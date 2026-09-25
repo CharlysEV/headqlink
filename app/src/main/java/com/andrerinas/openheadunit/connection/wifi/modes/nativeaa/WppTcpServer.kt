@@ -366,7 +366,7 @@ class WppTcpServer(
                     AppLog.w("WppTcpServer: handshake failed: ${action.reason} (phone silent=${action.phoneWasSilent})")
                 // The poke and the settling window belong to the Bluetooth path; over TCP the phone
                 // is already on our network, so there is nothing to wake and nothing to extend.
-                WppAction.ExtendSettle, WppAction.ResumePoke -> {}
+                WppAction.ExtendSettle, WppAction.ResumePoke, is WppAction.Release -> {}
             }
         }
 

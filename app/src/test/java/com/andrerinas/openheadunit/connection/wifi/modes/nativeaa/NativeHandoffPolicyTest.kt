@@ -309,24 +309,4 @@ class NativeHandoffPolicyTest {
             )
         }
     }
-
-    @Test
-    fun `a silent poke names the setting that would end it`() {
-        val advice = NativeHandoffPolicy.silentPokeAdvice(hfpSlcEnabled = false)
-        assertTrue(advice != null)
-        assertTrue(advice!!.contains("Complete the Bluetooth connection"))
-    }
-
-    @Test
-    fun `a poke that already completes the connection has nothing to add`() {
-        assertEquals(null, NativeHandoffPolicy.silentPokeAdvice(hfpSlcEnabled = true))
-    }
-
-    @Test
-    fun `the advice does not send a reader after a second radio first`() {
-        // The warning it follows blames another Bluetooth device. Where this fires, that order is
-        // wrong, so the sentence has to say which to try first.
-        val advice = NativeHandoffPolicy.silentPokeAdvice(hfpSlcEnabled = false)!!
-        assertTrue(advice.contains("before looking for another Bluetooth device"))
-    }
 }

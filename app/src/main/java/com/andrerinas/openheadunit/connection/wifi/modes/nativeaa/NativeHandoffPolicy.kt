@@ -116,20 +116,6 @@ object NativeHandoffPolicy {
             pokesSinceLastAccept > 0 &&
             pokesSinceLastAccept % SILENT_POKE_WARN_INTERVAL == 0
 
-    /**
-     * The sentence to add to that warning when the wake poke is holding a silent channel.
-     *
-     * A silent hold leaves the phone's hands-free profile half-open, and Android Auto will not
-     * start wireless setup for a head unit that is not connected with a profile. That is one
-     * setting away, so the warning must not send a reader hunting for a second radio instead.
-     */
-    fun silentPokeAdvice(hfpSlcEnabled: Boolean): String? =
-        if (hfpSlcEnabled) null
-        else "\"Complete the Bluetooth connection\" is off, so these pokes hold a silent " +
-            "channel and the phone's hands-free profile never finishes connecting. Android Auto " +
-            "will not start wireless setup for a head unit whose Bluetooth is not fully " +
-            "connected, so turn that setting on before looking for another Bluetooth device."
-
     /** How many handshakes may time out waiting for the phone's Type 2, back to back, before we
      *  stop serving new ones. Roughly a minute of trying at the phone's ~12 s reconnect cadence. */
     const val MAX_CONSECUTIVE_HANDSHAKE_FAILURES = 5

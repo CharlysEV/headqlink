@@ -1004,8 +1004,6 @@
     <string name="preflight_open_location">Poloha</string>
     <string name="preflight_later">Později</string>
     <string name="preflight_invalid_bssid">Neplatná adresa WiFi. Zadejte šest dvojic hexadecimálních číslic (např. 02:1A:11:FF:3C:4D).</string>
-    <string name="native_aa_complete_hfp_slc">Dokončit připojení Bluetooth</string>
-    <string name="native_aa_complete_hfp_slc_description">Některé telefony nespustí bezdrátové Android Auto, dokud se Bluetooth této jednotky nepovažuje za připojené, nejen spárované. Ve výchozím nastavení zapnuto; vypněte, pokud přestanou fungovat hovory na tomto zařízení.</string>
     <string name="announce_connection_configuration">Požádat o delší časový limit spojení</string>
     <string name="announce_connection_configuration_description">Řekne Android Auto, aby před označením spojení za mrtvé počkal 15 sekund místo 3, a aby použil větší vyrovnávací paměti soketu. Je to určeno pro rádio, které se uprostřed relace na pár sekund odpojí od kanálu a vezme si spojení s sebou. Zda to váš telefon nějak respektuje, nebylo změřeno.</string>
     <string name="native_aa_ignore_external_bt">Ignorovat kontrolu kompatibility Bluetooth</string>

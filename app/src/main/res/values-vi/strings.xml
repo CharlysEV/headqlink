@@ -1007,8 +1007,6 @@
     <string name="preflight_open_location">Vị trí</string>
     <string name="preflight_later">Để sau</string>
     <string name="preflight_invalid_bssid">Địa chỉ WiFi không hợp lệ. Nhập 6 cặp ký tự thập lục phân (vd: 02:1A:11:FF:3C:4D).</string>
-    <string name="native_aa_complete_hfp_slc">Hoàn tất kết nối Bluetooth</string>
-    <string name="native_aa_complete_hfp_slc_description">Một số điện thoại chỉ khởi động Android Auto không dây khi Bluetooth của thiết bị này được tính là đã kết nối, chứ không chỉ đã ghép đôi. Bật theo mặc định; hãy tắt nếu cuộc gọi trên thiết bị này ngừng hoạt động.</string>
     <string name="announce_connection_configuration">Yêu cầu thời gian chờ liên kết dài hơn</string>
     <string name="announce_connection_configuration_description">Yêu cầu Android Auto đợi 15 giây thay vì 3 giây trước khi coi liên kết là đã chết, và sử dụng vùng đệm socket lớn hơn. Tính năng này nhắm đến trường hợp radio rời kênh trong vài giây giữa phiên và kéo theo cả kết nối. Chưa đo được liệu điện thoại của bạn có tuân theo điều này hay không.</string>
     <string name="native_aa_ignore_external_bt">Bỏ qua kiểm tra tương thích Bluetooth</string>

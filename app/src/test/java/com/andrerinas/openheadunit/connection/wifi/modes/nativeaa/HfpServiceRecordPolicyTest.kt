@@ -41,10 +41,9 @@ class HfpServiceRecordPolicyTest {
     }
 
     private fun opens(
-        enabled: Boolean = true,
         publishedStandIn: Boolean = true,
         link: BluetoothWakePolicy.HandsFreeLink = BluetoothWakePolicy.HandsFreeLink.ABSENT,
-    ) = HfpServiceRecordPolicy.shouldOpenServiceLevelConnection(enabled, publishedStandIn, link)
+    ) = HfpServiceRecordPolicy.shouldOpenServiceLevelConnection(publishedStandIn, link)
 
     @Test
     fun `a live hands-free link keeps the stand-in from speaking first`() {
@@ -60,11 +59,6 @@ class HfpServiceRecordPolicyTest {
     fun `an adapter that would not say still opens the exchange`() {
         // Same rule as the record above: a question that could not be asked is not answered yes.
         assertTrue(opens(link = BluetoothWakePolicy.HandsFreeLink.UNREADABLE))
-    }
-
-    @Test
-    fun `the setting off stops the stand-in speaking first`() {
-        assertFalse(opens(enabled = false))
     }
 
     @Test
