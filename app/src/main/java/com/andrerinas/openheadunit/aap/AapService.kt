@@ -294,6 +294,7 @@ class AapService : Service() {
     @Volatile private var projectingSinceMs = 0L
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var wifiLock: WifiManager.WifiLock? = null
+    private var lowLatencyWifiLock: WifiManager.WifiLock? = null
 
     private var wifiReadyCallback: ConnectivityManager.NetworkCallback? = null
 
@@ -2557,17 +2558,38 @@ class AapService : Service() {
     }
 
     private fun acquireWifiLock() {
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         if (wifiLock == null) {
-            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "HeadunitRevived:Connection")
         }
         if (wifiLock?.isHeld == false) {
             wifiLock?.acquire()
             AppLog.i("WifiLock acquired (HIGH_PERF)")
         }
+        // LOW_LATENCY disables radio power-save batching while projection is visible. Retain
+        // HIGH_PERF as well: Android uses it when the screen is off or the app is backgrounded.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                if (lowLatencyWifiLock == null) {
+                    lowLatencyWifiLock = wifiManager.createWifiLock(
+                        WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "OpenHeadunit:LowLatency"
+                    ).apply { setReferenceCounted(false) }
+                }
+                if (lowLatencyWifiLock?.isHeld == false) {
+                    lowLatencyWifiLock?.acquire()
+                    AppLog.i("WifiLock acquired (LOW_LATENCY, active when foreground and screen on)")
+                }
+            } catch (e: RuntimeException) {
+                AppLog.w("Low-latency WiFi lock unavailable; keeping HIGH_PERF: ${e.message}")
+            }
+        }
     }
 
     private fun releaseWifiLock() {
+        if (lowLatencyWifiLock?.isHeld == true) {
+            lowLatencyWifiLock?.release()
+            AppLog.i("Low-latency WifiLock released")
+        }
         if (wifiLock?.isHeld == true) {
             wifiLock?.release()
             AppLog.i("WifiLock released")
