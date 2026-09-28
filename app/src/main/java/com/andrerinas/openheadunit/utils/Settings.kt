@@ -2390,21 +2390,6 @@ class Settings(private val context: Context) {
         get() = prefs.getBoolean("insecure-aa-rfcomm-listener", false)
         set(value) = prefs.edit().putBoolean("insecure-aa-rfcomm-listener", value).apply()
 
-    // Open a hands-free service level connection instead of holding a silent channel. Android Auto
-    // will not start wireless setup unless the head unit is connected with a Bluetooth profile, and
-    // a silent channel leaves the phone's hands-free state machine half-open until it times out, so
-    // it never counts. Measured on hardware: a full wireless session with this on, none with it off.
-    //
-    // On by default, because it only runs where this app stands in for a radio with no hands-free
-    // stack of its own, and stands down again where a real hands-free link is already up.
-    //
-    // What a completed stand-in link does to call routing is not measured: no round has placed or
-    // taken a call with this on, and the responder negotiates neither a codec nor a SCO link, so it
-    // could not carry one. The switch is here for the user who would rather not find out.
-    var nativeAaCompleteHfpSlc: Boolean
-        get() = prefs.getBoolean("native-aa-complete-hfp-slc", true)
-        set(value) = prefs.edit().putBoolean("native-aa-complete-hfp-slc", value).apply()
-
     // What an escalated wake did to this unit's own hands-free link, as NativeAaWakeDamagePolicy.
     // Measured rather than chosen: the poke displaces the phone's single slot by design and no API
     // puts it back, but whether the link returns is a property of this unit's stack. The first

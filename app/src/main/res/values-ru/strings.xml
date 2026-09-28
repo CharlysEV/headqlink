@@ -1003,8 +1003,6 @@
     <string name="preflight_open_location">Геолокация</string>
     <string name="preflight_later">Позже</string>
     <string name="preflight_invalid_bssid">Неверный адрес WiFi. Введите 6 пар шестнадцатеричных цифр (например, 02:1A:11:FF:3C:4D).</string>
-    <string name="native_aa_complete_hfp_slc">Завершать подключение Bluetooth</string>
-    <string name="native_aa_complete_hfp_slc_description">Некоторые телефоны не запускают беспроводной Android Auto, пока Bluetooth этого устройства не будет считаться подключённым, а не просто сопряжённым. По умолчанию включено; отключите, если звонки на этом устройстве перестанут работать.</string>
     <string name="announce_connection_configuration">Запросить более длинный тайм-аут соединения</string>
     <string name="announce_connection_configuration_description">Указывает Android Auto ждать 15 секунд вместо 3, прежде чем считать соединение разорванным, и использовать буферы сокета большего размера. Это рассчитано на радиомодуль, который на несколько секунд уходит с канала в середине сеанса и забирает с собой соединение. Не измерялось, учитывает ли телефон хоть что-то из этого.</string>
     <string name="native_aa_ignore_external_bt">Игнорировать проверку совместимости Bluetooth</string>

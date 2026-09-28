@@ -1080,8 +1080,6 @@
     <string name="preflight_open_location">स्थान</string>
     <string name="preflight_later">बाद में</string>
     <string name="preflight_invalid_bssid">यह एक वाई-फ़ाई पता नहीं है। हेक्स अंकों के छह जोड़े दर्ज करें, जैसे 02:1A:11:FF:3C:4D।</string>
-    <string name="native_aa_complete_hfp_slc">ब्लूटूथ कनेक्शन पूरा करें</string>
-    <string name="native_aa_complete_hfp_slc_description">कुछ फ़ोन तब तक वायरलेस Android Auto शुरू नहीं करेंगे जब तक कि इस यूनिट का ब्लूटूथ कनेक्टेड न माना जाए। डिफ़ॉल्ट रूप से चालू।</string>
     <string name="native_aa_wake_remeasure">ब्लूटूथ वेक को पुनः मापें</string>
     <string name="native_aa_wake_verdict_unmeasured">अभी तक नहीं मापा गया</string>
     <string name="native_aa_wake_verdict_safe">इस यूनिट पर सुरक्षित</string>

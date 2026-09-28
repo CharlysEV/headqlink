@@ -63,11 +63,10 @@ object HfpServiceRecordPolicy {
      * which it stops retrying wireless setup entirely.
      */
     fun shouldOpenServiceLevelConnection(
-        enabled: Boolean,
         publishedStandIn: Boolean,
         handsFreeLink: BluetoothWakePolicy.HandsFreeLink,
     ): Boolean =
-        enabled && publishedStandIn && handsFreeLink != BluetoothWakePolicy.HandsFreeLink.CONNECTED
+        publishedStandIn && handsFreeLink != BluetoothWakePolicy.HandsFreeLink.CONNECTED
 
     /**
      * Why a hold that spoke first ended without a service level connection, or null when it did not.

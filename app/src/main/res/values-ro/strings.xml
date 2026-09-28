@@ -1001,8 +1001,6 @@
     <string name="preflight_open_location">Locație</string>
     <string name="preflight_later">Mai târziu</string>
     <string name="preflight_invalid_bssid">Adresă WiFi nevalidă. Introduceți 6 perechi de cifre hexazecimale (ex: 02:1A:11:FF:3C:4D).</string>
-    <string name="native_aa_complete_hfp_slc">Finalizează conexiunea Bluetooth</string>
-    <string name="native_aa_complete_hfp_slc_description">Unele telefoane nu pornesc Android Auto wireless până când Bluetooth-ul acestei unități nu este considerat conectat, nu doar asociat. Activat implicit; dezactivați-l dacă apelurile pe acest dispozitiv nu mai funcționează.</string>
     <string name="announce_connection_configuration">Solicită un timp de așteptare mai lung pentru legătură</string>
     <string name="announce_connection_configuration_description">Îi spune aplicației Android Auto să aștepte 15 secunde în loc de 3 înainte de a considera legătura moartă și să folosească memorii tampon de socket mai mari. Este menit pentru o radio care părăsește canalul pentru câteva secunde în mijlocul sesiunii și ia legătura cu ea. Nu s-a măsurat dacă telefonul dvs. respectă ceva din toate acestea.</string>
     <string name="native_aa_ignore_external_bt">Ignoră verificarea de compatibilitate Bluetooth</string>

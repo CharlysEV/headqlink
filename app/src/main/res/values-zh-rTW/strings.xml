@@ -1003,8 +1003,6 @@
     <string name="preflight_open_location">定位服務</string>
     <string name="preflight_later">稍後</string>
     <string name="preflight_invalid_bssid">無效的 WiFi 位址。請輸入 6 組十六進位數字（例如 02:1A:11:FF:3C:4D）。</string>
-    <string name="native_aa_complete_hfp_slc">完成藍牙連線</string>
-    <string name="native_aa_complete_hfp_slc_description">部分手機必須等到此裝置的藍牙被視為已連線（而非僅已配對）才會啟動無線 Android Auto。預設開啟；若此裝置上的通話停止運作，請關閉。</string>
     <string name="announce_connection_configuration">要求更長的連線逾時</string>
     <string name="announce_connection_configuration_description">告訴 Android Auto 在判定連線中斷前等待 15 秒，而不是 3 秒，並使用較大的通訊端緩衝區。這是針對在工作階段中途離開頻道幾秒鐘、並將連線一併中斷的無線電。尚未測得你的手機是否會遵循其中任何一項。</string>
     <string name="native_aa_ignore_external_bt">忽略藍牙相容性檢查</string>
