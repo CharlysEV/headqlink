@@ -1,5 +1,6 @@
 package com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt
 
+import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.ExternalModuleCarrier
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.HandshakeLink
 import com.andrerinas.openheadunit.utils.AppLog
 import kotlinx.coroutines.CancellationException
@@ -56,7 +57,7 @@ class ZbtAaCarrier(
         )
     },
     private val now: () -> Long = { System.currentTimeMillis() }
-) {
+) : ExternalModuleCarrier {
 
     companion object {
         /** How long to wait before dialling the daemon again after it refused a connection. */
@@ -267,7 +268,7 @@ class ZbtAaCarrier(
      * Ask the module to bring the phone's link up — the module-side wake, replacing the HFP poke
      * that cannot reach this phone. Safe to call from any thread.
      */
-    fun requestWake() {
+    override fun requestWake() {
         val open = channel
         if (open == null || open.isFinished) {
             AppLog.d("NativeAA: [ZBT] no channel to wake through.")
@@ -291,7 +292,7 @@ class ZbtAaCarrier(
     }
 
     /** Ends the carrier and unblocks whatever is reading. Safe from any thread. */
-    fun close() {
+    override fun close() {
         stopped = true
         runCatching { channel?.close() }
     }

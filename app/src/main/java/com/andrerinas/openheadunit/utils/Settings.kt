@@ -2449,4 +2449,10 @@ class Settings(private val context: Context) {
         get() = prefs.getBoolean("external-bt-zbt-transport", false)
         set(value) = prefs.edit().putBoolean("external-bt-zbt-transport", value).apply()
 
+    // Carry the Native AA handshake over FYT's BLINK module, through the `blink` daemon's
+    // /dev/auto_serial relay (needs root). Off by default; only offered where that node exists.
+    var externalBtBlinkTransport: Boolean
+        get() = prefs.getBoolean("external-bt-blink-transport", false)
+        set(value) = prefs.edit().putBoolean("external-bt-blink-transport", value).apply()
+
 }

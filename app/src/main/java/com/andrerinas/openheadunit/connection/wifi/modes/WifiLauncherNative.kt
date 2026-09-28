@@ -92,6 +92,7 @@ class WifiLauncherNative : WifiLauncher {
             settings.externalBtZbtTransport,
             settings.nativeAaIgnoreExternalBt,
             ZbtDaemonReachability.cached(),
+            settings.externalBtBlinkTransport,
         )
         if (blockedByExternalBt) NativeAaHandshakeManager.externalBtDiagnostic()?.let { AppLog.e(it) }
 

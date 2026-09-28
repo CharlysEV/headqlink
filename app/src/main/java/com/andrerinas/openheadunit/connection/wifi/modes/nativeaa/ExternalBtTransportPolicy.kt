@@ -30,7 +30,10 @@ object ExternalBtTransportPolicy {
         ZBT,
 
         /** External Bluetooth, and no route through it: refuse mode 3 and say why. */
-        BLOCKED
+        BLOCKED,
+
+        /** FYT's BLINK module, through `blink`'s `/dev/auto_serial` relay. Opt-in only. */
+        BLINK
     }
 
     /**
@@ -51,8 +54,12 @@ object ExternalBtTransportPolicy {
         externalBtEvidence: String?,
         zbtTransportEnabled: Boolean,
         ignoreExternalBt: Boolean,
-        daemonReachable: Boolean? = null
+        daemonReachable: Boolean? = null,
+        blinkTransportEnabled: Boolean = false
     ): Route = when {
+        // Before the evidence check: the setting is only offered where the relay exists, and a
+        // unit whose markers are not in ExternalBtPolicy's list still has the module.
+        blinkTransportEnabled -> Route.BLINK
         externalBtEvidence == null -> Route.NORMAL
         zbtTransportEnabled -> Route.ZBT
         ignoreExternalBt -> Route.NORMAL
@@ -70,9 +77,10 @@ object ExternalBtTransportPolicy {
         externalBtEvidence: String?,
         zbtTransportEnabled: Boolean,
         ignoreExternalBt: Boolean,
-        cachedDaemonReachable: Boolean?
+        cachedDaemonReachable: Boolean?,
+        blinkTransportEnabled: Boolean = false
     ): Boolean =
-        route(externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable) ==
+        route(externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable, blinkTransportEnabled) ==
             Route.BLOCKED &&
             !needsDaemonMeasurement(
                 externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable
@@ -89,11 +97,21 @@ object ExternalBtTransportPolicy {
         externalBtEvidence: String?,
         zbtTransportEnabled: Boolean,
         ignoreExternalBt: Boolean,
-        cachedDaemonReachable: Boolean?
-    ): Boolean = externalBtEvidence != null && !zbtTransportEnabled &&
+        cachedDaemonReachable: Boolean?,
+        blinkTransportEnabled: Boolean = false
+    ): Boolean = !blinkTransportEnabled && externalBtEvidence != null && !zbtTransportEnabled &&
         !ignoreExternalBt && cachedDaemonReachable == null
 
     enum class WifiButton { MODULE, REFUSED, ANDROID_RADIO }
+
+    /** External-module routes cannot use Android's bonded-device and driver-selection controls. */
+    fun usesExternalModule(route: Route): Boolean = route == Route.ZBT || route == Route.BLINK
+
+    /** BLINK keeps its module bridge open across sessions and must not touch Android RFCOMM. */
+    fun rearmsWithoutAndroidRadio(route: Route): Boolean = route == Route.BLINK
+
+    /** An enabled route must keep its recovery control visible even if the node disappears. */
+    fun showBlinkToggle(nodePresent: Boolean, enabled: Boolean): Boolean = nodePresent || enabled
 
     /**
      * What the main screen's WiFi button arms. A daemon not measured yet goes to the module route,
@@ -103,11 +121,13 @@ object ExternalBtTransportPolicy {
         externalBtEvidence: String?,
         zbtTransportEnabled: Boolean,
         ignoreExternalBt: Boolean,
-        cachedDaemonReachable: Boolean?
+        cachedDaemonReachable: Boolean?,
+        blinkTransportEnabled: Boolean = false
     ): WifiButton = when {
-        refusesBringUp(externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable) ->
+        refusesBringUp(externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable, blinkTransportEnabled) ->
             WifiButton.REFUSED
-        route(externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable) == Route.ZBT ||
+        route(externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable, blinkTransportEnabled)
+            .let { it == Route.ZBT || it == Route.BLINK } ||
             needsDaemonMeasurement(externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable) ->
             WifiButton.MODULE
         else -> WifiButton.ANDROID_RADIO

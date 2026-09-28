@@ -707,7 +707,9 @@ class HomeFragment : Fragment() {
         val appSettings = App.provide(requireContext()).settings
         if (requestDriverSelection) {
             requestDriverSelection = false
-            showNativeAaDeviceSelector(autoCountdown = false)
+            if (!ExternalBtTransportPolicy.usesExternalModule(NativeAaHandshakeManager.transportRoute(requireContext()))) {
+                showNativeAaDeviceSelector(autoCountdown = false)
+            }
         } else if (appSettings.wifiConnectionMode == WifiLauncherMode.NATIVE && !commManager.isConnected) {
             if (!hasCheckedNativeDriverSelection) checkNativeDriverSelectionOnStartup()
         }
@@ -749,6 +751,9 @@ class HomeFragment : Fragment() {
     private fun checkNativeDriverSelectionOnStartup(): Boolean {
         if (!isAdded) return false
         hasCheckedNativeDriverSelection = true
+        if (ExternalBtTransportPolicy.usesExternalModule(NativeAaHandshakeManager.transportRoute(requireContext()))) {
+            return false
+        }
         val appSettings = App.provide(requireContext()).settings
         if (appSettings.nativeDriverSelectionMode == NativeDriverSelectionPolicy.Mode.DISABLED) return false
         // Every answer this check can reach pokes a phone and arms the stack, so a unit the user
@@ -806,6 +811,10 @@ class HomeFragment : Fragment() {
 
     private fun showNativeAaDeviceSelector(autoCountdown: Boolean = false) {
         if (!isAdded) return
+        if (ExternalBtTransportPolicy.usesExternalModule(NativeAaHandshakeManager.transportRoute(requireContext()))) {
+            AppLog.i("HomeFragment: Android Bluetooth driver selection does not apply to the external-module route")
+            return
+        }
         val adapter = BluetoothHelper.getBluetoothAdapter(requireContext())
 
         if (adapter == null || !adapter.isEnabled) {

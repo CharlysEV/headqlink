@@ -20,6 +20,7 @@ import com.andrerinas.openheadunit.connection.wifi.direct.WifiBandCapability
 import com.andrerinas.openheadunit.utils.BluetoothAddressSeedPolicy
 import com.andrerinas.openheadunit.utils.BluetoothHelper
 import com.andrerinas.openheadunit.aap.protocol.proto.Wireless
+import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.blink.BlinkAaCarrier
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt.ZbtAaCarrier
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt.ZbtAttemptPolicy
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt.ZbtRetransmitPolicy
@@ -43,6 +44,7 @@ import com.andrerinas.openheadunit.connection.ConnectionStage
 import com.andrerinas.openheadunit.connection.ConnectionStageTracker
 import com.andrerinas.openheadunit.connection.wifi.modes.WifiLauncherNative
 import com.andrerinas.openheadunit.utils.Settings
+import com.andrerinas.openheadunit.utils.SystemProperties
 import java.io.DataInputStream
 import java.io.OutputStream
 import java.util.*
@@ -126,7 +128,8 @@ class NativeAaHandshakeManager(
                 settings.externalBtZbtTransport,
                 settings.nativeAaIgnoreExternalBt,
                 // A read, never a dial. This runs on the UI path, and the dial is a socket connect.
-                ZbtDaemonReachability.cached()
+                ZbtDaemonReachability.cached(),
+                settings.externalBtBlinkTransport
             )
         }
 
@@ -137,7 +140,8 @@ class NativeAaHandshakeManager(
                 BluetoothHelper.externalBtEvidence,
                 settings.externalBtZbtTransport,
                 settings.nativeAaIgnoreExternalBt,
-                ZbtDaemonReachability.cached()
+                ZbtDaemonReachability.cached(),
+                settings.externalBtBlinkTransport
             )
         }
 
@@ -145,7 +149,7 @@ class NativeAaHandshakeManager(
             when (transportRoute(context)) {
                 // The module has its own listener and its own compatibility, established by the
                 // daemon answering at connection time. Nothing below measures that.
-                ExternalBtTransportPolicy.Route.ZBT -> {
+                ExternalBtTransportPolicy.Route.ZBT, ExternalBtTransportPolicy.Route.BLINK -> {
                     AppLog.i("NativeAA: Bluetooth runs over the external module on this unit, so the RFCOMM compatibility check does not apply.")
                     return true
                 }
@@ -355,7 +359,7 @@ class NativeAaHandshakeManager(
     // The external-Bluetooth-module transport, when that is the route this unit takes. Non-null
     // only between start() and stop() on that route; it replaces the RFCOMM listeners entirely
     // rather than running beside them.
-    @Volatile private var zbtCarrier: ZbtAaCarrier? = null
+    @Volatile private var zbtCarrier: ExternalModuleCarrier? = null
     // The coroutine serving [activeHandshakeLink]. Closing a superseded handshake's link only
     // ends it on stacks where close() interrupts a pending read; some do not, and it runs on for
     // minutes. Cancelling cannot break a blocking JNI read either, but it does end every real
@@ -775,7 +779,8 @@ class NativeAaHandshakeManager(
                 BluetoothHelper.externalBtEvidence,
                 settings.externalBtZbtTransport,
                 settings.nativeAaIgnoreExternalBt,
-                ZbtDaemonReachability.cached()
+                ZbtDaemonReachability.cached(),
+                settings.externalBtBlinkTransport
             )
         ) {
             notStartedReason = "the vendor Bluetooth daemon is still being asked whether it will carry Android Auto."
@@ -795,6 +800,10 @@ class NativeAaHandshakeManager(
             // setup below applies to it.
             ExternalBtTransportPolicy.Route.ZBT -> {
                 startOverExternalModule()
+                return
+            }
+            ExternalBtTransportPolicy.Route.BLINK -> {
+                startOverBlinkModule()
                 return
             }
             ExternalBtTransportPolicy.Route.BLOCKED -> {
@@ -1098,6 +1107,14 @@ class NativeAaHandshakeManager(
         handshakeStartedAt = 0L
         handoffSettlingSince = 0L
         resetHandshakeBackoff()
+
+        if (ExternalBtTransportPolicy.rearmsWithoutAndroidRadio(transportRoute(context))) {
+            aaListenersClosedForSession = false
+            aaListenerLost = false
+            aaReopenAttempts = 0
+            AppLog.i("NativeAA: [BLINK] session state re-armed; the module bridge remains ready for the next phone channel.")
+            return
+        }
 
         if (!SessionEndGroupPolicy.shouldReopenAaListeners(isRunning, aaListenersClosedForSession)) {
             if (!aaListenerLost) {
@@ -2558,6 +2575,41 @@ class NativeAaHandshakeManager(
             }
         }
     }
+    private fun startOverBlinkModule() {
+        isRunning = true
+        notStartedReason = null
+        aaListenersClosedForSession = false
+        localRadioName = "FYT BLINK module"
+        // The module's own address, which blink keeps in a property. The phone is bonded to that
+        // address, and without it no Bluetooth service is announced and calls stay on the phone.
+        SystemProperties.get("persist.blinkbt.addr", "").trim().takeIf { it.isNotEmpty() }
+            ?.let { seedBluetoothAddressFromModule(it) }
+        AppLog.i(
+            "NativeAA: FYT BLINK transport is on — the handshake goes over the DUDUAUTO module through " +
+                "blink's /dev/auto_serial relay (root), where the stock Carlink normally sits."
+        )
+        val carrier = BlinkAaCarrier(
+            serve = { link ->
+                ConnectionStageTracker.report(ConnectionStage.PHONE_ANSWERED)
+                handleHandshake(link)
+            },
+            isRunning = { isRunning },
+            isFinishedForSession = { aaListenersClosedForSession },
+            mayServeHandshake = { NativeHandoffPolicy.shouldServeHandshake(consecutiveHandshakeFailures) },
+            onPhoneEvidence = { resetHandshakeBackoff() }
+        )
+        zbtCarrier = carrier
+        scope.launch(Dispatchers.IO + CoroutineName("NativeAa-BlinkCarrier")) {
+            try {
+                carrier.run()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.e("NativeAA: [BLINK] carrier stopped unexpectedly: ${e.message}", e)
+            }
+        }
+    }
+
 
     private fun refuseWhileBackedOff(link: HandshakeLink): Boolean {
         if (NativeHandoffPolicy.shouldServeHandshake(consecutiveHandshakeFailures)) return false
