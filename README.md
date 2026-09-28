@@ -47,6 +47,22 @@ Choose from one of four connection strategies depending on your Android Auto ver
 - Supports **Wi-Fi Direct (P2P)** or the **Headunit Hotspot** transport.
 - Configure under Open Headunit Settings -> **Android Auto Mode** -> **Native Mode**.
 
+#### FYT BLINK / DUDUAUTO module transport (experimental)
+On rooted FYT units where the phone pairs with an external BLINK module shown as **DUDUAUTO**, Native Mode can carry its Android Auto Bluetooth handshake through `/dev/auto_serial` while calls remain on the module and the vehicle microphone/speakers.
+
+Requirements:
+- An FYT unit whose `blink` daemon exposes `/dev/auto_serial`.
+- Root access for Open Headunit.
+- The stock `com.syu.carlink` package disabled, because two readers on the same terminal split protocol messages.
+- The phone paired with DUDUAUTO; pairing and phone priority remain managed by the module.
+
+Setup:
+1. Disable the stock client: `adb shell su -c 'pm disable-user --user 0 com.syu.carlink'`.
+2. In Open Headunit, select **Native Mode** and enable **FYT BLINK module (DUDUAUTO)**.
+3. Keep the phone paired with DUDUAUTO and connect normally.
+
+Android Bluetooth driver selection, preferred-phone and wake-list controls are intentionally hidden on this route because Android cannot see or dial phones bonded to the external module. To roll back, turn this transport off and re-enable the stock client with `adb shell su -c 'pm enable com.syu.carlink'`.
+
 #### 3. Headunit Server (Essential for Self-Mode on AA 17.4+)
 - Starts the native Android Auto developer server directly on your phone or on the same device (Self-Mode).
 - **Setup:**
