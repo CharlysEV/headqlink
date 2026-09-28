@@ -9,6 +9,8 @@
     <string name="allowed">Dozwolone</string>
     <string name="ignored">Ignorowane</string>
     <string name="exit">Wyjdź</string>
+    <string name="apps">Aplikacje</string>
+    <string name="no_apps_found">Nie znaleziono aplikacji</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Tryb samodzielny</string>
     <string name="to_android_auto">Do Android Auto</string>
