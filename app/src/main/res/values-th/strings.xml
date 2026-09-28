@@ -180,6 +180,8 @@
     <string name="remove_from_blacklist">ลบออกจากบัญชีดำ</string>
     <string name="usb_device_action_title">การกระทำของอุปกรณ์ USB</string>
     <string name="exit">ออก</string>
+    <string name="apps">แอปพลิเคชัน</string>
+    <string name="no_apps_found">ไม่พบแอปพลิเคชัน</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">โหมดตนเอง (Self Mode)</string>
     <string name="to_android_auto">ไปที่ Android Auto</string>

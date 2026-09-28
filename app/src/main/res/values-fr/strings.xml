@@ -180,6 +180,8 @@
     <string name="allowed">Autorisé</string>
     <string name="ignored">Ignoré</string>
     <string name="exit">Quitter</string>
+    <string name="apps">Applications</string>
+    <string name="no_apps_found">Aucune application trouvée</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Self Mode</string>
     <string name="to_android_auto">Vers Android Auto</string>

@@ -269,6 +269,23 @@
 
     </LinearLayout>
 
+   <com.google.android.material.button.MaterialButton
+        android:id="@+id/apps_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/exit_button"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="16dp"
+        app:layout_goneMarginEnd="16dp"
+        android:text="@string/apps"
+        app:icon="@drawable/ic_apps"
+        app:iconTint="@android:color/white"
+        app:backgroundTint="@color/material_grey_700"
+        android:textColor="@android:color/white"
+        app:cornerRadius="8dp"
+        android:visibility="gone" />
+
     <!-- Exit button — always at bottom-right, independent of the grid -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/exit_button"

@@ -180,6 +180,8 @@
     <string name="remove_from_blacklist">Hapus dari Daftar Hitam</string>
     <string name="usb_device_action_title">Tindakan Perangkat USB</string>
     <string name="exit">Keluar</string>
+    <string name="apps">Aplikasi</string>
+    <string name="no_apps_found">Tidak ada aplikasi yang ditemukan</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Mode Mandiri</string>
     <string name="to_android_auto">Ke Android Auto</string>

@@ -9,6 +9,8 @@
     <string name="allowed">ნებადართული</string>
     <string name="ignored">იგნორირებული</string>
     <string name="exit">გასვლა</string>
+    <string name="apps">აპლიკაციები</string>
+    <string name="no_apps_found">აპლიკაციები ვერ მოიძებნა</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">ავტონომიური რეჟიმი</string>
     <string name="to_android_auto">Android Auto-ზე გადასვლა</string>
