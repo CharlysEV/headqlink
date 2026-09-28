@@ -1,5 +1,6 @@
 package com.andrerinas.openheadunit.main
 
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
@@ -18,6 +19,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.andrerinas.openheadunit.R
 import com.google.android.material.appbar.MaterialToolbar
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,6 +31,39 @@ data class AppDrawerItem(
 )
 
 class AppDrawerFragment : Fragment() {
+
+    companion object {
+        private var cachedApps: List<AppDrawerItem>? = null
+
+        fun preload(context: Context) {
+            if (cachedApps != null) return
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val appContext = context.applicationContext
+                    val pm = appContext.packageManager
+                    val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
+                    val resolved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        pm.queryIntentActivities(mainIntent, PackageManager.ResolveInfoFlags.of(0))
+                    } else {
+                        pm.queryIntentActivities(mainIntent, 0)
+                    }
+
+                    val ownPackage = appContext.packageName
+                    val appsList = resolved.mapNotNull { resolveInfo ->
+                        val pkg = resolveInfo.activityInfo.packageName
+                        if (pkg == ownPackage) null
+                        else AppDrawerItem(resolveInfo.loadLabel(pm).toString(), pkg, resolveInfo.loadIcon(pm))
+                    }.sortedBy { it.label.lowercase() }
+
+                    cachedApps = appsList
+                } catch (_: Exception) {}
+            }
+        }
+
+        fun invalidateCache() {
+            cachedApps = null
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -48,9 +83,28 @@ class AppDrawerFragment : Fragment() {
         val screenWidthDp = resources.displayMetrics.widthPixels / resources.displayMetrics.density
         rvApps.layoutManager = GridLayoutManager(requireContext(), (screenWidthDp / 120).toInt().coerceAtLeast(3))
 
+        val pm = requireContext().packageManager
+
+        fun displayApps(apps: List<AppDrawerItem>) {
+            progressBar.visibility = View.GONE
+            rvApps.adapter = AppDrawerAdapter(apps) { app ->
+                val intent = pm.getLaunchIntentForPackage(app.packageName)?.apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                if (intent != null) startActivity(intent)
+            }
+        }
+
+        // Jeśli lista jest w cache, wyświetlamy natychmiast bez ponownego skanowania systemu
+        val cached = cachedApps
+        if (cached != null) {
+            progressBar.visibility = View.GONE
+            displayApps(cached)
+            return
+        }
+
         progressBar.visibility = View.VISIBLE
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            val pm = requireContext().packageManager
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
             val resolved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 pm.queryIntentActivities(mainIntent, PackageManager.ResolveInfoFlags.of(0))
@@ -65,15 +119,11 @@ class AppDrawerFragment : Fragment() {
                 else AppDrawerItem(resolveInfo.loadLabel(pm).toString(), pkg, resolveInfo.loadIcon(pm))
             }.sortedBy { it.label.lowercase() }
 
+            cachedApps = appsList
+
             withContext(Dispatchers.Main) {
                 if (!isAdded) return@withContext
-                progressBar.visibility = View.GONE
-                rvApps.adapter = AppDrawerAdapter(appsList) { app ->
-                    val intent = pm.getLaunchIntentForPackage(app.packageName)?.apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    if (intent != null) startActivity(intent)
-                }
+                displayApps(appsList)
             }
         }
     }
