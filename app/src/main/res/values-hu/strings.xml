@@ -9,6 +9,8 @@
     <string name="allowed">Engedélyezett</string>
     <string name="ignored">Ignorált</string>
     <string name="exit">Kilépés</string>
+    <string name="apps">Alkalmazások</string>
+    <string name="no_apps_found">Nem találhatók alkalmazások</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Önálló mód</string>
     <string name="to_android_auto">Android Auto-ba</string>

@@ -15,6 +15,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -228,11 +229,11 @@ class AppDrawerAdapter(
 
             val cachedIcon = AppDrawerCache.iconCache.get(itemKey)
             if (cachedIcon != null) {
-                ivIcon.imageAlpha = 255
+                ivIcon.alpha = 1.0f
                 ivIcon.setImageDrawable(cachedIcon)
             } else {
-                ivIcon.setImageResource(R.drawable.ic_apps)
-                ivIcon.imageAlpha = 110
+                ivIcon.setImageDrawable(ContextCompat.getDrawable(itemView.context, R.drawable.ic_apps))
+                ivIcon.alpha = 0.4f
 
                 coroutineScope.launch(Dispatchers.IO) {
                     val pm = itemView.context.applicationContext.packageManager
@@ -250,7 +251,7 @@ class AppDrawerAdapter(
                         AppDrawerCache.iconCache.put(itemKey, icon)
                         withContext(Dispatchers.Main) {
                             if (ivIcon.tag == itemKey) {
-                                ivIcon.imageAlpha = 255
+                                ivIcon.alpha = 1.0f
                                 ivIcon.setImageDrawable(icon)
                             }
                         }

@@ -9,6 +9,8 @@
     <string name="allowed">許可</string>
     <string name="ignored">無視</string>
     <string name="exit">終了</string>
+    <string name="apps">アプリ</string>
+    <string name="no_apps_found">アプリが見つかりません</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">セルフモード</string>
     <string name="to_android_auto">To Android Auto</string>

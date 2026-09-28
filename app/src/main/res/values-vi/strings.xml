@@ -9,6 +9,8 @@
     <string name="allowed">Đã cho phép</string>
     <string name="ignored">Bị bỏ qua</string>
     <string name="exit">Thoát</string>
+    <string name="apps">Ứng dụng</string>
+    <string name="no_apps_found">Không tìm thấy ứng dụng nào</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Chế độ độc lập</string>
     <string name="to_android_auto">Sang Android Auto</string>

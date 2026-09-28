@@ -9,6 +9,8 @@
     <string name="allowed">허용됨</string>
     <string name="ignored">무시됨</string>
     <string name="exit">종료</string>
+    <string name="apps">앱</string>
+    <string name="no_apps_found">애플리케이션을 찾을 수 없습니다</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">단독 모드</string>
     <string name="to_android_auto">Android Auto로 전환</string>

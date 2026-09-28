@@ -10,6 +10,8 @@
     <string name="allowed">İzin Verildi</string>
     <string name="ignored">Yoksayıldı</string>
     <string name="exit">Çıkış</string>
+    <string name="apps">Uygulamalar</string>
+    <string name="no_apps_found">Uygulama bulunamadı</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Dahili Mod</string>
     <string name="to_android_auto">Android Auto\'ya Geç</string>

@@ -9,6 +9,8 @@
     <string name="allowed">Дозволено</string>
     <string name="ignored">Ігноровано</string>
     <string name="exit">Вийти</string>
+    <string name="apps">Програми</string>
+    <string name="no_apps_found">Програми не знайдено</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Самостійний режим</string>
     <string name="to_android_auto">В Android Auto</string>

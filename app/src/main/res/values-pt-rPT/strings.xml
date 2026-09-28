@@ -181,6 +181,8 @@
     <string name="remove_from_blacklist">Remover da lista negra</string>
     <string name="usb_device_action_title">Ação do dispositivo USB</string>
     <string name="exit">Sair</string>
+    <string name="apps">Aplicações</string>
+    <string name="no_apps_found">Nenhuma aplicação encontrada</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Modo Próprio</string>
     <string name="to_android_auto">Para o Android Auto</string>

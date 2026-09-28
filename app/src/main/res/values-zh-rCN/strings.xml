@@ -8,6 +8,8 @@
     <string name="allowed">已允许</string>
     <string name="ignored">已忽略</string>
     <string name="exit">退出</string>
+    <string name="apps">应用</string>
+    <string name="no_apps_found">未找到应用程序</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">独立模式</string>
     <string name="to_android_auto">到 Android Auto</string>

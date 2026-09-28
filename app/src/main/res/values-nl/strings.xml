@@ -8,6 +8,8 @@
     <string name="allowed">Toegestaan</string>
     <string name="ignored">Genegeerd</string>
     <string name="exit">Exit</string>
+    <string name="apps">Apps</string>
+    <string name="no_apps_found">Geen applicaties gevonden</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Self Mode</string>
     <string name="to_android_auto">Naar Android Auto</string>
