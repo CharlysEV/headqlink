@@ -360,11 +360,17 @@ class HomeFragment : Fragment() {
         )
         exitButton.visibility = if (shouldShowExit) View.VISIBLE else View.GONE
         appsButton.visibility = if (isLauncherActive) View.VISIBLE else View.GONE
+        if (isLauncherActive) {
+            AppDrawerFragment.preload(ctx)
+        }
     }
 
     private fun setupListeners() {
         appsButton.setOnClickListener {
-            findNavController().navigate(R.id.action_homeFragment_to_appDrawerFragment)
+            val controller = findNavController()
+            if (controller.currentDestination?.id == R.id.homeFragment) {
+                controller.navigate(R.id.action_homeFragment_to_appDrawerFragment)
+            }
         }
 
         exitButton.setOnClickListener {

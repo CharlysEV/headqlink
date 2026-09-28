@@ -47,18 +47,22 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
         instance = this
         registerActivityLifecycleCallbacks(this)
 
-        val packageReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                AppDrawerFragment.invalidateCache()
+        try {
+            val packageReceiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    AppDrawerFragment.invalidateCache()
+                }
             }
+            val packageFilter = IntentFilter().apply {
+                addAction(Intent.ACTION_PACKAGE_ADDED)
+                addAction(Intent.ACTION_PACKAGE_REMOVED)
+                addAction(Intent.ACTION_PACKAGE_CHANGED)
+                addDataScheme("package")
+            }
+            ContextCompat.registerReceiver(this, packageReceiver, packageFilter, ContextCompat.RECEIVER_EXPORTED)
+        } catch (e: Exception) {
+            AppLog.w("App", "Failed to register package change receiver", e)
         }
-        val packageFilter = IntentFilter().apply {
-            addAction(Intent.ACTION_PACKAGE_ADDED)
-            addAction(Intent.ACTION_PACKAGE_REMOVED)
-            addAction(Intent.ACTION_PACKAGE_CHANGED)
-            addDataScheme("package")
-        }
-        ContextCompat.registerReceiver(this, packageReceiver, packageFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
 
 
