@@ -59,6 +59,27 @@ object ExternalBtPolicy {
         fun evidence(): String? = held ?: read()?.also { held = it }
     }
 
+    /** The property FYT's Car Link reads to pick its external-module backend. */
+    const val FYT_BLUETOOTH_TYPE = "sys.fyt.bluetooth_type"
+
+    /** The relay node Car Link opens on that backend. */
+    const val FYT_MODULE_NODE = "/dev/auto_serial"
+
+    /**
+     * Evidence that this is an FYT unit whose Bluetooth is an external module reached through
+     * `/dev/auto_serial`, or null.
+     *
+     * The same test Car Link makes: [FYT_BLUETOOTH_TYPE] above zero, or the relay node. Kept apart
+     * from [detect], because that evidence sends a unit to the ZLink daemon measurement and this
+     * one must not: FYT units have no such daemon, and dialling it only delays the refusal.
+     */
+    fun detectFytModule(nodeExists: (String) -> Boolean, property: (String) -> String?): String? {
+        val type = property(FYT_BLUETOOTH_TYPE)?.trim()?.toIntOrNull() ?: 0
+        if (type > 0) return "$FYT_BLUETOOTH_TYPE=$type"
+        if (nodeExists(FYT_MODULE_NODE)) return "$FYT_MODULE_NODE exists"
+        return null
+    }
+
     /** Convenience over [detect] for callers that only need the yes/no. */
     fun isExternal(nodeExists: (String) -> Boolean, property: (String) -> String?): Boolean =
         detect(nodeExists, property) != null

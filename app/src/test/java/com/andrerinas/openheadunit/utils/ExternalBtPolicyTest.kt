@@ -101,4 +101,20 @@ class ExternalBtPolicyTest {
         assertEquals("/dev/rf_serial exists", latch.evidence())
         assertEquals(1, reads)
     }
+
+    @Test
+    fun `an FYT unit is detected by its Bluetooth type or its relay node`() {
+        val none: (String) -> Boolean = { false }
+        assertEquals(
+            "sys.fyt.bluetooth_type=2",
+            ExternalBtPolicy.detectFytModule(none) { if (it == "sys.fyt.bluetooth_type") "2" else null }
+        )
+        assertEquals(
+            "/dev/auto_serial exists",
+            ExternalBtPolicy.detectFytModule({ it == "/dev/auto_serial" }) { null }
+        )
+        assertNull(ExternalBtPolicy.detectFytModule(none) { "0" })
+        assertNull(ExternalBtPolicy.detectFytModule(none) { "" })
+        assertNull(ExternalBtPolicy.detectFytModule(none) { "abc" })
+    }
 }

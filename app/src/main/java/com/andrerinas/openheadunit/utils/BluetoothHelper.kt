@@ -500,6 +500,26 @@ object BluetoothHelper {
         get() = externalBtLatch.evidence()
 
     /**
+     * Evidence that this is an FYT unit with an external module on `/dev/auto_serial`, or null.
+     * See [ExternalBtPolicy.detectFytModule]. Latched the same way: the node can appear late.
+     */
+    private val fytModuleLatch = ExternalBtPolicy.Latch {
+        ExternalBtPolicy.detectFytModule(
+            nodeExists = { path ->
+                // SELinux can hide the pts behind the link, so a listing of /dev is the fallback.
+                try {
+                    java.io.File(path).exists() ||
+                        java.io.File(path).parentFile?.list()?.contains(java.io.File(path).name) == true
+                } catch (e: Exception) { false }
+            },
+            property = { key -> SystemProperties.get(key, "") }
+        )
+    }
+
+    val fytModuleEvidence: String?
+        get() = fytModuleLatch.evidence()
+
+    /**
      * The address as canonical `AA:BB:CC:DD:EE:FF`, or null when it is not an address at all.
      *
      * Bluetooth is the one caller that accepts the separator-less form, because vendor properties

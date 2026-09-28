@@ -32,7 +32,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.R
 import com.andrerinas.openheadunit.aap.AapService
-import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.blink.BlinkAutoSerialChannel
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.CredentialField
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.NativeAaWakeDamagePolicy
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt.ZbtProbe
@@ -1297,7 +1296,7 @@ class SettingsFragment : Fragment() {
                     stableId = "externalBtModuleControlsHint",
                     textResId = R.string.external_bt_module_controls_hint
                 ))
-                settings.lastConnectedNativeMac.takeIf { it.isNotBlank() }?.let { phoneMac ->
+                settings.lastExternalModulePhoneMac.takeIf { it.isNotBlank() }?.let { phoneMac ->
                     items.add(SettingItem.SettingEntry(
                         stableId = "externalBtModuleLastPhone",
                         nameResId = R.string.external_bt_module_last_phone,
@@ -1408,7 +1407,9 @@ class SettingsFragment : Fragment() {
             // Only where the detection has fired: everywhere else this governs a gate that never
             // closes, and a switch that changes nothing is what sends people down a wrong
             // diagnosis. The evidence is a lazy, so asking on every rebuild costs one field read.
-            if (BluetoothHelper.externalBtEvidence != null) {
+            // FYT module evidence closes the same gate, so it must offer the same way out for a
+            // unit whose phone really pairs with the Android radio.
+            if (BluetoothHelper.externalBtEvidence != null || BluetoothHelper.fytModuleEvidence != null) {
                 items.add(SettingItem.ToggleSettingEntry(
                     stableId = "nativeAaIgnoreExternalBt",
                     nameResId = R.string.native_aa_ignore_external_bt,
@@ -1497,7 +1498,7 @@ class SettingsFragment : Fragment() {
 
         // Only where FYT's blink daemon relays the BLINK module's Android Auto channel. Needs root.
         val blinkEnabled = pendingExternalBtBlinkTransport ?: settings.externalBtBlinkTransport
-        if (ExternalBtTransportPolicy.showBlinkToggle(BlinkAutoSerialChannel.isPresent(), blinkEnabled)) {
+        if (ExternalBtTransportPolicy.showBlinkToggle(BluetoothHelper.fytModuleEvidence, blinkEnabled)) {
             items.add(SettingItem.ToggleSettingEntry(
                 stableId = "externalBtBlinkTransport",
                 nameResId = R.string.external_bt_blink_transport,
@@ -4246,7 +4247,8 @@ class SettingsFragment : Fragment() {
             pendingExternalBtZbtTransport ?: settings.externalBtZbtTransport,
             pendingNativeAaIgnoreExternalBt ?: settings.nativeAaIgnoreExternalBt,
             ZbtDaemonReachability.cached(),
-            pendingExternalBtBlinkTransport ?: settings.externalBtBlinkTransport
+            pendingExternalBtBlinkTransport ?: settings.externalBtBlinkTransport,
+            BluetoothHelper.fytModuleEvidence
         )
 
     /** The WiFi Direct band the block is currently showing settings for. */

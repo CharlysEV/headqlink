@@ -31,10 +31,26 @@ class BlinkAutoSerialChannelTest {
         assertTrue(BlinkAutoSerialChannel.BRIDGE_SCRIPT.indexOf(guard) < BlinkAutoSerialChannel.BRIDGE_SCRIPT.indexOf("exec 3<>"))
 
         assertEquals(0, runGuard(guard, "echo package:com.syu.carlink", "return 1"))
-        assertEquals(7, runGuard(guard, "return 0", "return 1"))
-        assertEquals(7, runGuard(guard, "echo package:com.syu.carlink", "echo 1234; return 0"))
-        assertEquals(7, runGuard(guard, "echo package:com.syu.carlink", "return 2"))
-        assertEquals(7, runGuard(guard, "return 2", "return 1"))
+        assertEquals(BlinkAutoSerialChannel.EXIT_STOCK_ENABLED, runGuard(guard, "return 0", "return 1"))
+        assertEquals(BlinkAutoSerialChannel.EXIT_STOCK_RUNNING, runGuard(guard, "echo package:com.syu.carlink", "echo 1234; return 0"))
+        assertEquals(BlinkAutoSerialChannel.EXIT_UNVERIFIED, runGuard(guard, "echo package:com.syu.carlink", "return 2"))
+        assertEquals(BlinkAutoSerialChannel.EXIT_UNVERIFIED, runGuard(guard, "return 2", "return 1"))
+    }
+
+    @Test
+    fun `guard exit codes name the refusal`() {
+        assertEquals(BlinkRefusal.STOCK_CLIENT_ENABLED, BlinkAutoSerialChannel.refusalFor(7, true))
+        assertEquals(BlinkRefusal.STOCK_CLIENT_RUNNING, BlinkAutoSerialChannel.refusalFor(8, true))
+        assertEquals(BlinkRefusal.OWNERSHIP_UNVERIFIED, BlinkAutoSerialChannel.refusalFor(9, true))
+        assertEquals(BlinkRefusal.BRIDGE_FAILED, BlinkAutoSerialChannel.refusalFor(3, true))
+        // A denied su prints nothing of the script's and usually exits 1.
+        assertEquals(BlinkRefusal.ROOT_DENIED, BlinkAutoSerialChannel.refusalFor(1, false))
+        assertEquals(BlinkRefusal.ROOT_DENIED, BlinkAutoSerialChannel.refusalFor(null, false))
+    }
+
+    @Test
+    fun `refusal retries back off and hold at the cap`() {
+        assertEquals(listOf(5_000L, 30_000L, 60_000L, 60_000L), (0..3).map { BlinkRefusalBackoff.delayMs(it) })
     }
 
     @Test
@@ -75,68 +91,31 @@ class BlinkAutoSerialChannelTest {
     }
 
     @Test
-    fun `close cannot complete while flush is sending a frame`() {
-        val closeStarted = CountDownLatch(1)
-        val closeReturned = CountDownLatch(1)
-        val closedDuringSend = AtomicBoolean(false)
-        lateinit var stream: BlinkAutoSerialChannel.FrameStream
-        lateinit var closer: Thread
-        stream = BlinkAutoSerialChannel.FrameStream {
-            closer = Thread {
-                closeStarted.countDown()
-                stream.close()
-                closeReturned.countDown()
-            }.apply { start() }
-            assertTrue(closeStarted.await(1, TimeUnit.SECONDS))
-            closedDuringSend.set(closeReturned.await(1, TimeUnit.SECONDS))
+    fun `close does not wait behind a blocked write and stops the frames after it`() {
+        val sendStarted = CountDownLatch(1)
+        val releaseSend = CountDownLatch(1)
+        val sent = java.util.concurrent.atomic.AtomicInteger(0)
+        val stream = BlinkAutoSerialChannel.FrameStream {
+            sent.incrementAndGet()
+            sendStarted.countDown()
+            releaseSend.await(2, TimeUnit.SECONDS)
         }
-        stream.output.write(BlinkAutoLine.decodeHex("000200060800")!!)
+        // Two whole frames; the first write blocks as if blink had stopped draining the pty.
+        stream.output.write(BlinkAutoLine.decodeHex("000200060800" + "000200060800")!!)
+        val flushFailed = AtomicBoolean(false)
+        val flusher = Thread {
+            try { stream.output.flush() } catch (_: IOException) { flushFailed.set(true) }
+        }.apply { start() }
+        assertTrue(sendStarted.await(1, TimeUnit.SECONDS))
 
-        stream.output.flush()
+        val closer = Thread { stream.close() }.apply { start() }
         closer.join(1_000)
+        assertFalse("close waited behind a blocked write", closer.isAlive)
 
-        assertFalse("close returned while sendFrame was in progress", closedDuringSend.get())
-        assertEquals(0, closeReturned.count)
-    }
-
-    @Test
-    fun `stock client ownership is tri-state and uncertainty fails closed`() {
-        assertEquals(
-            BlinkPortOwner.STOCK_CLIENT,
-            BlinkAutoSerialChannel.stockClientState { FakeProcess(stdout = "1234\nPIDOF_RC=0\n") }
-        )
-        // pidof's normal "no such process" answer, reported by the root shell itself.
-        assertEquals(
-            BlinkPortOwner.AVAILABLE,
-            BlinkAutoSerialChannel.stockClientState { FakeProcess(stdout = "PIDOF_RC=1\n") }
-        )
-        // su refused or missing: same exit code as pidof, but no marker, so it is not proof.
-        assertEquals(
-            BlinkPortOwner.UNKNOWN,
-            BlinkAutoSerialChannel.stockClientState { FakeProcess(stdout = "", exitCode = 1) }
-        )
-        assertEquals(
-            BlinkPortOwner.UNKNOWN,
-            BlinkAutoSerialChannel.stockClientState { FakeProcess(stdout = "") }
-        )
-        assertEquals(
-            BlinkPortOwner.UNKNOWN,
-            BlinkAutoSerialChannel.stockClientState { FakeProcess(stdout = "PIDOF_RC=127\n") }
-        )
-        assertEquals(
-            BlinkPortOwner.UNKNOWN,
-            BlinkAutoSerialChannel.stockClientState { FakeProcess(stdout = "1234\nPIDOF_RC=1\n") }
-        )
-        val stuck = FakeProcess(terminates = false)
-        assertEquals(
-            BlinkPortOwner.UNKNOWN,
-            BlinkAutoSerialChannel.stockClientState(timeoutMs = 0) { stuck }
-        )
-        assertTrue(stuck.destroyed)
-        assertEquals(
-            BlinkPortOwner.UNKNOWN,
-            BlinkAutoSerialChannel.stockClientState { throw IOException("su denied") }
-        )
+        releaseSend.countDown()
+        flusher.join(1_000)
+        assertEquals(1, sent.get())
+        assertTrue(flushFailed.get())
     }
 
     private fun runGuard(guard: String, pmBody: String, pidofBody: String): Int {

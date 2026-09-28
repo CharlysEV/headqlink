@@ -21,6 +21,10 @@ import com.andrerinas.openheadunit.utils.BluetoothAddressSeedPolicy
 import com.andrerinas.openheadunit.utils.BluetoothHelper
 import com.andrerinas.openheadunit.aap.protocol.proto.Wireless
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.blink.BlinkAaCarrier
+import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.blink.BlinkAutoSerialChannel
+import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.blink.BlinkRefusal
+import com.andrerinas.openheadunit.utils.ToastUtils
+import android.widget.Toast
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt.ZbtAaCarrier
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt.ZbtAttemptPolicy
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt.ZbtRetransmitPolicy
@@ -60,6 +64,8 @@ class NativeAaHandshakeManager(
     private val scope: CoroutineScope
 ) {
     companion object {
+        /** Where the BLINK daemon keeps its module's Bluetooth address. BLINK only. */
+        private const val BLINK_MODULE_ADDRESS_PROPERTY = "persist.blinkbt.addr"
         private val AA_UUID = UUID.fromString("4de17a00-52cb-11e6-bdf4-0800200c9a66")
         private val HFP_UUID = UUID.fromString("0000111e-0000-1000-8000-00805f9b34fb")
         // The phone-wake targets, and the rules for when a poke may run at all, live in
@@ -131,7 +137,8 @@ class NativeAaHandshakeManager(
                 settings.nativeAaIgnoreExternalBt,
                 // A read, never a dial. This runs on the UI path, and the dial is a socket connect.
                 ZbtDaemonReachability.cached(),
-                settings.externalBtBlinkTransport
+                settings.externalBtBlinkTransport,
+                BluetoothHelper.fytModuleEvidence
             )
         }
 
@@ -143,7 +150,8 @@ class NativeAaHandshakeManager(
                 settings.externalBtZbtTransport,
                 settings.nativeAaIgnoreExternalBt,
                 ZbtDaemonReachability.cached(),
-                settings.externalBtBlinkTransport
+                settings.externalBtBlinkTransport,
+                BluetoothHelper.fytModuleEvidence
             )
         }
 
@@ -361,7 +369,7 @@ class NativeAaHandshakeManager(
     // The external-Bluetooth-module transport, when that is the route this unit takes. Non-null
     // only between start() and stop() on that route; it replaces the RFCOMM listeners entirely
     // rather than running beside them.
-    @Volatile private var zbtCarrier: ExternalModuleCarrier? = null
+    @Volatile private var moduleCarrier: ExternalModuleCarrier? = null
     // The coroutine serving [activeHandshakeLink]. Closing a superseded handshake's link only
     // ends it on stacks where close() interrupts a pending read; some do not, and it runs on for
     // minutes. Cancelling cannot break a blocking JNI read either, but it does end every real
@@ -782,7 +790,8 @@ class NativeAaHandshakeManager(
                 settings.externalBtZbtTransport,
                 settings.nativeAaIgnoreExternalBt,
                 ZbtDaemonReachability.cached(),
-                settings.externalBtBlinkTransport
+                settings.externalBtBlinkTransport,
+                BluetoothHelper.fytModuleEvidence
             )
         ) {
             notStartedReason = "the vendor Bluetooth daemon is still being asked whether it will carry Android Auto."
@@ -809,6 +818,13 @@ class NativeAaHandshakeManager(
                 return
             }
             ExternalBtTransportPolicy.Route.BLOCKED -> {
+                val fyt = BluetoothHelper.fytModuleEvidence
+                if (fyt != null) {
+                    notStartedReason = "this FYT unit's Bluetooth is an external module ($fyt). Turn on " +
+                        "\"Connect through the FYT external Bluetooth module\", or use USB or a WiFi mode."
+                    AppLog.e("NativeAA: $notStartedReason")
+                    return
+                }
                 externalBtDiagnostic()?.let { AppLog.e(it) }
                 notStartedReason = "this unit's Bluetooth is an external module with no route through it " +
                     "(${BluetoothHelper.externalBtEvidence}). Turn on \"Connect through the head unit's " +
@@ -1085,6 +1101,12 @@ class NativeAaHandshakeManager(
 
     /** Whether an automatic poke may run, or the phone is only listened for. */
     fun wakesPhone(): Boolean = !wakeStoodDown
+
+    /**
+     * Whether a wake here sends anything. False on a module that opens Android Auto by itself,
+     * where reporting a wake would leave the pill claiming one that never runs.
+     */
+    fun reportsWake(): Boolean = moduleCarrier?.sendsWake ?: true
 
     /**
      * Puts the Bluetooth side back where it was before the session, without taking it down.
@@ -2086,8 +2108,8 @@ class NativeAaHandshakeManager(
         // On the module route the poke below is meaningless: it dials the phone over the radio the
         // phone is not paired to. Ask the module to bring the link up instead. Branching here rather
         // than at the callers covers the credential path and WppAction.ResumePoke at once.
-        zbtCarrier?.let {
-            ConnectionStageTracker.report(ConnectionStage.WAKING_PHONE)
+        moduleCarrier?.let {
+            if (it.sendsWake) ConnectionStageTracker.report(ConnectionStage.WAKING_PHONE)
             it.requestWake()
             return
         }
@@ -2399,10 +2421,10 @@ class NativeAaHandshakeManager(
 
     /** The WiFi button on the module route: there is no Android device to name, only the module. */
     fun wakeOverModule(): Boolean {
-        val carrier = zbtCarrier ?: return false
+        val carrier = moduleCarrier ?: return false
         wakeStoodDown = false
         sessionEndedAt = 0L
-        ConnectionStageTracker.report(ConnectionStage.WAKING_PHONE)
+        if (carrier.sendsWake) ConnectionStageTracker.report(ConnectionStage.WAKING_PHONE)
         AppLog.i("NativeAA: Manual poke requested — asking the Bluetooth module to connect Android Auto.")
         resetHandshakeBackoff()
         resetJoinRefusals()
@@ -2533,7 +2555,7 @@ class NativeAaHandshakeManager(
         val seeded = BluetoothAddressSeedPolicy.seed(settings.bluetoothAddress, canonical)
         if (seeded.isEmpty() || seeded == settings.bluetoothAddress) return
         settings.bluetoothAddress = seeded
-        AppLog.i("NativeAA: [ZBT] the module named this unit's Bluetooth address ($seeded), so the " +
+        AppLog.i("NativeAA: the external module named this unit's Bluetooth address ($seeded), so the " +
             "Bluetooth service can be announced; phone calls need it")
     }
 
@@ -2571,7 +2593,7 @@ class NativeAaHandshakeManager(
                 )
             }
         )
-        zbtCarrier = carrier
+        moduleCarrier = carrier
         scope.launch(Dispatchers.IO + CoroutineName("NativeAa-ZbtCarrier")) {
             try {
                 carrier.run()
@@ -2586,14 +2608,23 @@ class NativeAaHandshakeManager(
         isRunning = true
         notStartedReason = null
         aaListenersClosedForSession = false
-        localRadioName = "FYT BLINK module"
-        // The module's own address, which blink keeps in a property. The phone is bonded to that
-        // address, and without it no Bluetooth service is announced and calls stay on the phone.
-        SystemProperties.get("persist.blinkbt.addr", "").trim().takeIf { it.isNotEmpty() }
-            ?.let { seedBluetoothAddressFromModule(it) }
+        localRadioName = "FYT external Bluetooth module"
+        // The module's own address, which the BLINK daemon keeps in a property. The phone is
+        // bonded to that address, and without it no Bluetooth service is announced and calls stay
+        // on the phone. Other FYT modules may not publish it, so say so when it is missing.
+        val moduleAddress = SystemProperties.get(BLINK_MODULE_ADDRESS_PROPERTY, "").trim()
+        if (moduleAddress.isNotEmpty()) {
+            seedBluetoothAddressFromModule(moduleAddress)
+        } else {
+            AppLog.i(
+                "NativeAA: [BLINK] $BLINK_MODULE_ADDRESS_PROPERTY is not set, so the module's Bluetooth " +
+                    "address is unknown here. Unless the Bluetooth address setting holds it, no Bluetooth " +
+                    "service is announced and calls may stay on the phone."
+            )
+        }
         AppLog.i(
-            "NativeAA: FYT BLINK transport is on — the handshake goes over the DUDUAUTO module through " +
-                "blink's /dev/auto_serial relay (root), where the stock Carlink normally sits."
+            "NativeAA: FYT external Bluetooth module transport is on — the handshake goes over the " +
+                "module through ${BlinkAutoSerialChannel.PORT} (root), where the stock Car Link normally sits."
         )
         val carrier = BlinkAaCarrier(
             serve = { link ->
@@ -2603,9 +2634,10 @@ class NativeAaHandshakeManager(
             isRunning = { isRunning },
             isFinishedForSession = { aaListenersClosedForSession },
             mayServeHandshake = { NativeHandoffPolicy.shouldServeHandshake(consecutiveHandshakeFailures) },
-            onPhoneEvidence = { resetHandshakeBackoff() }
+            onPhoneEvidence = { resetHandshakeBackoff() },
+            onRefusalChanged = { refusal -> onBlinkRefusalChanged(refusal) }
         )
-        zbtCarrier = carrier
+        moduleCarrier = carrier
         scope.launch(Dispatchers.IO + CoroutineName("NativeAa-BlinkCarrier")) {
             try {
                 carrier.run()
@@ -2617,6 +2649,18 @@ class NativeAaHandshakeManager(
         }
     }
 
+
+    /**
+     * Puts a module refusal on screen, not only in the log: without this the pill keeps saying
+     * the phone is being woken while nothing can answer it.
+     */
+    private fun onBlinkRefusalChanged(refusal: BlinkRefusal?) {
+        if (refusal == null) return
+        ConnectionStageTracker.retreat(ConnectionStage.WAKING_PHONE, ConnectionStage.WAITING_FOR_PHONE)
+        scope.launch(Dispatchers.Main) {
+            ToastUtils.showToast(context, refusal.message, Toast.LENGTH_LONG, force = true)
+        }
+    }
 
     private fun refuseWhileBackedOff(link: HandshakeLink): Boolean {
         if (NativeHandoffPolicy.shouldServeHandshake(consecutiveHandshakeFailures)) return false
@@ -2929,7 +2973,8 @@ class NativeAaHandshakeManager(
                         AppLog.i("NativeAA: Handshake completed successfully on Bluetooth side.")
                         val remoteMac = link.peerAddress.orEmpty()
                         if (remoteMac.isNotEmpty()) {
-                            settings.lastConnectedNativeMac = remoteMac
+                            if (moduleCarrier != null) settings.lastExternalModulePhoneMac = remoteMac
+                            else settings.lastConnectedNativeMac = remoteMac
                         }
                         ifOwner(link) {
                             // The exchange is done; the phone's work is not — it still has to
@@ -3693,8 +3738,8 @@ class NativeAaHandshakeManager(
         // cancelling the scope alone cannot, since that read has no suspension point. Nulled as well
         // as closed: start() builds a fresh one, and a stale reference would take the next session's
         // wake requests to a dead channel.
-        zbtCarrier?.close()
-        zbtCarrier = null
+        moduleCarrier?.close()
+        moduleCarrier = null
         wppTcpServer?.stop()
         wppTcpServer = null
         try { aaServerSocket?.close() } catch (e: Exception) {}

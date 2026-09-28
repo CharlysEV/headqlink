@@ -54,14 +54,29 @@ object BlinkAutoLine {
             if (isHex(hex)) return Event.PhoneLinked(hex.chunked(2).joinToString(":").uppercase())
         }
         if (line.startsWith("ZB")) {
+            // Any valid hex, even shorter than a WPP header: the handshake reads a byte stream, so
+            // a frame split across two records must not lose its tail. Only idleReply needs whole
+            // frames, and it checks for itself.
             val bytes = decodeHex(line.substring(2))
-            if (bytes != null && bytes.size >= WppFraming.HEADER_SIZE) return Event.Frame(bytes)
+            if (bytes != null && bytes.isNotEmpty()) return Event.Frame(bytes)
         }
         return Event.Other(original)
     }
 
-    /** The line that sends [frame] (header included) to the phone. */
-    fun encode(frame: ByteArray): String = "AT#ZA" + toHex(frame) + "\r\n"
+    /**
+     * The lines that send [frame] (header included) to the phone.
+     *
+     * The stock client never sends a frame in one line: it splits the hex into
+     * [MAX_HEX_PER_LINE]-character `AT#ZA` lines. RFCOMM is a byte stream, so the split is invisible
+     * to the phone, and matching it keeps longer lines away from module firmware that may not take
+     * them. Unlike the stock client, a hex length that is an exact multiple of the chunk size does
+     * not produce a trailing empty `AT#ZA`.
+     */
+    fun encode(frame: ByteArray): String =
+        toHex(frame).chunked(MAX_HEX_PER_LINE).joinToString("") { "AT#ZA$it\r\n" }
+
+    /** 50 bytes per line, as the stock client sends. */
+    const val MAX_HEX_PER_LINE = 100
 
     /**
      * What to answer on our own while no handshake owns the channel, or null.

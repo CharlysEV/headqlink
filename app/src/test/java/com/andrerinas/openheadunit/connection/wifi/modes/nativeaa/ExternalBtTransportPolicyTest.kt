@@ -220,10 +220,29 @@ class ExternalBtTransportPolicyTest {
     }
 
     @Test
-    fun `an enabled BLINK transport remains visible when its node disappears`() {
-        assertTrue(ExternalBtTransportPolicy.showBlinkToggle(nodePresent = false, enabled = true))
-        assertTrue(ExternalBtTransportPolicy.showBlinkToggle(nodePresent = true, enabled = false))
-        assertFalse(ExternalBtTransportPolicy.showBlinkToggle(nodePresent = false, enabled = false))
+    fun `an enabled BLINK transport remains visible when detection stops seeing the module`() {
+        assertTrue(ExternalBtTransportPolicy.showBlinkToggle(fytModuleEvidence = null, enabled = true))
+        assertTrue(ExternalBtTransportPolicy.showBlinkToggle(fytModuleEvidence = fyt, enabled = false))
+        assertFalse(ExternalBtTransportPolicy.showBlinkToggle(fytModuleEvidence = null, enabled = false))
+    }
+
+    private val fyt = "sys.fyt.bluetooth_type=2"
+
+    @Test
+    fun `an FYT module unit with the toggle off is refused without measuring a daemon`() {
+        assertEquals(Route.BLOCKED, ExternalBtTransportPolicy.route(null, false, false, null, false, fyt))
+        assertEquals(Route.BLOCKED, ExternalBtTransportPolicy.route(evidence, false, false, null, false, fyt))
+        assertFalse(ExternalBtTransportPolicy.needsDaemonMeasurement(evidence, false, false, null, false, fyt))
+        assertTrue(ExternalBtTransportPolicy.refusesBringUp(null, false, false, null, false, fyt))
+        assertEquals(WifiButton.REFUSED, ExternalBtTransportPolicy.wifiButton(null, false, false, null, false, fyt))
+    }
+
+    @Test
+    fun `on an FYT module unit the toggle and the existing overrides still decide`() {
+        assertEquals(Route.BLINK, ExternalBtTransportPolicy.route(null, false, false, null, true, fyt))
+        assertEquals(Route.NORMAL, ExternalBtTransportPolicy.route(null, false, true, null, false, fyt))
+        assertEquals(Route.ZBT, ExternalBtTransportPolicy.route(null, true, false, null, false, fyt))
+        assertEquals(WifiButton.MODULE, ExternalBtTransportPolicy.wifiButton(null, false, false, null, true, fyt))
     }
 
     @Test

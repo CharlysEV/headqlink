@@ -47,19 +47,21 @@ Choose from one of four connection strategies depending on your Android Auto ver
 - Supports **Wi-Fi Direct (P2P)** or the **Headunit Hotspot** transport.
 - Configure under Open Headunit Settings -> **Android Auto Mode** -> **Native Mode**.
 
-#### FYT BLINK / DUDUAUTO module transport (experimental)
-On rooted FYT units where the phone pairs with an external BLINK module shown as **DUDUAUTO**, Native Mode can carry its Android Auto Bluetooth handshake through `/dev/auto_serial` while calls remain on the module and the vehicle microphone/speakers.
+#### FYT external Bluetooth module transport (experimental)
+On rooted FYT units where the phone pairs for calls with a separate Bluetooth module (for example **DUDUAUTO** on DUDUOS), Native Mode can carry its Android Auto Bluetooth handshake through `/dev/auto_serial`, the relay the stock Car Link app (`com.syu.carlink`) uses, while calls remain on the module and the vehicle microphone/speakers. Tested so far only on DUDUOS with a BLINK module.
 
 Requirements:
-- An FYT unit whose `blink` daemon exposes `/dev/auto_serial`.
+- An FYT unit that exposes `/dev/auto_serial` (Car Link's external-module backend, `sys.fyt.bluetooth_type` above zero).
 - Root access for Open Headunit.
 - The stock `com.syu.carlink` package disabled, because two readers on the same terminal split protocol messages.
-- The phone paired with DUDUAUTO; pairing and phone priority remain managed by the module.
+- The phone paired with the module; pairing and phone priority remain managed by the module.
 
 Setup:
 1. Disable the stock client: `adb shell su -c 'pm disable-user --user 0 com.syu.carlink'`.
-2. In Open Headunit, select **Native Mode** and enable **FYT BLINK module (DUDUAUTO)**.
-3. Keep the phone paired with DUDUAUTO and connect normally.
+2. In Open Headunit, select **Native Mode** and enable **Connect through the FYT external Bluetooth module**.
+3. Keep the phone paired with the module and connect normally.
+
+On a detected FYT module unit with this transport off, Native Mode refuses to start and names this setting, instead of listening on a radio the phone is not paired with. If the channel cannot be opened (Car Link still enabled or running, or root denied), the reason is shown on screen and retried with a growing delay.
 
 Android Bluetooth driver selection, preferred-phone and wake-list controls are intentionally hidden on this route because Android cannot see or dial phones bonded to the external module. To roll back, turn this transport off and re-enable the stock client with `adb shell su -c 'pm enable com.syu.carlink'`.
 

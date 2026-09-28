@@ -10,8 +10,6 @@ import java.io.InputStreamReader
 import java.io.OutputStream
 import java.util.concurrent.LinkedBlockingQueue
 
-internal enum class BlinkPortOwner { AVAILABLE, STOCK_CLIENT, UNKNOWN }
-
 /**
  * A root-owned bridge to `/dev/auto_serial`, the pseudo-terminal FYT's `blink` daemon relays the
  * module's Android Auto RFCOMM channel through.
@@ -42,25 +40,46 @@ class BlinkAutoSerialChannel internal constructor(
         internal const val TTY_MODE_COMMAND =
             "stty raw -echo -iuclc -icrnl -inlcr -igncr -ixon -ixoff -opost"
 
-        private const val PIDOF_RC_TAG = "PIDOF_RC="
+        /** Exit codes of [STOCK_CLIENT_GUARD], so the carrier can name the refusal. */
+        internal const val EXIT_STOCK_ENABLED = 7
+        internal const val EXIT_STOCK_RUNNING = 8
+        internal const val EXIT_UNVERIFIED = 9
+
+        /**
+         * What a bridge that ended before opening the port was refused for.
+         *
+         * @param scriptSpoke whether the script printed anything. Every failure path in it does,
+         *   so silence means it never ran: `su` was denied or is missing.
+         */
+        internal fun refusalFor(exitCode: Int?, scriptSpoke: Boolean): BlinkRefusal = when {
+            exitCode == EXIT_STOCK_ENABLED -> BlinkRefusal.STOCK_CLIENT_ENABLED
+            exitCode == EXIT_STOCK_RUNNING -> BlinkRefusal.STOCK_CLIENT_RUNNING
+            exitCode == EXIT_UNVERIFIED -> BlinkRefusal.OWNERSHIP_UNVERIFIED
+            !scriptSpoke -> BlinkRefusal.ROOT_DENIED
+            else -> BlinkRefusal.BRIDGE_FAILED
+        }
 
         internal val STOCK_CLIENT_GUARD = """
             STOCK_PACKAGE=com.syu.carlink
             DISABLED_PACKAGE=${'$'}(pm list packages -d "${'$'}STOCK_PACKAGE" 2>/dev/null)
             PM_STATUS=${'$'}?
-            if [ "${'$'}PM_STATUS" -ne 0 ] || [ "${'$'}DISABLED_PACKAGE" != "package:${'$'}STOCK_PACKAGE" ]; then
+            if [ "${'$'}PM_STATUS" -ne 0 ]; then
+                echo "${ERR_TAG}cannot read whether the stock client is disabled"
+                exit $EXIT_UNVERIFIED
+            fi
+            if [ "${'$'}DISABLED_PACKAGE" != "package:${'$'}STOCK_PACKAGE" ]; then
                 echo "${ERR_TAG}stock client must be disabled before opening $PORT"
-                exit 7
+                exit $EXIT_STOCK_ENABLED
             fi
             RUNNING_PIDS=${'$'}(pidof "${'$'}STOCK_PACKAGE" 2>/dev/null)
             PIDOF_STATUS=${'$'}?
             if [ "${'$'}PIDOF_STATUS" -eq 0 ] && [ -n "${'$'}RUNNING_PIDS" ]; then
                 echo "${ERR_TAG}stock client is still running (${ '$' }RUNNING_PIDS)"
-                exit 7
+                exit $EXIT_STOCK_RUNNING
             fi
             if [ "${'$'}PIDOF_STATUS" -ne 1 ] || [ -n "${'$'}RUNNING_PIDS" ]; then
                 echo "${ERR_TAG}cannot verify that the stock client is stopped"
-                exit 7
+                exit $EXIT_UNVERIFIED
             fi
         """.trimIndent()
 
@@ -92,42 +111,6 @@ class BlinkAutoSerialChannel internal constructor(
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", BRIDGE_SCRIPT))
             return BlinkAutoSerialChannel(process, onLine, onEnded).also { it.start() }
         }
-
-        /** Whether `blink` has made the node. The link itself is world-visible; its target is not. */
-        fun isPresent(): Boolean = runCatching {
-            // exists() follows the link, and SELinux may hide the pts behind it from an app, so a
-            // listing of /dev is the fallback. minSdk 16 rules out java.nio.file.
-            java.io.File(PORT).exists() || java.io.File("/dev").list()?.contains("auto_serial") == true
-        }.getOrDefault(false)
-
-        /** Whether the stock client owns the shared port. Unknown is deliberately not available. */
-        internal fun stockClientState(
-            timeoutMs: Long = 3_000,
-            processLauncher: (Array<String>) -> Process = { Runtime.getRuntime().exec(it) },
-        ): BlinkPortOwner = try {
-            // su failing also exits 1 with no output, like pidof finding nothing, so the root
-            // shell reports pidof's own status and only that marker counts as an answer.
-            val process = processLauncher(
-                arrayOf("su", "-c", "pidof com.syu.carlink; echo \"$PIDOF_RC_TAG\$?\"")
-            )
-            if (!waitForProcess(process, timeoutMs)) {
-                process.destroy()
-                BlinkPortOwner.UNKNOWN
-            } else {
-                val lines = process.inputStream.bufferedReader().readLines()
-                    .map { it.trim() }.filter { it.isNotEmpty() }
-                val pids = lines.dropLast(1)
-                when (lines.lastOrNull()) {
-                    "${PIDOF_RC_TAG}0" ->
-                        if (pids.isNotEmpty()) BlinkPortOwner.STOCK_CLIENT else BlinkPortOwner.UNKNOWN
-                    "${PIDOF_RC_TAG}1" ->
-                        if (pids.isEmpty()) BlinkPortOwner.AVAILABLE else BlinkPortOwner.UNKNOWN
-                    else -> BlinkPortOwner.UNKNOWN
-                }
-            }
-        } catch (_: Exception) {
-            BlinkPortOwner.UNKNOWN
-        }
     }
 
     @Volatile
@@ -136,6 +119,21 @@ class BlinkAutoSerialChannel internal constructor(
 
     @Volatile
     private var readerPid: String? = null
+
+    /** Whether the bridge got as far as reading the port. */
+    @Volatile
+    var portOpened = false
+        private set
+
+    /** Whether the script printed any line of its own. */
+    @Volatile
+    var scriptSpoke = false
+        private set
+
+    /** The bridge's exit code once it has ended, if it could be read. */
+    @Volatile
+    var exitCode: Int? = null
+        private set
 
     private val sink: OutputStream = process.outputStream
     private val writeLock = Any()
@@ -160,11 +158,15 @@ class BlinkAutoSerialChannel internal constructor(
                 when {
                     line.startsWith(PID_TAG) -> {
                         readerPid = line.removePrefix(PID_TAG).trim()
+                        scriptSpoke = true
+                        portOpened = true
                         AppLog.i("NativeAA: [BLINK] bridge up on $PORT (reader pid $readerPid)")
                     }
+                    // Not logged here: a refused bridge repeats on every retry, and the carrier logs
+                    // each distinct refusal once.
                     line.startsWith(ERR_TAG) -> {
+                        scriptSpoke = true
                         reason = line.removePrefix(ERR_TAG)
-                        AppLog.e("NativeAA: [BLINK] $reason")
                     }
                     else -> onLine(line)
                 }
@@ -175,7 +177,9 @@ class BlinkAutoSerialChannel internal constructor(
             reason = "reader crashed: ${e.javaClass.simpleName}: ${e.message}"
             AppLog.e("NativeAA: [BLINK] $reason", e)
         } finally {
-            val exit = runCatching { process.exitValue() }.getOrNull()
+            // stdout closes just before the shell exits; wait briefly so the refusal can be named.
+            val exit = if (waitForProcess(process, 1_000)) runCatching { process.exitValue() }.getOrNull() else null
+            exitCode = exit
             if (!isFinished) {
                 isFinished = true
                 onEnded(reason + (exit?.let { " (exit $it)" } ?: ""))
@@ -282,13 +286,21 @@ class BlinkAutoSerialChannel internal constructor(
             }
 
             override fun flush() {
-                synchronized(pendingOut) {
+                // Split under the lock, write after releasing it: a write blocks when `blink`
+                // stops draining the pty, and close() runs on the reader thread, which must never
+                // wait behind it. closed is checked before every frame, so once close() returns no
+                // new frame starts; at most one already in the pipe completes.
+                val frames = synchronized(pendingOut) {
                     if (closed) throw IOException("the BLINK handshake stream is closed")
                     val bytes = pendingOut.toByteArray()
-                    val (frames, used) = splitFrames(bytes)
+                    val (whole, used) = splitFrames(bytes)
                     pendingOut.reset()
                     if (used < bytes.size) pendingOut.write(bytes, used, bytes.size - used)
-                    for (frame in frames) sendFrame(frame)
+                    whole
+                }
+                for (frame in frames) {
+                    if (closed) throw IOException("the BLINK handshake stream is closed")
+                    sendFrame(frame)
                 }
             }
 

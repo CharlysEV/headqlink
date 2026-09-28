@@ -6,6 +6,12 @@ package com.andrerinas.openheadunit.connection.wifi.modes.nativeaa
  */
 interface ExternalModuleCarrier {
 
+    /**
+     * Whether [requestWake] actually sends something to the module. A carrier whose module wakes
+     * the phone on its own must not make the connection pill claim the phone is being woken.
+     */
+    val sendsWake: Boolean get() = true
+
     /** Ask the module side to bring the phone's Android Auto link up. Safe from any thread. */
     fun requestWake()
 
