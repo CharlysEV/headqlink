@@ -1013,8 +1013,6 @@
     <string name="preflight_open_location">Ubicación</string>
     <string name="preflight_later">Más tarde</string>
     <string name="preflight_invalid_bssid">Dirección WiFi no válida. Introduzca seis pares de dígitos hexadecimales (ej. 02:1A:11:FF:3C:4D).</string>
-    <string name="native_aa_complete_hfp_slc">Completar la conexión Bluetooth</string>
-    <string name="native_aa_complete_hfp_slc_description">Algunos teléfonos no inician Android Auto inalámbrico hasta que el Bluetooth de esta unidad cuenta como conectado, no solo emparejado. Activado de forma predeterminada; desactívelo si las llamadas en este dispositivo dejan de funcionar.</string>
     <string name="announce_connection_configuration">Pedir un tiempo de espera de conexión más largo</string>
     <string name="announce_connection_configuration_description">Indica a Android Auto que espere 15 segundos en lugar de 3 antes de considerar la conexión muerta, y que use búferes de socket más grandes. Está pensado para una radio que sale del canal durante unos segundos a mitad de la sesión y se lleva la conexión con ella. No se ha medido si su teléfono respeta algo de esto.</string>
     <string name="native_aa_ignore_external_bt">Ignorar la comprobación de compatibilidad Bluetooth</string>

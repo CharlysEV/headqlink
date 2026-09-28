@@ -1010,8 +1010,6 @@
     <string name="preflight_open_location">Standort</string>
     <string name="preflight_later">Später</string>
     <string name="preflight_invalid_bssid">Ungültige WLAN-Adresse. Gib sechs hexadezimale Zahlenpaare ein, z. B. 02:1A:11:FF:3C:4D.</string>
-    <string name="native_aa_complete_hfp_slc">Bluetooth-Verbindung vollständig herstellen</string>
-    <string name="native_aa_complete_hfp_slc_description">Manche Telefone starten kabelloses Android Auto erst, wenn das Bluetooth dieses Geräts als verbunden gilt und nicht nur als gekoppelt. Standardmäßig an; schalte es aus, wenn Anrufe auf diesem Gerät nicht mehr funktionieren.</string>
     <string name="announce_connection_configuration">Um einen längeren Verbindungs-Timeout bitten</string>
     <string name="announce_connection_configuration_description">Weist Android Auto an, 15 Sekunden statt 3 zu warten, bevor die Verbindung als tot gilt, und größere Socket-Puffer zu verwenden. Das ist für ein Funkmodul gedacht, das mitten in der Sitzung für ein paar Sekunden den Kanal wechselt und die Verbindung dabei mitreißt. Ob dein Telefon das überhaupt beachtet, wurde nicht gemessen.</string>
     <string name="native_aa_ignore_external_bt">Bluetooth-Kompatibilitätsprüfung ignorieren</string>

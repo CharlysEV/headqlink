@@ -999,8 +999,6 @@
     <string name="preflight_open_location">Konum</string>
     <string name="preflight_later">Daha sonra</string>
     <string name="preflight_invalid_bssid">Geçersiz WiFi adresi. 6 çift onaltılık basamak girin (örn. 02:1A:11:FF:3C:4D).</string>
-    <string name="native_aa_complete_hfp_slc">Bluetooth bağlantısını tamamla</string>
-    <string name="native_aa_complete_hfp_slc_description">Bazı telefonlar, bu cihazın Bluetooth\'u yalnızca eşleştirilmiş değil bağlı sayılana kadar kablosuz Android Auto\'yu başlatmaz. Varsayılan olarak açık; bu cihazdaki aramalar çalışmayı bırakırsa kapatın.</string>
     <string name="announce_connection_configuration">Daha uzun bağlantı zaman aşımı iste</string>
     <string name="announce_connection_configuration_description">Android Auto\'ya bağlantıyı ölü saymadan önce 3 yerine 15 saniye beklemesini ve daha büyük soket arabellekleri kullanmasını söyler. Bu, oturum ortasında birkaç saniyeliğine kanaldan çıkan ve bağlantıyı da beraberinde götüren bir radyo için tasarlanmıştır. Telefonunuzun bunlardan herhangi birine uyup uymadığı ölçülmedi.</string>
     <string name="native_aa_ignore_external_bt">Bluetooth uyumluluk denetimini yoksay</string>

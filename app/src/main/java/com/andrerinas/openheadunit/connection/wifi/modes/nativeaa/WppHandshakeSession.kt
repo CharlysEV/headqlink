@@ -37,7 +37,9 @@ enum class WppStage {
     AWAIT_INFO_REQUEST,
     /** Credentials delivered; the phone is associating, doing WPS and getting a DHCP lease. */
     SETTLING,
-    /** The phone's projection session landed. */
+    /** The session landed and the phone's channel stays open for it, answering its pings. */
+    HOLDING,
+    /** The phone's projection session landed, or a held channel was released. */
     DONE,
     /** The exchange ended without a session. */
     FAILED
@@ -65,6 +67,10 @@ sealed class WppEvent {
     object SettleTimeout : WppEvent()
     /** The network the phone was sent has been taken down, so its join can no longer succeed. */
     object NetworkWithdrawn : WppEvent()
+    /** The phone closed the channel. Only acted on in [WppStage.HOLDING]. */
+    object PeerClosed : WppEvent()
+    /** The projection session this channel was held for has ended. */
+    object SessionEnded : WppEvent()
 }
 
 /**
@@ -99,6 +105,8 @@ sealed class WppAction {
     ) : WppAction()
     /** Restart the wake poke. Only ever emitted once the phone has given up on this handoff. */
     object ResumePoke : WppAction()
+    /** A held channel is over; close it. [peerClosed] is true when the phone ended it first. */
+    data class Release(val peerClosed: Boolean) : WppAction()
 }
 
 /**
@@ -132,7 +140,14 @@ sealed class WppAction {
  * version and where to reach us over TCP. What goes in it is [WppEndpointPolicy]'s decision, not
  * this session's.
  */
-class WppHandshakeSession {
+class WppHandshakeSession(
+    /**
+     * Keep the channel after the session lands instead of finishing: true on Bluetooth, where
+     * Android Auto re-dials a closed RFCOMM while a profile keeps this unit present. Over TCP
+     * there is nothing to hold.
+     */
+    private val holdsChannel: Boolean = false
+) {
 
     companion object {
         /** How long to wait for the phone's version response before carrying on without it.
@@ -181,7 +196,7 @@ class WppHandshakeSession {
         WppStage.AWAIT_INFO_REQUEST -> INFO_REQUEST_TIMEOUT_MS
         WppStage.SETTLING -> settleBudgetMs
         // AWAIT_CREDENTIALS is bounded by the caller's own credential wait, which ends in
-        // CredentialsReady or CredentialsUnavailable; NEW, DONE and FAILED never expire.
+        // CredentialsReady or CredentialsUnavailable; NEW, HOLDING, DONE and FAILED never expire.
         else -> null
     }
 
@@ -194,13 +209,14 @@ class WppHandshakeSession {
      */
     fun on(event: WppEvent): List<WppAction> {
         if (isTerminal()) return emptyList()
+        if (stage == WppStage.HOLDING) return onHolding(event)
 
         // The projection session landing ends the exchange from wherever it has got to: whatever
         // the phone was still going to ask for, it has stopped needing. Over TCP that can happen
         // before the exchange has run its course, because the phone dials us from inside the
         // network it is already on.
         if (event is WppEvent.TcpSessionUp) {
-            stage = WppStage.DONE
+            stage = if (holdsChannel) WppStage.HOLDING else WppStage.DONE
             return listOf(WppAction.CompleteSuccess)
         }
 
@@ -218,8 +234,19 @@ class WppHandshakeSession {
             WppStage.AWAIT_CREDENTIALS -> onAwaitCredentials(event)
             WppStage.AWAIT_INFO_REQUEST -> onAwaitInfoRequest(event)
             WppStage.SETTLING -> onSettling(event)
-            WppStage.DONE, WppStage.FAILED -> emptyList()
+            WppStage.HOLDING, WppStage.DONE, WppStage.FAILED -> emptyList()
         }
+    }
+
+    /** Pings are answered and nothing else is: credentials onto a live session drop it. */
+    private fun onHolding(event: WppEvent): List<WppAction> = when {
+        event is WppEvent.MessageReceived -> {
+            messagesReceived++
+            if (event.type == WppMessageType.PING_REQUEST) listOf(WppAction.SendPingResponse) else emptyList()
+        }
+        event is WppEvent.PeerClosed -> { stage = WppStage.DONE; listOf(WppAction.Release(peerClosed = true)) }
+        event is WppEvent.SessionEnded -> { stage = WppStage.DONE; listOf(WppAction.Release(peerClosed = false)) }
+        else -> emptyList()
     }
 
     private fun onNew(event: WppEvent): List<WppAction> = when (event) {

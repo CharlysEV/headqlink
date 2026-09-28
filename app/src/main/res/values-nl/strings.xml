@@ -1004,8 +1004,6 @@
     <string name="preflight_open_location">Locatie</string>
     <string name="preflight_later">Later</string>
     <string name="preflight_invalid_bssid">Ongeldig WiFi-adres. Voer zes paren hex-cijfers in (bijv. 02:1A:11:FF:3C:4D).</string>
-    <string name="native_aa_complete_hfp_slc">Bluetooth-verbinding voltooien</string>
-    <string name="native_aa_complete_hfp_slc_description">Sommige telefoons starten draadloos Android Auto pas als de Bluetooth van dit apparaat als verbonden telt, niet alleen als gekoppeld. Standaard aan; schakel het uit als gesprekken op dit apparaat niet meer werken.</string>
     <string name="announce_connection_configuration">Vragen om een langere verbindingstime-out</string>
     <string name="announce_connection_configuration_description">Vertelt Android Auto om 15 seconden te wachten in plaats van 3 voordat de verbinding als dood wordt beschouwd, en om grotere socketbuffers te gebruiken. Dit is bedoeld voor een radio die midden in een sessie een paar seconden van kanaal wisselt en de verbinding meesleurt. Of je telefoon hier iets mee doet, is niet gemeten.</string>
     <string name="native_aa_ignore_external_bt">Bluetooth-compatibiliteitscontrole negeren</string>

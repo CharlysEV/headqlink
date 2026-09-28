@@ -204,7 +204,6 @@ class SettingsFragment : Fragment() {
     private var pendingNativeAaIgnoreExternalBt: Boolean? = null
     private var pendingExternalBtZbtTransport: Boolean? = null
     private var pendingExternalBtBlinkTransport: Boolean? = null
-    private var pendingNativeAaCompleteHfpSlc: Boolean? = null
     private var pendingAnnounceConnectionConfiguration: Boolean? = null
 
     // The probe's verdict is not a pending setting: it changes nothing and there is nothing to
@@ -400,7 +399,6 @@ class SettingsFragment : Fragment() {
         pendingNativeAaIgnoreExternalBt = settings.nativeAaIgnoreExternalBt
         pendingExternalBtZbtTransport = settings.externalBtZbtTransport
         pendingExternalBtBlinkTransport = settings.externalBtBlinkTransport
-        pendingNativeAaCompleteHfpSlc = settings.nativeAaCompleteHfpSlc
         pendingAnnounceConnectionConfiguration = settings.announceConnectionConfiguration
         pendingNativeApTransport = settings.nativeApStrategy
         pendingNativeDriverSelectionMode = settings.nativeDriverSelectionMode
@@ -537,7 +535,6 @@ class SettingsFragment : Fragment() {
         pendingNativeAaIgnoreExternalBt = settings.nativeAaIgnoreExternalBt
         pendingExternalBtZbtTransport = settings.externalBtZbtTransport
         pendingExternalBtBlinkTransport = settings.externalBtBlinkTransport
-        pendingNativeAaCompleteHfpSlc = settings.nativeAaCompleteHfpSlc
         pendingAnnounceConnectionConfiguration = settings.announceConnectionConfiguration
         pendingNativeApTransport = settings.nativeApStrategy
         pendingNativeDriverSelectionMode = NativeDriverSelectionPolicy.Mode.AUTO
@@ -785,7 +782,6 @@ class SettingsFragment : Fragment() {
         pendingNativeAaIgnoreExternalBt?.let { settings.nativeAaIgnoreExternalBt = it }
         pendingExternalBtZbtTransport?.let { settings.externalBtZbtTransport = it }
         pendingExternalBtBlinkTransport?.let { settings.externalBtBlinkTransport = it }
-        pendingNativeAaCompleteHfpSlc?.let { settings.nativeAaCompleteHfpSlc = it }
         pendingAnnounceConnectionConfiguration?.let { settings.announceConnectionConfiguration = it }
         pendingNativeApTransport?.let { settings.nativeApStrategy = it }
         pendingNativeDriverSelectionMode?.let { settings.nativeDriverSelectionMode = it }
@@ -925,7 +921,6 @@ class SettingsFragment : Fragment() {
                         pendingNativeAaIgnoreExternalBt != settings.nativeAaIgnoreExternalBt ||
                         pendingExternalBtZbtTransport != settings.externalBtZbtTransport ||
                         pendingExternalBtBlinkTransport != settings.externalBtBlinkTransport ||
-                        pendingNativeAaCompleteHfpSlc != settings.nativeAaCompleteHfpSlc ||
                         pendingAnnounceConnectionConfiguration != settings.announceConnectionConfiguration ||
                         pendingNativeApTransport != settings.nativeApStrategy ||
                         pendingNativeDriverSelectionMode != settings.nativeDriverSelectionMode ||
@@ -1427,19 +1422,6 @@ class SettingsFragment : Fragment() {
                     }
                 ))
             }
-
-            items.add(SettingItem.ToggleSettingEntry(
-                stableId = "nativeAaCompleteHfpSlc",
-                nameResId = R.string.native_aa_complete_hfp_slc,
-                descriptionResId = R.string.native_aa_complete_hfp_slc_description,
-                isChecked = pendingNativeAaCompleteHfpSlc ?: settings.nativeAaCompleteHfpSlc,
-                searchKeywords = "bluetooth hfp hands-free handsfree calls profile wireless",
-                onCheckedChanged = { isChecked ->
-                    pendingNativeAaCompleteHfpSlc = isChecked
-                    checkChanges()
-                    updateSettingsList()
-                }
-            ))
 
             // An action, not a switch: the wake's cost is a property of this unit's own Bluetooth
             // stack, which is measured rather than asked. What a user can do is ask for the

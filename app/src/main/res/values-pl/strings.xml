@@ -1003,8 +1003,6 @@
     <string name="preflight_open_location">Lokalizacja</string>
     <string name="preflight_later">Później</string>
     <string name="preflight_invalid_bssid">Nieprawidłowy adres WiFi. Wprowadź 6 par cyfr szesnastkowych (np. 02:1A:11:FF:3C:4D).</string>
-    <string name="native_aa_complete_hfp_slc">Dokończ połączenie Bluetooth</string>
-    <string name="native_aa_complete_hfp_slc_description">Niektóre telefony nie uruchomią bezprzewodowego Android Auto, dopóki Bluetooth tej jednostki nie zostanie uznany za połączony, a nie tylko sparowany. Domyślnie włączone; wyłącz, jeśli połączenia na tym urządzeniu przestaną działać.</string>
     <string name="announce_connection_configuration">Poproś o dłuższy limit czasu połączenia</string>
     <string name="announce_connection_configuration_description">Każe Android Auto czekać 15 sekund zamiast 3, zanim uzna połączenie za martwe, oraz używać większych buforów gniazda. Jest przeznaczone dla radia, które na kilka sekund schodzi z kanału w trakcie sesji i zabiera ze sobą połączenie. Nie zmierzono, czy twój telefon w ogóle to respektuje.</string>
     <string name="native_aa_ignore_external_bt">Zignoruj sprawdzanie zgodności Bluetooth</string>

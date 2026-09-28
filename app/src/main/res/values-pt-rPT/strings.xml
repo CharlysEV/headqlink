@@ -1080,8 +1080,6 @@
     <string name="preflight_open_location">Localização</string>
     <string name="preflight_later">Mais tarde</string>
     <string name="preflight_invalid_bssid">Esse não é um endereço Wi-Fi válido. Introduza seis pares de dígitos hexadecimais, como 02:1A:11:FF:3C:4D.</string>
-    <string name="native_aa_complete_hfp_slc">Concluir a ligação Bluetooth</string>
-    <string name="native_aa_complete_hfp_slc_description">Alguns telemóveis só iniciam o Android Auto sem fios quando o Bluetooth desta unidade conta como ligado. Ativo por predefinição.</string>
     <string name="native_aa_wake_remeasure">Medir novamente o despertar por Bluetooth</string>
     <string name="native_aa_wake_verdict_unmeasured">Ainda não medido</string>
     <string name="native_aa_wake_verdict_safe">Seguro nesta unidade</string>

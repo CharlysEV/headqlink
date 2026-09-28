@@ -1000,8 +1000,6 @@
     <string name="preflight_open_location">Helymeghatározás</string>
     <string name="preflight_later">Később</string>
     <string name="preflight_invalid_bssid">Érvénytelen WiFi cím. Adjon meg 6 hexadecimális számpárt (pl. 02:1A:11:FF:3C:4D).</string>
-    <string name="native_aa_complete_hfp_slc">Bluetooth-kapcsolat befejezése</string>
-    <string name="native_aa_complete_hfp_slc_description">Egyes telefonok csak akkor indítják el a vezeték nélküli Android Autót, ha a készülék Bluetooth-kapcsolata csatlakoztatottnak számít, nem csupán párosítottnak. Alapértelmezés szerint bekapcsolva; kapcsolja ki, ha a hívások ezen az eszközön nem működnek tovább.</string>
     <string name="announce_connection_configuration">Hosszabb kapcsolat-időtúllépés kérése</string>
     <string name="announce_connection_configuration_description">Megkéri az Android Autót, hogy a kapcsolat holtnak nyilvánítása előtt 15 másodpercet várjon 3 helyett, és nagyobb socketpuffereket használjon. Ez egy olyan rádiónak szól, amely a munkamenet közepén néhány másodpercre elhagyja a csatornát, és magával viszi a kapcsolatot. Nem mértük, hogy a telefon ezt egyáltalán figyelembe veszi-e.</string>
     <string name="native_aa_ignore_external_bt">Bluetooth-kompatibilitási ellenőrzés figyelmen kívül hagyása</string>
