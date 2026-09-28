@@ -1,5 +1,5 @@
 # Changelog
-### v.3.5.0-beta1
+### v.3.5.0-beta2
 - Native AA: reconnect to a network that is still there, instead of rebuilding it every time
 - Added: Option to use Open Headunit as a launcher
 - External Bluetooth module: make the WiFi button work, find the module after a boot, and keep a Bluetooth auto-start from being lost behind the settings screen
@@ -7,6 +7,8 @@
 - Native AA over hotspot: stop advertising an endpoint that moves, bring the hotspot back after a boot or ACC wake- #1014
 - Connection: one attempt at a time, hold auto-connect behind settings and the pill's X, and fix the dongle's TLS handshake- #1015
 - Native AA: recover when the platform deletes the group mid-join, bring the hotspot back after sleep, log the Bluetooth link, and stop a QR crash below Android 4.4
+- Request low-latency Wi-Fi during wireless projection, thanks to @emotionbug
+- Stabilize wireless audio playback and AAC handling with opt-in AAudio
 
 ### v.3.4.0
 - USB: connect non-Pixel phones without fighting a fast-reverting dongle
