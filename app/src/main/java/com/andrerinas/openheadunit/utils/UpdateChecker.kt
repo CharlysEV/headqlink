@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import com.andrerinas.openheadunit.BuildConfig
+import com.andrerinas.openheadunit.ssl.ConscryptInitializer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -12,6 +13,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 
 data class AppVersion(
     val major: Int,
@@ -108,6 +110,9 @@ object UpdateChecker {
                 setRequestProperty("User-Agent", "OpenHeadunit-App")
                 setRequestProperty("Accept", "application/vnd.github.v3+json")
             }
+            if (conn is HttpsURLConnection) {
+                ConscryptInitializer.httpsSocketFactory(context)?.let { conn.sslSocketFactory = it }
+            }
 
             val code = conn.responseCode
             if (code != 200) {
@@ -165,7 +170,7 @@ object UpdateChecker {
                 )
             )
         } catch (e: Exception) {
-            AppLog.w(TAG, "Update check failed: ${e.message}", e)
+            AppLog.e("$TAG: Update check failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -184,7 +189,7 @@ object UpdateChecker {
                 }
                 context.startActivity(webIntent)
             } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to open Play Store", e)
+                AppLog.e("$TAG: Failed to open Play Store", e)
             }
         }
     }
@@ -196,7 +201,7 @@ object UpdateChecker {
             }
             context.startActivity(intent)
         } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to open GitHub releases URL: $url", e)
+            AppLog.e("$TAG: Failed to open GitHub releases URL: $url", e)
         }
     }
 }

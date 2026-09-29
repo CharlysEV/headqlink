@@ -5224,7 +5224,7 @@ class SettingsFragment : Fragment() {
                 },
                 onFailure = {
                     MaterialAlertDialogBuilder(ctx, R.style.DarkAlertDialog)
-                        .setTitle(R.string.update_not_available_title)
+                        .setTitle(R.string.check_for_updates)
                         .setMessage(R.string.update_check_failed)
                         .setPositiveButton(android.R.string.ok, null)
                         .show()
