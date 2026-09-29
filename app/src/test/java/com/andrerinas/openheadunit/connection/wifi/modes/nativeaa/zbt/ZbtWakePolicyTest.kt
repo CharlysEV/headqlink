@@ -1,5 +1,6 @@
 package com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -53,5 +54,48 @@ class ZbtWakePolicyTest {
         // The module re-sends link state about every 12 s. A wake landing on that cadence would be
         // indistinguishable from it in a log read after the fact, which is how these are read.
         assertTrue(ZbtWakePolicy.MIN_INTERVAL_MS > 12_000L)
+    }
+
+    private fun pending(
+        requestedAtMs: Long = 1_000_000L,
+        lastSentAtMs: Long = 0L,
+        nowMs: Long = 1_003_000L,
+        settling: Boolean = false,
+        handshakeInFlight: Boolean = false,
+        sessionConnected: Boolean = false
+    ) = ZbtWakePolicy.pending(
+        requestedAtMs, lastSentAtMs, nowMs, settling, handshakeInFlight, sessionConnected
+    )
+
+    @Test
+    fun `a wake asked for before the channel opened goes out once it can`() {
+        // The cold bring-up: credentials arrive while the daemon is still being measured.
+        assertEquals(ZbtWakePolicy.Pending.SEND, pending())
+    }
+
+    @Test
+    fun `a pending wake waits out a busy link rather than being lost`() {
+        assertEquals(ZbtWakePolicy.Pending.HOLD, pending(handshakeInFlight = true))
+        assertEquals(ZbtWakePolicy.Pending.HOLD, pending(settling = true))
+        assertEquals(ZbtWakePolicy.Pending.HOLD, pending(lastSentAtMs = 1_000_000L))
+    }
+
+    @Test
+    fun `a live session makes a pending wake pointless`() {
+        assertEquals(ZbtWakePolicy.Pending.SESSION_UP, pending(sessionConnected = true))
+    }
+
+    @Test
+    fun `a pending wake does not outlive its bound or a clock that went backwards`() {
+        val at = 1_000_000L
+        assertEquals(
+            ZbtWakePolicy.Pending.HOLD,
+            pending(requestedAtMs = at, nowMs = at + ZbtWakePolicy.PENDING_MAX_MS - 1, handshakeInFlight = true)
+        )
+        assertEquals(
+            ZbtWakePolicy.Pending.EXPIRED,
+            pending(requestedAtMs = at, nowMs = at + ZbtWakePolicy.PENDING_MAX_MS)
+        )
+        assertEquals(ZbtWakePolicy.Pending.EXPIRED, pending(requestedAtMs = at, nowMs = at - 1))
     }
 }
