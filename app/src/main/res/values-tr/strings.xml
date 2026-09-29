@@ -299,6 +299,17 @@
     <string name="about">Hakkında &amp; Destek</string>
     <string name="about_description">Open Headunit hakkında daha fazla bilgi alın</string>
     <string name="version">Sürüm</string>
+    <string name="check_for_updates">Güncellemeleri denetle</string>
+    <string name="check_for_updates_description">Open Headunit\'in daha yeni bir sürümünün olup olmadığını kontrol edin</string>
+    <string name="checking_for_updates">Güncellemeler denetleniyor…</string>
+    <string name="update_available_title">Güncelleme Mevcut</string>
+    <string name="update_available_playstore_message">Daha yeni bir sürüm (%1$s) mevcut. Uygulamanızı güncellemek için lütfen Google Play Store\'u ziyaret edin.</string>
+    <string name="update_available_github_message">Daha yeni bir sürüm (%1$s) mevcut. En son sürümü indirmek için GitHub\'ı ziyaret edin.</string>
+    <string name="update_not_available_title">Güncel</string>
+    <string name="update_not_available_message">Zaten en son sürümü (%1$s) kullanıyorsunuz.</string>
+    <string name="update_check_failed">Güncellemeler denetlenemedi. Lütfen internet bağlantınızı kontrol edin.</string>
+    <string name="open_play_store">Play Store\'u Aç</string>
+    <string name="open_github_releases">GitHub Releases\'ı Aç</string>
     <string name="about_title">Open Headunit Hakkında</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 

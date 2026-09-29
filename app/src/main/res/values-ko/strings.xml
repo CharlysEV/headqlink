@@ -330,6 +330,17 @@
     <string name="about">정보 및 지원</string>
     <string name="about_description">Open Headunit에 대한 자세한 정보를 확인하세요</string>
     <string name="version">버전</string>
+    <string name="check_for_updates">업데이트 확인</string>
+    <string name="check_for_updates_description">Open Headunit의 최신 버전이 있는지 확인합니다</string>
+    <string name="checking_for_updates">업데이트 확인 중…</string>
+    <string name="update_available_title">업데이트 가능</string>
+    <string name="update_available_playstore_message">최신 버전(%1$s)이 출시되었습니다. Google Play 스토어에서 앱을 업데이트하세요.</string>
+    <string name="update_available_github_message">최신 버전(%1$s)이 출시되었습니다. GitHub에서 최신 릴리스를 다운로드하세요.</string>
+    <string name="update_not_available_title">최신 상태임</string>
+    <string name="update_not_available_message">이미 최신 버전(%1$s)을 사용하고 있습니다.</string>
+    <string name="update_check_failed">업데이트 확인에 실패했습니다. 인터넷 연결을 확인하세요.</string>
+    <string name="open_play_store">Play 스토어 열기</string>
+    <string name="open_github_releases">GitHub Releases 열기</string>
     <string name="about_title">Open Headunit 정보</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 

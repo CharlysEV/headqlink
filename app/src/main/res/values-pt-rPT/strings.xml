@@ -652,6 +652,17 @@
     <string name="support_rules_oneissue_title">Um problema por publicação</string>
     <string name="support_rules_oneissue_desc">Mantenha cada publicação focada num único problema para que possa ser acompanhado e corrigido.</string>
     <string name="version">Versão</string>
+    <string name="check_for_updates">Procurar atualizações</string>
+    <string name="check_for_updates_description">Verificar se existe uma versão mais recente do Open Headunit disponível</string>
+    <string name="checking_for_updates">A procurar atualizações…</string>
+    <string name="update_available_title">Atualização disponível</string>
+    <string name="update_available_playstore_message">Está disponível uma versão mais recente (%1$s). Visite a Google Play Store para atualizar a sua aplicação.</string>
+    <string name="update_available_github_message">Está disponível uma versão mais recente (%1$s). Visite o GitHub para descarregar a versão mais recente.</string>
+    <string name="update_not_available_title">Atualizado</string>
+    <string name="update_not_available_message">Já está a utilizar a versão mais recente (%1$s).</string>
+    <string name="update_check_failed">Falha ao procurar atualizações. Verifique a sua ligação à internet.</string>
+    <string name="open_play_store">Abrir Play Store</string>
+    <string name="open_github_releases">Abrir GitHub Releases</string>
     <string name="about_title">Acerca do Open Headunit</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 

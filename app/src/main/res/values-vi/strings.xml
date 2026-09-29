@@ -311,6 +311,17 @@
     <string name="about">Giới thiệu &amp; Hỗ trợ</string>
     <string name="about_description">Xem thêm thông tin về Open Headunit</string>
     <string name="version">Phiên bản</string>
+    <string name="check_for_updates">Kiểm tra bản cập nhật</string>
+    <string name="check_for_updates_description">Kiểm tra xem có phiên bản Open Headunit mới hơn không</string>
+    <string name="checking_for_updates">Đang kiểm tra bản cập nhật…</string>
+    <string name="update_available_title">Có bản cập nhật mới</string>
+    <string name="update_available_playstore_message">Đã có phiên bản mới hơn (%1$s). Vui lòng truy cập Google Play Store để cập nhật ứng dụng của bạn.</string>
+    <string name="update_available_github_message">Đã có phiên bản mới hơn (%1$s). Truy cập GitHub để tải xuống bản phát hành mới nhất.</string>
+    <string name="update_not_available_title">Đã là bản mới nhất</string>
+    <string name="update_not_available_message">Bạn đang sử dụng phiên bản mới nhất (%1$s).</string>
+    <string name="update_check_failed">Không thể kiểm tra bản cập nhật. Vui lòng kiểm tra kết nối internet của bạn.</string>
+    <string name="open_play_store">Mở Play Store</string>
+    <string name="open_github_releases">Mở GitHub Releases</string>
     <string name="about_title">Giới thiệu Open Headunit</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 

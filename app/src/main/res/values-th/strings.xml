@@ -652,6 +652,17 @@
     <string name="support_rules_oneissue_title">หนึ่งปัญหาต่อหนึ่งโพสต์</string>
     <string name="support_rules_oneissue_desc">จำกัดแต่ละโพสต์ไว้ที่ปัญหาเดียวเพื่อให้สามารถติดตามและแก้ไขได้</string>
     <string name="version">เวอร์ชัน</string>
+    <string name="check_for_updates">ตรวจหาการอัปเดต</string>
+    <string name="check_for_updates_description">ตรวจสอบว่ามี Open Headunit เวอร์ชันใหม่กว่าหรือไม่</string>
+    <string name="checking_for_updates">กำลังตรวจหาการอัปเดต…</string>
+    <string name="update_available_title">มีการอัปเดต</string>
+    <string name="update_available_playstore_message">มีเวอร์ชันใหม่กว่า (%1$s) พร้อมใช้งาน โปรดไปที่ Google Play Store เพื่ออัปเดตแอปของคุณ</string>
+    <string name="update_available_github_message">มีเวอร์ชันใหม่กว่า (%1$s) พร้อมใช้งาน ไปที่ GitHub เพื่อดาวน์โหลดเวอร์ชันล่าสุด</string>
+    <string name="update_not_available_title">เป็นเวอร์ชันล่าสุดแล้ว</string>
+    <string name="update_not_available_message">คุณกำลังใช้เวอร์ชันล่าสุด (%1$s) อยู่แล้ว</string>
+    <string name="update_check_failed">ไม่สามารถตรวจหาการอัปเดตได้ โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตของคุณ</string>
+    <string name="open_play_store">เปิด Play Store</string>
+    <string name="open_github_releases">เปิด GitHub Releases</string>
     <string name="about_title">เกี่ยวกับ Open Headunit</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 

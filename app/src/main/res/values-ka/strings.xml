@@ -320,6 +320,17 @@
     <string name="about">შესახებ &amp; მხარდაჭერა</string>
     <string name="about_description">მიიღეთ მეტი ინფორმაცია Open Headunit-ის შესახებ</string>
     <string name="version">ვერსია</string>
+    <string name="check_for_updates">განახლებების შემოწმება</string>
+    <string name="check_for_updates_description">შემოწმება, ხელმისაწვდომია თუ არა Open Headunit-ის ახალი ვერსია</string>
+    <string name="checking_for_updates">მოწმდება განახლებები…</string>
+    <string name="update_available_title">განახლება ხელმისაწვდომია</string>
+    <string name="update_available_playstore_message">ხელმისაწვდომია უფრო ახალი ვერსია (%1$s). გთხოვთ, ეწვიოთ Google Play Store-ს აპლიკაციის განსაახლებლად.</string>
+    <string name="update_available_github_message">ხელმისაწვდომია უფრო ახალი ვერსია (%1$s). ეწვიეთ GitHub-ს უახლესი ვერსიის ჩამოსატვირთად.</string>
+    <string name="update_not_available_title">განახლებულია</string>
+    <string name="update_not_available_message">თქვენ უკვე იყენებთ უახლეს ვერსიას (%1$s).</string>
+    <string name="update_check_failed">განახლებების შემოწმება ვერ მოხერხდა. გთხოვთ, შეამოწმოთ ინტერნეტთან კავშირი.</string>
+    <string name="open_play_store">Play Store-ის გახსნა</string>
+    <string name="open_github_releases">GitHub Releases-ის გახსნა</string>
     <string name="about_title">Open Headunit-ის შესახებ</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 
