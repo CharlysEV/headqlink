@@ -53,4 +53,27 @@ object ZbtWakePolicy {
         // is a burst of state-changing messages at a moment we cannot reason about.
         return elapsed >= MIN_INTERVAL_MS
     }
+
+    /** How long a wake asked for before it could go out is still worth sending. */
+    const val PENDING_MAX_MS = 60_000L
+
+    enum class Pending { SEND, HOLD, SESSION_UP, EXPIRED }
+
+    /**
+     * What to do with a wake that was asked for and not yet sent. A cold bring-up asks before the
+     * module channel exists, so the request waits for the carrier's own thread to send it.
+     */
+    fun pending(
+        requestedAtMs: Long,
+        lastSentAtMs: Long,
+        nowMs: Long,
+        settling: Boolean,
+        handshakeInFlight: Boolean,
+        sessionConnected: Boolean
+    ): Pending = when {
+        sessionConnected -> Pending.SESSION_UP
+        nowMs < requestedAtMs || nowMs - requestedAtMs >= PENDING_MAX_MS -> Pending.EXPIRED
+        shouldSend(lastSentAtMs, nowMs, settling, handshakeInFlight, sessionConnected) -> Pending.SEND
+        else -> Pending.HOLD
+    }
 }
