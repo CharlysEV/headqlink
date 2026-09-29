@@ -17,6 +17,7 @@ class WirelessRearmPolicyTest {
         band: Int = 0,
         channel: Int = 0,
         zbtTransport: Boolean = false,
+        blinkTransport: Boolean = false,
         ignoreExternalBt: Boolean = false,
         autoEnableHotspot: Boolean = false,
         insecureRfcomm: Boolean = false,
@@ -29,6 +30,7 @@ class WirelessRearmPolicyTest {
         wifiDirectBand = band,
         fiveGhzChannel = channel,
         externalBtZbtTransport = zbtTransport,
+        externalBtBlinkTransport = blinkTransport,
         nativeAaIgnoreExternalBt = ignoreExternalBt,
         autoEnableHotspot = autoEnableHotspot,
         insecureAaRfcommListener = insecureRfcomm,
@@ -93,6 +95,11 @@ class WirelessRearmPolicyTest {
     @Test
     fun `the external Bluetooth module transport re-arms`() {
         assertTrue(WirelessRearmPolicy.requiresRearm(config(), config(zbtTransport = true)))
+    }
+
+    @Test
+    fun `the BLINK module transport re-arms`() {
+        assertTrue(WirelessRearmPolicy.requiresRearm(config(), config(blinkTransport = true)))
     }
 
     @Test

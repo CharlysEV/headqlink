@@ -2235,6 +2235,15 @@ class Settings(private val context: Context) {
         get() = prefs.getString("last-connected-native-mac", "") ?: ""
         set(value) = prefs.edit().putString("last-connected-native-mac", value).apply()
 
+    /**
+     * The last phone that finished a handshake through an external Bluetooth module. Kept apart
+     * from [lastConnectedNativeMac]: that one feeds the Android Bluetooth pokes and driver pinning,
+     * and a phone met through the module is not paired with that radio.
+     */
+    var lastExternalModulePhoneMac: String
+        get() = prefs.getString("last-external-module-phone-mac", "") ?: ""
+        set(value) = prefs.edit().putString("last-external-module-phone-mac", value).apply()
+
     // ---------------------------------------------------------------------------------------------
     // Standing connection failures.
     //
@@ -2433,5 +2442,11 @@ class Settings(private val context: Context) {
     var externalBtZbtTransport: Boolean
         get() = prefs.getBoolean("external-bt-zbt-transport", false)
         set(value) = prefs.edit().putBoolean("external-bt-zbt-transport", value).apply()
+
+    // Carry the Native AA handshake over FYT's BLINK module, through the `blink` daemon's
+    // /dev/auto_serial relay (needs root). Off by default; only offered where that node exists.
+    var externalBtBlinkTransport: Boolean
+        get() = prefs.getBoolean("external-bt-blink-transport", false)
+        set(value) = prefs.edit().putBoolean("external-bt-blink-transport", value).apply()
 
 }

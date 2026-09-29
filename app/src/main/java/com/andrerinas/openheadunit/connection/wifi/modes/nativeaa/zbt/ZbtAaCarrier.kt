@@ -1,5 +1,6 @@
 package com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt
 
+import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.ExternalModuleCarrier
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.HandshakeLink
 import com.andrerinas.openheadunit.utils.AppLog
 import kotlinx.coroutines.CancellationException
@@ -57,7 +58,7 @@ class ZbtAaCarrier(
         )
     },
     private val now: () -> Long = { System.currentTimeMillis() }
-) {
+) : ExternalModuleCarrier {
 
     companion object {
         /** How long to wait before dialling the daemon again after it refused a connection. */
@@ -276,7 +277,7 @@ class ZbtAaCarrier(
      *
      * @param userAsked the WiFi button, whose wake is held through a busy link rather than dropped
      */
-    fun requestWake(userAsked: Boolean = false) {
+    override fun requestWake(userAsked: Boolean) {
         val open = channel
         if (open == null || open.isFinished) {
             // A cold bring-up asks before the channel exists, and nothing else would ask again.
@@ -334,7 +335,7 @@ class ZbtAaCarrier(
     }
 
     /** Ends the carrier and unblocks whatever is reading. Safe from any thread. */
-    fun close() {
+    override fun close() {
         stopped = true
         runCatching { channel?.close() }
     }

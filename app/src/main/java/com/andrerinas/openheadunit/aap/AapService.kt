@@ -3057,6 +3057,10 @@ class AapService : Service() {
                 }
             }
             ACTION_NATIVE_AA_SWITCH_DEVICE -> {
+                if (ExternalBtTransportPolicy.usesExternalModule(NativeAaHandshakeManager.transportRoute(this))) {
+                    AppLog.w("AapService: ignoring Android Bluetooth driver switch on the external-module route")
+                    return START_STICKY
+                }
                 val targetMac = intent?.getStringExtra(EXTRA_MAC)
                 AppLog.i("AapService: ACTION_NATIVE_AA_SWITCH_DEVICE received (targetMac=$targetMac)")
                 // The phone projecting now is the one the driver is moving away from, and ending

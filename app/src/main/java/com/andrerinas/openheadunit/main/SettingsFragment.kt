@@ -75,6 +75,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.pm.PackageManager
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.NativeAaHandshakeManager
+import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.ExternalBtTransportPolicy
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.NativeCredentialsPreflight
 import com.andrerinas.openheadunit.utils.BluetoothHelper
 import androidx.lifecycle.lifecycleScope
@@ -201,6 +202,7 @@ class SettingsFragment : Fragment() {
     private var pendingBluetoothManagerServiceName: String? = null
     private var pendingNativeAaIgnoreExternalBt: Boolean? = null
     private var pendingExternalBtZbtTransport: Boolean? = null
+    private var pendingExternalBtBlinkTransport: Boolean? = null
     private var pendingAnnounceConnectionConfiguration: Boolean? = null
 
     // The probe's verdict is not a pending setting: it changes nothing and there is nothing to
@@ -395,6 +397,7 @@ class SettingsFragment : Fragment() {
         pendingBluetoothManagerServiceName = settings.bluetoothManagerServiceName
         pendingNativeAaIgnoreExternalBt = settings.nativeAaIgnoreExternalBt
         pendingExternalBtZbtTransport = settings.externalBtZbtTransport
+        pendingExternalBtBlinkTransport = settings.externalBtBlinkTransport
         pendingAnnounceConnectionConfiguration = settings.announceConnectionConfiguration
         pendingNativeApTransport = settings.nativeApStrategy
         pendingNativeDriverSelectionMode = settings.nativeDriverSelectionMode
@@ -530,6 +533,7 @@ class SettingsFragment : Fragment() {
         pendingBluetoothManagerServiceName = settings.bluetoothManagerServiceName
         pendingNativeAaIgnoreExternalBt = settings.nativeAaIgnoreExternalBt
         pendingExternalBtZbtTransport = settings.externalBtZbtTransport
+        pendingExternalBtBlinkTransport = settings.externalBtBlinkTransport
         pendingAnnounceConnectionConfiguration = settings.announceConnectionConfiguration
         pendingNativeApTransport = settings.nativeApStrategy
         pendingNativeDriverSelectionMode = NativeDriverSelectionPolicy.Mode.AUTO
@@ -776,6 +780,7 @@ class SettingsFragment : Fragment() {
         pendingBluetoothManagerServiceName?.let { settings.bluetoothManagerServiceName = it }
         pendingNativeAaIgnoreExternalBt?.let { settings.nativeAaIgnoreExternalBt = it }
         pendingExternalBtZbtTransport?.let { settings.externalBtZbtTransport = it }
+        pendingExternalBtBlinkTransport?.let { settings.externalBtBlinkTransport = it }
         pendingAnnounceConnectionConfiguration?.let { settings.announceConnectionConfiguration = it }
         pendingNativeApTransport?.let { settings.nativeApStrategy = it }
         pendingNativeDriverSelectionMode?.let { settings.nativeDriverSelectionMode = it }
@@ -914,6 +919,7 @@ class SettingsFragment : Fragment() {
                         pendingBluetoothManagerServiceName != settings.bluetoothManagerServiceName ||
                         pendingNativeAaIgnoreExternalBt != settings.nativeAaIgnoreExternalBt ||
                         pendingExternalBtZbtTransport != settings.externalBtZbtTransport ||
+                        pendingExternalBtBlinkTransport != settings.externalBtBlinkTransport ||
                         pendingAnnounceConnectionConfiguration != settings.announceConnectionConfiguration ||
                         pendingNativeApTransport != settings.nativeApStrategy ||
                         pendingNativeDriverSelectionMode != settings.nativeDriverSelectionMode ||
@@ -1124,7 +1130,8 @@ class SettingsFragment : Fragment() {
                 }
 
                 if (newMode == WifiLauncherMode.NATIVE) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    if (!ExternalBtTransportPolicy.usesExternalModule(pendingExternalBtRoute()) &&
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                         ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                         bluetoothPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
                     } else {
@@ -1284,6 +1291,20 @@ class SettingsFragment : Fragment() {
                 addStationStandDownSetting(items)
             }
 
+            if (ExternalBtTransportPolicy.usesExternalModule(pendingExternalBtRoute())) {
+                items.add(SettingItem.InfoBanner(
+                    stableId = "externalBtModuleControlsHint",
+                    textResId = R.string.external_bt_module_controls_hint
+                ))
+                settings.lastExternalModulePhoneMac.takeIf { it.isNotBlank() }?.let { phoneMac ->
+                    items.add(SettingItem.SettingEntry(
+                        stableId = "externalBtModuleLastPhone",
+                        nameResId = R.string.external_bt_module_last_phone,
+                        value = phoneMac,
+                        onClick = { }
+                    ))
+                }
+            } else {
             // Multi-Driver Selection settings for Native AA
             val currentDriverMode = pendingNativeDriverSelectionMode ?: NativeDriverSelectionPolicy.Mode.AUTO
             items.add(SettingItem.SegmentedButtonSettingEntry(
@@ -1386,7 +1407,9 @@ class SettingsFragment : Fragment() {
             // Only where the detection has fired: everywhere else this governs a gate that never
             // closes, and a switch that changes nothing is what sends people down a wrong
             // diagnosis. The evidence is a lazy, so asking on every rebuild costs one field read.
-            if (BluetoothHelper.externalBtEvidence != null) {
+            // FYT module evidence closes the same gate, so it must offer the same way out for a
+            // unit whose phone really pairs with the Android radio.
+            if (BluetoothHelper.externalBtEvidence != null || BluetoothHelper.fytModuleEvidence != null) {
                 items.add(SettingItem.ToggleSettingEntry(
                     stableId = "nativeAaIgnoreExternalBt",
                     nameResId = R.string.native_aa_ignore_external_bt,
@@ -1435,6 +1458,7 @@ class SettingsFragment : Fragment() {
                         .show()
                 }
             ))
+            }
 
             // Rendering it here is half the gate: AapService re-tests the connection mode before
             // acting on it, because a preference turned on under Native AA and then hidden by a
@@ -1472,6 +1496,23 @@ class SettingsFragment : Fragment() {
             }
         }
 
+        // Only where FYT's blink daemon relays the BLINK module's Android Auto channel. Needs root.
+        val blinkEnabled = pendingExternalBtBlinkTransport ?: settings.externalBtBlinkTransport
+        if (ExternalBtTransportPolicy.showBlinkToggle(BluetoothHelper.fytModuleEvidence, blinkEnabled)) {
+            items.add(SettingItem.ToggleSettingEntry(
+                stableId = "externalBtBlinkTransport",
+                nameResId = R.string.external_bt_blink_transport,
+                descriptionResId = R.string.external_bt_blink_transport_description,
+                isChecked = blinkEnabled,
+                searchKeywords = "fyt blink duduauto dudu carlink external bluetooth module transport auto_serial",
+                onCheckedChanged = { isChecked ->
+                    pendingExternalBtBlinkTransport = isChecked
+                    checkChanges()
+                    updateSettingsList()
+                }
+            ))
+        }
+
         // Only on units whose Bluetooth is an external module, where the native route is refused
         // outright and this is the one thing that might change that. Everywhere else it would be an
         // action with no meaning.
@@ -1479,7 +1520,10 @@ class SettingsFragment : Fragment() {
         // Deliberately outside the Native AA block: the reporters who need this are on units where
         // that mode does not work, so requiring them to select it first would hide the diagnostic
         // behind the very setting it is diagnosing.
-        if (BluetoothHelper.externalBtEvidence != null) {
+        // Not on FYT module units, which have no ZLink daemon; the route refuses ZBT there anyway.
+        // Still shown while on, so a toggle left over from before can be turned off.
+        val zbtChecked = pendingExternalBtZbtTransport ?: settings.externalBtZbtTransport
+        if (BluetoothHelper.externalBtEvidence != null && (BluetoothHelper.fytModuleEvidence == null || zbtChecked)) {
             items.add(SettingItem.ToggleSettingEntry(
                 stableId = "externalBtZbtTransport",
                 nameResId = R.string.external_bt_transport,
@@ -3337,6 +3381,7 @@ class SettingsFragment : Fragment() {
         val wifiDirectBand: Int,
         val fiveGhzChannel: Int,
         val externalBtZbtTransport: Boolean,
+        val externalBtBlinkTransport: Boolean,
         val nativeAaIgnoreExternalBt: Boolean,
         val autoEnableHotspot: Boolean,
         val insecureAaRfcommListener: Boolean,
@@ -3733,6 +3778,7 @@ class SettingsFragment : Fragment() {
             wifiDirectBand = settings.wifiDirectBand,
             fiveGhzChannel = settings.fiveGhzChannel,
             externalBtZbtTransport = settings.externalBtZbtTransport,
+            externalBtBlinkTransport = settings.externalBtBlinkTransport,
             nativeAaIgnoreExternalBt = settings.nativeAaIgnoreExternalBt,
             autoEnableHotspot = settings.autoEnableHotspot,
             insecureAaRfcommListener = settings.insecureAaRfcommListener,
@@ -3796,6 +3842,7 @@ class SettingsFragment : Fragment() {
         wifiDirectBand = settings.wifiDirectBand,
         fiveGhzChannel = settings.fiveGhzChannel,
         externalBtZbtTransport = settings.externalBtZbtTransport,
+        externalBtBlinkTransport = settings.externalBtBlinkTransport,
         nativeAaIgnoreExternalBt = settings.nativeAaIgnoreExternalBt,
         autoEnableHotspot = settings.autoEnableHotspot,
         insecureAaRfcommListener = settings.insecureAaRfcommListener,
@@ -3811,6 +3858,7 @@ class SettingsFragment : Fragment() {
             wifiDirectBand = snapshot.wifiDirectBand,
             fiveGhzChannel = snapshot.fiveGhzChannel,
             externalBtZbtTransport = snapshot.externalBtZbtTransport,
+            externalBtBlinkTransport = snapshot.externalBtBlinkTransport,
             nativeAaIgnoreExternalBt = snapshot.nativeAaIgnoreExternalBt,
             autoEnableHotspot = snapshot.autoEnableHotspot,
             insecureAaRfcommListener = snapshot.insecureAaRfcommListener,
@@ -4197,6 +4245,17 @@ class SettingsFragment : Fragment() {
     /** The transport the Native AA block is currently showing settings for. */
     private fun pendingNativeTransport(): NativeTransport =
         pendingNativeApTransport ?: NativeStrategy.DEFAULT
+
+    /** The Bluetooth route represented by the unsaved controls currently on screen. */
+    private fun pendingExternalBtRoute(): ExternalBtTransportPolicy.Route =
+        ExternalBtTransportPolicy.route(
+            BluetoothHelper.externalBtEvidence,
+            pendingExternalBtZbtTransport ?: settings.externalBtZbtTransport,
+            pendingNativeAaIgnoreExternalBt ?: settings.nativeAaIgnoreExternalBt,
+            ZbtDaemonReachability.cached(),
+            pendingExternalBtBlinkTransport ?: settings.externalBtBlinkTransport,
+            BluetoothHelper.fytModuleEvidence
+        )
 
     /** The WiFi Direct band the block is currently showing settings for. */
     private fun pendingP2pBandPreference(): P2pBandPreference =
@@ -4744,10 +4803,13 @@ class SettingsFragment : Fragment() {
             // Unless there is a route to that chip, in which case the flat refusal below would be
             // wrong: either the user turned the transport on, or the daemon answered when asked.
             // The dial is a socket connect, so it never happens on this thread.
-            val chosen = pendingExternalBtZbtTransport ?: settings.externalBtZbtTransport
+            // ZBT only counts off FYT module units, where the route can actually take it.
+            val chosen = ((pendingExternalBtZbtTransport ?: settings.externalBtZbtTransport) &&
+                BluetoothHelper.fytModuleEvidence == null) ||
+                (pendingExternalBtBlinkTransport ?: settings.externalBtBlinkTransport)
             externalBtRouteJob?.cancel()
             externalBtRouteJob = viewLifecycleOwner.lifecycleScope.launch {
-                val viaModule = if (chosen) true else {
+                val viaModule = if (chosen) true else if (BluetoothHelper.fytModuleEvidence != null) false else {
                     ZbtDaemonReachability.cached()
                         ?: withContext(Dispatchers.IO) { ZbtDaemonReachability.resolve() }
                 }

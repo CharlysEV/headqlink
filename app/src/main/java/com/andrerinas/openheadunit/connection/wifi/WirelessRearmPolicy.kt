@@ -29,6 +29,7 @@ object WirelessRearmPolicy {
         val fiveGhzChannel: Int,
         /** The two that decide whether the Native servers start at all. */
         val externalBtZbtTransport: Boolean,
+        val externalBtBlinkTransport: Boolean,
         val nativeAaIgnoreExternalBt: Boolean,
         /** Read once by the Helper launcher, and once per listener start. */
         val autoEnableHotspot: Boolean,

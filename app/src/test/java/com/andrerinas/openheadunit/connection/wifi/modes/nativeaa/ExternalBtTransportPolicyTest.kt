@@ -198,4 +198,76 @@ class ExternalBtTransportPolicyTest {
         assertEquals(WifiButton.MODULE, ExternalBtTransportPolicy.wifiButton(evidence, false, false, null))
         assertEquals(WifiButton.REFUSED, ExternalBtTransportPolicy.wifiButton(evidence, false, false, false))
     }
+
+    @Test
+    fun `the BLINK transport wins whenever it is on, evidence or not`() {
+        assertEquals(Route.BLINK, ExternalBtTransportPolicy.route(null, false, false, null, true))
+        assertEquals(Route.BLINK, ExternalBtTransportPolicy.route(evidence, false, false, false, true))
+        assertEquals(Route.BLINK, ExternalBtTransportPolicy.route(evidence, true, true, true, true))
+    }
+
+    @Test
+    fun `the BLINK transport never refuses bring-up or waits on the ZJ daemon`() {
+        assertFalse(ExternalBtTransportPolicy.refusesBringUp(evidence, false, false, false, true))
+        assertFalse(ExternalBtTransportPolicy.needsDaemonMeasurement(evidence, false, false, null, true))
+        assertEquals(WifiButton.MODULE, ExternalBtTransportPolicy.wifiButton(evidence, false, false, false, true))
+    }
+
+    @Test
+    fun `leaving the BLINK transport off changes nothing`() {
+        assertEquals(Route.BLOCKED, ExternalBtTransportPolicy.route(evidence, false, false, false, false))
+        assertEquals(Route.NORMAL, ExternalBtTransportPolicy.route(null, false, false, null, false))
+    }
+
+    @Test
+    fun `an enabled BLINK transport remains visible when detection stops seeing the module`() {
+        assertTrue(ExternalBtTransportPolicy.showBlinkToggle(fytModuleEvidence = null, enabled = true))
+        assertTrue(ExternalBtTransportPolicy.showBlinkToggle(fytModuleEvidence = fyt, enabled = false))
+        assertFalse(ExternalBtTransportPolicy.showBlinkToggle(fytModuleEvidence = null, enabled = false))
+    }
+
+    private val fyt = "sys.fyt.bluetooth_type=2"
+
+    @Test
+    fun `an FYT module unit with the toggle off is refused without measuring a daemon`() {
+        assertEquals(Route.BLOCKED, ExternalBtTransportPolicy.route(null, false, false, null, false, fyt))
+        assertEquals(Route.BLOCKED, ExternalBtTransportPolicy.route(evidence, false, false, null, false, fyt))
+        assertFalse(ExternalBtTransportPolicy.needsDaemonMeasurement(evidence, false, false, null, false, fyt))
+        assertTrue(ExternalBtTransportPolicy.refusesBringUp(null, false, false, null, false, fyt))
+        assertEquals(WifiButton.REFUSED, ExternalBtTransportPolicy.wifiButton(null, false, false, null, false, fyt))
+    }
+
+    @Test
+    fun `on an FYT module unit the toggle and the existing overrides still decide`() {
+        assertEquals(Route.BLINK, ExternalBtTransportPolicy.route(null, false, false, null, true, fyt))
+        assertEquals(Route.NORMAL, ExternalBtTransportPolicy.route(null, false, true, null, false, fyt))
+        assertEquals(WifiButton.MODULE, ExternalBtTransportPolicy.wifiButton(null, false, false, null, true, fyt))
+    }
+
+    @Test
+    fun `an FYT module unit never takes the ZLink daemon route`() {
+        assertEquals(Route.BLOCKED, ExternalBtTransportPolicy.route(null, true, false, null, false, fyt))
+        assertEquals(Route.BLOCKED, ExternalBtTransportPolicy.route(evidence, true, false, true, false, fyt))
+        assertTrue(ExternalBtTransportPolicy.refusesBringUp(evidence, true, false, true, false, fyt))
+        assertEquals(WifiButton.REFUSED, ExternalBtTransportPolicy.wifiButton(null, true, false, null, false, fyt))
+        // The FYT toggle still wins over a leftover ZBT toggle.
+        assertEquals(Route.BLINK, ExternalBtTransportPolicy.route(null, true, false, null, true, fyt))
+        assertEquals(WifiButton.MODULE, ExternalBtTransportPolicy.wifiButton(null, true, false, null, true, fyt))
+    }
+
+    @Test
+    fun `only BLINK re-arms without Android Bluetooth listeners`() {
+        assertFalse(ExternalBtTransportPolicy.rearmsWithoutAndroidRadio(Route.NORMAL))
+        assertFalse(ExternalBtTransportPolicy.rearmsWithoutAndroidRadio(Route.BLOCKED))
+        assertFalse(ExternalBtTransportPolicy.rearmsWithoutAndroidRadio(Route.ZBT))
+        assertTrue(ExternalBtTransportPolicy.rearmsWithoutAndroidRadio(Route.BLINK))
+    }
+
+    @Test
+    fun `only module routes suppress Android Bluetooth driver controls`() {
+        assertFalse(ExternalBtTransportPolicy.usesExternalModule(Route.NORMAL))
+        assertFalse(ExternalBtTransportPolicy.usesExternalModule(Route.BLOCKED))
+        assertTrue(ExternalBtTransportPolicy.usesExternalModule(Route.ZBT))
+        assertTrue(ExternalBtTransportPolicy.usesExternalModule(Route.BLINK))
+    }
 }

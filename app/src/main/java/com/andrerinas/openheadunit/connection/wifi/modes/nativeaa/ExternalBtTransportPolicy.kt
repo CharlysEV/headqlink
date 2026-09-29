@@ -30,7 +30,10 @@ object ExternalBtTransportPolicy {
         ZBT,
 
         /** External Bluetooth, and no route through it: refuse mode 3 and say why. */
-        BLOCKED
+        BLOCKED,
+
+        /** FYT's external module, through `/dev/auto_serial`. Opt-in only. */
+        BLINK
     }
 
     /**
@@ -46,13 +49,25 @@ object ExternalBtTransportPolicy {
      * @param zbtTransportEnabled the user's opt-in, `Settings.externalBtZbtTransport`
      * @param ignoreExternalBt the compatibility override, `Settings.nativeAaIgnoreExternalBt`
      * @param daemonReachable whether the vendor daemon answered, or null if it has not been asked
+     * @param blinkTransportEnabled the user's opt-in, `Settings.externalBtBlinkTransport`
+     * @param fytModuleEvidence what `ExternalBtPolicy.detectFytModule` found, or null
      */
     fun route(
         externalBtEvidence: String?,
         zbtTransportEnabled: Boolean,
         ignoreExternalBt: Boolean,
-        daemonReachable: Boolean? = null
+        daemonReachable: Boolean? = null,
+        blinkTransportEnabled: Boolean = false,
+        fytModuleEvidence: String? = null
     ): Route = when {
+        // Before the evidence checks: an enabled toggle is a recovery control too, and must win
+        // even where detection cannot see the node.
+        blinkTransportEnabled -> Route.BLINK
+        // An FYT module unit with the toggle off is refused with a reason that names the toggle,
+        // rather than running RFCOMM listeners and pokes on a radio its phone is not paired to.
+        // Never the ZLink daemon measurement or route: FYT units have no such daemon, so a ZBT
+        // toggle left on (or offered because a ZLink marker also matched) is refused too.
+        fytModuleEvidence != null -> if (ignoreExternalBt) Route.NORMAL else Route.BLOCKED
         externalBtEvidence == null -> Route.NORMAL
         zbtTransportEnabled -> Route.ZBT
         ignoreExternalBt -> Route.NORMAL
@@ -70,12 +85,17 @@ object ExternalBtTransportPolicy {
         externalBtEvidence: String?,
         zbtTransportEnabled: Boolean,
         ignoreExternalBt: Boolean,
-        cachedDaemonReachable: Boolean?
+        cachedDaemonReachable: Boolean?,
+        blinkTransportEnabled: Boolean = false,
+        fytModuleEvidence: String? = null
     ): Boolean =
-        route(externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable) ==
-            Route.BLOCKED &&
+        route(
+            externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable,
+            blinkTransportEnabled, fytModuleEvidence
+        ) == Route.BLOCKED &&
             !needsDaemonMeasurement(
-                externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable
+                externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable,
+                blinkTransportEnabled, fytModuleEvidence
             )
 
     /**
@@ -89,11 +109,26 @@ object ExternalBtTransportPolicy {
         externalBtEvidence: String?,
         zbtTransportEnabled: Boolean,
         ignoreExternalBt: Boolean,
-        cachedDaemonReachable: Boolean?
-    ): Boolean = externalBtEvidence != null && !zbtTransportEnabled &&
-        !ignoreExternalBt && cachedDaemonReachable == null
+        cachedDaemonReachable: Boolean?,
+        blinkTransportEnabled: Boolean = false,
+        fytModuleEvidence: String? = null
+    ): Boolean = !blinkTransportEnabled && fytModuleEvidence == null && externalBtEvidence != null &&
+        !zbtTransportEnabled && !ignoreExternalBt && cachedDaemonReachable == null
 
     enum class WifiButton { MODULE, REFUSED, ANDROID_RADIO }
+
+    /** External-module routes cannot use Android's bonded-device and driver-selection controls. */
+    fun usesExternalModule(route: Route): Boolean = route == Route.ZBT || route == Route.BLINK
+
+    /** BLINK keeps its module bridge open across sessions and must not touch Android RFCOMM. */
+    fun rearmsWithoutAndroidRadio(route: Route): Boolean = route == Route.BLINK
+
+    /**
+     * Offered wherever the FYT module is detected, and kept while enabled even if detection stops
+     * seeing it, so the control that turns it off is always reachable.
+     */
+    fun showBlinkToggle(fytModuleEvidence: String?, enabled: Boolean): Boolean =
+        fytModuleEvidence != null || enabled
 
     /**
      * What the main screen's WiFi button arms. A daemon not measured yet goes to the module route,
@@ -103,13 +138,23 @@ object ExternalBtTransportPolicy {
         externalBtEvidence: String?,
         zbtTransportEnabled: Boolean,
         ignoreExternalBt: Boolean,
-        cachedDaemonReachable: Boolean?
+        cachedDaemonReachable: Boolean?,
+        blinkTransportEnabled: Boolean = false,
+        fytModuleEvidence: String? = null
     ): WifiButton = when {
-        refusesBringUp(externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable) ->
-            WifiButton.REFUSED
-        route(externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable) == Route.ZBT ||
-            needsDaemonMeasurement(externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable) ->
-            WifiButton.MODULE
+        refusesBringUp(
+            externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable,
+            blinkTransportEnabled, fytModuleEvidence
+        ) -> WifiButton.REFUSED
+        usesExternalModule(
+            route(
+                externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable,
+                blinkTransportEnabled, fytModuleEvidence
+            )
+        ) || needsDaemonMeasurement(
+            externalBtEvidence, zbtTransportEnabled, ignoreExternalBt, cachedDaemonReachable,
+            blinkTransportEnabled, fytModuleEvidence
+        ) -> WifiButton.MODULE
         else -> WifiButton.ANDROID_RADIO
     }
 }

@@ -907,6 +907,15 @@
     <string name="external_bt_nativeaa_desc">휴대전화는 Android가 앱에 제공하는 블루투스가 아니라 이 헤드유닛 자체의 블루투스 모듈(%1$s)과 페어링되므로, 무선 핸드셰이크는 그곳에 결코 도달하지 못합니다.\n\n이 앱은 ZJ/ZLink 서비스를 통해서만 그 모듈에 도달할 수 있는데, 이 헤드유닛은 그 서비스를 실행하지 않습니다. 대신 USB나 WiFi 모드를 사용하십시오.</string>
     <string name="external_bt_module_nativeaa">ZJ/ZLink 모듈을 통한 네이티브 무선</string>
     <string name="external_bt_module_nativeaa_desc">휴대전화는 Android가 앱에 제공하는 블루투스가 아니라 이 헤드유닛 자체의 블루투스 모듈(%1$s)과 페어링되므로, 핸드셰이크는 모듈의 ZJ/ZLink 서비스를 통해 전송됩니다.\n\n실험적인 기능이며, 그 서비스가 유일한 통로입니다. 휴대전화가 Android Auto를 시작하지 않으면 USB나 WiFi 모드를 사용하십시오.</string>
+    <string name="external_bt_blink_transport">FYT 외장 블루투스 모듈로 연결</string>
+    <string name="external_bt_module_controls_hint">휴대폰 페어링, 연결 우선순위와 운전자 선택은 외장 Bluetooth 모듈에서 관리합니다.</string>
+    <string name="external_bt_module_last_phone">모듈을 통해 마지막으로 연결된 휴대폰</string>
+    <string name="external_bt_blink_transport_description">실험 기능입니다. 통화용으로 별도의 블루투스 모듈(예: DUDUOS의 \"DUDUAUTO\")에 페어링하는 FYT 기기용이며, 지금까지는 DUDUOS에서만 시험했습니다. 무선 Android Auto 연결은 이 기기의 블루투스가 아니라 이 모듈이 받고, 평소에는 순정 Car Link 앱이 응답합니다. 이 설정을 켜면 이 앱이 대신 응답하므로 통화는 모듈과 차량 스피커에 그대로 남습니다.\n\n먼저 순정 Car Link 앱을 비활성화하세요(pm disable-user com.syu.carlink). 그러지 않으면 두 앱이 같은 채널을 읽습니다. 기기가 허용하면 루트 없이 채널을 열고, 아니면 루트로 엽니다. Native를 선택하고 휴대폰은 이 모듈에만 페어링하세요. 연결되지 않으면 로그를 내보내 주세요.</string>
+    <string name="external_bt_blink_refused_stock_enabled">외장 블루투스 모듈: 순정 Car Link 앱이 아직 활성화되어 있습니다. 비활성화하거나(pm disable-user com.syu.carlink) 이 연결 방식을 끄세요.</string>
+    <string name="external_bt_blink_refused_stock_running">외장 블루투스 모듈: 순정 Car Link 앱이 비활성화됐지만 아직 실행 중입니다. 기기를 다시 시작하세요.</string>
+    <string name="external_bt_blink_refused_root">외장 블루투스 모듈: 이 기기에서는 모듈 채널을 여는 데 루트가 필요한데, 루트 권한이 거부됐거나 없습니다.</string>
+    <string name="external_bt_blink_refused_unverified">외장 블루투스 모듈: 순정 Car Link 앱이 멈췄는지 확인하지 못해 모듈 채널을 열지 않았습니다. 로그를 내보내 주세요.</string>
+    <string name="external_bt_blink_refused_bridge">외장 블루투스 모듈: 모듈 채널을 열지 못했습니다. 로그를 내보내 주세요.</string>
     <string name="external_bt_transport">헤드유닛 블루투스 모듈로 연결</string>
     <string name="external_bt_transport_description">실험적 기능이며 ZJ/ZLink 블루투스 서비스가 있는 기기 전용입니다. 무선 Android Auto 핸드셰이크를, Android가 앱에 제공하는 블루투스가 아니라 휴대폰이 실제로 페어링된 이 기기 자체의 블루투스 칩을 통해 보냅니다.\n\n먼저 이 설정을 끈 상태로 \"헤드유닛 블루투스 모듈 검사\"를 실행하세요. 포트에서 대기 중인 것이 없으면 이 설정은 이 기기에서 아무 역할도 하지 못하며, 무엇을 설정하든 네이티브 무선은 동작하지 않습니다. 응답이 있으면 이것을 켜고 네이티브를 선택하세요. 이 설정이 이미 켜져 연결된 상태에서 검사를 실행하면 바로 그 사실을 알려 주며, 이는 오류가 아닙니다. 두 경우 모두 로그를 내보내 주세요.</string>
     <string name="zbt_probe_title">헤드유닛 블루투스 모듈 테스트</string>

@@ -14,6 +14,7 @@
         <package android:name="com.google.android.projection.gearhead" />
         <!-- OEM AA/CarPlay apps that conflict with Open Headunit -->
         <package android:name="com.zjinnova.zlink" />
+        <package android:name="com.syu.carlink" />
         <package android:name="com.zjinnova.zlink5" />
         <package android:name="cn.manstep.phonemirrorBox" />
         <package android:name="cn.manstep.phonemirrorBox.nomap" />

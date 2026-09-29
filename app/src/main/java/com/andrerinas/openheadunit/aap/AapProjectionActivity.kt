@@ -72,6 +72,8 @@ import com.andrerinas.openheadunit.main.Aa174Notice
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.andrerinas.openheadunit.main.AutoStartOfferPolicy
 import com.andrerinas.openheadunit.main.MainActivity
+import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.ExternalBtTransportPolicy
+import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.NativeAaHandshakeManager
 import java.io.File
 import kotlin.math.abs
 
@@ -780,6 +782,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         if (settings.wifiConnectionMode !=
             com.andrerinas.openheadunit.connection.wifi.WifiLauncherMode.NATIVE
         ) return
+        if (ExternalBtTransportPolicy.usesExternalModule(NativeAaHandshakeManager.transportRoute(this))) return
         val adapter = BluetoothHelper.getBluetoothAdapter(this)
         if (adapter == null || !adapter.isEnabled) return
 
@@ -1582,7 +1585,9 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         options.add(ExitOption(R.string.exit_dialog_settings, R.drawable.ic_settings_quick, Color.LTGRAY))
 
         if (settings.wifiConnectionMode == com.andrerinas.openheadunit.connection.wifi.WifiLauncherMode.NATIVE) {
-            options.add(ExitOption(R.string.switch_driver, R.drawable.ic_phone, Color.LTGRAY))
+            if (!ExternalBtTransportPolicy.usesExternalModule(NativeAaHandshakeManager.transportRoute(this))) {
+                options.add(ExitOption(R.string.switch_driver, R.drawable.ic_phone, Color.LTGRAY))
+            }
             // WiFi Direct only: the group is ours, created for the session. An access point is
             // usually the user's own, and UserExitHotspotPolicy already leaves it alone.
             if (settings.nativeApStrategy == com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.NativeStrategy.WIFI_DIRECT) {

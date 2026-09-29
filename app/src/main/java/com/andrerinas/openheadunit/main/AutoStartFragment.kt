@@ -27,6 +27,8 @@ import com.andrerinas.openheadunit.app.BtAutoDisconnectPolicy
 import com.andrerinas.openheadunit.utils.AppLog
 import com.andrerinas.openheadunit.utils.AppPermissions
 import com.andrerinas.openheadunit.connection.wifi.WifiLauncherMode
+import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.ExternalBtTransportPolicy
+import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.NativeAaHandshakeManager
 import com.andrerinas.openheadunit.utils.Settings
 import com.andrerinas.openheadunit.utils.BluetoothHelper
 import com.andrerinas.openheadunit.utils.CarLauncherManager
@@ -395,7 +397,8 @@ class AutoStartFragment : Fragment() {
             ))
         }
 
-        if (settings.wifiConnectionMode == WifiLauncherMode.NATIVE) {
+        if (settings.wifiConnectionMode == WifiLauncherMode.NATIVE &&
+            !ExternalBtTransportPolicy.usesExternalModule(NativeAaHandshakeManager.transportRoute(requireContext()))) {
             items.add(SettingItem.SettingEntry(
                 stableId = "nativePokeBt",
                 nameResId = R.string.native_poke_bt_label,

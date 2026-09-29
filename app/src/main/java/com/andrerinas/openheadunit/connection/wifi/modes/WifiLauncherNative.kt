@@ -92,6 +92,8 @@ class WifiLauncherNative : WifiLauncher {
             settings.externalBtZbtTransport,
             settings.nativeAaIgnoreExternalBt,
             ZbtDaemonReachability.cached(),
+            settings.externalBtBlinkTransport,
+            BluetoothHelper.fytModuleEvidence,
         )
         if (blockedByExternalBt) NativeAaHandshakeManager.externalBtDiagnostic()?.let { AppLog.e(it) }
 
@@ -430,7 +432,7 @@ class WifiLauncherNative : WifiLauncher {
             // a wake that will not run.
             AppLog.i("AapService: the phone ended the last session itself. Skipping auto-poke until it comes back.")
         } else if (!service.userExitedAA) {
-            ConnectionStageTracker.report(ConnectionStage.WAKING_PHONE)
+            if (handshakeManager?.reportsWake() != false) ConnectionStageTracker.report(ConnectionStage.WAKING_PHONE)
             handshakeManager?.triggerPoke()
         } else {
             AppLog.i("AapService: userExitedAA is true. Skipping auto-poke.")
