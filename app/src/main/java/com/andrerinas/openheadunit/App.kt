@@ -25,6 +25,7 @@ import com.andrerinas.openheadunit.utils.AppLog
 import com.andrerinas.openheadunit.utils.AppThemeManager
 import com.andrerinas.openheadunit.utils.Settings
 import android.os.SystemClock
+import com.andrerinas.openheadunit.main.AppDrawerFragment
 import com.andrerinas.openheadunit.main.FloatingButtonManager
 import java.io.File
 
@@ -45,6 +46,23 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
         super.onCreate()
         instance = this
         registerActivityLifecycleCallbacks(this)
+
+        try {
+            val packageReceiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    AppDrawerFragment.invalidateCache()
+                }
+            }
+            val packageFilter = IntentFilter().apply {
+                addAction(Intent.ACTION_PACKAGE_ADDED)
+                addAction(Intent.ACTION_PACKAGE_REMOVED)
+                addAction(Intent.ACTION_PACKAGE_CHANGED)
+                addDataScheme("package")
+            }
+            ContextCompat.registerReceiver(this, packageReceiver, packageFilter, ContextCompat.RECEIVER_EXPORTED)
+        } catch (e: Exception) {
+            AppLog.w("App", "Failed to register package change receiver", e)
+        }
 
 
 

@@ -12,8 +12,12 @@ interface ExternalModuleCarrier {
      */
     val sendsWake: Boolean get() = true
 
-    /** Ask the module side to bring the phone's Android Auto link up. Safe from any thread. */
-    fun requestWake()
+    /**
+     * Ask the module side to bring the phone's Android Auto link up. Safe from any thread.
+     *
+     * @param userAsked the WiFi button; a carrier that paces its wakes may hold this one rather than drop it
+     */
+    fun requestWake(userAsked: Boolean = false)
 
     /** End the carrier and unblock whatever is reading. Safe from any thread. */
     fun close()

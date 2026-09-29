@@ -221,6 +221,10 @@ class NativeAaHandshakeManager(
      * before they press anything, so a poke on a manager that never started said nothing at all.
      */
     @Volatile private var notStartedReason: String? = null
+
+    /** The route waits on the daemon's answer, and a wake asked for meanwhile is held for it. */
+    @Volatile private var measuringDaemon = false
+    @Volatile private var wakeAwaitingModule = false
     // Set by closeAaListeners() so the AA accept loops can tell "we closed this on purpose
     // after a successful handoff" apart from a real socket error, for logging only.
     @Volatile private var aaListenersClosedForSession = false
@@ -797,9 +801,15 @@ class NativeAaHandshakeManager(
         ) {
             notStartedReason = "the vendor Bluetooth daemon is still being asked whether it will carry Android Auto."
             AppLog.i("NativeAA: this unit's Bluetooth is an external module; asking the vendor daemon whether it will carry Android Auto before choosing a route.")
+            measuringDaemon = true
             scope.launch(Dispatchers.IO + CoroutineName("NativeAa-ZbtReachability")) {
                 ZbtDaemonReachability.resolve()
-                withContext(Dispatchers.Main.immediate) { start() }
+                withContext(Dispatchers.Main.immediate) {
+                    measuringDaemon = false
+                    start()
+                    // The module route took it if it opened; any other answer has nothing to wake.
+                    wakeAwaitingModule = false
+                }
             }
             return
         }
@@ -2073,7 +2083,7 @@ class NativeAaHandshakeManager(
         // isActive() is "started, and the listener not closed for this session": the accept loop
         // is launched in the same start() call, so this is as close to "accepting" as there is.
         if (!EarlyWakePolicy.mayWakeBeforeCredentials(
-                listenersOpen = isActive(),
+                listenersOpen = isActive() || measuringDaemon,
                 credentialsPresent = credentials != null,
                 userExited = userExited,
                 sessionUp = commManager.isConnected,
@@ -2112,6 +2122,12 @@ class NativeAaHandshakeManager(
         moduleCarrier?.let {
             if (it.sendsWake) ConnectionStageTracker.report(ConnectionStage.WAKING_PHONE)
             it.requestWake()
+            return
+        }
+        // No route yet, and the one being measured is probably the module: an HFP poke is wasted.
+        if (measuringDaemon) {
+            wakeAwaitingModule = true
+            AppLog.i("NativeAA: the vendor daemon is still being asked for a route, so the wake waits for it.")
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -2429,7 +2445,7 @@ class NativeAaHandshakeManager(
         AppLog.i("NativeAA: Manual poke requested — asking the Bluetooth module to connect Android Auto.")
         resetHandshakeBackoff()
         resetJoinRefusals()
-        carrier.requestWake()
+        carrier.requestWake(userAsked = true)
         return true
     }
 
@@ -2595,6 +2611,11 @@ class NativeAaHandshakeManager(
             }
         )
         moduleCarrier = carrier
+        if (wakeAwaitingModule) {
+            wakeAwaitingModule = false
+            ConnectionStageTracker.report(ConnectionStage.WAKING_PHONE)
+            carrier.requestWake()
+        }
         scope.launch(Dispatchers.IO + CoroutineName("NativeAa-ZbtCarrier")) {
             try {
                 carrier.run()
@@ -3727,6 +3748,8 @@ class NativeAaHandshakeManager(
     fun stop() {
         isRunning = false
         notStartedReason = "the wireless mode was stopped"
+        measuringDaemon = false
+        wakeAwaitingModule = false
         standingInForHfp = false
         aaReopenJob?.cancel()
         aaReopenJob = null

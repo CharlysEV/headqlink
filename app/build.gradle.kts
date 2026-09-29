@@ -98,8 +98,8 @@ android {
         applicationId = "com.andrerinas.headunitrevived"
         minSdk = 16
         targetSdk = 36
-        versionCode = 114
-        versionName = "3.5.0-beta1"
+        versionCode = 115
+        versionName = "3.5.0-beta2"
         setProperty("archivesBaseName", "${applicationId}_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true

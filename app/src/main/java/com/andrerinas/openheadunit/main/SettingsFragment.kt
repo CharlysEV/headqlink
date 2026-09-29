@@ -1833,6 +1833,9 @@ class SettingsFragment : Fragment() {
             onCheckedChanged = { isChecked ->
                 pendingEnableCarLauncher = isChecked
                 CarLauncherManager.setLauncherEnabled(requireContext(), isChecked)
+                if (isChecked && !CarLauncherManager.isDefaultLauncher(requireContext())) {
+                    CarLauncherManager.promptSetDefaultLauncher(requireContext())
+                }
                 checkChanges()
                 updateSettingsList()
             }

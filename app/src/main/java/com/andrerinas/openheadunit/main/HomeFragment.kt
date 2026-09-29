@@ -86,6 +86,7 @@ class HomeFragment : Fragment() {
     private lateinit var wifi: Button
     private lateinit var wifi_text_view: TextView
     private lateinit var exitButton: Button
+    private lateinit var appsButton: Button
     private lateinit var self_mode_text: TextView
     private var hasAttemptedAutoConnect = false
     private var hasAttemptedSingleUsbAutoConnect = false
@@ -116,6 +117,7 @@ class HomeFragment : Fragment() {
         wifi = view.findViewById(R.id.wifi_button)
         wifi_text_view = view.findViewById(R.id.wifi_text)
         exitButton = view.findViewById(R.id.exit_button)
+        appsButton = view.findViewById(R.id.apps_button)
         self_mode_text = view.findViewById(R.id.self_mode_text)
 
         // Portrait layout: cap grid width so square buttons never overflow
@@ -351,14 +353,26 @@ class HomeFragment : Fragment() {
     private fun updateExitButtonVisibility() {
         val ctx = context ?: return
         val appSettings = App.provide(ctx).settings
-        val shouldShow = CarLauncherManager.shouldShowExitButton(
+        val isLauncherActive = appSettings.isCarLauncherActive
+        val shouldShowExit = CarLauncherManager.shouldShowExitButton(
             isCarLauncherEnabled = appSettings.enableCarLauncher,
             isDefaultLauncher = CarLauncherManager.isDefaultLauncher(ctx)
         )
-        exitButton.visibility = if (shouldShow) View.VISIBLE else View.GONE
+        exitButton.visibility = if (shouldShowExit) View.VISIBLE else View.GONE
+        appsButton.visibility = if (isLauncherActive) View.VISIBLE else View.GONE
+        if (isLauncherActive) {
+            AppDrawerFragment.preload(ctx)
+        }
     }
 
     private fun setupListeners() {
+        appsButton.setOnClickListener {
+            val controller = findNavController()
+            if (controller.currentDestination?.id == R.id.homeFragment) {
+                controller.navigate(R.id.action_homeFragment_to_appDrawerFragment)
+            }
+        }
+
         exitButton.setOnClickListener {
             val appSettings = App.provide(requireContext()).settings
             val keepServiceAlive = appSettings.autoStartOnBoot ||
@@ -1238,6 +1252,7 @@ class HomeFragment : Fragment() {
         }
 
         exitButton.setTextColor(Color.WHITE)
+        appsButton.setTextColor(Color.WHITE)
     }
 
     companion object {

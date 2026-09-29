@@ -9,6 +9,8 @@
     <string name="allowed">Permis</string>
     <string name="ignored">Ignorat</string>
     <string name="exit">Ieșire</string>
+    <string name="apps">Aplicații</string>
+    <string name="no_apps_found">Nicio aplicație găsită</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Mod local</string>
     <string name="to_android_auto">Către Android Auto</string>

@@ -186,6 +186,8 @@
     <string name="remove_from_blacklist">Remove from Blacklist</string>
     <string name="usb_device_action_title">USB Device Action</string>
     <string name="exit">Exit</string>
+    <string name="apps">Apps</string>
+    <string name="no_apps_found">No applications found</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Self Mode</string>
     <string name="to_android_auto">To Android Auto</string>

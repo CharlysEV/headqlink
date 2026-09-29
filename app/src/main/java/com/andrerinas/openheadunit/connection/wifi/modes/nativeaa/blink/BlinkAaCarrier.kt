@@ -298,7 +298,7 @@ class BlinkAaCarrier(
      * nothing is sent. Called on every credential delivery and resume, so the hint is logged once
      * per arming.
      */
-    override fun requestWake() {
+    override fun requestWake(userAsked: Boolean) {
         if (wakeHintLogged) return
         wakeHintLogged = true
         AppLog.i(

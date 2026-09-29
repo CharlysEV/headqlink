@@ -9,6 +9,8 @@
     <string name="allowed">Povoleno</string>
     <string name="ignored">Ignorováno</string>
     <string name="exit">Ukončit</string>
+    <string name="apps">Aplikace</string>
+    <string name="no_apps_found">Nenalezeny žádné aplikace</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Self Mode</string>
     <string name="to_android_auto">Do Android Auto</string>

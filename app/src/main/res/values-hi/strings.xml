@@ -180,6 +180,8 @@
     <string name="remove_from_blacklist">ब्लैकलिस्ट से हटाएं</string>
     <string name="usb_device_action_title">USB डिवाइस क्रिया</string>
     <string name="exit">निकास</string>
+    <string name="apps">ऐप्स</string>
+    <string name="no_apps_found">कोई ऐप नहीं मिला</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">सेल्फ़ मोड</string>
     <string name="to_android_auto">Android Auto पर जाएँ</string>
