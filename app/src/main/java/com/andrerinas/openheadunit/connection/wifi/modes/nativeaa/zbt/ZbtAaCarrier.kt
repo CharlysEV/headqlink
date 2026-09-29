@@ -9,6 +9,7 @@ import kotlinx.coroutines.delay
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.concurrent.atomic.AtomicLong
 import com.andrerinas.openheadunit.utils.BluetoothHelper
 
 /**
@@ -91,6 +92,9 @@ class ZbtAaCarrier(
 
     @Volatile
     private var lastWakeAt = 0L
+
+    /** When a wake was asked for and not yet sent, or 0. */
+    private val wakeRequestedAt = AtomicLong(0L)
 
     @Volatile
     private var stopped = false
@@ -180,6 +184,8 @@ class ZbtAaCarrier(
         everSawPresence = false
 
         while (keepRunning() && !open.isFinished) {
+            // A quiet pump returns within the read timeout, so a request waits a few seconds at most.
+            sendPendingWake(open)
             val wake = minOf(nextSummary, nextPoll)
             val pumped = open.pumpOnce(wake) { keepRunning() }
             if (pumped == ZbtByteChannel.Pump.ENDED) return
@@ -265,28 +271,65 @@ class ZbtAaCarrier(
 
     /**
      * Ask the module to bring the phone's link up — the module-side wake, replacing the HFP poke
-     * that cannot reach this phone. Safe to call from any thread.
+     * that cannot reach this phone. Only records the request: the carrier's own thread sends it,
+     * because a caller may be the main thread and the channel is a socket. Safe from any thread.
+     *
+     * @param userAsked the WiFi button, whose wake is held through a busy link rather than dropped
      */
-    fun requestWake() {
+    fun requestWake(userAsked: Boolean = false) {
         val open = channel
         if (open == null || open.isFinished) {
-            AppLog.d("NativeAA: [ZBT] no channel to wake through.")
+            // A cold bring-up asks before the channel exists, and nothing else would ask again.
+            wakeRequestedAt.set(now())
+            AppLog.i("NativeAA: [ZBT] wake requested before the module channel is open; it goes out once it is.")
             return
         }
-        if (!ZbtWakePolicy.shouldSend(
-                lastSentAtMs = lastWakeAt,
-                nowMs = now(),
-                settling = isSettling(),
-                handshakeInFlight = isHandshakeInFlight(),
-                sessionConnected = isSessionConnected()
-            )
-        ) return
-        lastWakeAt = now()
+        val sendable = ZbtWakePolicy.shouldSend(
+            lastSentAtMs = lastWakeAt,
+            nowMs = now(),
+            settling = isSettling(),
+            handshakeInFlight = isHandshakeInFlight(),
+            sessionConnected = isSessionConnected()
+        )
+        if (!sendable && !userAsked) return
+        wakeRequestedAt.set(now())
+        if (!sendable) {
+            AppLog.i("NativeAA: [ZBT] wake held: a handshake or handoff is running, or one went out under ${ZbtWakePolicy.MIN_INTERVAL_MS / 1000}s ago.")
+        }
+    }
+
+    /** Sends a recorded wake from the carrier's own thread, when [ZbtWakePolicy.pending] allows. */
+    private fun sendPendingWake(open: ZbtByteChannel) {
+        val requestedAt = wakeRequestedAt.get()
+        if (requestedAt == 0L) return
+        val verdict = ZbtWakePolicy.pending(
+            requestedAtMs = requestedAt,
+            lastSentAtMs = lastWakeAt,
+            nowMs = now(),
+            settling = isSettling(),
+            handshakeInFlight = isHandshakeInFlight(),
+            sessionConnected = isSessionConnected()
+        )
+        if (verdict == ZbtWakePolicy.Pending.HOLD) return
+        // A newer request arriving meanwhile keeps its own stamp and is judged on the next pass.
+        if (!wakeRequestedAt.compareAndSet(requestedAt, 0L)) return
+        when (verdict) {
+            ZbtWakePolicy.Pending.SESSION_UP -> {
+                AppLog.i("NativeAA: [ZBT] a session came up, so the pending wake is not sent.")
+                return
+            }
+            ZbtWakePolicy.Pending.EXPIRED -> {
+                AppLog.i("NativeAA: [ZBT] a wake could not go out within ${ZbtWakePolicy.PENDING_MAX_MS / 1000}s, so it is dropped.")
+                return
+            }
+            else -> Unit
+        }
         try {
             open.requestReconnect(ZbtMessages.ENABLE_TYPE_ANDROID_AUTO)
+            lastWakeAt = now()
             AppLog.i("NativeAA: [ZBT] asked the module to connect Android Auto (RequestReconn).")
         } catch (e: Exception) {
-            AppLog.w("NativeAA: [ZBT] could not ask the module to connect: ${e.message}")
+            AppLog.w("NativeAA: [ZBT] could not ask the module to connect: ${e.javaClass.simpleName}: ${e.message}")
         }
     }
 
