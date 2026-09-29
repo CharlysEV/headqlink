@@ -4,9 +4,11 @@ import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.ExternalModule
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.HandshakeLink
 import com.andrerinas.openheadunit.utils.AppLog
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicLong
@@ -35,6 +37,12 @@ class BlinkAaCarrier(
     private val onPhoneEvidence: () -> Unit,
     /** Called with the reason whenever it changes, and with null once the port is open again. */
     private val onRefusalChanged: (BlinkRefusal?) -> Unit = {},
+    /** Whether the stock client is out of the way, read without root before every pass. */
+    private val stockClient: () -> StockCarLink.State = { StockCarLink.State.UNKNOWN },
+    private val openDirect: (onLine: (String) -> Unit, onEnded: (String) -> Unit) -> BlinkAutoSerialChannel =
+        { onLine, onEnded -> BlinkAutoSerialChannel.openDirect(onLine, onEnded) },
+    private val openRoot: (onLine: (String) -> Unit, onEnded: (String) -> Unit) -> BlinkAutoSerialChannel =
+        { onLine, onEnded -> BlinkAutoSerialChannel.open(onLine, onEnded) },
     private val now: () -> Long = { System.currentTimeMillis() },
 ) : ExternalModuleCarrier {
 
@@ -44,6 +52,12 @@ class BlinkAaCarrier(
 
         /** How often the run loop looks at the flags the reader thread sets. */
         private const val POLL_MS = 200L
+
+        /** How long the copy loop run as this app gets to open the port before root is tried. */
+        private const val DIRECT_OPEN_TIMEOUT_MS = 3_000L
+
+        /** How long that copy loop gets to exit by itself once its stdin is closed. */
+        private const val DIRECT_CLOSE_TIMEOUT_MS = 3_000L
     }
 
     @Volatile private var channel: BlinkAutoSerialChannel? = null
@@ -59,6 +73,7 @@ class BlinkAaCarrier(
     @Volatile private var refusal: BlinkRefusal? = null
     private var consecutiveRefusals = 0
     @Volatile private var wakeHintLogged = false
+    private var directFailure: String? = null
 
     /** The module wakes the phone itself; nothing is sent. */
     override val sendsWake: Boolean get() = false
@@ -66,15 +81,8 @@ class BlinkAaCarrier(
     suspend fun run() {
         carrierJob = currentCoroutineContext()[Job]
         while (keepRunning()) {
-            // One su per pass: the bridge checks the stock client itself before it opens the port,
-            // and its exit code says which check refused it.
             val ended = AtomicReference<String?>(null)
-            val opened = try {
-                BlinkAutoSerialChannel.open(::onLine) { why -> ended.set(why) }
-            } catch (e: Exception) {
-                refuse(BlinkRefusal.ROOT_DENIED, "could not run su: ${e.message}")
-                continue
-            }
+            val opened = openChannel { why -> ended.set(why) } ?: continue
             channel = opened
             var announced = false
             try {
@@ -114,6 +122,96 @@ class BlinkAaCarrier(
             }
         }
         AppLog.i("NativeAA: [BLINK] carrier stopped after $attempts handshake(s), $framesIn frame(s) from the phone.")
+    }
+
+    /**
+     * Opens the port as this app when the stock client is known to be out of the way, the way the
+     * stock client itself does, and falls back to the root bridge otherwise. At most one `su` per
+     * pass: the bridge checks the stock client itself, and its exit code says which check refused it.
+     *
+     * @return the channel, or null after waiting out a refusal
+     */
+    private suspend fun openChannel(onEnded: (String) -> Unit): BlinkAutoSerialChannel? {
+        if (directStuck) {
+            refuse(BlinkRefusal.BRIDGE_FAILED, "a no-root channel did not exit earlier")
+            return null
+        }
+        val stock = stockClient()
+        if (stock == StockCarLink.State.ENABLED) {
+            // Refused without su: nothing root could do would make the port safe to share.
+            refuse(BlinkRefusal.STOCK_CLIENT_ENABLED, "${StockCarLink.PACKAGE} is enabled")
+            return null
+        }
+        // Anything the package manager cannot vouch for goes to the bridge, whose guard asks with root.
+        if (stock.allowsDirectOpen) {
+            try {
+                openDirectly(onEnded)?.let { return it }
+            } catch (_: DirectChannelStuck) {
+                return null
+            }
+        } else if (stock != lastStockState) {
+            AppLog.i("NativeAA: [BLINK] stock client state $stock; using the root bridge, which checks it.")
+        }
+        lastStockState = stock
+        return try {
+            openRoot(::onLine, onEnded)
+        } catch (e: Exception) {
+            refuse(BlinkRefusal.ROOT_DENIED, "could not run su: ${e.message}")
+            null
+        }
+    }
+
+    private var lastStockState: StockCarLink.State? = null
+
+    /** Set once a no-root shell would not exit; nothing more is opened until the carrier restarts. */
+    private var directStuck = false
+
+    /**
+     * Tries the copy loop as this app. It either opens the port or ends early, when the node's
+     * mode or SELinux keeps this app out; a loop that does neither in time is given up on too.
+     *
+     * @return the open channel, or null to fall back to root
+     */
+    private suspend fun openDirectly(onEnded: (String) -> Unit): BlinkAutoSerialChannel? {
+        val ended = AtomicReference<String?>(null)
+        val direct = try {
+            openDirect(::onLine) { why -> ended.set(why); onEnded(why) }
+        } catch (e: Exception) {
+            noteDirectFailure("could not run sh: ${e.message}")
+            return null
+        }
+        var waited = 0L
+        while (!direct.portOpened && !direct.isFinished && waited < DIRECT_OPEN_TIMEOUT_MS) {
+            delay(POLL_MS)
+            waited += POLL_MS
+        }
+        if (direct.portOpened && !direct.isFinished) {
+            AppLog.i("NativeAA: [BLINK] opened ${BlinkAutoSerialChannel.PORT} without root.")
+            directFailure = null
+            return direct
+        }
+        val why = if (direct.isFinished) "${ended.get() ?: "the channel ended"}, exit ${direct.exitCode}"
+            else "no answer within ${DIRECT_OPEN_TIMEOUT_MS} ms"
+        // Before root opens the port, this shell must be gone and its trap run: otherwise its
+        // reader could take the phone's lines, or its mode restore undo the root bridge's raw mode.
+        val exitedCleanly = withContext(Dispatchers.IO) { direct.closeAndAwait(DIRECT_CLOSE_TIMEOUT_MS) }
+        if (!exitedCleanly) {
+            // Its reader may still be on the port, where neither another try nor root can help.
+            directStuck = true
+            refuse(BlinkRefusal.BRIDGE_FAILED, "$why; the no-root channel did not exit when asked, restart the unit")
+            throw DirectChannelStuck()
+        }
+        noteDirectFailure(why)
+        return null
+    }
+
+    /** The no-root shell would not exit, so root is not tried this pass. */
+    private class DirectChannelStuck : Exception()
+
+    private fun noteDirectFailure(why: String) {
+        if (why == directFailure) return
+        directFailure = why
+        AppLog.i("NativeAA: [BLINK] cannot open ${BlinkAutoSerialChannel.PORT} without root ($why); trying the root bridge.")
     }
 
     /** Logs a refusal once per distinct reason and waits longer each time it repeats. */

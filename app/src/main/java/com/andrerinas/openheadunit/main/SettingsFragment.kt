@@ -1520,7 +1520,10 @@ class SettingsFragment : Fragment() {
         // Deliberately outside the Native AA block: the reporters who need this are on units where
         // that mode does not work, so requiring them to select it first would hide the diagnostic
         // behind the very setting it is diagnosing.
-        if (BluetoothHelper.externalBtEvidence != null) {
+        // Not on FYT module units, which have no ZLink daemon; the route refuses ZBT there anyway.
+        // Still shown while on, so a toggle left over from before can be turned off.
+        val zbtChecked = pendingExternalBtZbtTransport ?: settings.externalBtZbtTransport
+        if (BluetoothHelper.externalBtEvidence != null && (BluetoothHelper.fytModuleEvidence == null || zbtChecked)) {
             items.add(SettingItem.ToggleSettingEntry(
                 stableId = "externalBtZbtTransport",
                 nameResId = R.string.external_bt_transport,
@@ -4797,11 +4800,13 @@ class SettingsFragment : Fragment() {
             // Unless there is a route to that chip, in which case the flat refusal below would be
             // wrong: either the user turned the transport on, or the daemon answered when asked.
             // The dial is a socket connect, so it never happens on this thread.
-            val chosen = (pendingExternalBtZbtTransport ?: settings.externalBtZbtTransport) ||
+            // ZBT only counts off FYT module units, where the route can actually take it.
+            val chosen = ((pendingExternalBtZbtTransport ?: settings.externalBtZbtTransport) &&
+                BluetoothHelper.fytModuleEvidence == null) ||
                 (pendingExternalBtBlinkTransport ?: settings.externalBtBlinkTransport)
             externalBtRouteJob?.cancel()
             externalBtRouteJob = viewLifecycleOwner.lifecycleScope.launch {
-                val viaModule = if (chosen) true else {
+                val viaModule = if (chosen) true else if (BluetoothHelper.fytModuleEvidence != null) false else {
                     ZbtDaemonReachability.cached()
                         ?: withContext(Dispatchers.IO) { ZbtDaemonReachability.resolve() }
                 }

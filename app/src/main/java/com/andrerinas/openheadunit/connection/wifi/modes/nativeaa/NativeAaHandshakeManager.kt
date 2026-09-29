@@ -23,6 +23,7 @@ import com.andrerinas.openheadunit.aap.protocol.proto.Wireless
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.blink.BlinkAaCarrier
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.blink.BlinkAutoSerialChannel
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.blink.BlinkRefusal
+import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.blink.StockCarLink
 import com.andrerinas.openheadunit.utils.ToastUtils
 import android.widget.Toast
 import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt.ZbtAaCarrier
@@ -2624,7 +2625,7 @@ class NativeAaHandshakeManager(
         }
         AppLog.i(
             "NativeAA: FYT external Bluetooth module transport is on — the handshake goes over the " +
-                "module through ${BlinkAutoSerialChannel.PORT} (root), where the stock Car Link normally sits."
+                "module through ${BlinkAutoSerialChannel.PORT}, where the stock Car Link normally sits."
         )
         val carrier = BlinkAaCarrier(
             serve = { link ->
@@ -2635,7 +2636,8 @@ class NativeAaHandshakeManager(
             isFinishedForSession = { aaListenersClosedForSession },
             mayServeHandshake = { NativeHandoffPolicy.shouldServeHandshake(consecutiveHandshakeFailures) },
             onPhoneEvidence = { resetHandshakeBackoff() },
-            onRefusalChanged = { refusal -> onBlinkRefusalChanged(refusal) }
+            onRefusalChanged = { refusal -> onBlinkRefusalChanged(refusal) },
+            stockClient = { StockCarLink.state(context.packageManager) }
         )
         moduleCarrier = carrier
         scope.launch(Dispatchers.IO + CoroutineName("NativeAa-BlinkCarrier")) {

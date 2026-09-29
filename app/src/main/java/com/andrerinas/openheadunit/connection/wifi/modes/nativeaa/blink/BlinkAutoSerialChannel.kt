@@ -14,7 +14,8 @@ import java.util.concurrent.LinkedBlockingQueue
  * A root-owned bridge to `/dev/auto_serial`, the pseudo-terminal FYT's `blink` daemon relays the
  * module's Android Auto RFCOMM channel through.
  *
- * The node belongs to root and the vendor app, so it is reached through `su`: one shell puts the
+ * Where the node is app-openable, as it is for the stock client, [openDirect] runs the copy loop
+ * as this app. Otherwise it is reached through `su` ([open]): one shell checks the stock client, puts the
  * terminal in raw mode without echo (as shipped it echoes every line back to the daemon, which
  * logs each one as an unsupported command), then copies the port to our stdin and our stdout to
  * the port. Lines are dispatched to [onLine] on a reader thread.
@@ -83,8 +84,8 @@ class BlinkAutoSerialChannel internal constructor(
             fi
         """.trimIndent()
 
-        internal val BRIDGE_SCRIPT = """
-            $STOCK_CLIENT_GUARD
+        /** The copy loop itself, which needs no root where the node is app-openable. */
+        internal val BRIDGE_BODY = """
             P=${'$'}(readlink -f $PORT)
             if [ ! -c "${'$'}P" ]; then echo "${ERR_TAG}$PORT is not a character device (${'$'}P)"; exit 3; fi
             OLD_MODE=${'$'}(stty -g < "${'$'}P") || { echo "${ERR_TAG}cannot read tty mode on ${'$'}P"; exit 4; }
@@ -106,9 +107,23 @@ class BlinkAutoSerialChannel internal constructor(
             cat >&3
         """.trimIndent()
 
-        /** Starts the bridge. Throws if `su` cannot be run at all. */
+        /** The root bridge: the stock-client guard, then the copy loop. */
+        internal val BRIDGE_SCRIPT = STOCK_CLIENT_GUARD + "\n" + BRIDGE_BODY
+
+        /** Starts the root bridge. Throws if `su` cannot be run at all. */
         fun open(onLine: (String) -> Unit, onEnded: (String) -> Unit): BlinkAutoSerialChannel {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", BRIDGE_SCRIPT))
+            return BlinkAutoSerialChannel(process, onLine, onEnded).also { it.start() }
+        }
+
+        /**
+         * Starts the same copy loop as this app, with no root, the way the stock client opens the
+         * node. Only the caller can check the stock client here, so it must have. A node this app
+         * cannot open or set the mode of ends the channel before [portOpened], and the caller falls
+         * back to [open]. Throws if `sh` cannot be run at all.
+         */
+        fun openDirect(onLine: (String) -> Unit, onEnded: (String) -> Unit): BlinkAutoSerialChannel {
+            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", BRIDGE_BODY))
             return BlinkAutoSerialChannel(process, onLine, onEnded).also { it.start() }
         }
     }
@@ -168,7 +183,8 @@ class BlinkAutoSerialChannel internal constructor(
                         scriptSpoke = true
                         reason = line.removePrefix(ERR_TAG)
                     }
-                    else -> onLine(line)
+                    // A closed channel's reader may still be draining; its lines belong to no one.
+                    else -> if (!isFinished) onLine(line)
                 }
             }
         } catch (e: IOException) {
@@ -203,6 +219,23 @@ class BlinkAutoSerialChannel internal constructor(
         isFinished = true
         readerPid = null
         cleanupScheduler { stopBridgeProcess(process, sink) }
+    }
+
+    /**
+     * Closes on the calling thread and says whether the shell ended by itself, running its trap:
+     * that trap is what stops the background reader and restores the terminal mode. Blocking.
+     *
+     * @return false if the shell had to be killed, when its reader may outlive it
+     */
+    fun closeAndAwait(timeoutMs: Long): Boolean {
+        isFinished = true
+        readerPid = null
+        runCatching { sink.close() }
+        // 128 and up is a signal, such as a kill from outside, which skips the trap.
+        if (waitForProcess(process, timeoutMs)) return runCatching { process.exitValue() < 128 }.getOrDefault(false)
+        runCatching { process.destroy() }
+        waitForProcess(process, timeoutMs)
+        return false
     }
 
     /**

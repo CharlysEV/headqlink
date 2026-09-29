@@ -65,12 +65,9 @@ object ExternalBtTransportPolicy {
         blinkTransportEnabled -> Route.BLINK
         // An FYT module unit with the toggle off is refused with a reason that names the toggle,
         // rather than running RFCOMM listeners and pokes on a radio its phone is not paired to.
-        // Never the ZLink daemon measurement: FYT units have no such daemon.
-        fytModuleEvidence != null -> when {
-            zbtTransportEnabled -> Route.ZBT
-            ignoreExternalBt -> Route.NORMAL
-            else -> Route.BLOCKED
-        }
+        // Never the ZLink daemon measurement or route: FYT units have no such daemon, so a ZBT
+        // toggle left on (or offered because a ZLink marker also matched) is refused too.
+        fytModuleEvidence != null -> if (ignoreExternalBt) Route.NORMAL else Route.BLOCKED
         externalBtEvidence == null -> Route.NORMAL
         zbtTransportEnabled -> Route.ZBT
         ignoreExternalBt -> Route.NORMAL

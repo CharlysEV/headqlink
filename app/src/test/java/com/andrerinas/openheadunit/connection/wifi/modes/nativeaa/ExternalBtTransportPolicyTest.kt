@@ -241,8 +241,18 @@ class ExternalBtTransportPolicyTest {
     fun `on an FYT module unit the toggle and the existing overrides still decide`() {
         assertEquals(Route.BLINK, ExternalBtTransportPolicy.route(null, false, false, null, true, fyt))
         assertEquals(Route.NORMAL, ExternalBtTransportPolicy.route(null, false, true, null, false, fyt))
-        assertEquals(Route.ZBT, ExternalBtTransportPolicy.route(null, true, false, null, false, fyt))
         assertEquals(WifiButton.MODULE, ExternalBtTransportPolicy.wifiButton(null, false, false, null, true, fyt))
+    }
+
+    @Test
+    fun `an FYT module unit never takes the ZLink daemon route`() {
+        assertEquals(Route.BLOCKED, ExternalBtTransportPolicy.route(null, true, false, null, false, fyt))
+        assertEquals(Route.BLOCKED, ExternalBtTransportPolicy.route(evidence, true, false, true, false, fyt))
+        assertTrue(ExternalBtTransportPolicy.refusesBringUp(evidence, true, false, true, false, fyt))
+        assertEquals(WifiButton.REFUSED, ExternalBtTransportPolicy.wifiButton(null, true, false, null, false, fyt))
+        // The FYT toggle still wins over a leftover ZBT toggle.
+        assertEquals(Route.BLINK, ExternalBtTransportPolicy.route(null, true, false, null, true, fyt))
+        assertEquals(WifiButton.MODULE, ExternalBtTransportPolicy.wifiButton(null, true, false, null, true, fyt))
     }
 
     @Test

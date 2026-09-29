@@ -38,6 +38,15 @@ class BlinkAutoSerialChannelTest {
     }
 
     @Test
+    fun `the no-root channel runs the same copy loop without the guard`() {
+        // Without root the guard cannot see Car Link's process, so the carrier checks the package
+        // manager instead and must not pretend the script did.
+        assertFalse(BlinkAutoSerialChannel.BRIDGE_BODY.contains("pm list packages"))
+        assertTrue(BlinkAutoSerialChannel.BRIDGE_SCRIPT.startsWith(BlinkAutoSerialChannel.STOCK_CLIENT_GUARD))
+        assertTrue(BlinkAutoSerialChannel.BRIDGE_SCRIPT.endsWith(BlinkAutoSerialChannel.BRIDGE_BODY))
+    }
+
+    @Test
     fun `guard exit codes name the refusal`() {
         assertEquals(BlinkRefusal.STOCK_CLIENT_ENABLED, BlinkAutoSerialChannel.refusalFor(7, true))
         assertEquals(BlinkRefusal.STOCK_CLIENT_RUNNING, BlinkAutoSerialChannel.refusalFor(8, true))
