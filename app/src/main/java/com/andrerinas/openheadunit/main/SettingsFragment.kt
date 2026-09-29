@@ -22,6 +22,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import com.andrerinas.openheadunit.utils.OemAppManager
 import com.andrerinas.openheadunit.utils.CarLauncherManager
+import com.andrerinas.openheadunit.utils.UpdateChecker
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -3033,6 +3034,15 @@ class SettingsFragment : Fragment() {
         ))
 
         items.add(SettingItem.SettingEntry(
+            stableId = "check_for_updates",
+            nameResId = R.string.check_for_updates,
+            value = getString(R.string.check_for_updates_description),
+            onClick = {
+                handleCheckForUpdates()
+            }
+        ))
+
+        items.add(SettingItem.SettingEntry(
             stableId = "support",
             nameResId = R.string.support,
             value = getString(R.string.support_description),
@@ -5172,4 +5182,54 @@ class SettingsFragment : Fragment() {
         alertDialog.show()
     }
 
+    private fun handleCheckForUpdates() {
+        val ctx = context ?: return
+        ToastUtils.showToast(ctx, R.string.checking_for_updates, Toast.LENGTH_SHORT, force = true)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val result = UpdateChecker.check(ctx)
+            if (!isAdded) return@launch
+
+            result.fold(
+                onSuccess = { info ->
+                    if (info.isUpdateAvailable) {
+                        val message = if (info.isPlayStore) {
+                            getString(R.string.update_available_playstore_message, info.latestVersionName)
+                        } else {
+                            getString(R.string.update_available_github_message, info.latestVersionName)
+                        }
+
+                        val builder = MaterialAlertDialogBuilder(ctx, R.style.DarkAlertDialog)
+                            .setTitle(R.string.update_available_title)
+                            .setMessage(message)
+                            .setNegativeButton(R.string.cancel, null)
+
+                        if (info.isPlayStore) {
+                            builder.setPositiveButton(R.string.open_play_store) { _, _ ->
+                                UpdateChecker.openPlayStore(ctx)
+                            }
+                        } else {
+                            builder.setPositiveButton(R.string.open_github_releases) { _, _ ->
+                                UpdateChecker.openGitHubReleases(ctx, info.releaseUrl)
+                            }
+                        }
+                        builder.show()
+                    } else {
+                        MaterialAlertDialogBuilder(ctx, R.style.DarkAlertDialog)
+                            .setTitle(R.string.update_not_available_title)
+                            .setMessage(getString(R.string.update_not_available_message, info.currentVersionName))
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show()
+                    }
+                },
+                onFailure = {
+                    MaterialAlertDialogBuilder(ctx, R.style.DarkAlertDialog)
+                        .setTitle(R.string.update_not_available_title)
+                        .setMessage(R.string.update_check_failed)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                }
+            )
+        }
+    }
 }
