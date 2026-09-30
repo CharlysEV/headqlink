@@ -16,11 +16,12 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
+import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.R
 import com.andrerinas.openheadunit.utils.AppLog
 import com.google.android.material.appbar.MaterialToolbar
@@ -46,7 +47,7 @@ object AppDrawerCache {
     }
 }
 
-class AppDrawerFragment : Fragment() {
+class AppDrawerFragment : DialogFragment() {
 
     companion object {
         private const val TAG = "AppDrawerFragment"
@@ -99,6 +100,30 @@ class AppDrawerFragment : Fragment() {
         }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setStyle(STYLE_NORMAL, R.style.AppTheme_Fullscreen)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (dialog != null) {
+            view?.let { applyHudMirroring(it) }
+        }
+    }
+
+    private fun applyHudMirroring(view: View) {
+        val ctx = context ?: return
+        val appSettings = App.provide(ctx).settings
+        val mirror = if (appSettings.hudMirroring) -1.0f else 1.0f
+        dialog?.window?.let { win ->
+            val root = win.findViewById<View>(android.R.id.content) ?: win.decorView
+            root.scaleX = mirror
+        } ?: run {
+            view.scaleX = mirror
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -113,7 +138,17 @@ class AppDrawerFragment : Fragment() {
         val progressBar = view.findViewById<ProgressBar>(R.id.progress_bar)
         val tvEmpty = view.findViewById<TextView>(R.id.tv_empty)
 
-        toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
+        toolbar.setNavigationOnClickListener {
+            if (dialog != null) {
+                dismiss()
+            } else {
+                try {
+                    findNavController().popBackStack()
+                } catch (_: Exception) {
+                    dismiss()
+                }
+            }
+        }
 
         val screenWidthDp = resources.displayMetrics.widthPixels / resources.displayMetrics.density
         rvApps.layoutManager = GridLayoutManager(requireContext(), (screenWidthDp / 120).toInt().coerceAtLeast(3))
