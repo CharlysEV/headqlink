@@ -652,6 +652,17 @@
     <string name="support_rules_oneissue_title">Satu masalah per issue</string>
     <string name="support_rules_oneissue_desc">Batasi setiap issue untuk satu masalah saja agar dapat dilacak dan diperbaiki. Buka issue terpisah untuk masalah yang tidak berhubungan.</string>
     <string name="version">Versi</string>
+    <string name="check_for_updates">Periksa pembaruan</string>
+    <string name="check_for_updates_description">Periksa apakah versi terbaru Open Headunit tersedia</string>
+    <string name="checking_for_updates">Memeriksa pembaruan…</string>
+    <string name="update_available_title">Pembaruan Tersedia</string>
+    <string name="update_available_playstore_message">Versi yang lebih baru (%1$s) telah tersedia. Silakan kunjungi Google Play Store untuk memperbarui aplikasi Anda.</string>
+    <string name="update_available_github_message">Versi yang lebih baru (%1$s) telah tersedia. Kunjungi GitHub untuk mengunduh rilis terbaru.</string>
+    <string name="update_not_available_title">Sudah Terbaru</string>
+    <string name="update_not_available_message">Anda sudah menggunakan versi terbaru (%1$s).</string>
+    <string name="update_check_failed">Gagal memeriksa pembaruan. Silakan periksa koneksi internet Anda.</string>
+    <string name="open_play_store">Buka Play Store</string>
+    <string name="open_github_releases">Buka GitHub Releases</string>
     <string name="about_title">Tentang Open Headunit</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 

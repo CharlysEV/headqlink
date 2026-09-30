@@ -279,6 +279,17 @@
     <string name="about">Rólunk &amp; támogatás</string>
     <string name="about_description">További információk a Open Headunit-ról.</string>
     <string name="version">Verzió</string>
+    <string name="check_for_updates">Frissítések keresése</string>
+    <string name="check_for_updates_description">Ellenőrzi, hogy elérhető-e újabb Open Headunit verzió</string>
+    <string name="checking_for_updates">Frissítések keresése…</string>
+    <string name="update_available_title">Frissítés elérhető</string>
+    <string name="update_available_playstore_message">Újabb verzió (%1$s) érhető el. Kérjük, látogasson el a Google Play Áruházba az alkalmazás frissítéséhez.</string>
+    <string name="update_available_github_message">Újabb verzió (%1$s) érhető el. Látogasson el a GitHubra a legújabb verzió letöltéséhez.</string>
+    <string name="update_not_available_title">Naprakész</string>
+    <string name="update_not_available_message">Már a legújabb verziót (%1$s) használja.</string>
+    <string name="update_check_failed">Nem sikerült ellenőrizni a frissítéseket. Ellenőrizze az internetkapcsolatot.</string>
+    <string name="open_play_store">Play Áruház megnyitása</string>
+    <string name="open_github_releases">GitHub Releases megnyitása</string>
     <string name="about_title">Open Headunit-ról</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 

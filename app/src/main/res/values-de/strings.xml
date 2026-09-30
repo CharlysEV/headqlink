@@ -358,6 +358,17 @@
     <string name="about">Über &amp; Support</string>
     <string name="about_description">Mehr Informationen über Open Headunit</string>
     <string name="version">Version</string>
+    <string name="check_for_updates">Auf Updates prüfen</string>
+    <string name="check_for_updates_description">Prüft, ob eine neuere Version verfügbar ist</string>
+    <string name="checking_for_updates">Prüfe auf Updates…</string>
+    <string name="update_available_title">Update verfügbar</string>
+    <string name="update_available_playstore_message">Es gibt ein neues Update (%1$s). Bitte besuche den Google Play Store und aktualisiere deine App.</string>
+    <string name="update_available_github_message">Es gibt ein neues Update (%1$s). Gehe jetzt zu GitHub und lade dir die neueste Version herunter.</string>
+    <string name="update_not_available_title">Kein Update verfügbar</string>
+    <string name="update_not_available_message">Du verwendest bereits die neueste Version (%1$s).</string>
+    <string name="update_check_failed">Prüfung auf Updates fehlgeschlagen. Bitte Internetverbindung prüfen.</string>
+    <string name="open_play_store">Zum Play Store</string>
+    <string name="open_github_releases">Zu GitHub Releases</string>
     <string name="about_title">Über Open Headunit</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 

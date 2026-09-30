@@ -306,6 +306,17 @@
     <string name="about">アプリとサポート</string>
     <string name="about_description">Open Headunitの多くの情報をゲットする</string>
     <string name="version">バージョン</string>
+    <string name="check_for_updates">アップデートを確認</string>
+    <string name="check_for_updates_description">Open Headunit の新しいバージョンがあるか確認します</string>
+    <string name="checking_for_updates">アップデートを確認中…</string>
+    <string name="update_available_title">アップデート利用可能</string>
+    <string name="update_available_playstore_message">新しいバージョン (%1$s) が利用可能です。Google Play ストアにアクセスしてアプリを更新してください。</string>
+    <string name="update_available_github_message">新しいバージョン (%1$s) が利用可能です。GitHub から最新版をダウンロードしてください。</string>
+    <string name="update_not_available_title">最新です</string>
+    <string name="update_not_available_message">すでに最新バージョン (%1$s) を使用しています。</string>
+    <string name="update_check_failed">アップデートの確認に失敗しました。インターネット接続を確認してください。</string>
+    <string name="open_play_store">Play ストアを開く</string>
+    <string name="open_github_releases">GitHub Releases を開く</string>
     <string name="about_title">Open Headunitについて</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 

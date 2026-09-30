@@ -278,6 +278,17 @@
     <string name="about">关于 &amp; 支持</string>
     <string name="about_description">取得更多信息关于 Open Headunit</string>
     <string name="version">版本</string>
+    <string name="check_for_updates">检查更新</string>
+    <string name="check_for_updates_description">检查是否有更新的 Open Headunit 版本</string>
+    <string name="checking_for_updates">正在检查更新…</string>
+    <string name="update_available_title">发现新版本</string>
+    <string name="update_available_playstore_message">有新版本 (%1$s) 可用。请前往 Google Play 商店更新您的应用。</string>
+    <string name="update_available_github_message">有新版本 (%1$s) 可用。请前往 GitHub 下载最新版本。</string>
+    <string name="update_not_available_title">已是最新版本</string>
+    <string name="update_not_available_message">您已在使用最新版本 (%1$s)。</string>
+    <string name="update_check_failed">检查更新失败，请检查网络连接。</string>
+    <string name="open_play_store">打开 Play 商店</string>
+    <string name="open_github_releases">打开 GitHub Releases</string>
     <string name="about_title">关于 Open Headunit</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 
