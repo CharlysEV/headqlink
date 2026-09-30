@@ -1052,10 +1052,12 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             var bssidSource = "getGroupOwnerBssid()"
             var bssid = ""
             var usedP2pOverride = false
+            var bssidFromInterface = false
             run {
                 val ownerBssid = SoftApBssidPolicy.choose(null, getGroupOwnerBssid(group), null)
                 val linkLocalBssid =
                     SoftApBssidPolicy.choose(null, InterfaceMacReader.fromIpv6LinkLocal(iface, P2pInterfaceNamePolicy::canCarryGroupAddress), null)
+                val p2pBssid = P2pInterfaceBssid.read(iface)
                 when {
                     ownerBssid.isNotEmpty() -> {
                         bssid = ownerBssid
@@ -1064,14 +1066,26 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                     linkLocalBssid.isNotEmpty() -> {
                         bssid = linkLocalBssid
                         bssidSource = "IPv6 link-local"
+                        bssidFromInterface = true
                         AppLog.i(
                             "WifiDirectManager: BSSID read from the IPv6 link-local address of " +
                                 "${iface ?: "an access point interface"} (EUI-64): $bssid"
                         )
                     }
+                    p2pBssid != null -> {
+                        bssid = p2pBssid
+                        bssidSource = "IPv6 link-local (P2pInterfaceBssid)"
+                        bssidFromInterface = true
+                        AppLog.i(
+                            "WifiDirectManager: BSSID read from IPv6 link-local on $iface via P2pInterfaceBssid: $bssid"
+                        )
+                    }
                     else -> {
                         bssid = getWifiDirectMac(iface)
                         bssidSource = "NetworkInterface.hardwareAddress"
+                        if (SoftApBssidPolicy.isUsable(bssid)) {
+                            bssidFromInterface = true
+                        }
                         AppLog.i(
                             "WifiDirectManager: ${iface ?: "no interface"} carries no EUI-64 IPv6 " +
                                 "link-local address, so no MAC can be derived from it - this " +
@@ -1358,13 +1372,61 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 val ipRetries = GroupIpResolutionPolicy.retriesAfterFirstRead(isOwner)
                 Thread {
                     try {
-                        var ip = getWifiDirectIp(iface)
+                        var groupIface = iface
+                        var ip = getWifiDirectIp(groupIface)
+                        var deliveryBssid = bssid
+                        var fromInterface = bssidFromInterface
                         var retries = 0
-                        while (ip == null && retries < ipRetries) {
-                            AppLog.d("WifiDirectManager: Waiting for IP on interface ${iface ?: "any p2p"} (Attempt ${retries + 1}/$ipRetries)...")
+                        fun needsBssid() = !usedP2pOverride && isOwner && !SoftApBssidPolicy.isUsable(deliveryBssid)
+                        // BSSID recovery from IPv6 can take a few seconds after the kernel brings the
+                        // interface up and assigns 192.168.49.1. Allow up to 15s when BSSID is needed.
+                        val maxRetries = if (needsBssid()) maxOf(ipRetries, 15) else ipRetries
+
+                        while (retries < maxRetries && deliveryEpoch == credentialsEpoch) {
+                            // group.interface is hidden on Android 11+, and when group info lands
+                            // before the kernel assigns the GO address the initial lookup found
+                            // nothing. Without a name the IPv6 read below can never succeed, so
+                            // look again each pass: only the GO address, never a p2p name guess.
+                            if (groupIface.isNullOrEmpty() && isOwner) {
+                                groupIface = getInterfaceByIp("192.168.49.1")
+                                if (groupIface != null) {
+                                    AppLog.i("WifiDirectManager: Discovered interface name by IP 192.168.49.1 after group info: $groupIface")
+                                    val found = groupIface
+                                    handler.post { if (deliveryEpoch == credentialsEpoch) discoveredInterface = found }
+                                }
+                            }
+                            if (!usedP2pOverride && isOwner && !fromInterface && !groupIface.isNullOrEmpty()) {
+                                val recovered = P2pInterfaceBssid.read(groupIface)
+                                    ?: SoftApBssidPolicy.choose(null, InterfaceMacReader.fromIpv6LinkLocal(groupIface, P2pInterfaceNamePolicy::canCarryGroupAddress), null).takeIf { it.isNotEmpty() }
+                                if (recovered != null) {
+                                    if (recovered != deliveryBssid) {
+                                        AppLog.i("WifiDirectManager: Resolved active group BSSID from interface IPv6 on $groupIface after IP setup: $recovered (was $deliveryBssid)")
+                                    }
+                                    deliveryBssid = recovered
+                                    fromInterface = true
+                                    val newBssid = recovered
+                                    val newIface = groupIface
+                                    handler.post {
+                                        if (deliveryEpoch == credentialsEpoch) {
+                                            lastKnownBssid = newBssid
+                                            lastKnownBssidIface = newIface
+                                        }
+                                    }
+                                }
+                            }
+                            if (ip != null && !needsBssid()) break
+                            AppLog.d("WifiDirectManager: Waiting for IP/BSSID on interface ${groupIface ?: "any p2p"} (Attempt ${retries + 1}/$maxRetries)...")
                             Thread.sleep(1000)
-                            ip = getWifiDirectIp(iface)
+                            ip = getWifiDirectIp(groupIface)
                             retries++
+                        }
+
+                        if (needsBssid() && deliveryEpoch == credentialsEpoch) {
+                            AppLog.w(
+                                "WifiDirectManager: could not recover this group's BSSID: " +
+                                    "${P2pInterfaceBssid.describe(groupIface)}. " +
+                                    "Set Static BSSID in Advanced settings on this firmware."
+                            )
                         }
 
                         // A group owner is 192.168.49.1 by platform, so waiting for the interface to
@@ -1377,11 +1439,20 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                                     "sent a network that no longer exists."
                             )
                         } else if (finalIp != null) {
-                            AppLog.i("WifiDirectManager: SUCCESS - Providing credentials to listener. SSID=$ssid, IP=$finalIp, BSSID=$bssid, identity stable=${GroupIdentityStabilityPolicy.label(deliveryStability)}")
+                            val readyBssid = deliveryBssid
+                            AppLog.i("WifiDirectManager: SUCCESS - Providing credentials to listener. SSID=$ssid, IP=$finalIp, BSSID=$readyBssid, identity stable=${GroupIdentityStabilityPolicy.label(deliveryStability)}")
                             // Our own listener, not the phone, and it fires three or four times
                             // per group — so it stays on the network step and re-reports as a no-op.
                             ConnectionStageTracker.report(ConnectionStage.CREATING_NETWORK)
-                            onCredentialsReady?.invoke(ssid, psk, finalIp, bssid, deliveryStability)
+                            handler.post {
+                                if (deliveryEpoch == credentialsEpoch) {
+                                    val onAir = ObservedP2pCredentials(ssid, psk, readyBssid)
+                                    if (appSettings.wifiDirectLastReadBack != onAir) {
+                                        appSettings.wifiDirectLastReadBack = onAir
+                                    }
+                                }
+                            }
+                            onCredentialsReady?.invoke(ssid, psk, finalIp, readyBssid, deliveryStability)
                         } else {
                             AppLog.e("WifiDirectManager: FAILED to get valid IP for credentials delivery.")
                         }
