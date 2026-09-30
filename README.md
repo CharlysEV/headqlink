@@ -112,7 +112,8 @@ adb shell am start -a android.intent.action.VIEW -d "headunit://connect?ip=192.1
 - Added: Simplified Chinese 🇨🇳, Indonesian 🇮🇩, Hindi 🇮🇳, Thai 🇹🇭, European Portuguese 🇵🇹
 - Connection: one attempt at a time, hold auto-connect behind settings and the pill's X, and fix the dongle's TLS handshake- #1015
 - Request low-latency Wi-Fi during wireless projection, thanks to @emotionbug
-- Stabilize wireless audio playback and AAC handling with opt-in AAudio
+- Add on-demand "Check for Updates" button
+- Add FYT BLINK/DUDUAUTO module transport for Native AA thanks to @dohun0310
 
 ### v.3.4.0
 - USB: connect non-Pixel phones without fighting a fast-reverting dongle
