@@ -60,6 +60,43 @@ class Eui64BssidPolicyTest {
     }
 
     @Test
+    fun `two different macs on one interface yield nothing`() {
+        assertNull(Eui64BssidPolicy.fromLinkLocals(listOf(universalBitSet, universalBitClear)))
+        assertEquals("00:1A:11:F1:9E:5C",
+            Eui64BssidPolicy.fromLinkLocals(listOf(universalBitSet, universalBitSet, stablePrivacy)))
+    }
+
+    @Test
+    fun `only fe80 slash 64 is read`() {
+        // A global address and a link-local with subnet bits set, both carrying the marker.
+        assertNull(Eui64BssidPolicy.fromLinkLocal(addr("20010db800000000021a11fffef19e5c")))
+        assertNull(Eui64BssidPolicy.fromLinkLocal(addr("fe80000100000000021a11fffef19e5c")))
+    }
+
+    @Test
+    fun `multicast, zero and masked results are not addresses`() {
+        // 01:..., 00:00:00:00:00:00 and 02:00:00:00:00:00 once the flip is undone.
+        assertNull(Eui64BssidPolicy.fromLinkLocal(addr("fe80000000000000031a11fffef19e5c")))
+        assertNull(Eui64BssidPolicy.fromLinkLocal(addr("fe80000000000000020000fffe000000")))
+        assertNull(Eui64BssidPolicy.fromLinkLocal(addr("fe80000000000000000000fffe000000")))
+    }
+
+    // A BYD built-in hotspot, and a HiBy R4 (Android 12, P2P MAC randomization) hosting a group,
+    // where a phone's scan listed the group at the decoded address.
+    @Test
+    fun `decodes addresses captured from real interfaces`() {
+        assertEquals("4E:B1:C7:94:48:3F", Eui64BssidPolicy.fromLinkLocal(addr("fe800000000000004cb1c7fffe94483f")))
+        assertEquals("4A:4D:90:CB:AD:5C", Eui64BssidPolicy.fromLinkLocal(addr("fe80000000000000484d90fffecbad5c")))
+    }
+
+    @Test
+    fun `describe says why nothing was recovered`() {
+        assertTrue(Eui64BssidPolicy.describe("p2p0", emptyList()).contains("no IPv6 link-local"))
+        assertTrue(Eui64BssidPolicy.describe("p2p0", listOf(stablePrivacy)).contains("opaque"))
+        assertTrue(Eui64BssidPolicy.describe("p2p0", listOf(universalBitSet, universalBitClear)).contains("conflicting"))
+    }
+
+    @Test
     fun `no link-local yields anything`() {
         assertNull(Eui64BssidPolicy.fromLinkLocals(emptyList()))
         assertNull(Eui64BssidPolicy.fromLinkLocals(listOf(stablePrivacy)))
