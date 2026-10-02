@@ -139,15 +139,7 @@ class AppDrawerFragment : DialogFragment() {
         val tvEmpty = view.findViewById<TextView>(R.id.tv_empty)
 
         toolbar.setNavigationOnClickListener {
-            if (dialog != null) {
-                dismiss()
-            } else {
-                try {
-                    findNavController().popBackStack()
-                } catch (_: Exception) {
-                    dismiss()
-                }
-            }
+            closeDrawer()
         }
 
         val screenWidthDp = resources.displayMetrics.widthPixels / resources.displayMetrics.density
@@ -189,6 +181,26 @@ class AppDrawerFragment : DialogFragment() {
         }
     }
 
+    private fun closeDrawer() {
+        if (dialog != null) {
+            try {
+                dismissAllowingStateLoss()
+            } catch (_: Exception) {
+                dismiss()
+            }
+        } else {
+            try {
+                if (!findNavController().popBackStack()) {
+                    dismissAllowingStateLoss()
+                }
+            } catch (_: Exception) {
+                try {
+                    dismissAllowingStateLoss()
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
     private fun warmupIcons(apps: List<AppDrawerItem>) {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val pm = context?.applicationContext?.packageManager ?: return@launch
@@ -212,8 +224,10 @@ class AppDrawerFragment : DialogFragment() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
         }
 
+        var launched = false
         try {
             startActivity(launchIntent)
+            launched = true
         } catch (e: Exception) {
             AppLog.w(TAG, "Direct launch failed for $comp, trying getLaunchIntentForPackage fallback", e)
             try {
@@ -222,10 +236,15 @@ class AppDrawerFragment : DialogFragment() {
                 }
                 if (fallbackIntent != null) {
                     startActivity(fallbackIntent)
+                    launched = true
                 }
             } catch (e2: Exception) {
                 AppLog.e(TAG, "Fallback launch failed for ${item.packageName}", e2)
             }
+        }
+
+        if (launched) {
+            closeDrawer()
         }
     }
 }
