@@ -21,8 +21,8 @@
 
         <ImageView
             android:id="@+id/iv_app_icon"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
             android:contentDescription="@null"
             tools:src="@mipmap/ic_launcher" />
 
@@ -33,9 +33,9 @@
             android:layout_marginTop="8dp"
             android:ellipsize="end"
             android:gravity="center"
-            android:maxLines="2"
+            android:maxLines="1"
             android:textColor="?android:attr/textColorPrimary"
-            android:textSize="13sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             tools:text="App Name" />
 
