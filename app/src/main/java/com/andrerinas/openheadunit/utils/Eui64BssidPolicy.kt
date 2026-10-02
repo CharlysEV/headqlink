@@ -1,5 +1,7 @@
 package com.andrerinas.openheadunit.utils
 
+import java.util.Locale
+
 /**
  * Recovers an interface's MAC from its IPv6 link-local address.
  *
@@ -12,6 +14,8 @@ package com.andrerinas.openheadunit.utils
  */
 object Eui64BssidPolicy {
 
+    private val MASKED = intArrayOf(0x02, 0, 0, 0, 0, 0)
+
     /** One interface, and every IPv6 link-local address on it as raw 16-byte material. */
     data class Candidate(val name: String, val linkLocalIpv6: List<ByteArray>)
 
@@ -21,32 +25,37 @@ object Eui64BssidPolicy {
     /**
      * The MAC encoded in [address], or null where the address was not built by the EUI-64 rule.
      *
-     * Bytes 11 and 12 must carry the `ff:fe` marker, which is what makes this self-validating: an
-     * interface using RFC 7217 stable-privacy addressing fails the test and yields nothing rather
-     * than a fabricated address. Bit 1 of byte 8 is the flipped U/L bit, which the xor undoes.
+     * Bytes 11 and 12 must carry the `ff:fe` marker, so an RFC 7217 stable-privacy address yields
+     * nothing rather than a fabricated MAC. Bit 1 of byte 8 is the flipped U/L bit, which the xor
+     * undoes. Only `fe80::/64` is read, and a multicast, zero or masked result is no address.
      */
     fun fromLinkLocal(address: ByteArray?): String? {
         if (address == null || address.size != 16) return null
-        if (address[11].toInt() and 0xFF != 0xFF) return null
-        if (address[12].toInt() and 0xFF != 0xFE) return null
-        val octets = intArrayOf(
-            (address[8].toInt() and 0xFF) xor 0x02,
-            address[9].toInt() and 0xFF,
-            address[10].toInt() and 0xFF,
-            address[13].toInt() and 0xFF,
-            address[14].toInt() and 0xFF,
-            address[15].toInt() and 0xFF
-        )
-        return octets.joinToString(":") { String.format("%02X", it) }
+        val bytes = IntArray(16) { address[it].toInt() and 0xFF }
+        if (bytes[0] != 0xFE || bytes[1] != 0x80 || (2..7).any { bytes[it] != 0 }) return null
+        if (bytes[11] != 0xFF || bytes[12] != 0xFE) return null
+        val octets = intArrayOf(bytes[8] xor 0x02, bytes[9], bytes[10], bytes[13], bytes[14], bytes[15])
+        if (octets[0] and 0x01 != 0) return null
+        if (octets.all { it == 0 } || octets.contentEquals(MASKED)) return null
+        return octets.joinToString(":") { String.format(Locale.ROOT, "%02X", it) }
     }
 
     /**
-     * The first of [addresses] that yields a MAC. Every one is tried rather than only the first,
-     * because a kernel may carry a stable-privacy address alongside the EUI-64 one and stopping at
-     * the first would return nothing on exactly the hardware where this works.
+     * The one MAC [addresses] encode. Every address is tried, because a kernel may carry a
+     * stable-privacy address beside the EUI-64 one; two different MACs on one interface say
+     * nothing about which is the network's, so that answers null.
      */
     fun fromLinkLocals(addresses: List<ByteArray>): String? =
-        addresses.firstNotNullOfOrNull { fromLinkLocal(it) }
+        addresses.mapNotNull { fromLinkLocal(it) }.distinct().singleOrNull()
+
+    /** Why [fromLinkLocals] found nothing on [name], for the log a reporter sends. */
+    fun describe(name: String, linkLocal: List<ByteArray>): String = when {
+        linkLocal.isEmpty() -> "$name has no IPv6 link-local address"
+        linkLocal.mapNotNull { fromLinkLocal(it) }.distinct().size > 1 ->
+            "$name has conflicting MAC-derived IPv6 link-local addresses"
+        else -> "$name has only opaque IPv6 link-local identifiers (no EUI-64 ff:fe), " +
+            "so its MAC cannot be derived"
+    }
 
     /**
      * Whether [name] is an access point or P2P interface.

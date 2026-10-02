@@ -49,6 +49,21 @@ object InterfaceMacReader {
         null
     }
 
+    /** Why [fromIpv6LinkLocal] found nothing on [iface], in words a reporter's log can carry. */
+    fun describeIpv6LinkLocal(iface: String?): String {
+        if (iface.isNullOrBlank()) return "the group interface could not be named"
+        return try {
+            val nic = NetworkInterface.getByName(iface) ?: return "interface $iface is gone"
+            Eui64BssidPolicy.describe(iface, nic.inetAddresses.asSequence()
+                .filterIsInstance<Inet6Address>()
+                .filter { it.isLinkLocalAddress }
+                .map { it.address }
+                .toList())
+        } catch (e: Exception) {
+            "interface $iface could not be read (${e.message})"
+        }
+    }
+
     /** `/sys/class/net/<iface>/address`. Readable without root on most head units. */
     fun fromSysfs(iface: String): String? = try {
         val file = File("/sys/class/net/$iface/address")

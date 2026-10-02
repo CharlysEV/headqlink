@@ -471,6 +471,9 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         AppLog.i("WifiDirectManager: the group is being removed ($why), so its credentials are no longer handed out.")
     }
 
+    /** The group (SSID and epoch) whose late address is being watched for; one watcher per group. */
+    @Volatile private var addressWatchKey: String? = null
+
     /** The SSID the identity read-back was last printed for; group info arrives several times each. */
     private var lastIdentityReportSsid: String? = null
 
@@ -570,6 +573,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         lastIdentityReportSsid = null
         nativeIdentityAssessedSsid = null
         nativeIdentityStability = GroupIdentityStability.UNPROVEN
+        addressWatchKey = null
         nativeJoinWatchdogSsid = null
         lastFrequencyUnreadableSsid = null
         lastUnfriendlyChannelSsid = null
@@ -1349,6 +1353,18 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 armNativeJoinWatchdog(ssid)
             }
 
+            val watchKey = "$ssid#$credentialsEpoch"
+            if (ssid.isNotEmpty() && GroupAddressRecoveryPolicy.shouldWatch(
+                    nativeOwner = isNativeAaMode() && isOwner,
+                    fixedByUser = usedP2pOverride,
+                    bssidUsable = SoftApBssidPolicy.isUsable(bssid),
+                    bssidIsGroupsOwn = bssidAnswersIdentity,
+                    alreadyWatching = addressWatchKey == watchKey,
+                )) {
+                addressWatchKey = watchKey
+                watchForLateGroupAddress(ssid, iface, credentialsEpoch)
+            }
+
             if (ssid.isNotEmpty()) {
                 // Wait for the IP address to be assigned to the interface
                 val deliveryEpoch = credentialsEpoch
@@ -1540,6 +1556,42 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         }
     } catch (e: Exception) {
         "This unit's own WiFi state could not be read (${e.message})."
+    }
+
+    /**
+     * Polls for the group's interface and its EUI-64 address, which can appear after group info,
+     * and asks for group info once more when they do, so the normal chain reads, grades and sends it.
+     */
+    private fun watchForLateGroupAddress(ssid: String, initialIface: String?, epoch: Int) {
+        Thread {
+            var iface = initialIface
+            for (second in 1..GroupAddressRecoveryPolicy.WINDOW_SECONDS) {
+                try {
+                    Thread.sleep(1000)
+                } catch (e: InterruptedException) {
+                    return@Thread
+                }
+                if (epoch != credentialsEpoch) return@Thread
+                if (iface.isNullOrEmpty()) iface = getInterfaceByIp("192.168.49.1")
+                if (iface.isNullOrEmpty()) continue
+                val mac = InterfaceMacReader.fromIpv6LinkLocal(iface, P2pInterfaceNamePolicy::canCarryGroupAddress)
+                if (mac != null) {
+                    AppLog.i("WifiDirectManager: the address of $ssid became readable on $iface after ${second}s ($mac); asking for group info again so it is graded and sent.")
+                    handler.post {
+                        if (epoch != credentialsEpoch) return@post
+                        channel?.let { ch -> manager?.requestGroupInfo(ch, this) }
+                    }
+                    return@Thread
+                }
+            }
+            if (epoch == credentialsEpoch) {
+                AppLog.w(
+                    "WifiDirectManager: could not recover the address of $ssid: " +
+                        "${InterfaceMacReader.describeIpv6LinkLocal(iface)}. " +
+                        "Set the static BSSID under Wireless connection in Settings on this firmware."
+                )
+            }
+        }.start()
     }
 
     private fun getInterfaceByIp(targetIp: String): String? {
