@@ -626,23 +626,24 @@ class CommManager(
             // disconnect, so a stable local reference avoids racing reads and lets us bail out
             // early instead of emitting TransportStarted when no reading actually started.
             val transport = _transport ?: return@withContext
-            // Only grab permanent AUDIOFOCUS_GAIN in Static Audio Focus mode, matching the
-            // gating in AapService.requestPermanentAudioFocus and AapControl.audioFocusRequest.
+            // AapAudio is the session's permanent focus owner. Only request AUDIOFOCUS_GAIN
+            // in Static Audio Focus mode, matching AapControl.audioFocusRequest.
             // In the default (dynamic) mode focus is acquired on demand via the AA protocol, so
             // an unconditional grab here would evict other media (e.g. the car radio) the moment
             // the phone connects, before AA plays anything.
             //
             // And even in static mode, not when the player we would evict is the head unit's own
             // A2DP sink: it answers by AVRCP-pausing the phone that is about to project to us.
-            if (settings.enableAudioSink && settings.staticAudioFocus) {
-                val mode = settings.playbackFocusMode
+            val audioConfig = transport.aapAudio.sessionConfig
+            if (audioConfig.enabled && audioConfig.staticFocus) {
+                val mode = audioConfig.focusMode
                 val btMediaLinkActive = BluetoothHelper.isA2dpMediaLinkActive(context)
                 if (PlaybackFocusPolicy.shouldAcquirePermanent(
                         mode = mode,
                         staticAudioFocus = true,
                         audioSinkEnabled = true,
                         btMediaLinkActive = btMediaLinkActive)) {
-                    transport.aapAudio?.requestFocusChange(
+                    transport.aapAudio?.postProtocolFocusChange(
                         AudioManager.STREAM_MUSIC,
                         AudioManager.AUDIOFOCUS_GAIN,
                         AudioManager.OnAudioFocusChangeListener { }
@@ -1031,6 +1032,7 @@ class CommManager(
         // (from transportedQuited firing onQuit during stop()) from double-stopping.
         val transport = _transport
         val connection = _connection
+        val closeAudio = audioDecoder.captureCleanup()
         _transport = null
         _connection = null
         settleSessionClaim(formed = false)
@@ -1049,14 +1051,17 @@ class CommManager(
         // holding a peer that never came back. See TeardownGuard.
         TeardownGuard.runThenClose(
             teardown = {
-                // Only send ByeByeRequest when we are initiating the disconnect (e.g. user pressed
-                // disconnect). When the transport self-quit (read error, soTimeout), the connection
-                // is already dead — skip the send and the 150 ms sleep inside stop().
-                if (sendByeBye) transport?.stop(byeByeReason) else transport?.quit()
+                try {
+                    // Only send ByeByeRequest when we are initiating the disconnect (e.g. user pressed
+                    // disconnect). When the transport self-quit (read error, soTimeout), the connection
+                    // is already dead — skip the send and the 150 ms sleep inside stop().
+                    if (sendByeBye) transport?.stop(byeByeReason) else transport?.quit()
 
-                // Explicitly stop and release decoders to prevent MediaCodec finalize() timeouts
-                videoDecoder.stop("CommManager: doDisconnect")
-                audioDecoder.stop()
+                    // Explicitly stop and release decoders to prevent MediaCodec finalize() timeouts
+                    videoDecoder.stop("CommManager: doDisconnect")
+                } finally {
+                    closeAudio()
+                }
             },
             close = { connection?.disconnect() },
             onError = { phase, e -> AppLog.e("CommManager: doDisconnect $phase failed: ${e.message}") }
