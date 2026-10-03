@@ -1,5 +1,5 @@
 # Changelog
-### v.3.5.0-beta2
+### v.3.5.0-beta3
 - Native AA: reconnect to a network that is still there, instead of rebuilding it every time
 - Native AA: wake the phone over the Bluetooth module on a cold start, and from the WiFi button
 - Native AA over hotspot: stop advertising an endpoint that moves, bring the hotspot back after a boot or ACC wake- #1014
@@ -11,6 +11,10 @@
 - Request low-latency Wi-Fi during wireless projection, thanks to @emotionbug
 - Add on-demand "Check for Updates" button
 - Add FYT BLINK/DUDUAUTO module transport for Native AA thanks to @dohun0310
+- Added: BSSID recovery via IPv6 EUI-64
+- Mic: isolate capture sessions and bound uplink flow control, thanks to @emotionbug
+- Audio: stabilize playback and AAC recovery with opt-in AAudio, thanks to @emotionbug
+- WPP: retain active control connections and isolate listener generations, thanks to @emotionbug
 
 ### v.3.4.0
 - USB: connect non-Pixel phones without fighting a fast-reverting dongle
