@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.C10Link" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/c10_bg</item>
+        <item name="android:statusBarColor">@color/c10_bg</item>
+        <item name="android:navigationBarColor">@color/c10_bg</item>
+        <item name="colorPrimary">@color/c10_accent</item>
+        <item name="colorOnPrimary">@color/c10_on_accent</item>
+        <item name="colorSurface">@color/c10_surface</item>
+        <item name="colorOnSurface">@color/c10_text</item>
+        <item name="colorOutline">@color/c10_outline</item>
+        <item name="android:textColorPrimary">@color/c10_text</item>
+        <item name="android:textColorSecondary">@color/c10_text_dim</item>
+        <item name="materialButtonStyle">@style/C10.Button</item>
+        <item name="materialAlertDialogTheme">@style/C10.Dialog</item>
+    </style>
+
+    <style name="C10.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">@color/c10_surface_hi</item>
+        <item name="colorPrimary">@color/c10_accent</item>
+    </style>
+
+    <style name="C10.Button" parent="Widget.Material3.Button">
+        <item name="android:minHeight">54dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="cornerRadius">10dp</item>
+        <item name="backgroundTint">@color/c10_accent</item>
+        <item name="android:textColor">@color/c10_on_accent</item>
+    </style>
+
+    <style name="C10.Button.Quiet" parent="Widget.Material3.Button.TextButton">
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/c10_accent</item>
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+    </style>
+
+    <style name="C10.Button.Outline" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:minHeight">44dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="cornerRadius">8dp</item>
+        <item name="strokeColor">@color/c10_outline</item>
+        <item name="android:textColor">@color/c10_text</item>
+    </style>
+
+    <style name="C10" />
+
+    <style name="C10.Text" />
+
+    <style name="C10.Text.Title">
+        <item name="android:textSize">26sp</item>
+        <item name="android:textColor">@color/c10_text</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:lineSpacingExtra">2dp</item>
+    </style>
+
+    <style name="C10.Text.Body">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/c10_text_dim</item>
+        <item name="android:lineSpacingExtra">3dp</item>
+    </style>
+
+    <style name="C10.Text.Label">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">@color/c10_text_faint</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="C10.Text.RowTitle">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/c10_text</item>
+    </style>
+
+    <style name="C10.Text.RowDetail">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/c10_text_dim</item>
+    </style>
+</resources>

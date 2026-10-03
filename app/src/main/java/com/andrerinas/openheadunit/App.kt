@@ -44,6 +44,8 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
 
     override fun onCreate() {
         super.onCreate()
+        // c10link: logcat continuo del proceso y registro de fallos, siempre activos.
+        com.c10link.link.LogcatCapture.start(this)
         instance = this
         registerActivityLifecycleCallbacks(this)
 

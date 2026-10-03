@@ -135,6 +135,12 @@ internal class AapControlMedia(
 
     private fun maxUnackedFor(channel: Int): Int {
         if (channel == Channel.ID_VID) {
+            // c10link: ventana pequeña para la prueba del freno (los acks esperan al coche).
+            val c10Window = com.andrerinas.openheadunit.decoder.video.VideoTap.videoWindow
+            if (c10Window > 0) {
+                com.andrerinas.openheadunit.decoder.video.VideoTap.announcedWindow = c10Window
+                return c10Window
+            }
             val softwareHevc =
                 aapTransport.settings.videoCodec == VideoDecoder.CodecType.H265.settingsValue &&
                         aapTransport.settings.forceSoftwareDecoding &&
@@ -148,7 +154,9 @@ internal class AapControlMedia(
             // more messages, so narrowing this stalls the phone mid-keyframe and caps throughput at
             // window/RTT. The phone does not hold to it either - one told 12 ran our backlog to 120
             // - so the bound that works is the decoder discarding frames it is behind on.
-            return if (aapTransport.isWireless) 12 else 16
+            val window = if (aapTransport.isWireless) 12 else 16
+            com.andrerinas.openheadunit.decoder.video.VideoTap.announcedWindow = window
+            return window
         }
 
         // Audio still benefits from a wider jitter window, especially on wireless.

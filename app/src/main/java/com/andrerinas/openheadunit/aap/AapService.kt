@@ -895,6 +895,7 @@ class AapService : Service() {
 
         if (commManager.isConnected) {
             // Connection still alive — return to projection screen
+            if (com.andrerinas.openheadunit.decoder.video.VideoTap.headless) return
             if (App.isPiPActive) {
                 AppLog.i("WakeDetect: connection active, but PiP is active. Skipping return to full screen.")
                 return
@@ -1320,6 +1321,10 @@ class AapService : Service() {
      *   call screen's own full-screen intent.
      */
     private fun launchAapProjectionActivity(allowNotificationFallback: Boolean = true): Boolean {
+        if (com.andrerinas.openheadunit.decoder.video.VideoTap.headless) {
+            AppLog.i("AapService: c10link sin pantalla - no se abre la proyección en el móvil")
+            return true
+        }
         if (App.isPiPActive) {
             AppLog.i("AapService: Skipping projection launch because PiP is active")
             return false

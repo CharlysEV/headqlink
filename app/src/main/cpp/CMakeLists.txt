@@ -79,3 +79,9 @@ else()
 endif()
 
 target_link_libraries(hur_soft_hevc PRIVATE ${log-lib} ${android-lib})
+
+# =========================================================================
+# c10link: estado del socket con el coche (SIOCOUTQ + TCP_INFO) para la traza
+# =========================================================================
+add_library(c10net SHARED c10_netstat.c)
+target_link_libraries(c10net log)

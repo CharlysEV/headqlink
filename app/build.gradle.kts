@@ -95,7 +95,7 @@ android {
         // installs, testers) and existing users just get a normal update. Only the display name
         // changed to Open Headunit. The code package and namespace stay openheadunit, so the
         // applicationId deliberately differs from the namespace, like com.google.talk for Hangouts.
-        applicationId = "com.andrerinas.headunitrevived"
+        applicationId = "com.c10link.app" // c10link: identificador propio del fork
         minSdk = 16
         targetSdk = 36
         versionCode = 116
@@ -248,6 +248,10 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation("androidx.media:media:1.6.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
+    // c10link: reproductor de vídeo e IPTV (HLS) en la pantalla del coche. 1.3.x admite minSdk 16.
+    implementation("androidx.media3:media3-exoplayer:1.3.1")
+    implementation("androidx.media3:media3-exoplayer-hls:1.3.1")
+    implementation("androidx.media3:media3-ui:1.3.1")
     implementation("com.google.android.material:material:1.10.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.startup:startup-runtime:1.1.1")

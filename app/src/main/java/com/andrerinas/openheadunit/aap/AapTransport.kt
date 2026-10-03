@@ -15,6 +15,7 @@ import android.view.KeyEvent
 import com.andrerinas.openheadunit.aap.protocol.Channel
 import com.andrerinas.openheadunit.aap.protocol.messages.KeyCodeEvent
 import com.andrerinas.openheadunit.aap.protocol.messages.MediaAck
+import com.andrerinas.openheadunit.decoder.video.VideoTap
 import com.andrerinas.openheadunit.aap.protocol.messages.MicrophoneResponse
 import com.andrerinas.openheadunit.aap.protocol.proto.Common
 import com.andrerinas.openheadunit.aap.protocol.messages.Messages
@@ -823,6 +824,7 @@ class AapTransport(
         val queued = AapMessage(channel, message.flags, message.type, message.dataOffset, size, copy)
         videoBacklog.incrementAndGet()
         handler.post {
+            VideoTap.delivered = false
             try {
                 aapVideo.process(queued)
             } catch (e: Exception) {
@@ -830,7 +832,13 @@ class AapTransport(
             } finally {
                 videoBacklog.decrementAndGet()
                 recycleVideoBuffer(copy)
-                if (acks) sendMediaAck(channel)
+                if (acks) {
+                    // c10link: con el freno, el ack del frame espera a que el frame salga hacia el coche.
+                    val gate = VideoTap.ackGate
+                    if (gate == null || !VideoTap.takeDelivered() || !gate.hold { sendMediaAck(channel) }) {
+                        sendMediaAck(channel)
+                    }
+                }
             }
         }
         return isPayload
@@ -1151,6 +1159,13 @@ class AapTransport(
     }
 
     internal fun gainVideoFocus() {
+        // c10link: sin vista en el móvil, el foco se da directamente en vez de abrir la proyección.
+        if (com.andrerinas.openheadunit.decoder.video.VideoTap.headless) {
+            // Igual que AapProjectionActivity con el transporte ya activo: un único foco no solicitado.
+            AppLog.i("AapTransport: c10link sin pantalla - foco de vídeo directo")
+            send(VideoFocusEvent(gain = true, unsolicited = true))
+            return
+        }
         context.sendBroadcast(ProjectionActivityRequest())
     }
 

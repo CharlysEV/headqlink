@@ -1315,4 +1315,5 @@
     <string name="oem_app_action_failed">Execution failed: %s</string>
     <string name="copy_to_clipboard">Copy</string>
     <string name="copied_to_clipboard">Copied to clipboard</string>
+    <string name="c10_touch_service_desc" translatable="false">Reenvía los toques de la pantalla del coche a la app proyectada y arranca el servidor de Android Auto cuando hace falta.</string>
 </resources>

@@ -12,6 +12,19 @@ import kotlin.math.roundToInt
 
 object HeadUnitScreenConfig {
 
+    /**
+     * c10link: pantalla externa (la del coche, p. ej. 1920x882) que sustituye a la del móvil al
+     * calcular resolución, márgenes y aspecto que se anuncian a Android Auto. null = la del móvil.
+     */
+    @JvmStatic
+    @Volatile
+    var externalCanvas: android.util.Size? = null
+
+    /** c10link: densidad anunciada a AA para la pantalla externa; 0 = la normal. */
+    @JvmStatic
+    @Volatile
+    var externalDpi: Int = 0
+
     private var screenWidthPx: Int = 0
     private var screenHeightPx: Int = 0
     private var density: Float = 1.0f
@@ -464,6 +477,13 @@ object HeadUnitScreenConfig {
         )
         screenWidthPx = canvas.width
         screenHeightPx = canvas.height
+        externalCanvas?.let {
+            realScreenWidthPx = it.width
+            realScreenHeightPx = it.height
+            screenWidthPx = it.width
+            screenHeightPx = it.height
+            AppLog.i("[RES_CAP] c10link: pantalla externa ${it.width}x${it.height} en lugar de la del móvil")
+        }
 
         val selectedResolution = Settings.Resolution.fromId(currentSettings.resolutionId)
         val isPortraitDisplay = screenHeightPx > screenWidthPx
@@ -642,6 +662,7 @@ object HeadUnitScreenConfig {
     )
 
     fun getDensityDpi(): Int {
+        if (externalCanvas != null && externalDpi > 0) return externalDpi
         return if (this::currentSettings.isInitialized && currentSettings.dpiPixelDensity != 0) {
             currentSettings.dpiPixelDensity
         } else {

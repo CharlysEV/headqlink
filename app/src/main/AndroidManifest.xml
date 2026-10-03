@@ -4,7 +4,11 @@
 
     <uses-sdk tools:overrideLibrary="
         com.google.android.gms.nearby, com.google.android.gms.base, com.google.android.gms.tasks, com.google.android.gms.common,
-        rikka.shizuku.api, rikka.shizuku.shared, rikka.shizuku.aidl, com.topjohnwu.superuser" />
+        rikka.shizuku.api, rikka.shizuku.shared, rikka.shizuku.aidl, com.topjohnwu.superuser,
+        androidx.media3.exoplayer.hls, androidx.media3.exoplayer, androidx.media3.ui, androidx.media3.common,
+        androidx.media3.datasource, androidx.media3.decoder, androidx.media3.extractor, androidx.media3.container,
+        androidx.media3.database, androidx.media" />
+    <!-- c10link: Media3 (vídeo e IPTV en el coche) pide minSdk 19; C10Link solo funciona en Android 13+. -->
 
     <queries>
         <intent>
@@ -54,6 +58,7 @@
 
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission
@@ -81,11 +86,16 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- c10link: GPS de los paneles Instrumentos/Eficiencia con la pantalla apagada -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- Declared so the microphone type can be claimed; it is only ever requested when
          RECORD_AUDIO is actually granted, because claiming it without throws on Android 14+. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- c10link: fotos y vídeos del móvil en la pantalla del coche (modo Android Auto ampliado) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <!--
         Only requested up to API 32. From API 33 (Android 13) a granted READ_LOGS makes the app a
         privileged logd reader, which routes every `logcat` spawn through LogcatManagerService: the
@@ -105,7 +115,7 @@
         android:name=".App"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/title"
+        android:label="C10Link"
         android:largeHeap="true"
         android:supportsRtl="true"
         tools:ignore="GoogleAppIndexingWarning">
@@ -154,11 +164,10 @@
             android:launchMode="singleTask"
             android:theme="@style/SplashTheme">
 
-            <!-- Primary Launcher Filter -->
+            <!-- c10link: sin icono propio; la app se abre desde C10Link (C10Activity). -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
@@ -454,5 +463,55 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
+
+        <!-- c10link: salida al Leapmotor C10 por QDLink/SSPLink -->
+        <activity
+            android:name="com.c10link.link.C10Activity"
+            android:exported="true"
+            android:label="C10Link"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.C10Link">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.c10link.link.SetupActivity"
+            android:exported="false"
+            android:label="C10Link"
+            android:theme="@style/Theme.C10Link" />
+
+        <activity
+            android:name="com.c10link.link.LatencyActivity"
+            android:exported="false"
+            android:label="Medir latencia"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.C10Link" />
+
+        <activity
+            android:name="com.c10link.link.LogActivity"
+            android:exported="false"
+            android:label="Diagnóstico"
+            android:theme="@style/Theme.C10Link" />
+
+        <service
+            android:name="com.c10link.link.LinkService"
+            android:exported="true"
+            android:foregroundServiceType="connectedDevice|location" />
+
+        <service
+            android:name="com.c10link.link.TouchService"
+            android:exported="true"
+            android:label="C10Link táctil"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/c10_touch_service" />
+        </service>
     </application>
 </manifest>

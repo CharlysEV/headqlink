@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        style="@style/C10.Text.Title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="¿Qué quieres ver en el coche?" />
+
+    <TextView
+        style="@style/C10.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Podrás cambiarlo cuando quieras desde la pantalla principal." />
+
+    <LinearLayout
+        android:id="@+id/c10_mode_options"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="22dp"
+        android:orientation="vertical" />
+</LinearLayout>

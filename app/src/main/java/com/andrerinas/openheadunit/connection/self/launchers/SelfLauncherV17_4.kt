@@ -17,9 +17,27 @@ class SelfLauncherV17_4(
 
     override suspend fun run(): Boolean {
         // Call withContext directly, not on 'service'
-        val success = withContext(Dispatchers.IO) {
+        var success = withContext(Dispatchers.IO) {
             commManager.connect("127.0.0.1", 5277)
             commManager.isConnected
+        }
+
+        // c10link: si el servidor de head unit no está arrancado, lo arrancamos pulsando su menú
+        // con el servicio de accesibilidad y reintentamos una vez.
+        if (!success && !commManager.isConnected) {
+            success = withContext(Dispatchers.IO) {
+                if (com.c10link.link.AaServerStarter.startAndWait(services.aap)) {
+                    Thread.sleep(1500)
+                    commManager.connect("127.0.0.1", 5277)
+                }
+                commManager.isConnected
+            }
+        }
+
+        if (!success && !commManager.isConnected && com.andrerinas.openheadunit.decoder.video.VideoTap.headless) {
+            // c10link: nunca abrir los ajustes de AA a la vista; C10Link muestra el motivo.
+            com.c10link.link.AaServerStarter.reportCannotStart(services.aap)
+            return false
         }
 
         if (!success && !commManager.isConnected) {

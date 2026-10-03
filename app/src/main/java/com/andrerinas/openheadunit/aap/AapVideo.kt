@@ -248,6 +248,17 @@ internal class AapVideo(private val videoDecoder: VideoDecoder, private val sett
         )
     }
 
+    /** c10link: la marca de tiempo de AA (8 bytes tras el tipo) para medir su cola de envío. */
+    private fun noteTimestamp(buf: ByteArray, payloadOffset: Int, len: Int) {
+        if (payloadOffset != VideoFragmentAssembler.OFFSET_TIMESTAMP_INDICATION || len < 10) {
+            com.andrerinas.openheadunit.decoder.video.VideoTap.frameTimestampUs = -1
+            return
+        }
+        var ts = 0L
+        for (i in 2 until 10) ts = (ts shl 8) or (buf[i].toLong() and 0xff)
+        com.andrerinas.openheadunit.decoder.video.VideoTap.frameTimestampUs = ts
+    }
+
     fun process(message: AapMessage): Boolean {
         val buf = message.data
         val len = message.size
@@ -281,12 +292,14 @@ internal class AapVideo(private val videoDecoder: VideoDecoder, private val sett
 
         return when (val action = decision.action) {
             is VideoFragmentAssembler.Action.DecodeWhole -> {
+                noteTimestamp(buf, action.payloadOffset, len) // c10link
                 messageBuffer.clear()
                 videoDecoder.decode(buf, action.payloadOffset, len - action.payloadOffset, settings.forceSoftwareDecoding, settings.videoCodec)
                 true
             }
 
             is VideoFragmentAssembler.Action.BeginAssembly -> {
+                noteTimestamp(buf, action.payloadOffset, len) // c10link
                 messageBuffer.clear()
                 val bytes = len - action.payloadOffset
                 if (ensureCapacity(bytes)) {

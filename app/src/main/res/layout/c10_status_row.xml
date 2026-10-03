@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="58dp"
+    android:orientation="horizontal">
+
+    <View
+        android:id="@+id/c10_status_dot"
+        android:layout_width="10dp"
+        android:layout_height="10dp"
+        android:background="@drawable/c10_dot" />
+
+    <TextView
+        android:id="@+id/c10_status_name"
+        style="@style/C10.Text.RowTitle"
+        android:layout_width="110dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp" />
+
+    <TextView
+        android:id="@+id/c10_status_value"
+        style="@style/C10.Text.RowDetail"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="end"
+        android:textSize="14sp" />
+</LinearLayout>
