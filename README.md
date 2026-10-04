@@ -9,7 +9,15 @@ Android app that brings **Android Auto** and a custom side panel with extra feat
 The phone can stay locked with the screen off. No root required.
 
 <p align="center">
-  <img src="docs/car_screen.png" width="700" alt="HeadQLink: side panel + Android Auto Maps navigation on the car screen" />
+  <img src="docs/car_screen.png" width="700" alt="HeadQLink car interface: side panel with tabs and splash screen" />
+  <br/>
+  <em>Car screen: side panel + Android Auto (shown during startup)</em>
+</p>
+
+<p align="center">
+  <img src="docs/phone_home.png" width="340" alt="HeadQLink phone app: home screen" />
+  <br/>
+  <em>Phone app: home screen</em>
 </p>
 
 Personal and experimental project. Fork of [Open Headunit](https://github.com/andreknieriem/open-headunit)
