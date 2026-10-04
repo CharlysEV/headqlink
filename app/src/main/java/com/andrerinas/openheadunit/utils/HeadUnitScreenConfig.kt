@@ -13,14 +13,14 @@ import kotlin.math.roundToInt
 object HeadUnitScreenConfig {
 
     /**
-     * c10link: pantalla externa (la del coche, p. ej. 1920x882) que sustituye a la del móvil al
+     * headqlink: pantalla externa (la del coche, p. ej. 1920x882) que sustituye a la del móvil al
      * calcular resolución, márgenes y aspecto que se anuncian a Android Auto. null = la del móvil.
      */
     @JvmStatic
     @Volatile
     var externalCanvas: android.util.Size? = null
 
-    /** c10link: densidad anunciada a AA para la pantalla externa; 0 = la normal. */
+    /** headqlink: densidad anunciada a AA para la pantalla externa; 0 = la normal. */
     @JvmStatic
     @Volatile
     var externalDpi: Int = 0
@@ -482,7 +482,7 @@ object HeadUnitScreenConfig {
             realScreenHeightPx = it.height
             screenWidthPx = it.width
             screenHeightPx = it.height
-            AppLog.i("[RES_CAP] c10link: pantalla externa ${it.width}x${it.height} en lugar de la del móvil")
+            AppLog.i("[RES_CAP] headqlink: pantalla externa ${it.width}x${it.height} en lugar de la del móvil")
         }
 
         val selectedResolution = Settings.Resolution.fromId(currentSettings.resolutionId)

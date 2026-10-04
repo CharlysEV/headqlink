@@ -699,7 +699,9 @@
         <b>2. Limitation of Liability</b><br/>
         Open Headunit is provided "as is" without warranty of any kind. The developers assume no liability for any accidents, damage to your vehicle/device, or legal consequences arising from the use of this software.<br/><br/>
         <b>3. No Affiliation</b><br/>
-        This project is an independent open-source initiative and is not affiliated with, endorsed by, or connected to Google LLC or the Android Auto brand.
+        This project is an independent open-source initiative and is not affiliated with, endorsed by, or connected to Google LLC or the Android Auto brand.<br/><br/>
+        <b>4. Exemption from Liability for Misuse</b><br/>
+        By accepting these terms you acknowledge that the use of this application is entirely at your own risk. You expressly exempt the developers, contributors and distributors from any responsibility derived from improper use, use contrary to applicable laws, or any negative consequence arising from the use of this software. A record of your acceptance will be stored on this device.
     ]]></string>
 
     <!-- Toast Messages -->
@@ -1315,5 +1317,4 @@
     <string name="oem_app_action_failed">Execution failed: %s</string>
     <string name="copy_to_clipboard">Copy</string>
     <string name="copied_to_clipboard">Copied to clipboard</string>
-    <string name="c10_touch_service_desc" translatable="false">Reenvía los toques de la pantalla del coche a la app proyectada y arranca el servidor de Android Auto cuando hace falta.</string>
 </resources>

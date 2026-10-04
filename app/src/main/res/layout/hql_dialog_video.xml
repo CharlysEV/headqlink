@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="24dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="24dp">
+
+    <TextView
+        style="@style/HQL.Text.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_picture_profile" />
+
+    <RadioGroup
+        android:id="@+id/hql_v_profiles"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <TextView
+        android:id="@+id/hql_v_reason"
+        style="@style/HQL.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:alpha="0.7"
+        android:textSize="12sp" />
+
+    <CheckBox
+        android:id="@+id/hql_v_autohide"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/hql_autohide_panel_ext" />
+
+    <TextView
+        android:id="@+id/hql_v_adv_toggle"
+        style="@style/HQL.Text.Label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:text="@string/hql_advanced_closed" />
+
+    <LinearLayout
+        android:id="@+id/hql_v_advanced"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+    <TextView
+        style="@style/HQL.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_advanced_help" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/hql_v_fps"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="fps"
+            android:inputType="number" />
+
+        <EditText
+            android:id="@+id/hql_v_kbps"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:hint="kbps"
+            android:inputType="number" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/hql_v_w"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/hql_width"
+            android:inputType="number" />
+
+        <EditText
+            android:id="@+id/hql_v_h"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:hint="@string/hql_height"
+            android:inputType="number" />
+    </LinearLayout>
+
+    <TextView
+        style="@style/HQL.Text.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/hql_h264_profile" />
+
+    <RadioGroup
+        android:id="@+id/hql_v_profile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/hql_v_baseline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Baseline" />
+
+        <RadioButton
+            android:id="@+id/hql_v_main"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Main" />
+
+        <RadioButton
+            android:id="@+id/hql_v_high"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="High" />
+    </RadioGroup>
+
+    <TextView
+        style="@style/HQL.Text.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/hql_mode_aa" />
+
+    <CheckBox
+        android:id="@+id/hql_v_lowlatency"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_low_latency_profile" />
+
+    <CheckBox
+        android:id="@+id/hql_v_brake"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_brake" />
+
+    <EditText
+        android:id="@+id/hql_v_window"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/hql_brake_window"
+        android:inputType="number" />
+
+    <TextView
+        style="@style/HQL.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:text="@string/hql_brake_help" />
+    </LinearLayout>
+
+    <TextView
+        style="@style/HQL.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:text="@string/hql_profile_reconnect_help" />
+</LinearLayout>

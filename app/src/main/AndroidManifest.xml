@@ -8,7 +8,7 @@
         androidx.media3.exoplayer.hls, androidx.media3.exoplayer, androidx.media3.ui, androidx.media3.common,
         androidx.media3.datasource, androidx.media3.decoder, androidx.media3.extractor, androidx.media3.container,
         androidx.media3.database, androidx.media" />
-    <!-- c10link: Media3 (vídeo e IPTV en el coche) pide minSdk 19; C10Link solo funciona en Android 13+. -->
+    <!-- headqlink: Media3 (vídeo e IPTV en el coche) pide minSdk 19; HeadQLink solo funciona en Android 13+. -->
 
     <queries>
         <intent>
@@ -16,6 +16,17 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
         <package android:name="com.google.android.projection.gearhead" />
+        <!-- headqlink: gestores de batería de fabricante (PowerHelper) -->
+        <package android:name="com.hihonor.systemmanager" />
+        <package android:name="com.huawei.systemmanager" />
+        <package android:name="com.miui.securitycenter" />
+        <package android:name="com.samsung.android.lool" />
+        <package android:name="com.coloros.safecenter" />
+        <package android:name="com.oppo.safe" />
+        <package android:name="com.oneplus.security" />
+        <package android:name="com.vivo.permissionmanager" />
+        <package android:name="com.iqoo.secure" />
+        <package android:name="com.asus.mobilemanager" />
         <!-- OEM AA/CarPlay apps that conflict with Open Headunit -->
         <package android:name="com.zjinnova.zlink" />
         <package android:name="com.syu.carlink" />
@@ -84,16 +95,17 @@
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
-    <!-- c10link: GPS de los paneles Instrumentos/Eficiencia con la pantalla apagada -->
+    <!-- headqlink: GPS de los paneles Instrumentos/Eficiencia con la pantalla apagada -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- Declared so the microphone type can be claimed; it is only ever requested when
          RECORD_AUDIO is actually granted, because claiming it without throws on Android 14+. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    <!-- c10link: fotos y vídeos del móvil en la pantalla del coche (modo Android Auto ampliado) -->
+    <!-- headqlink: fotos y vídeos del móvil en la pantalla del coche (modo Android Auto ampliado) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <!--
@@ -114,9 +126,11 @@
     <application
         android:name=".App"
         android:hardwareAccelerated="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="C10Link"
+        android:icon="@mipmap/hql_launcher"
+        android:label="HeadQLink"
+        android:localeConfig="@xml/hql_locales_config"
         android:largeHeap="true"
+        android:usesCleartextTraffic="true"
         android:supportsRtl="true"
         tools:ignore="GoogleAppIndexingWarning">
 
@@ -164,7 +178,7 @@
             android:launchMode="singleTask"
             android:theme="@style/SplashTheme">
 
-            <!-- c10link: sin icono propio; la app se abre desde C10Link (C10Activity). -->
+            <!-- headqlink: sin icono propio; la app se abre desde HeadQLink (HomeActivity). -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -394,6 +408,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- headqlink: conexión automática al detectar el Bluetooth del coche -->
+        <receiver
+            android:name="com.headqlink.link.CarBtReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
+            </intent-filter>
+        </receiver>
+
         <receiver
             android:name=".app.AutoStartReceiver"
             android:directBootAware="true"
@@ -464,13 +488,13 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
-        <!-- c10link: salida al Leapmotor C10 por QDLink/SSPLink -->
+        <!-- headqlink: salida a la pantalla del coche por SSPLink -->
         <activity
-            android:name="com.c10link.link.C10Activity"
+            android:name="com.headqlink.link.HomeActivity"
             android:exported="true"
-            android:label="C10Link"
+            android:label="HeadQLink"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.C10Link">
+            android:theme="@style/Theme.HeadQLink">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -478,40 +502,45 @@
         </activity>
 
         <activity
-            android:name="com.c10link.link.SetupActivity"
+            android:name="com.headqlink.link.SetupActivity"
             android:exported="false"
-            android:label="C10Link"
-            android:theme="@style/Theme.C10Link" />
+            android:label="HeadQLink"
+            android:theme="@style/Theme.HeadQLink" />
 
         <activity
-            android:name="com.c10link.link.LatencyActivity"
+            android:name="com.headqlink.link.LatencyActivity"
             android:exported="false"
-            android:label="Medir latencia"
+            android:label="@string/hql_measure_latency"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.C10Link" />
+            android:theme="@style/Theme.HeadQLink" />
 
         <activity
-            android:name="com.c10link.link.LogActivity"
+            android:name="com.headqlink.link.LogActivity"
             android:exported="false"
-            android:label="Diagnóstico"
-            android:theme="@style/Theme.C10Link" />
+            android:label="@string/hql_diagnostics"
+            android:theme="@style/Theme.HeadQLink" />
 
         <service
-            android:name="com.c10link.link.LinkService"
+            android:name="com.headqlink.link.AaGuardService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
+        <service
+            android:name="com.headqlink.link.LinkService"
             android:exported="true"
             android:foregroundServiceType="connectedDevice|location" />
 
         <service
-            android:name="com.c10link.link.TouchService"
+            android:name="com.headqlink.link.TouchService"
             android:exported="true"
-            android:label="C10Link táctil"
+            android:label="@string/hql_touch_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
             <meta-data
                 android:name="android.accessibilityservice"
-                android:resource="@xml/c10_touch_service" />
+                android:resource="@xml/hql_touch_service" />
         </service>
     </application>
 </manifest>

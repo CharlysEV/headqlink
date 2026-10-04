@@ -1322,7 +1322,7 @@ class AapService : Service() {
      */
     private fun launchAapProjectionActivity(allowNotificationFallback: Boolean = true): Boolean {
         if (com.andrerinas.openheadunit.decoder.video.VideoTap.headless) {
-            AppLog.i("AapService: c10link sin pantalla - no se abre la proyección en el móvil")
+            AppLog.i("AapService: headqlink sin pantalla - no se abre la proyección en el móvil")
             return true
         }
         if (App.isPiPActive) {

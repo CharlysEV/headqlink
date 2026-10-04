@@ -82,3 +82,9 @@ deploy_old_tablet.sh
 .antigravitycli
 .agents
 dev-note8.ps1
+
+# headqlink: datos de la clave de firma de las versiones publicadas
+key.properties
+
+# headqlink: notas locales (referencias a QDLink, textos originales), no se publican
+local/

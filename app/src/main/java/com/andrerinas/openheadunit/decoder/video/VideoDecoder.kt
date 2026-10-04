@@ -858,7 +858,7 @@ class VideoDecoder(
      * before the first rendered frame.
      */
     fun decode(buffer: ByteArray, offset: Int, size: Int, forceSoftware: Boolean, codecName: String) {
-        // c10link: reenvío directo al coche antes de decodificar.
+        // headqlink: reenvío directo al coche antes de decodificar.
         VideoTap.sink?.let { tap ->
             VideoTap.delivered = true
             tap.onAccessUnit(buffer, offset, size)
@@ -1394,10 +1394,10 @@ class VideoDecoder(
                 val avcType = b and 0x1F
                 if (avcType == 7 || avcType == 8) return CodecType.H264
 
-                // c10link: una cabecera HEVC válida tiene el bit prohibido y el bit alto de
+                // headqlink: una cabecera HEVC válida tiene el bit prohibido y el bit alto de
                 // nuh_layer_id a 0 y el segundo byte en 0x01. Sin esta comprobación, un frame P de
                 // H.264 (0x41, tras reiniciar el decodificador a mitad de sesión) parecía un VPS y se
-                // creaba un decodificador H.265 que nunca daba imagen (pantalla negra, 2026-10-03).
+                // creaba un decodificador H.265 que nunca daba imagen (pantalla negra).
                 val hevcType = (b and 0x7E) shr 1
                 val hevcHeader = (b and 0x81) == 0 && headerPos + 1 < limit && buffer[headerPos + 1].toInt() == 0x01
                 if (hevcType in 32..34 && hevcHeader && isHevcSupported()) return CodecType.H265

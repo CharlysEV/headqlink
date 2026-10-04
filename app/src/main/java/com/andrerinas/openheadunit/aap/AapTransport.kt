@@ -833,7 +833,7 @@ class AapTransport(
                 videoBacklog.decrementAndGet()
                 recycleVideoBuffer(copy)
                 if (acks) {
-                    // c10link: con el freno, el ack del frame espera a que el frame salga hacia el coche.
+                    // headqlink: con el freno, el ack del frame espera a que el frame salga hacia el coche.
                     val gate = VideoTap.ackGate
                     if (gate == null || !VideoTap.takeDelivered() || !gate.hold { sendMediaAck(channel) }) {
                         sendMediaAck(channel)
@@ -1159,10 +1159,10 @@ class AapTransport(
     }
 
     internal fun gainVideoFocus() {
-        // c10link: sin vista en el móvil, el foco se da directamente en vez de abrir la proyección.
+        // headqlink: sin vista en el móvil, el foco se da directamente en vez de abrir la proyección.
         if (com.andrerinas.openheadunit.decoder.video.VideoTap.headless) {
             // Igual que AapProjectionActivity con el transporte ya activo: un único foco no solicitado.
-            AppLog.i("AapTransport: c10link sin pantalla - foco de vídeo directo")
+            AppLog.i("AapTransport: headqlink sin pantalla - foco de vídeo directo")
             send(VideoFocusEvent(gain = true, unsolicited = true))
             return
         }

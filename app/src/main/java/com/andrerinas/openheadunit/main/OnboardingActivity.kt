@@ -17,6 +17,7 @@ import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.R
 import com.andrerinas.openheadunit.app.BaseActivity
 import com.andrerinas.openheadunit.decoder.video.VideoDecoder
+import com.andrerinas.openheadunit.utils.AppLog
 import com.andrerinas.openheadunit.utils.AppPermissions
 import com.andrerinas.openheadunit.utils.AudioStreamTester
 import com.andrerinas.openheadunit.utils.AppThemeManager
@@ -24,6 +25,11 @@ import com.andrerinas.openheadunit.utils.LocaleHelper
 import com.andrerinas.openheadunit.utils.PermissionRowBinder
 import com.andrerinas.openheadunit.utils.Settings
 import com.andrerinas.openheadunit.utils.SystemOptimizer
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import com.google.android.material.button.MaterialButton
@@ -587,6 +593,7 @@ class OnboardingActivity : BaseActivity() {
 
     private fun finishOnboarding() {
         settings.hasAcceptedDisclaimer = true
+        recordDisclaimerAcceptance()
         settings.hasCompletedSetupWizard = true
         settings.onboardingVersion = CURRENT_ONBOARDING_VERSION
         settings.commit()
@@ -596,6 +603,7 @@ class OnboardingActivity : BaseActivity() {
     /** Complete the wizard and open a specific Settings sub-screen (e.g. the loading screen setup). */
     private fun finishOnboardingInto(destinationId: Int) {
         settings.hasAcceptedDisclaimer = true
+        recordDisclaimerAcceptance()
         settings.hasCompletedSetupWizard = true
         settings.onboardingVersion = CURRENT_ONBOARDING_VERSION
         settings.commit()
@@ -817,6 +825,42 @@ class OnboardingActivity : BaseActivity() {
         val tv = android.util.TypedValue()
         theme.resolveAttribute(attr, tv, true)
         return tv.data
+    }
+
+    private fun recordDisclaimerAcceptance() {
+        if (settings.disclaimerAcceptedAt != 0L) return
+        val now = System.currentTimeMillis()
+        val appVersion = try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown"
+        } catch (_: Exception) { "unknown" }
+
+        settings.disclaimerAcceptedAt = now
+        settings.disclaimerAcceptedVersion = appVersion
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+        val receipt = buildString {
+            appendLine("DISCLAIMER ACCEPTANCE RECORD")
+            appendLine("============================")
+            appendLine("Date: ${sdf.format(Date(now))}")
+            appendLine("App: $packageName")
+            appendLine("Version: $appVersion")
+            appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+            appendLine("Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+            appendLine("Serial: ${Build.SERIAL}")
+            appendLine()
+            appendLine("The user accepted the safety & liability disclaimer,")
+            appendLine("including the exemption from liability for misuse (section 4),")
+            appendLine("at the date and time indicated above.")
+        }
+        try {
+            val dir = File(filesDir, "consent")
+            dir.mkdirs()
+            File(dir, "disclaimer_acceptance.txt").writeText(receipt)
+            AppLog.i("Disclaimer acceptance recorded at $now")
+        } catch (e: Exception) {
+            AppLog.w("Failed to write disclaimer receipt: ${e.message}")
+        }
     }
 
     companion object {

@@ -56,11 +56,11 @@ class SelfLauncherManager(
      * relevant Android classes have no public constructors.
      */
     private fun isAaVersion174OrHigher(): Boolean {
-        // c10link: prueba de los disparadores inalámbricos (sin "servidor de head unit" manual)
+        // headqlink: prueba de los disparadores inalámbricos (sin "servidor de head unit" manual)
         // también en AA 17.4+. Se activa con el extra force_legacy_launch de C10Link.
         if (service.getSharedPreferences("cfg", android.content.Context.MODE_PRIVATE)
                 .getBoolean("force_legacy_launch", false)) {
-            AppLog.i("SelfMode: c10link force_legacy_launch activo -> se ignora la versión de AA")
+            AppLog.i("SelfMode: headqlink force_legacy_launch activo -> se ignora la versión de AA")
             return false
         }
         return try {

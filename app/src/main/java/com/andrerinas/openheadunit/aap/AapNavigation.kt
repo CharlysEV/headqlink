@@ -30,7 +30,7 @@ class AapNavigation(
     fun process(message: AapMessage): Boolean {
         if (message.channel != Channel.ID_NAV) return false
 
-        return when (message.type) {
+        val handled = when (message.type) {
             NavigationStatus.MsgType.INSTRUMENT_CLUSTER_START_VALUE -> {
                 AppLog.d("Nav: Instrument cluster start")
                 clearAccumulatedData()
@@ -142,6 +142,9 @@ class AapNavigation(
                 false
             }
         }
+        // headqlink: estado de navegación para la interfaz propia del coche (NavTap).
+        if (handled) NavTap.publish(snapshot)
+        return handled
     }
 
     private fun clearAccumulatedData() {

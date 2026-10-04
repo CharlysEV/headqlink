@@ -135,7 +135,7 @@ internal class AapControlMedia(
 
     private fun maxUnackedFor(channel: Int): Int {
         if (channel == Channel.ID_VID) {
-            // c10link: ventana pequeña para la prueba del freno (los acks esperan al coche).
+            // headqlink: ventana pequeña para la prueba del freno (los acks esperan al coche).
             val c10Window = com.andrerinas.openheadunit.decoder.video.VideoTap.videoWindow
             if (c10Window > 0) {
                 com.andrerinas.openheadunit.decoder.video.VideoTap.announcedWindow = c10Window

@@ -95,11 +95,11 @@ android {
         // installs, testers) and existing users just get a normal update. Only the display name
         // changed to Open Headunit. The code package and namespace stay openheadunit, so the
         // applicationId deliberately differs from the namespace, like com.google.talk for Hangouts.
-        applicationId = "com.c10link.app" // c10link: identificador propio del fork
+        applicationId = "com.headqlink.app" // headqlink: identificador propio del fork
         minSdk = 16
         targetSdk = 36
-        versionCode = 116
-        versionName = "3.5.0-beta3"
+        versionCode = 1
+        versionName = "0.1-beta"
         setProperty("archivesBaseName", "${applicationId}_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
@@ -189,7 +189,12 @@ android {
         }
 
         getByName("debug") {
-            // debugging setup
+            // headqlink: con clave propia (key.properties), también las de prueba se firman con ella,
+            // para poder instalar una versión encima de otra sin desinstalar.
+            val relConfig = signingConfigs.getByName("release")
+            if (relConfig.storeFile != null && relConfig.storeFile!!.exists()) {
+                signingConfig = relConfig
+            }
         }
     }
 
@@ -248,7 +253,7 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation("androidx.media:media:1.6.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
-    // c10link: reproductor de vídeo e IPTV (HLS) en la pantalla del coche. 1.3.x admite minSdk 16.
+    // headqlink: reproductor de vídeo e IPTV (HLS) en la pantalla del coche. 1.3.x admite minSdk 16.
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-exoplayer-hls:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1")

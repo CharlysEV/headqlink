@@ -1,7 +1,7 @@
 package com.andrerinas.openheadunit.decoder.video
 
 /**
- * c10link: grifo del vídeo de Android Auto. Cada unidad H.264/H.265 ensamblada que llega a
+ * headqlink: grifo del vídeo de Android Auto. Cada unidad H.264/H.265 ensamblada que llega a
  * [VideoDecoder.decode] se entrega también a [sink] (reenvío directo al coche por SSPLink).
  * Con [bypassDecoder] el decodificador local no la procesa (sin pantalla en el móvil).
  */
@@ -57,7 +57,7 @@ object VideoTap {
         return d
     }
 
-    /** Modo C10 sin pantalla: no se abre la vista de proyección en el móvil. */
+    /** Modo coche sin pantalla: no se abre la vista de proyección en el móvil. */
     @JvmStatic
     @Volatile
     var headless: Boolean = false

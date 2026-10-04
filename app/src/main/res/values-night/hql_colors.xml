@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: tema oscuro (modo noche o elegido en el menú). -->
+<resources>
+    <bool name="hql_light_bars">false</bool>
+    <color name="hql_bg">#0E1113</color>
+    <color name="hql_surface">#161A1D</color>
+    <color name="hql_surface_hi">#1E2327</color>
+    <color name="hql_outline">#2A3136</color>
+    <color name="hql_text">#E9EDEF</color>
+    <color name="hql_text_dim">#99A3AA</color>
+    <color name="hql_text_faint">#68737A</color>
+    <color name="hql_accent">#5FD3B8</color>
+    <color name="hql_on_accent">#06201A</color>
+    <color name="hql_ok">#5FD3B8</color>
+    <color name="hql_warn">#E5B455</color>
+    <color name="hql_error">#E2705F</color>
+    <color name="hql_idle">#4A545B</color>
+</resources>

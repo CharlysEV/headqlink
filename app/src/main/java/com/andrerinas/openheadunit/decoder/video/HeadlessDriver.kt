@@ -11,7 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * c10link: hace sin vista lo que AapProjectionActivity hace al tener su superficie lista - arrancar
+ * headqlink: hace sin vista lo que AapProjectionActivity hace al tener su superficie lista - arrancar
  * la lectura cuando el handshake termina - para que Android Auto avance aunque no se muestre nada
  * en el móvil (modo [VideoTap.headless]). El foco de vídeo lo da AapTransport.gainVideoFocus() cuando
  * AA configura el canal de vídeo; el handshake lo inicia AapService por su cuenta.

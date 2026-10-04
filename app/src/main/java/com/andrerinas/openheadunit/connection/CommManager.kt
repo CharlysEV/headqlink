@@ -592,9 +592,9 @@ class CommManager(
             // cleared the moment a handshake succeeds, so a premature banner self-heals, while a
             // missing one leaves the user a failed connection and no remedy.
             ConnectionIssues.raise(context, ConnectionIssue.HEADUNIT_SERVER_NOT_ANSWERING)
-            // c10link: en modo C10 (sin pantalla) lo recuperamos solos reiniciando el servidor.
+            // headqlink: en modo coche (sin pantalla) lo recuperamos solos reiniciando el servidor.
             if (com.andrerinas.openheadunit.decoder.video.VideoTap.headless) {
-                com.c10link.link.AaRecovery.onServerDeaf(context)
+                com.headqlink.link.AaRecovery.onServerDeaf(context)
             }
         }
         if (UnresponsivePeerPolicy.shouldExplain(silentPeerFailures) && endpoint?.endsWith(":5277") == true) {

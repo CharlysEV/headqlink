@@ -989,6 +989,14 @@ class Settings(private val context: Context) {
         get() = prefs.getBoolean("has-accepted-disclaimer", false)
         set(value) { prefs.edit().putBoolean("has-accepted-disclaimer", value).apply() }
 
+    var disclaimerAcceptedAt: Long
+        get() = prefs.getLong("disclaimer-accepted-at", 0L)
+        set(value) { prefs.edit().putLong("disclaimer-accepted-at", value).apply() }
+
+    var disclaimerAcceptedVersion: String
+        get() = prefs.getString("disclaimer-accepted-version", "") ?: ""
+        set(value) { prefs.edit().putString("disclaimer-accepted-version", value).apply() }
+
     var hasCompletedSetupWizard: Boolean
         get() = prefs.getBoolean("has-completed-setup-wizard", false)
         set(value) { prefs.edit().putBoolean("has-completed-setup-wizard", value).apply() }
