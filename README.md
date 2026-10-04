@@ -14,12 +14,6 @@ The phone can stay locked with the screen off. No root required.
   <em>Car screen: side panel + Android Auto (shown during startup)</em>
 </p>
 
-<p align="center">
-  <img src="docs/phone_home.png" width="340" alt="HeadQLink phone app: home screen" />
-  <br/>
-  <em>Phone app: home screen</em>
-</p>
-
 Personal and experimental project. Fork of [Open Headunit](https://github.com/andreknieriem/open-headunit)
 (original README at [README_OPEN_HEADUNIT.md](README_OPEN_HEADUNIT.md)).
 
