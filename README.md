@@ -9,6 +9,7 @@ Proyecto personal y experimental. Es un fork de [Open Headunit](https://github.c
 
 ## Key features
 
+- **Phone screen off** — once connected, the phone can be locked with the screen off; projection keeps running.
 - **Multitouch support** — all touch points from the car's screen are forwarded to Android Auto (up to 3 fingers for pinch-to-zoom in Maps, etc.).
 - **Steering wheel controls via Bluetooth** — media keys (play/pause, next, previous) work through the car's existing HFP/AVRCP Bluetooth connection; no extra pairing needed.
 - **Extended interface** — an optional side panel with extra screens (route planner, efficiency, radio, photos, videos, games and more). **Only intended for use while the vehicle is stationary.**
