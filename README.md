@@ -8,6 +8,10 @@ Android app that brings **Android Auto** and a custom side panel with extra feat
 **Leapmotor C10** screen, using the car's built-in mirroring connection (SSPLink over WiFi Direct).
 The phone can stay locked with the screen off. No root required.
 
+<p align="center">
+  <img src="docs/car_screen.png" width="700" alt="HeadQLink: side panel + Android Auto Maps navigation on the car screen" />
+</p>
+
 Personal and experimental project. Fork of [Open Headunit](https://github.com/andreknieriem/open-headunit)
 (original README at [README_OPEN_HEADUNIT.md](README_OPEN_HEADUNIT.md)).
 
@@ -19,6 +23,7 @@ Personal and experimental project. Fork of [Open Headunit](https://github.com/an
 - ✅ **Extended interface** — an optional side panel with extra screens (route planner, efficiency, radio, photos, videos, games and more). **Only intended for use while the vehicle is stationary.**
 - 🚧 **Removing the need for accessibility settings.** Currently, with Android Auto 17.4+, the app requires enabling AA's developer mode (a one-time step). Investigating alternative launch paths to eliminate this requirement.
 - 🚧 **Performance.** Targeting 30/60 fps with no substantial frame loss.
+- 🚧 **In-motion testing.** Tested with drive gear engaged while stationary; more road testing is needed.
 
 ## How it works (two modes depending on Android Auto version)
 
@@ -53,8 +58,41 @@ With **AA ≥ 17.4**, Google removed the direct launch path. The only viable rou
 3. On the car's screen, open the mirroring app and tap **Connect** on the phone (or enable automatic
    connection via Bluetooth).
 
-To build it yourself: `./gradlew assembleGithubDebug` (signs with your key if `key.properties` exists;
-without it, the APK uses the default debug key).
+## Building from source
+
+Requirements: JDK 17 and the Android SDK (compileSdk 36). Gradle downloads all other dependencies.
+
+```bash
+# On macOS with Homebrew OpenJDK:
+JAVA_HOME="$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home" \
+  ./gradlew assembleGithubDebug
+
+# On Linux / Windows (if JDK 17 is the default):
+./gradlew assembleGithubDebug
+```
+
+The output APK is at `app/build/outputs/apk/github/debug/`. If `key.properties` exists, the APK is
+signed with your key; otherwise it uses the default debug key.
+
+## Project structure
+
+```
+app/src/main/java/
+├── com/andrerinas/openheadunit/   # Open Headunit base (AA protocol, decoder, launcher)
+│   ├── aap/                       #   AA Protocol (control, transport, video, navigation)
+│   ├── connection/                #   Connection management and self-launchers
+│   └── decoder/video/             #   Video decoder and frame relay
+└── com/headqlink/link/            # HeadQLink additions
+    ├── SspSession.java            #   SSPLink protocol (UDP discovery, TCP session, H.264)
+    ├── CarUi.java                 #   Car screen UI (side panel + AA on VirtualDisplay)
+    ├── LinkService.java           #   Foreground service managing the connection
+    ├── SetupActivity.java         #   Setup wizard (permissions, AA config)
+    ├── GlFrameRelay.java          #   OpenGL compositor (AA + panel → SSPLink video)
+    ├── RouteTab.java              #   Route planner (OSM / OSRM)
+    ├── EfficiencyScreen.java      #   Energy and efficiency display
+    ├── RadioScreen.java           #   Internet radio (radio-browser.info)
+    └── ...                        #   Games, gallery, IPTV, instruments, etc.
+```
 
 ## License
 
