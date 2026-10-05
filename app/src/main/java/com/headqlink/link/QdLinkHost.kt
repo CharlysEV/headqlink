@@ -35,7 +35,11 @@ internal class QdLinkHost(
 ) {
     /** Avisos a LinkService, siempre en el hilo principal. */
     interface Callbacks {
+        /** Primer anuncio del coche desde la última sesión. */
         fun onCarSeen(name: String)
+
+        /** Otro anuncio del coche sin sesión (como mucho uno cada HEARD_EVERY_MS): «sin coche» vuelve a contar. */
+        fun onCarHeard()
         fun onCarConnected(detail: String)
         fun onCarSize(detail: String)
         fun onCarLost(reason: String)
@@ -90,6 +94,10 @@ internal class QdLinkHost(
     /** Ya se avisó de "coche detectado" desde la última sesión (un aviso, no uno por broadcast). */
     @Volatile
     private var seenNotified = false
+
+    /** Último aviso de «coche anunciado» a LinkService (ms monótonos), para no mandar uno por broadcast. */
+    @Volatile
+    private var lastHeardMs = Long.MIN_VALUE / 4
 
     @Volatile
     var lastCar: CarAnnouncement? = null
@@ -222,7 +230,17 @@ internal class QdLinkHost(
             if (first) QdTrace.i("HQL/Enlace", "coche anunciado: $car")
             if (!seenNotified && !live && !stopping) {
                 seenNotified = true
+                lastHeardMs = android.os.SystemClock.elapsedRealtime()
                 main.post { if (!stopping) callbacks.onCarSeen(car.name) }
+                return
+            }
+            // Cada anuncio sin sesión (aunque el TCP no llegue): «sin coche» vuelve a contar (LinkLifecycle.carHeard).
+            if (!live && !stopping) {
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (now - lastHeardMs >= HEARD_EVERY_MS) {
+                    lastHeardMs = now
+                    main.post { if (!stopping) callbacks.onCarHeard() }
+                }
             }
         }
 
@@ -288,5 +306,8 @@ internal class QdLinkHost(
 
     private companion object {
         const val RETRY_START_MS = 5_000L
+
+        /** Avisos de «coche anunciado» a LinkService: como mucho uno cada tanto (el coche se anuncia cada ~1 s). */
+        const val HEARD_EVERY_MS = 2_000L
     }
 }

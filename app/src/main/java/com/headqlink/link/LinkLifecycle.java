@@ -21,6 +21,10 @@ import java.util.List;
  *                                                      CERRADO (el cierre de siempre)
  * </pre>
  *
+ * «Sin coche» es sin anuncios del coche: cada Connect_Broadcast (aunque no llegue a haber TCP) vuelve a contar la
+ * búsqueda o «Esperar al coche» desde ese momento ({@link #carHeard}). Antes solo contaba la sesión, y con el coche
+ * anunciándose sin conectar se cerraba todo igualmente al vencer (90 s después de verlo, en un caso real).
+ *
  * Seguridad: sin coche, el servidor de head unit de AA sigue encendido como mucho lo que dure «Esperar al coche»; al
  * vencer, el cierre de siempre lo apaga (ya o, con el móvil bloqueado, al desbloquearlo, con AA aparcado mientras).
  */
@@ -29,6 +33,8 @@ final class LinkLifecycle {
     static final long SEARCH_MIN_MS = 5 * 60_000L;
     /** Al vencer una espera con una sesión o un intento en marcha, se vuelve a mirar en este tiempo. */
     static final long RECHECK_MS = 5_000L;
+    /** «Coche anunciado: vuelvo a contar…» en el log como mucho una vez cada tanto (el coche se anuncia cada pocos s). */
+    static final long HEARD_LOG_MS = 60_000L;
 
     enum Phase {
         /** Buscando al coche desde el arranque (aún no hubo sesión). */
@@ -201,6 +207,11 @@ final class LinkLifecycle {
     private long closeAt = -1;
     /** Ya se pidió arrancar el servidor en esta búsqueda (un aviso, no uno por broadcast). */
     private boolean serverAsked;
+    /** Último anuncio del coche (-1 = ninguno desde el arranque) y última vez que se dijo en el log. */
+    private long heardAt = -1;
+    private long heardLoggedAt = -1;
+    /** «Esperar al coche» del último arranque o pérdida (para los anuncios sin el ajuste a mano). */
+    private long lastWaitMs = SEARCH_MIN_MS;
 
     Phase phase() {
         return phase;
@@ -238,18 +249,64 @@ final class LinkLifecycle {
         deadline = now + search;
         closeAt = deadline;
         serverAsked = false;
+        heardAt = -1;
+        heardLoggedAt = -1;
+        lastWaitMs = Math.max(0, waitMs);
         d.why("arranque (" + triggerName(trigger) + "): busco al coche hasta " + dur(search));
         keepAaForTheCar(d, e, "arranque");
         if (trigger == Trigger.BLUETOOTH) askServer(d, e, "Bluetooth del coche");
         return d;
     }
 
-    /** Broadcast del coche (antes del ACK y del TCP). */
+    /** Broadcast del coche (antes del ACK y del TCP), con «Esperar al coche» del último arranque o pérdida. */
     Decision carSeen(long now, Env e) {
-        Decision d = new Decision();
+        return carSeen(now, e, lastWaitMs);
+    }
+
+    /** Primer broadcast del coche (antes del ACK y del TCP): AA para él y, como cada anuncio, la espera desde ahora. */
+    Decision carSeen(long now, Env e, long waitMs) {
+        Decision d = carHeard(now, waitMs);
         if (phase == Phase.CLOSED) return d;
         keepAaForTheCar(d, e, "coche anunciado");
         askServer(d, e, "coche anunciado");
+        return d;
+    }
+
+    /**
+     * Cada broadcast del coche sin sesión (aunque no llegue a conectar): la búsqueda o «Esperar al coche» (waitMs)
+     * vuelve a contar desde ahora; nunca acorta lo que quedaba. VÍDEO VIVO no se alarga (sin sesión no hay vídeo que
+     * enviar), solo el cierre de después. Sin acciones: solo mueve el temporizador ({@link #deadlineMs()}).
+     */
+    Decision carHeard(long now, long waitMs) {
+        Decision d = new Decision();
+        if (phase == Phase.CLOSED || phase == Phase.CONNECTED) return d;
+        heardAt = now;
+        long wait = Math.max(0, waitMs);
+        long until;
+        switch (phase) {
+            case SEARCHING:
+                until = now + Math.max(SEARCH_MIN_MS, wait);
+                if (until > closeAt) closeAt = until;
+                deadline = closeAt;
+                break;
+            case GRACE:
+                // Después de VÍDEO VIVO, la pausa sigue hasta el nuevo cierre (el temporizador del vídeo no cambia).
+                until = now + wait;
+                if (until > closeAt) closeAt = until;
+                break;
+            case PARKED:
+                until = now + wait;
+                if (until > closeAt) closeAt = until;
+                deadline = closeAt;
+                break;
+            default:
+                return d;
+        }
+        if (heardLoggedAt < 0 || now - heardLoggedAt >= HEARD_LOG_MS) {
+            heardLoggedAt = now;
+            d.why("coche anunciado sin sesión: vuelvo a contar " + (phase == Phase.SEARCHING ? "la búsqueda" : "la espera")
+                    + " desde ahora; cierro todo si no se anuncia en " + dur(closeAt - now));
+        }
         return d;
     }
 
@@ -286,6 +343,7 @@ final class LinkLifecycle {
         lostAt = now;
         closeAt = now + total;
         serverAsked = false;
+        lastWaitMs = Math.max(0, waitMs);
         if (grace > 0) {
             phase = Phase.GRACE;
             deadline = now + grace;
@@ -319,7 +377,9 @@ final class LinkLifecycle {
         switch (phase) {
             case SEARCHING:
                 close();
-                return d.add(Action.SHUTDOWN).why("sin coche en " + dur(now - startedAt) + " desde el arranque: cierro todo");
+                return d.add(Action.SHUTDOWN).why((heardAt >= 0
+                        ? "sin sesión en " + dur(now - startedAt) + " desde el arranque y sin anuncios del coche desde hace "
+                        + dur(now - heardAt) : "sin coche en " + dur(now - startedAt) + " desde el arranque") + ": cierro todo");
             case GRACE:
                 if (now < closeAt) {
                     phase = Phase.PARKED;
@@ -330,12 +390,13 @@ final class LinkLifecycle {
                             + "; sigo escuchando al coche " + dur(closeAt - now) + " más");
                 }
                 // VÍDEO VIVO cubría toda la espera.
+                String g = goneText(now);
                 close();
-                return d.add(Action.SHUTDOWN).why("espera del coche vencida (" + dur(now - lostAt) + " sin coche): cierro todo");
+                return d.add(Action.SHUTDOWN).why("espera del coche vencida (" + g + "): cierro todo");
             case PARKED:
-                long gone = now - lostAt;
+                String gone = goneText(now);
                 close();
-                return d.add(Action.SHUTDOWN).why("espera del coche vencida (" + dur(gone) + " sin coche): cierro todo");
+                return d.add(Action.SHUTDOWN).why("espera del coche vencida (" + gone + "): cierro todo");
             default:
                 return d;
         }
@@ -357,6 +418,12 @@ final class LinkLifecycle {
             default:
                 return d;
         }
+    }
+
+    /** «5 min sin coche», o «7 min sin sesión, 5 min sin anuncios» si el coche se anunció después de perderlo. */
+    private String goneText(long now) {
+        if (heardAt > lostAt) return dur(now - lostAt) + " sin sesión, " + dur(now - heardAt) + " sin anuncios del coche";
+        return dur(now - lostAt) + " sin coche";
     }
 
     /** El servicio se cierra (Desconectar, o el cierre de una espera vencida): nada más pendiente. */

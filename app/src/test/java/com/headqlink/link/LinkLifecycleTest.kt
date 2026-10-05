@@ -245,6 +245,65 @@ class LinkLifecycleTest {
     }
 
     @Test
+    fun aCarThatAnnouncesItselfWithoutConnectingKeepsTheSearchAlive() {
+        // Caso real: el coche se anunció a los 3,5 min sin llegar a abrir el TCP y todo se cerró 90 s después.
+        life.start(0, Trigger.USER, aaLive(), wait)
+        assertTrue(life.carSeen(3 * min + 30 * sec, aaLive(), wait).actions().isEmpty())
+        assertEquals(3 * min + 30 * sec + wait, life.deadlineMs())
+        assertTrue("a los 5 min no se cierra", life.timer(5 * min, aaLive()).isEmpty)
+        // Cada anuncio vuelve a contar.
+        life.carHeard(7 * min, wait)
+        assertEquals(12 * min, life.deadlineMs())
+        assertTrue(life.timer(12 * min - 1, aaLive()).isEmpty)
+        val d = life.timer(12 * min, aaLive())
+        assertEquals(listOf(Action.SHUTDOWN), d.actions())
+        assertTrue(d.reasons().toString(), d.reasons().any { it.contains("sin anuncios del coche desde hace 5 min") })
+    }
+
+    @Test
+    fun announcementsWhileParkedRestartTheWait() {
+        connectedAt10s()
+        life.carLost(100 * sec, aaLive(), grace, wait)
+        life.timer(130 * sec, aaLive())
+        val parked = aaLive().parked(true)
+        assertEquals(400 * sec, life.deadlineMs())
+
+        assertTrue(life.carHeard(380 * sec, wait).actions().isEmpty())
+        assertEquals(380 * sec + wait, life.deadlineMs())
+        assertTrue("el cierre de antes ya no vale", life.timer(400 * sec, parked).isEmpty)
+        val d = life.timer(380 * sec + wait, parked)
+        assertEquals(listOf(Action.SHUTDOWN), d.actions())
+        assertTrue(d.reasons().toString(), d.reasons().any { it.contains("sin anuncios del coche") })
+    }
+
+    @Test
+    fun announcementsDuringTheVideoGraceExtendOnlyTheFinalClose() {
+        connectedAt10s()
+        life.carLost(100 * sec, aaLive(), grace, wait)
+        life.carHeard(120 * sec, wait)
+        assertEquals("VÍDEO VIVO no se alarga", 130 * sec, life.deadlineMs())
+        assertEquals(120 * sec + wait, life.closeAtMs())
+        life.timer(130 * sec, aaLive())
+        assertEquals(Phase.PARKED, life.phase())
+        assertEquals(120 * sec + wait, life.deadlineMs())
+    }
+
+    @Test
+    fun announcementsNeverShortenTheWaitAndAreLoggedOncePerMinute() {
+        life.start(0, Trigger.USER, aaLive(), 15 * min)
+        assertEquals(1, life.carHeard(sec, 1 * min).reasons().size)
+        assertEquals("no acorta la búsqueda de 15 min", 15 * min, life.deadlineMs())
+        assertTrue("una línea por minuto, no una por anuncio", life.carHeard(2 * sec, wait).reasons().isEmpty())
+        assertEquals(1, life.carHeard(62 * sec, wait).reasons().size)
+        // Con sesión (o cerrado) no hay espera que contar.
+        life.carConnected(70 * sec, aaLive())
+        assertTrue(life.carHeard(71 * sec, wait).isEmpty)
+        assertEquals(-1, life.deadlineMs())
+        life.close()
+        assertTrue(life.carHeard(72 * sec, wait).isEmpty)
+    }
+
+    @Test
     fun theServiceStartsOnlyOnce() {
         life.start(0, Trigger.USER, aaLive(), wait)
         assertTrue(life.start(sec, Trigger.BLUETOOTH, Env().aa(true), wait).isEmpty)

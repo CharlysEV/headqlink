@@ -71,6 +71,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
      */
     private final LinkLifecycle life = new LinkLifecycle();
     private final Runnable lifeTimer = this::onLifeTimer;
+    /** Motor original: último anuncio del coche pasado al ciclo de vida (onCarBroadcast, con su candado). */
+    private long lastHeardPostMs;
     /** Android Auto ya cerrado o aparcado para el guardián (shutdownAll): onDestroy no lo repite. */
     private boolean aaClosed;
     private SystemMonitor sysMonitor;
@@ -439,7 +441,13 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             L.i("coche anunciado: " + name);
             setStatus(Str.get(R.string.hql_car_detected));
             LinkState.setCar(LinkState.Car.SEEN, name);
-            apply(life.carSeen(now(), env()));
+            apply(life.carSeen(now(), env(), cfg.carWaitMs()));
+        }
+
+        @Override
+        public void onCarHeard() {
+            // Otro anuncio sin sesión: la búsqueda o «Esperar al coche» vuelve a contar desde ahora.
+            apply(life.carHeard(now(), cfg.carWaitMs()));
         }
 
         @Override
@@ -540,7 +548,12 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             }
             setStatus(Str.get(R.string.hql_car_detected));
             LinkState.setCar(LinkState.Car.SEEN, info.optString("DeviceName"));
-            main.post(() -> apply(life.carSeen(now(), env())));
+            lastHeardPostMs = now();
+            main.post(() -> apply(life.carSeen(now(), env(), cfg.carWaitMs())));
+        } else if (now() - lastHeardPostMs >= 2_000) {
+            // Sigue anunciándose sin conectar: «sin coche» vuelve a contar (como mucho un aviso cada 2 s).
+            lastHeardPostMs = now();
+            main.post(() -> apply(life.carHeard(now(), cfg.carWaitMs())));
         }
         // Reenviamos el ACK en cada broadcast mientras el coche no se conecte.
         udp.sendAck(carIp, session.ackJson());
