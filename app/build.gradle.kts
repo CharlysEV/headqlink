@@ -1,4 +1,4 @@
-import org.jetbrains.kotlin.config.KotlinCompilerVersion
+﻿import org.jetbrains.kotlin.config.KotlinCompilerVersion
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
 import java.util.Properties
 import java.io.FileInputStream
@@ -98,8 +98,8 @@ android {
         applicationId = "com.headqlink.app" // headqlink: identificador propio del fork
         minSdk = 16
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.2.1-qdauto"
+        versionCode = 4
+        versionName = "0.2.2-qdauto"
         setProperty("archivesBaseName", "${applicationId}_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
@@ -189,8 +189,8 @@ android {
         }
 
         getByName("debug") {
-            // headqlink: con clave propia (key.properties), también las de prueba se firman con ella,
-            // para poder instalar una versión encima de otra sin desinstalar.
+            // headqlink: con clave propia (key.properties), tambiÃ©n las de prueba se firman con ella,
+            // para poder instalar una versiÃ³n encima de otra sin desinstalar.
             val relConfig = signingConfigs.getByName("release")
             if (relConfig.storeFile != null && relConfig.storeFile!!.exists()) {
                 signingConfig = relConfig
@@ -253,7 +253,7 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation("androidx.media:media:1.6.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
-    // headqlink: reproductor de vídeo e IPTV (HLS) en la pantalla del coche. 1.3.x admite minSdk 16.
+    // headqlink: reproductor de vÃ­deo e IPTV (HLS) en la pantalla del coche. 1.3.x admite minSdk 16.
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-exoplayer-hls:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1")
@@ -275,7 +275,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0")
     implementation(project(":contract"))
-    // headqlink: núcleo del protocolo QDLink/SSPLink de QDAuto (motor de enlace «QDAuto»).
+    // headqlink: nÃºcleo del protocolo QDLink/SSPLink de QDAuto (motor de enlace Â«QDAutoÂ»).
     implementation(project(":qdcore"))
 
     // Multidex
