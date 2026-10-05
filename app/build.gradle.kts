@@ -275,6 +275,8 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0")
     implementation(project(":contract"))
+    // headqlink: núcleo del protocolo QDLink/SSPLink de QDAuto (motor de enlace «QDAuto»).
+    implementation(project(":qdcore"))
 
     // Multidex
     implementation("androidx.multidex:multidex:2.0.1")

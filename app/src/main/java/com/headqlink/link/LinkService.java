@@ -19,8 +19,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 
 /**
- * Servicio en primer plano: mantiene P2P + escucha UDP y abre una SspSession por cada coche
- * que anuncia por broadcast. Funciona con la pantalla apagada (wakelock + wifilock).
+ * Servicio en primer plano: mantiene la red con el coche (Wi-Fi Direct o la zona Wi-Fi del móvil) + escucha UDP y
+ * abre una sesión por cada coche que anuncia por broadcast. Funciona con la pantalla apagada (wakelock + wifilock).
  */
 public class LinkService extends Service implements UdpDiscovery.Listener, SspSession.Listener {
     static final String ACTION_STOP = "com.headqlink.link.STOP";
@@ -38,15 +38,25 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     /** Reinicia el servidor de head unit de Android Auto con la automatización de accesibilidad. */
     static final String ACTION_AA_SERVER_RESTART = "com.headqlink.link.AA_SERVER_RESTART";
     private static final String CHANNEL = "link";
-    /** Tras perder al coche, cuánto esperamos a que vuelva antes de cerrarlo todo. */
+    /** Tras perder al coche, cuánto esperamos a que vuelva antes de cerrarlo todo (por defecto; ver Config.carGoneMs). */
     private static final long CAR_GONE_MS = 30_000;
+    /** Si al vencer la espera hay una sesión o un intento en marcha, se vuelve a mirar en este tiempo. */
+    private static final long CAR_GONE_RECHECK_MS = 5_000;
 
     static volatile String status = "parado";
 
     private Config cfg;
     private P2pLink p2p;
+    /** Solo en el modo «Punto de acceso del móvil» (qdauto §5.3). */
+    private HotspotWatcher hotspot;
+    private volatile HotspotWatcher.State hotspotState = HotspotWatcher.State.UNKNOWN;
+    /** El transporte (red + descubrimiento) se arranca una sola vez por servicio. */
+    private boolean transportStarted;
     private UdpDiscovery udp;
     private SspSession session;
+    /** Motor QDAuto (qdauto §4.3): dueño del PhoneLink del núcleo, y el vídeo que vive entre sesiones. */
+    private QdLinkHost qd;
+    private VideoHub video;
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
     private WifiManager.MulticastLock mcLock;
@@ -59,6 +69,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
      */
     private volatile boolean stopping;
     private SystemMonitor sysMonitor;
+    /** Adaptación térmica del vídeo y temperatura de la batería cada minuto. */
+    private ThermalGuard thermal;
     /** Pantalla encendida/apagada/desbloqueada: con la pantalla encendida Android escanea WiFi cada 10 s. */
     private final android.content.BroadcastReceiver screenReceiver = new android.content.BroadcastReceiver() {
         @Override
@@ -67,6 +79,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             String what = Intent.ACTION_SCREEN_ON.equals(a) ? "screen_on" : Intent.ACTION_SCREEN_OFF.equals(a) ? "screen_off" : "unlocked";
             PerfTrace.event(what, 0);
             CarTrace.note("PANTALLA", what);
+            QdTrace.i("HQL/Sistema", "pantalla: " + what + " · " + PhoneScreen.describe(c));
         }
     };
     private final android.content.BroadcastReceiver scanReceiver = new android.content.BroadcastReceiver() {
@@ -74,6 +87,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         public void onReceive(Context c, Intent i) {
             boolean updated = i.getBooleanExtra(WifiManager.EXTRA_RESULTS_UPDATED, false);
             PerfTrace.event("wifi_scan", updated ? 1 : 0);
+            QdTrace.i("HQL/Sistema", "escaneo Wi-Fi del sistema" + (updated ? "" : " (sin resultados nuevos)"));
         }
     };
     /** Sin llegar a conectar con el coche en este tiempo, se cierra todo (no se queda buscando). */
@@ -84,11 +98,26 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         shutdownAll();
     };
 
-    private final Runnable carGone = () -> {
-        if (stopping) return;
-        L.i("coche desconectado más de " + CAR_GONE_MS / 1000 + " s: cierro todo");
-        shutdownAll();
+    private final Runnable carGone = new Runnable() {
+        @Override
+        public void run() {
+            if (stopping) return;
+            if (qd != null && qd.isBusy()) {
+                // El coche ha vuelto (o está conectando) justo ahora: no se apaga nada.
+                L.i("espera del coche vencida con una sesión o un intento en marcha: vuelvo a mirar en "
+                        + CAR_GONE_RECHECK_MS / 1000 + " s");
+                main.postDelayed(this, CAR_GONE_RECHECK_MS);
+                return;
+            }
+            L.i("coche desconectado más de " + carGoneMs() / 1000 + " s: cierro todo");
+            shutdownAll();
+        }
     };
+
+    /** Espera a que vuelva el coche: la del ajuste car_gone_ms con el motor QDAuto; 30 s con el original. */
+    private long carGoneMs() {
+        return qd != null ? cfg.carGoneMs() : CAR_GONE_MS;
+    }
 
     @Override
     public void onCreate() {
@@ -206,6 +235,28 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             startAaTest();
             return START_NOT_STICKY;
         }
+        boolean applyQd = intent != null && ACTION_APPLY.equals(intent.getAction()) && qd != null
+                && (qd.isBusy() || video.hasVideo());
+        if (applyQd) {
+            // Motor QDAuto: se cierran la sesión y el vídeo; la sesión nueva usa los ajustes nuevos. Mientras AA termina
+            // de desconectar (si renegocia), no se reconecta.
+            boolean renegotiate = intent.getBooleanExtra(EXTRA_AA_RENEGOTIATE, false) && Config.isAa(cfg.mode());
+            L.i("aplicando ajustes: cierro la sesión con el coche y el vídeo (motor QDAuto)");
+            qd.closeSession("aplicar ajustes");
+            video.stop("ajustes");
+            qd.pauseReconnect(renegotiate ? 3000 : 1000);
+            if (renegotiate) {
+                L.i("aplicando ajustes: reconecto Android Auto (perfil " + cfg.videoProfile().id + ")");
+                try {
+                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
+                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_DISCONNECT));
+                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
+                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_STOP_SELF_MODE));
+                } catch (RuntimeException e) {
+                    L.e("no se pudo desconectar Android Auto", e);
+                }
+            }
+        }
         if (intent != null && ACTION_APPLY.equals(intent.getAction()) && session != null) {
             // Cerrar la sesión: el coche reconecta en ~5 s y la nueva sesión usa los ajustes nuevos.
             L.i("aplicando ajustes: reinicio la sesión con el coche");
@@ -224,17 +275,20 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             }
         }
         if (!goForeground(Str.get(R.string.hql_waiting_car))) return START_NOT_STICKY;
-        if (udp == null) {
+        if (!transportStarted) {
+            transportStarted = true;
             L.i("servicio iniciado. " + cfg.summary());
+            SessionSummary.INSTANCE.startTrip(System.currentTimeMillis(), AaPassthroughSource.AA_LAUNCHES.get());
             acquireLocks();
-            p2p = new P2pLink(this);
-            p2p.start();
-            udp = new UdpDiscovery(this);
-            udp.start();
+            startTransport();
             LinkState.setRunning(true);
             LinkState.setCar(LinkState.Car.SEARCHING, "");
             sysMonitor = new SystemMonitor(this);
             sysMonitor.start();
+            // Con el motor QDAuto, el nivel térmico baja fps y bitrate del vídeo vivo; con el original, solo se registra.
+            VideoHub hub = video;
+            thermal = new ThermalGuard(this, hub != null ? hub::setThermalLevel : null);
+            thermal.start();
             main.postDelayed(noCar, NO_CAR_MS);
             setStatus(Str.get(R.string.hql_waiting_car));
         } else {
@@ -242,6 +296,114 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         }
         // Sin relanzamiento automático: HeadQLink solo arranca cuando el usuario abre la app.
         return START_NOT_STICKY;
+    }
+
+    /**
+     * Red y descubrimiento, según los ajustes al arrancar (se aplican al volver a conectar). Wi-Fi Direct: P2pLink une
+     * el móvil al grupo del coche, como siempre. Zona Wi-Fi: P2pLink no arranca (no se crean grupos ni se toca la zona
+     * Wi-Fi; tampoco se ata el proceso a ninguna red) y HotspotWatcher informa de si está activa.
+     */
+    private void startTransport() {
+        // Una sola lectura: lo que se cambie en marcha se aplica al volver a conectar, y diagnóstico e interfaz dicen esto.
+        String linkMode = cfg.linkMode();
+        String engine = cfg.linkEngine();
+        LinkState.setActiveTransport(linkMode, engine);
+        if (Config.LINK_HOTSPOT.equals(linkMode)) {
+            L.i("conexión: punto de acceso del móvil (sin Wi-Fi Direct)");
+            hotspot = new HotspotWatcher(this, this::onHotspotState);
+            hotspot.start();
+        } else {
+            L.i("conexión: Wi-Fi Direct");
+            p2p = new P2pLink(this);
+            p2p.start();
+        }
+        if (Config.ENGINE_QDAUTO.equals(engine)) {
+            // Los dos motores escuchan en el UDP 18463: nunca conviven.
+            L.i("motor de protocolo: QDAuto");
+            video = new VideoHub(this, cfg);
+            qd = new QdLinkHost(this, cfg, linkMode, video, new QdCallbacks());
+            qd.start();
+        } else {
+            L.i("motor de protocolo: original de headqlink");
+            udp = new UdpDiscovery(this);
+            udp.start();
+        }
+    }
+
+    /** Avisos del motor QDAuto (hilo principal). */
+    private final class QdCallbacks implements QdLinkHost.Callbacks {
+        @Override
+        public void onCarSeen(String name) {
+            if (LinkState.car == LinkState.Car.CONNECTED || LinkState.car == LinkState.Car.SEEN) return;
+            L.i("coche anunciado: " + name);
+            setStatus(Str.get(R.string.hql_car_detected));
+            LinkState.setCar(LinkState.Car.SEEN, name);
+        }
+
+        @Override
+        public void onCarConnected(String detail) {
+            hadSession = true;
+            // Si el tamaño del coche (CAR_INFO) ya llegó, se conserva.
+            LinkState.setCar(LinkState.Car.CONNECTED, LinkState.car == LinkState.Car.CONNECTED ? LinkState.carDetail : "");
+            main.removeCallbacks(carGone);
+            main.removeCallbacks(noCar);
+            setStatus(Str.get(R.string.hql_car_connected));
+        }
+
+        @Override
+        public void onCarSize(String detail) {
+            LinkState.setCar(LinkState.Car.CONNECTED, detail);
+            setStatus(Str.get(R.string.hql_car_connected));
+        }
+
+        @Override
+        public void onCarLost(String reason) {
+            L.i("sesión con el coche terminada: " + reason);
+            if (video != null && video.hasVideo() && cfg.qdKeepVideo()) {
+                // El vídeo y Android Auto siguen vivos esperando al coche (qdauto §6): sin reiniciar nada.
+                setStatus(Str.get(R.string.hql_reconnecting));
+                LinkState.setCar(LinkState.Car.RECONNECTING, "");
+            } else {
+                setStatus(Str.get(R.string.hql_session_ended));
+                LinkState.setCar(LinkState.Car.SEARCHING, "");
+            }
+            if (hadSession && !stopping) {
+                main.removeCallbacks(carGone);
+                main.postDelayed(carGone, carGoneMs());
+            }
+        }
+
+        @Override
+        public void onLinkError(String message) {
+            setStatus(message);
+        }
+
+        @Override
+        public void onLinkReady() {
+            setStatus(Str.get(R.string.hql_waiting_car));
+            if (hotspot != null) hotspot.republish();
+            else if (p2p != null) p2p.republish();
+            else LinkState.setNetwork(LinkState.Level.IDLE, "");
+        }
+    }
+
+    /** Hilo principal: la zona Wi-Fi se enciende o se apaga (o no se sabe). */
+    private void onHotspotState(HotspotWatcher.State state, String detail) {
+        hotspotState = state;
+        if (stopping || isLinkConnected()) return;
+        if (state == HotspotWatcher.State.OFF) {
+            L.w("zona Wi-Fi apagada: el coche no puede conectar hasta que se active");
+            setStatus(Str.get(R.string.hql_hotspot_off_notif));
+        } else if (state == HotspotWatcher.State.ON) {
+            setStatus(Str.get(R.string.hql_waiting_car));
+        }
+    }
+
+    /** Hay una sesión con el coche ahora mismo. */
+    private boolean isLinkConnected() {
+        if (qd != null) return qd.isConnected();
+        SspSession s = session;
+        return s != null && s.isConnected();
     }
 
     /** Pasa a primer plano; si Android no lo permite, el servicio se detiene sin tumbar la app. */
@@ -366,12 +528,22 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     private Notification buildNotification(String text) {
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, Str.get(R.string.hql_channel_link), NotificationManager.IMPORTANCE_LOW));
-        boolean connected = session != null && session.isConnected();
+        boolean connected = isLinkConnected();
         String title = connected ? Str.get(R.string.hql_notif_connected) : "HeadQLink";
+        // Con la zona Wi-Fi apagada, tocar la notificación abre sus ajustes; si no, la app.
+        boolean hotspotOff = hotspot != null && hotspotState == HotspotWatcher.State.OFF && !connected;
+        Intent open = hotspotOff ? new Intent("android.settings.TETHER_SETTINGS")
+                : new Intent(this, HomeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        if (hotspotOff && open.resolveActivity(getPackageManager()) == null) {
+            open = new Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS);
+        }
+        android.app.PendingIntent pi = android.app.PendingIntent.getActivity(this, hotspotOff ? 2 : 1, open,
+                android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
         return new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.hql_ic_notif)
                 .setContentTitle(title)
                 .setContentText(connected ? null : text)
+                .setContentIntent(pi)
                 .setOngoing(true)
                 .build();
     }
@@ -417,6 +589,18 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         main.removeCallbacks(carGone);
         main.removeCallbacks(noCar);
         if (sysMonitor != null) sysMonitor.stop();
+        if (qd != null) {
+            // Primero se cierra la sesión en curso y se espera su resumen (como mucho 500 ms), para que el del viaje
+            // (qdauto §7.4) la incluya; los dos antes de cerrar el diario del coche.
+            qd.stop();
+            if (!qd.awaitStopped(500)) L.w("la sesión con el coche no terminó en 500 ms; el resumen del viaje puede no incluirla");
+            String trip = SessionSummary.INSTANCE.tripSummary(System.currentTimeMillis(), AaPassthroughSource.AA_LAUNCHES.get());
+            QdTrace.block("HQL/Viaje", trip);
+            for (String line : trip.split("\n")) L.quiet("I", line);
+            CarTrace.note("VIAJE", trip.replace('\n', ' '));
+        }
+        // Después del resumen de la última sesión, que lleva el estado térmico.
+        if (thermal != null) thermal.stop();
         CarTrace.close();
         try {
             unregisterReceiver(scanReceiver);
@@ -427,8 +611,11 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         if (aaTest != null) aaTest.stop();
         L.i("servicio parado");
         if (session != null) session.close();
+        if (qd != null) qd.stop();
+        if (video != null) video.quit();
         if (udp != null) udp.shutdown();
         if (p2p != null) p2p.stop();
+        if (hotspot != null) hotspot.stop();
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
         if (mcLock != null && mcLock.isHeld()) mcLock.release();

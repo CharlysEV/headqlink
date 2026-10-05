@@ -47,6 +47,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
         // headqlink: logcat continuo del proceso y registro de fallos, siempre activos.
         com.headqlink.link.Str.init(this)
         com.headqlink.link.LogcatCapture.start(this)
+        com.headqlink.link.QdTrace.init(this)
         instance = this
         registerActivityLifecycleCallbacks(this)
 

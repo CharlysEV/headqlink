@@ -20,6 +20,9 @@ import java.util.Locale;
 final class CarTrace {
     private static final SimpleDateFormat TS = new SimpleDateFormat("HH:mm:ss.SSS", Locale.US);
     private static final int MAX_HEX = 512;
+    /** Retención (qdauto §7.1): ≤ 30 diarios y ≤ 100 MiB, contando el que se abre. */
+    private static final int MAX_FILES = 30;
+    private static final long MAX_BYTES = 100L * 1024 * 1024;
 
     private static File dir;
     private static Writer out;
@@ -34,11 +37,14 @@ final class CarTrace {
         dir = new File(ctx.getExternalFilesDir(null), "car");
         //noinspection ResultOfMethodCallIgnored
         dir.mkdirs();
+        LogRetention.prune(dir, "car-", MAX_FILES - 1, MAX_BYTES);
     }
 
     /** Abre el diario (al arrancar el servicio). */
     static synchronized void open() {
         if (out != null || dir == null) return;
+        // Un diario por arranque del servicio: la retención también aquí, no solo al arrancar el proceso.
+        LogRetention.prune(dir, "car-", MAX_FILES - 1, MAX_BYTES);
         String name = "car-" + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date()) + ".log";
         try {
             out = new FileWriter(new File(dir, name), true);
@@ -118,9 +124,14 @@ final class CarTrace {
         if (h.payloadFormat == Proto.PAYLOAD_JSON) {
             line("RX " + head, new String(payload, off, len, StandardCharsets.UTF_8));
         } else if (h.msgType == Proto.MSG_TOUCH) {
+            // Un táctil corto o raro no puede tumbar el hilo lector (antes lanzaba BufferUnderflowException).
             StringBuilder sb = new StringBuilder();
-            for (Proto.Finger f : Proto.parseTouch(payload, off, len)) {
-                if (f != null) sb.append(String.format(Locale.US, "[id%d a%d %.1f,%.1f] ", f.id, f.action, f.x, f.y));
+            try {
+                for (Proto.Finger f : Proto.parseTouch(payload, off, len)) {
+                    if (f != null) sb.append(String.format(Locale.US, "[id%d a%d %.1f,%.1f] ", f.id, f.action, f.x, f.y));
+                }
+            } catch (RuntimeException ex) {
+                sb.append("(táctil ilegible: ").append(ex).append(") ");
             }
             line("RX " + head, sb + "| " + L.hex(payload, off, Math.min(len, 64)));
         } else {

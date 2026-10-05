@@ -43,13 +43,36 @@ final class PowerHelper {
         return pm != null && pm.isIgnoringBatteryOptimizations(ctx.getPackageName());
     }
 
-    /** Pide a Android la exención de la optimización de batería (diálogo del sistema). */
+    /**
+     * Pide a Android la exención de la optimización de batería (diálogo del sistema); si no hay diálogo, la lista de
+     * apps sin optimizar y, si tampoco, la información de la app.
+     */
     static void requestUnrestricted(Context ctx) {
         try {
             ctx.startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    Uri.parse("package:" + ctx.getPackageName())));
+                    Uri.parse("package:" + ctx.getPackageName())).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            return;
+        } catch (RuntimeException e) {
+            L.w("batería: sin el diálogo de la exención (" + e.getMessage() + "); abro la lista");
+        }
+        try {
+            ctx.startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (RuntimeException e) {
             openAppDetails(ctx);
+        }
+    }
+
+    /**
+     * Batería de HeadQLink (Información de la app › Batería: «Sin restricciones»; en Samsung, también «Límites de uso en
+     * segundo plano»). Si este Android no la abre directamente, el gestor del fabricante o la información de la app.
+     */
+    static void openAppBattery(Context ctx) {
+        try {
+            ctx.startActivity(new Intent("android.settings.VIEW_ADVANCED_POWER_USAGE_DETAIL",
+                    Uri.parse("package:" + ctx.getPackageName())).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (RuntimeException e) {
+            L.w("batería: sin la página de batería de la app (" + e.getMessage() + ")");
+            openOem(ctx);
         }
     }
 
@@ -85,7 +108,22 @@ final class PowerHelper {
     }
 
     private static void openAppDetails(Context ctx) {
-        ctx.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.getPackageName()))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        openAppDetails(ctx, ctx.getPackageName());
+    }
+
+    /** Información de una app (permisos, batería, «Forzar detención»…). */
+    static void openAppDetails(Context ctx, String pkg) {
+        try {
+            ctx.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (RuntimeException e) {
+            L.w("no se pudo abrir la información de " + pkg + ": " + e.getMessage());
+            ctx.startActivity(new Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }
+    }
+
+    /** Fabricante Samsung (One UI: «Límites de uso en segundo plano»). */
+    static boolean isSamsung() {
+        return "samsung".equalsIgnoreCase(Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.trim());
     }
 }

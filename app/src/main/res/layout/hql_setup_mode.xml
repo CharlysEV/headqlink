@@ -23,4 +23,19 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="22dp"
         android:orientation="vertical" />
+
+    <!-- qdauto: conexión con el coche (Wi-Fi Direct o zona Wi-Fi del móvil) -->
+    <TextView
+        style="@style/HQL.Text.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="@string/hql_link_title" />
+
+    <LinearLayout
+        android:id="@+id/hql_link_options"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="vertical" />
 </LinearLayout>

@@ -221,7 +221,7 @@ final class RouteTab implements CarScreen {
             lp.bottomMargin = 8;
             results.addView(item, lp);
             item.setOnClickListener(v -> {
-                L.i("ruta: destino elegido en el coche: " + pl.name);
+                L.i("ruta: destino elegido en el coche"); // sin el nombre: el log se exporta (qdauto §7.5)
                 RoutePlanner.setManualDestination(pl);
                 root.removeView(panel);
                 tick();
@@ -309,7 +309,8 @@ final class RouteTab implements CarScreen {
             ctx.getApplicationContext().startActivity(i);
             CarUi.switchToAa();
         } catch (RuntimeException e) {
-            L.w("ruta: no se pudo abrir Google Maps: " + e);
+            // Solo el tipo: el mensaje lleva el Intent, con las coordenadas del destino.
+            L.w("ruta: no se pudo abrir Google Maps: " + e.getClass().getSimpleName());
         }
     }
 

@@ -1,0 +1,610 @@
+package com.headqlink.link;
+
+import android.content.Context;
+import android.os.Handler;
+import android.os.SystemClock;
+
+import com.andrerinas.openheadunit.decoder.video.VideoTap;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
+import dev.qdauto.core.h264.AnnexB;
+import dev.qdauto.core.session.KeyframeReason;
+
+/**
+ * La mitad de vídeo de SspSession, sin socket, para el motor QDAuto (qdauto §4.7): la fuente (Android Auto, patrón o
+ * app), el encoder, el relay GL, la interfaz propia del coche y el freno a AA. Vive entre sesiones con el coche: se
+ * engancha a una SessionPort con attach y se desengancha con detach sin destruirse, así que la sesión siguiente
+ * reutiliza Android Auto, el decodificador, el encoder y CarUi (radio, viaje, ruta) tal cual.
+ *
+ * Hilos: crear, enganchar, desenganchar, pedir IDR, ABR y parar, en hql-video (VideoHub). El camino caliente (sink de
+ * AA, sink del encoder, puerta GL) solo lee la referencia volatile active: sin sesión, el frame se tira y se cuenta, y
+ * el ack de AA sale en el acto. Los tamaños y parámetros son exactamente los de SspSession.startVideo.
+ */
+final class VideoPipeline {
+    /** "Último frame": se codifica uno nuevo solo con la cola del kernel por debajo de esto (SspSession.GATE_OUTQ). */
+    private static final int GATE_OUTQ = 64 * 1024;
+    private static final int GATE_MAX_PENDING = 3;
+    private static final long GATE_PENDING_TIMEOUT_NS = 200_000_000L;
+    static final long ENCODER_HEALTH_NS = 2_000_000_000L;
+
+    final VideoPlan plan;
+    private final Context ctx;
+    private final Config cfg;
+    private final Handler h;
+
+    private VideoSource source;
+    private VideoEncoder encoder;
+    /**
+     * csd y active se escriben juntos con csdLock (attach y SPS/PPS nuevo): o attach ve el SPS/PPS y lo manda, o el
+     * SPS/PPS ve la sesión enganchada y se le manda. Sin el candado, uno que saliera entre las dos cosas se perdía.
+     */
+    private final Object csdLock = new Object();
+    private volatile byte[] csd;
+    private volatile SessionPort active;
+    private AaAckBrake brake;
+    private KeyframePolicy policy;
+    private Jitter srcJitter;
+    private Jitter encJitter;
+    private VideoEncoder.Params vp;
+
+    // Puerta «último frame» (hilo GL) y ABR.
+    private final AtomicInteger pendingEnc = new AtomicInteger();
+    private volatile long pendingSinceNs;
+    private volatile int denyPending;
+    private volatile int denyQueue;
+    private volatile int denyKernel;
+    private volatile int denyNoSession;
+    private volatile int abrDenies;
+    private int abrBps;
+    private int abrInitial;
+    private int abrMin;
+    private int abrMax;
+    private int abrCalm;
+    /** Adaptación térmica (ThermalPolicy, hilo hql-video): nivel, tope de bitrate (0 = sin tope) y fps máximos. */
+    private int thermalLevel = ThermalPolicy.NORMAL;
+    private int thermalMaxBps;
+    private volatile int fpsCap;
+    private final Runnable abrTick = new Runnable() {
+        @Override
+        public void run() {
+            adaptBitrate();
+            h.postDelayed(this, 1000);
+        }
+    };
+
+    // Salud, métricas y estado del reenvío.
+    private volatile long lastEncoderFrameNs;
+    /** "Último frame": cuándo se dibujó el último frame para el encoder (puerta GL); 0 = ninguno. */
+    private volatile long lastSubmitNs;
+    /** La entrada del encoder pasa por la puerta GL: sin sesión no se le da ningún frame. */
+    private boolean gated;
+    private boolean warnedKeyMismatch;
+    private volatile int headerW;
+    private volatile int headerH;
+    private int attaches;
+    private volatile long attachedAtNs;
+    private volatile boolean idrAfterAttach;
+    private volatile long firstIdrAfterAttachMs = -1;
+    private final AtomicLong droppedNoSession = new AtomicLong();
+    private boolean stopped;
+
+    private VideoPipeline(Context ctx, Config cfg, VideoPlan plan, Handler h) {
+        this.ctx = ctx.getApplicationContext();
+        this.cfg = cfg;
+        this.plan = plan;
+        this.h = h;
+    }
+
+    /** Hilo hql-video: crea la fuente y, según el modo, el reenvío directo o el encoder. */
+    static VideoPipeline create(Context ctx, Config cfg, VideoPlan plan, Boolean carDark, Handler h) throws IOException {
+        VideoPipeline p = new VideoPipeline(ctx, cfg, plan, h);
+        try {
+            p.start(carDark);
+        } catch (IOException | RuntimeException e) {
+            p.stop();
+            throw e;
+        }
+        return p;
+    }
+
+    private void start(Boolean carDark) throws IOException {
+        fpsCap = plan.fps;
+        source = VideoSource.create(ctx, cfg);
+        source.setCarSize(plan.car.carW, plan.car.carH);
+        source.setVideoSize(plan.videoW, plan.videoH);
+        source.setTargetFps(plan.fps);
+        if (carDark != null) source.onCarDarkMode(carDark);
+        if (!source.usesEncoder()) {
+            startPassthrough();
+        } else {
+            startEncoder();
+        }
+    }
+
+    // ---------------------------------------------------------------- reenvío directo (AA Básico)
+
+    private void startPassthrough() {
+        policy = new KeyframePolicy();
+        // startPassthrough ya pide un ciclo de foco.
+        policy.noteRequested(SystemClock.elapsedRealtime());
+        if (source instanceof AaPassthroughSource && cfg.aaBrake()) {
+            brake = new AaAckBrake();
+            VideoTap.setAckGate(brake.gate);
+            L.i("VIDEO freno a AA activo: ventana pedida " + cfg.aaWindow() + ", anunciada " + VideoTap.getAnnouncedWindow()
+                    + " (si AA ya estaba conectado, la ventana nueva se aplica al reconectar AA)");
+        }
+        int fps = plan.car.argsFps > 0 ? plan.car.argsFps : 30;
+        srcJitter = new Jitter("origen", Math.max(1, fps));
+        int[] size = source.passthroughSize();
+        headerW = size != null ? size[0] : plan.videoW;
+        headerH = size != null ? size[1] : plan.videoH;
+        L.i("VIDEO reenvío directo desde " + source.getClass().getSimpleName() + ", cabecera " + headerW + "x" + headerH);
+        source.startPassthrough(this::onAaUnit);
+    }
+
+    /** Hilo de vídeo de AA: una unidad H.264 (con el SPS ya recortado por AaPassthroughSource). */
+    private void onAaUnit(byte[] data, int off, int len) {
+        Jitter j = srcJitter;
+        if (j != null) j.tick();
+        AaAckBrake b = brake;
+        if (AnnexB.INSTANCE.isCodecConfig(data, off, len)) {
+            // SPS+PPS sueltos: se guardan y se mandan aparte; sin ranura, AA confirma en el acto.
+            byte[] c = Arrays.copyOfRange(data, off, off + len);
+            synchronized (csdLock) {
+                csd = c;
+                SessionPort p = active;
+                if (p != null) p.sendConfig(c);
+            }
+            if (b != null) b.noSlot();
+            return;
+        }
+        boolean key = AnnexB.INSTANCE.containsIdr(data, off, len);
+        if (key) {
+            KeyframePolicy pol = policy;
+            if (pol != null) pol.onIdrSeen(SystemClock.elapsedRealtime());
+        }
+        // El tamaño lo decide la negociación con AA, que llega después de arrancar.
+        int[] sz = source.passthroughSize();
+        SessionPort p = active;
+        if (sz != null && (sz[0] != headerW || sz[1] != headerH)) {
+            L.i("VIDEO cabecera " + headerW + "x" + headerH + " -> " + sz[0] + "x" + sz[1]);
+            headerW = sz[0];
+            headerH = sz[1];
+            if (p != null) p.setHeader(headerW, headerH, null, null, null);
+        }
+        if (p == null) {
+            droppedNoSession.incrementAndGet();
+            if (b != null) b.noSlot();
+            return;
+        }
+        if (key) noteIdr();
+        AckSlot slot = b != null ? b.newSlot(p) : null;
+        p.sendFrame(data, off, len, key, VideoTap.getFrameTimestampUs(), slot != null ? b.completionFor(slot) : null);
+    }
+
+    // ---------------------------------------------------------------- encoder (último frame, patrón, app)
+
+    private void startEncoder() throws IOException {
+        int carFps = plan.car.argsFps;
+        int carBitrate = plan.car.argsBitrate;
+        vp = new VideoEncoder.Params();
+        vp.width = plan.videoW;
+        vp.height = plan.videoH;
+        vp.fps = plan.fps;
+        vp.bitrate = cfg.bitrate(carBitrate);
+        vp.profile = cfg.profile();
+        vp.prependSpsPps = cfg.prependSpsPps();
+        vp.lowLatency = LowLatency.enabled;
+        vp.noRepeat = cfg.getBool("enc_no_repeat");
+        vp.maxClocks = cfg.encMaxClocks();
+        boolean latestFrame = source instanceof AaPassthroughSource;
+        if (latestFrame) {
+            // Como SspSession: sin IDR periódicos (el coche pide uno cuando lo necesita), VBR con tope, intra-refresh.
+            vp.cbr = cfg.getBool("enc_cbr");
+            vp.intraRefreshFrames = cfg.getBool("enc_no_ir") ? 0 : vp.fps;
+            vp.iFrameIntervalSec = cfg.getBool("enc_no_ir") ? 10 : 30;
+            vp.repeatAfterUs = 100_000;
+            VideoProfile prof = cfg.videoProfile();
+            if (cfg.getInt(Config.KBPS) <= 0) {
+                // El del perfil; en Coche, el que pide el coche (VIDEO_ARGS BitRate).
+                vp.bitrate = prof.startBitrate(carBitrate, plan.videoW);
+                if (prof.adaptiveBitrate()) {
+                    abrBps = vp.bitrate;
+                    abrInitial = vp.bitrate;
+                    abrMin = prof.minBitrate;
+                    abrMax = prof.maxBitrate;
+                }
+            }
+            gated = true;
+            source.setLinkGate(new GlFrameRelay.Gate() {
+                @Override
+                public boolean ready() {
+                    return gateReady();
+                }
+
+                @Override
+                public void submitted() {
+                    long now = System.nanoTime();
+                    pendingSinceNs = now;
+                    lastSubmitNs = now;
+                    pendingEnc.incrementAndGet();
+                }
+            });
+        }
+        L.i("VIDEO start: coche pide " + plan.car.argsW + "x" + plan.car.argsH + "@" + carFps + " " + carBitrate + "bps intervalo "
+                + plan.car.argsInterval + " | usamos " + vp);
+        encJitter = new Jitter("encoder", Math.max(1, vp.fps));
+        encoder = new VideoEncoder(vp, new VideoEncoder.Sink() {
+            @Override
+            public void onCodecConfig(byte[] c) {
+                L.i("SPS/PPS " + c.length + " bytes: " + L.hex(c, 0, Math.min(48, c.length)));
+                synchronized (csdLock) {
+                    csd = c;
+                    SessionPort p = active;
+                    if (p != null) p.sendConfig(c);
+                }
+            }
+
+            @Override
+            public void onFrame(byte[] data, int len, boolean keyFrame, long ptsUs) {
+                onEncodedFrame(data, len, keyFrame, ptsUs);
+            }
+        });
+        L.i("fuente de vídeo: " + cfg.mode() + " -> " + source.getClass().getSimpleName());
+        source.start(encoder.start(), plan.videoW, plan.videoH, vp.fps, vp.toString());
+        if (abrMax > 0) {
+            L.i(String.format(Locale.US, "bitrate adaptable %.1f-%.1f Mbps, empieza en %.1f", abrMin / 1e6, abrMax / 1e6, abrBps / 1e6));
+            h.postDelayed(abrTick, 1000);
+        }
+    }
+
+    /** Hilo enc-drain: el búfer se reutiliza, pero el núcleo copia el frame al encolarlo. */
+    private void onEncodedFrame(byte[] buf, int len, boolean flagKey, long ptsUs) {
+        Jitter j = encJitter;
+        if (j != null) j.tick();
+        lastEncoderFrameNs = System.nanoTime();
+        // pendingEnc - 1 sin bajar de 0 (bucle CAS: getAndUpdate es de API 24).
+        while (true) {
+            int v = pendingEnc.get();
+            if (v <= 0 || pendingEnc.compareAndSet(v, v - 1)) break;
+        }
+        boolean key = AnnexB.INSTANCE.containsIdr(buf, 0, len);
+        if (key != flagKey && !warnedKeyMismatch) {
+            warnedKeyMismatch = true;
+            L.w("encoder: la marca de keyframe (" + flagKey + ") no coincide con el contenido (IDR " + key + "); manda el contenido");
+        }
+        SessionPort p = active;
+        if (p == null) {
+            droppedNoSession.incrementAndGet();
+            return;
+        }
+        if (key) noteIdr();
+        p.sendFrame(buf, 0, len, key, ptsUs, null);
+    }
+
+    /**
+     * "Último frame" (hilo GL): ¿cabe un frame nuevo? Con sesión enganchada y en vídeo, como mucho GATE_MAX_PENDING-1
+     * en el encoder, como mucho uno en la cola del núcleo y la cola del kernel por debajo de GATE_OUTQ.
+     */
+    private boolean gateReady() {
+        SessionPort p = active;
+        if (p == null || p.getClosed() || !p.isStreaming()) {
+            denyNoSession++;
+            return false;
+        }
+        if (pendingEnc.get() >= GATE_MAX_PENDING) {
+            if (System.nanoTime() - pendingSinceNs < GATE_PENDING_TIMEOUT_NS) {
+                denyPending++;
+                return false;
+            }
+            pendingEnc.set(0);
+        }
+        if (p.videoQueueFrames() > 1) {
+            denyQueue++;
+            return false;
+        }
+        int q = p.gateOutq();
+        if (q >= GATE_OUTQ) {
+            denyKernel++;
+            abrDenies++;
+            return false;
+        }
+        return true;
+    }
+
+    /** ABR (AIMD) cada segundo en hql-video, como SspSession.adaptBitrate, solo con sesión enganchada. */
+    private void adaptBitrate() {
+        VideoEncoder enc = encoder;
+        if (enc == null || stopped || abrMax <= 0 || active == null) return;
+        int d = abrDenies;
+        abrDenies = 0;
+        int before = abrBps;
+        int max = abrCeiling();
+        int min = Math.min(abrMin, max);
+        if (d >= 5) {
+            abrBps = Math.max(min, (int) (abrBps * 0.8));
+            abrCalm = 0;
+        } else if (d == 0) {
+            if (++abrCalm >= 2 && abrBps < max) {
+                abrBps = Math.min(max, abrBps + 1_000_000);
+                abrCalm = 0;
+            }
+        } else {
+            abrCalm = 0;
+        }
+        abrBps = Math.min(abrBps, max);
+        if (abrBps != before) {
+            enc.setBitrate(abrBps);
+            PerfTrace.event("abr_kbps", abrBps / 1000);
+        }
+    }
+
+    /** Techo del ABR: el del perfil o, con calor, el tope térmico (lo que sea menor). */
+    private int abrCeiling() {
+        return thermalMaxBps > 0 ? Math.min(abrMax, thermalMaxBps) : abrMax;
+    }
+
+    /**
+     * Hilo hql-video: nivel térmico nuevo (ThermalGuard), en marcha y sin reiniciar la sesión ni AA: bitrate del
+     * encoder (setParameters) y ritmo del relay GL. En el reenvío directo de AA no hay encoder propio: solo se registra.
+     */
+    void applyThermal(int level, int status) {
+        if (stopped || level == thermalLevel) return;
+        thermalLevel = level;
+        VideoEncoder enc = encoder;
+        String head = "térmico " + status + " → perfil " + ThermalPolicy.name(level);
+        if (enc == null || vp == null) {
+            L.i(head + ": reenvío directo de AA, sin encoder propio; no se cambia nada");
+            return;
+        }
+        int base = abrMax > 0 ? abrInitial : vp.bitrate;
+        thermalMaxBps = level == ThermalPolicy.NORMAL ? 0 : ThermalPolicy.bitrateCap(level, base);
+        int bps;
+        if (abrMax > 0) {
+            abrBps = level == ThermalPolicy.NORMAL ? Math.max(abrBps, Math.min(abrInitial, abrMax)) : Math.min(abrBps, abrCeiling());
+            bps = abrBps;
+        } else {
+            bps = thermalMaxBps > 0 ? thermalMaxBps : vp.bitrate;
+        }
+        enc.setBitrate(bps);
+        int fps = ThermalPolicy.fpsCap(level, vp.fps);
+        // Sin relay GL (patrón, app) la fuente dibuja a su ritmo: solo baja el bitrate.
+        fpsCap = gated ? fps : vp.fps;
+        source.setMaxFps(fps);
+        PerfTrace.event("thermal_fps", fpsCap);
+        PerfTrace.event("thermal_kbps", bps / 1000);
+        L.i(String.format(Locale.US, "%s: %d fps (sesión %d) · %.1f Mbit/s (sesión %.1f)%s", head, fpsCap, vp.fps,
+                bps / 1e6, base / 1e6, gated ? "" : " · sin relay GL, solo el bitrate"));
+    }
+
+    /** fps máximos ahora (los de la sesión, o el tope térmico). */
+    int fpsCap() {
+        return fpsCap;
+    }
+
+    private void noteIdr() {
+        if (!idrAfterAttach) {
+            idrAfterAttach = true;
+            long ms = (System.nanoTime() - attachedAtNs) / 1_000_000;
+            firstIdrAfterAttachMs = ms;
+            L.i("VIDEO primer IDR tras enganchar: " + ms + " ms");
+        }
+    }
+
+    // ---------------------------------------------------------------- sesiones (hilo hql-video)
+
+    /** Engancha la sesión: cabecera, SPS/PPS en caché delante del primer IDR y, en reconexiones, comprobar el origen. */
+    void attach(SessionPort port) {
+        attachedAtNs = System.nanoTime();
+        idrAfterAttach = false;
+        firstIdrAfterAttachMs = -1;
+        if (source.usesEncoder()) {
+            int carFps = plan.car.argsFps;
+            int carBitrate = plan.car.argsBitrate;
+            int carInterval = plan.car.argsInterval;
+            port.setHeader(plan.videoW, plan.videoH, carFps > 0 ? null : vp.fps, carBitrate > 0 ? null : vp.bitrate,
+                    carInterval > 0 ? null : 4);
+        } else {
+            port.setHeader(headerW, headerH, null, null, null);
+        }
+        pendingEnc.set(0);
+        denyPending = 0;
+        denyQueue = 0;
+        denyKernel = 0;
+        denyNoSession = 0;
+        abrDenies = 0;
+        if (abrMax > 0 && abrBps > Math.min(abrInitial, abrCeiling()) && encoder != null) {
+            abrBps = Math.min(abrInitial, abrCeiling());
+            encoder.setBitrate(abrBps);
+        }
+        port.setSocketJitter(new Jitter("socket", Math.max(1, vp != null ? vp.fps : plan.fps)));
+        long lost = droppedNoSession.getAndSet(0);
+        // SPS/PPS en caché delante del primer IDR, y la sesión enganchada, a la vez (csdLock).
+        synchronized (csdLock) {
+            byte[] c = csd;
+            if (c != null) port.sendConfig(c);
+            active = port;
+        }
+        if (attaches++ > 0) {
+            L.i("VIDEO reenganchado a S" + port.getId() + (lost > 0 ? " (" + lost + " frames tirados sin sesión)" : ""));
+            source.onReattached();
+        } else {
+            L.i("VIDEO enganchado a S" + port.getId());
+        }
+    }
+
+    /** Desengancha la sesión (si es la activa): la puerta GL se cierra y los frames se tiran (y se cuentan). */
+    void detach(SessionPort port) {
+        if (active != port) return;
+        active = null;
+        L.i("VIDEO desenganchado de S" + port.getId() + " (el vídeo sigue vivo)");
+    }
+
+    SessionPort active() {
+        return active;
+    }
+
+    /** Hilo hql-video: IDR pedido por la sesión activa. */
+    void requestKeyFrame(KeyframeReason reason) {
+        VideoEncoder enc = encoder;
+        if (enc != null) {
+            // Con encoder: al momento, sin antirrebote (como askKeyFrame); redraw para tener un frame que codificar.
+            enc.requestKeyFrame();
+            source.redraw();
+            return;
+        }
+        KeyframePolicy pol = policy;
+        if (pol == null) return;
+        long now = SystemClock.elapsedRealtime();
+        if (pol.onRequest(now)) {
+            fireCycle(String.valueOf(reason));
+        } else {
+            PerfTrace.event("idr_skip", 0);
+        }
+    }
+
+    /** Pide un ciclo de foco a AA; si la palanca está ocupada, un único reintento a +150 ms. */
+    private void fireCycle(String why) {
+        if (stopped) return;
+        L.i("AA: ciclo de foco para IDR (" + why + ")");
+        source.requestKeyFrame(started -> h.post(() -> {
+            if (started || stopped) return;
+            long delay = policy.onLeverRefused(SystemClock.elapsedRealtime());
+            if (delay > 0) {
+                h.postDelayed(() -> {
+                    if (stopped) return;
+                    policy.onRetry(SystemClock.elapsedRealtime());
+                    fireCycle("reintento");
+                }, delay);
+            }
+        }));
+    }
+
+    /** Hilo hql-video, cada 500 ms: vigilante del IDR en el reenvío directo. */
+    void tick() {
+        KeyframePolicy pol = policy;
+        SessionPort p = active;
+        if (pol == null || p == null || stopped) return;
+        if (pol.watchdog(SystemClock.elapsedRealtime(), p.waitingForIdr())) fireCycle("vigilante: sin IDR en 1,5 s");
+    }
+
+    void setCarDark(boolean dark) {
+        source.onCarDarkMode(dark);
+    }
+
+    /** Sin Android Auto ni encoder muertos: la pipeline sirve para una sesión nueva. */
+    boolean healthy() {
+        if (stopped) return false;
+        if (!source.usesEncoder()) {
+            return !(source instanceof AaPassthroughSource) || ((AaPassthroughSource) source).aaAlive();
+        }
+        if (encoder == null || encoder.failed()) return false;
+        if (vp != null && vp.noRepeat) return true;
+        return encoderResponsive(System.nanoTime(), lastEncoderFrameNs, lastSubmitNs, gated);
+    }
+
+    /**
+     * ¿Responde el encoder? (puro, lo prueban los tests). Sin puerta (patrón, app) la fuente dibuja siempre: basta con
+     * una salida en ENCODER_HEALTH_NS. Con la puerta GL ("último frame") no: sin sesión no se dibuja nada y, tras sus
+     * repeticiones (KEY_REPEAT_PREVIOUS_FRAME_AFTER, acotadas), el encoder se calla aunque esté bien. Ahí solo está mal
+     * si se le dio un frame después de su última salida y no ha devuelto nada en ENCODER_HEALTH_NS.
+     */
+    static boolean encoderResponsive(long nowNs, long lastOutNs, long lastInNs, boolean gated) {
+        if (nowNs - lastOutNs < ENCODER_HEALTH_NS) return true;
+        if (!gated) return false;
+        return lastInNs - lastOutNs <= 0 || nowNs - lastInNs < ENCODER_HEALTH_NS;
+    }
+
+    /** Por qué no sirve (para el log). */
+    String unhealthyReason() {
+        if (stopped) return "parada";
+        if (!source.usesEncoder()) return "Android Auto desconectado";
+        if (encoder == null) return "sin encoder";
+        if (encoder.failed()) return "el encoder ha fallado";
+        long now = System.nanoTime();
+        String r = "el encoder no da frames desde hace " + (now - lastEncoderFrameNs) / 1_000_000 + " ms";
+        return gated ? r + " (el último frame se le dio hace " + (now - lastSubmitNs) / 1_000_000 + " ms)" : r;
+    }
+
+    /** Toque del coche, directo desde el hilo de eventos de la sesión (VideoHub serializa las llamadas). */
+    void touch(int action, Proto.Finger[] fingers) {
+        VideoSource s = source;
+        if (s != null) s.touchMulti(action, fingers);
+    }
+
+    /** Líneas de la pipeline para las estadísticas de 5 s de la sesión activa (o null si port no es la activa). */
+    List<String> takeStats(SessionPort port) {
+        if (active != port) return null;
+        List<String> out = new ArrayList<>();
+        AaAckBrake b = brake;
+        if (b != null) out.add(b.takeWindowLine());
+        int dp = denyPending;
+        int dq = denyQueue;
+        int dk = denyKernel;
+        if (dp + dq + dk > 0) {
+            out.add(String.format(Locale.US, "puerta cerrada: encoder lleno %d, cola %d, kernel %d", dp, dq, dk));
+            denyPending = 0;
+            denyQueue = 0;
+            denyKernel = 0;
+        }
+        StringBuilder jit = new StringBuilder();
+        VideoSource s = source;
+        String rj = s != null ? s.takeJitterSummary() : null;
+        if (rj != null) jit.append(rj);
+        Jitter j = srcJitter != null ? srcJitter : encJitter;
+        if (j != null) {
+            if (jit.length() > 0) jit.append(" · ");
+            jit.append(j.takeSummary());
+        }
+        Jitter sj = port.getSocketJitter();
+        if (sj != null) {
+            if (jit.length() > 0) jit.append(" · ");
+            jit.append(sj.takeSummary());
+        }
+        if (jit.length() > 0) out.add(jit.toString());
+        if (abrMax > 0) out.add(String.format(Locale.US, "bitrate %.1f Mbps (%.1f-%.1f)", abrBps / 1e6, abrMin / 1e6, abrMax / 1e6));
+        return out;
+    }
+
+    void setStatus(String line) {
+        VideoSource s = source;
+        if (s != null) s.setStatus(line);
+    }
+
+    /** ms del primer IDR tras el último enganche, o -1. */
+    long firstIdrAfterAttachMs() {
+        return firstIdrAfterAttachMs;
+    }
+
+    int aaCycles() {
+        KeyframePolicy p = policy;
+        return p != null ? p.cycles() : 0;
+    }
+
+    String keyframeSummary() {
+        KeyframePolicy p = policy;
+        return p != null ? p.summary() : "";
+    }
+
+    /** Hilo hql-video: para todo (equivale a la parte de vídeo de SspSession.close). */
+    void stop() {
+        if (stopped) return;
+        stopped = true;
+        active = null;
+        h.removeCallbacks(abrTick);
+        if (brake != null) {
+            VideoTap.setAckGate(null);
+            brake.stop();
+        }
+        if (source != null) source.stop();
+        if (encoder != null) encoder.stop();
+        if (policy != null && policy.cycles() > 0) L.i("AA: " + policy.summary());
+    }
+}

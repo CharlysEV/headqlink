@@ -13,6 +13,9 @@ import java.util.Locale;
 
 /**
  * Perfiles de imagen:
+ * - Coche (el recomendado): lo que pide el coche en VIDEO_ARGS, con "último frame": sus fps (30 en el C10, y Android
+ *   Auto también a 30) y su bitrate (5,08 Mbps en el C10), a la resolución de su pantalla, sin optimizaciones de
+ *   latencia ni relojes al máximo. Es lo que el coche muestra, con el mínimo de calor y batería.
  * - Muy alto: "último frame" (recodificar en el móvil) a 60 fps y resolución completa, con las
  *   optimizaciones de latencia y los relojes del encoder al máximo; bitrate adaptable 5-16 Mbps.
  * - Alto: lo mismo sin optimizaciones de latencia ni relojes al máximo (menos batería y calor; el
@@ -20,15 +23,19 @@ import java.util.Locale;
  * - Medio: "último frame" a 45 fps fijos (AA a 60, un frame por tic) y 720p, 5 Mbps.
  * - Básico: reenvío directo del vídeo de AA con freno, a 30 fps y 720p (no recodifica).
  * - Muy bajo: "último frame" a 20 fps fijos, 720p y 2,5 Mbps (lo mínimo para el enlace y la batería).
- * El recomendado se elige según lo que declara el codificador por hardware del móvil y su RAM.
+ * El recomendado se elige según lo que declara el codificador por hardware del móvil y su RAM (recommend).
  */
 final class VideoProfile {
+    static final String CAR = "coche";
     static final String MAX = "muy_alto";
     static final String HIGH = "alto";
     static final String MEDIUM = "medio";
     static final String BASIC = "basico";
     static final String LOW = "muy_bajo";
-    static final String[] ALL = {MAX, HIGH, MEDIUM, BASIC, LOW};
+    static final String[] ALL = {CAR, MAX, HIGH, MEDIUM, BASIC, LOW};
+    /** Coche: fps y bitrate si el coche no manda VIDEO_ARGS (como el C10). */
+    static final int CAR_DEFAULT_FPS = 30;
+    static final int CAR_DEFAULT_BPS = 5_000_000;
 
     final String id;
     final boolean reencode;
@@ -44,9 +51,16 @@ final class VideoProfile {
     /** > bitrate: adaptable entre minBitrate y maxBitrate según el enlace (SspSession.adaptBitrate). */
     final int minBitrate;
     final int maxBitrate;
+    /** Coche: fps y bitrate, los que pida el coche en VIDEO_ARGS (los de arriba, si no los manda). */
+    final boolean followsCar;
 
     private VideoProfile(String id, boolean reencode, int fps, boolean hd720, boolean fixedRate, boolean boost,
                          int bitrate, int minBitrate, int maxBitrate) {
+        this(id, reencode, fps, hd720, fixedRate, boost, bitrate, minBitrate, maxBitrate, false);
+    }
+
+    private VideoProfile(String id, boolean reencode, int fps, boolean hd720, boolean fixedRate, boolean boost,
+                         int bitrate, int minBitrate, int maxBitrate, boolean followsCar) {
         this.id = id;
         this.reencode = reencode;
         this.fps = fps;
@@ -56,14 +70,34 @@ final class VideoProfile {
         this.bitrate = bitrate;
         this.minBitrate = minBitrate;
         this.maxBitrate = maxBitrate;
+        this.followsCar = followsCar;
     }
 
     boolean adaptiveBitrate() {
         return maxBitrate > minBitrate;
     }
 
+    /** fps de la sesión: los del perfil o, en Coche, los que pide el coche (VIDEO_ARGS FrameRate, entre 10 y 60). */
+    int fpsFor(int carFps) {
+        if (!followsCar || carFps <= 0) return fps;
+        return Math.max(10, Math.min(60, carFps));
+    }
+
+    /**
+     * Bitrate inicial del "último frame": el del perfil o, en Coche, el que pide el coche (VIDEO_ARGS BitRate). Sin
+     * bitrate en el perfil (Básico recodificando por ajuste manual), 5 Mbps a 720p y 8 a resolución completa.
+     */
+    int startBitrate(int carBitrate, int videoW) {
+        if (followsCar) return carBitrate > 0 ? carBitrate : CAR_DEFAULT_BPS;
+        if (bitrate > 0) return bitrate;
+        return videoW <= 1280 ? 5_000_000 : 8_000_000;
+    }
+
+    /** Perfil por su id; uno desconocido (de una versión vieja o mal escrito) es Coche. */
     static VideoProfile of(String id) {
         switch (id == null ? "" : id) {
+            case MAX:
+                return new VideoProfile(MAX, true, 60, false, false, true, 10_000_000, 5_000_000, 16_000_000);
             case HIGH:
                 return new VideoProfile(HIGH, true, 60, false, false, false, 10_000_000, 5_000_000, 14_000_000);
             case MEDIUM:
@@ -73,7 +107,8 @@ final class VideoProfile {
             case LOW:
                 return new VideoProfile(LOW, true, 20, true, true, false, 2_500_000, 2_500_000, 2_500_000);
             default:
-                return new VideoProfile(MAX, true, 60, false, false, true, 10_000_000, 5_000_000, 16_000_000);
+                return new VideoProfile(CAR, true, CAR_DEFAULT_FPS, false, false, false,
+                        CAR_DEFAULT_BPS, CAR_DEFAULT_BPS, CAR_DEFAULT_BPS, true);
         }
     }
 
@@ -87,6 +122,8 @@ final class VideoProfile {
 
     static String title(String id) {
         switch (id) {
+            case MAX:
+                return Str.get(R.string.hql_profile_max);
             case HIGH:
                 return Str.get(R.string.hql_profile_high);
             case MEDIUM:
@@ -96,12 +133,14 @@ final class VideoProfile {
             case LOW:
                 return Str.get(R.string.hql_profile_low);
             default:
-                return Str.get(R.string.hql_profile_max);
+                return Str.get(R.string.hql_profile_car);
         }
     }
 
     static String detail(String id) {
         switch (id) {
+            case MAX:
+                return Str.get(R.string.hql_profile_max_detail);
             case HIGH:
                 return Str.get(R.string.hql_profile_high_detail);
             case MEDIUM:
@@ -111,7 +150,7 @@ final class VideoProfile {
             case LOW:
                 return Str.get(R.string.hql_profile_low_detail);
             default:
-                return Str.get(R.string.hql_profile_max_detail);
+                return Str.get(R.string.hql_profile_car_detail);
         }
     }
 
@@ -121,23 +160,33 @@ final class VideoProfile {
     /** Perfil recomendado para este móvil (se calcula una vez). */
     static synchronized String recommended(Context ctx) {
         if (recommended != null) return recommended;
-        boolean enc1080p60 = hwSupports(true, 1920, 1088, 60);
-        boolean dec1080p60 = hwSupports(false, 1920, 1088, 60);
-        boolean enc720p30 = hwSupports(true, 1280, 720, 45);
+        boolean enc1080p30 = hwSupports(true, 1920, 1088, 30);
+        boolean dec1080p30 = hwSupports(false, 1920, 1088, 30);
+        boolean enc720p45 = hwSupports(true, 1280, 720, 45);
         ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
         ctx.getSystemService(ActivityManager.class).getMemoryInfo(mi);
         long ramGb = Math.round(mi.totalMem / 1e9);
         String soc = Build.VERSION.SDK_INT >= 31 ? Build.SOC_MANUFACTURER + " " + Build.SOC_MODEL : Build.HARDWARE;
-        if (enc1080p60 && dec1080p60 && ramGb >= 6) recommended = MAX;
-        else if (enc720p30 && ramGb >= 3) recommended = MEDIUM;
-        else recommended = BASIC;
+        recommended = recommend(enc1080p30, dec1080p30, enc720p45, ramGb);
         reasonSoc = soc;
         reasonRam = ramGb;
-        reasonFlags = new boolean[]{enc1080p60, dec1080p60, enc720p30};
-        reason = String.format(Locale.US, "%s · %d GB · enc1080p60 %b · dec1080p60 %b · enc720p45 %b",
-                soc, ramGb, enc1080p60, dec1080p60, enc720p30);
+        reasonFlags = new boolean[]{enc1080p30, dec1080p30, enc720p45};
+        reason = String.format(Locale.US, "%s · %d GB · enc1080p30 %b · dec1080p30 %b · enc720p45 %b",
+                soc, ramGb, enc1080p30, dec1080p30, enc720p45);
         L.i("perfil recomendado: " + recommended + " (" + reason + ")");
         return recommended;
+    }
+
+    /**
+     * Regla del recomendado (pura, la prueban los tests). Coche si el móvil codifica y decodifica 1080p a 30 fps por
+     * hardware y tiene al menos 4 GB: es lo que pide el C10 (30 fps, ~5 Mbps). Antes era Muy alto (60 fps, 5-16 Mbps):
+     * el coche no mostraba más y el móvil llegaba al estado térmico crítico (viaje del 2026-10-05). Si no, Medio
+     * (720p) o Básico.
+     */
+    static String recommend(boolean enc1080p30, boolean dec1080p30, boolean enc720p45, long ramGb) {
+        if (enc1080p30 && dec1080p30 && ramGb >= 4) return CAR;
+        if (enc720p45 && ramGb >= 3) return MEDIUM;
+        return BASIC;
     }
 
     private static String reasonSoc = "";

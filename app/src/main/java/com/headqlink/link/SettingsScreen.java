@@ -56,7 +56,11 @@ final class SettingsScreen implements CarScreen {
             profilePills.add(p);
             row.addView(p);
         }
-        img.addView(row);
+        // Con el perfil Coche ya son 7: si no caben, la fila se desplaza.
+        android.widget.HorizontalScrollView rowScroll = new android.widget.HorizontalScrollView(c);
+        rowScroll.setHorizontalScrollBarEnabled(false);
+        rowScroll.addView(row);
+        img.addView(rowScroll);
         detail = CarStyle.text(c, "", 22, CarStyle.TEXT_DIM);
         detail.setPadding(6, 6, 0, 0);
         img.addView(detail);
@@ -79,6 +83,23 @@ final class SettingsScreen implements CarScreen {
         ui.addView(toggle(c, Str.get(R.string.hql_low_latency_reconnect), cfg.lowLatency(),
                 on -> cfg.putBool(Config.LOW_LATENCY, on)));
         col.addView(ui, cardLp());
+
+        // Conexión (solo lectura): modo, motor, coche e interfaz local (qdauto §5.2).
+        LinearLayout conn = CarStyle.card(c);
+        conn.addView(title(c, Str.get(R.string.hql_settings_connection)));
+        // La del servicio en marcha, no la configurada (un cambio en marcha se aplica al volver a conectar).
+        String engineName = Config.ENGINE_QDAUTO.equals(LinkState.engineFor(cfg)) ? Str.get(R.string.hql_engine_qdauto) : Str.get(R.string.hql_engine_original);
+        TextView connLine = CarStyle.text(c, Str.get(R.string.hql_settings_link_line, Ui.linkTitle(LinkState.linkModeFor(cfg)), engineName), 22, CarStyle.TEXT);
+        connLine.setPadding(6, 14, 0, 0);
+        conn.addView(connLine);
+        String detail = LinkState.linkDetail;
+        String net = LinkState.network;
+        TextView connDetail = CarStyle.text(c, (detail.isEmpty() ? "" : Str.get(R.string.hql_settings_car_line, detail))
+                + (!detail.isEmpty() && !net.isEmpty() ? "\n" : "") + net, 20, CarStyle.TEXT_DIM);
+        connDetail.setPadding(6, 6, 0, 0);
+        if (detail.isEmpty() && net.isEmpty()) connDetail.setVisibility(View.GONE);
+        conn.addView(connDetail);
+        col.addView(conn, cardLp());
 
         TextView info = CarStyle.text(c, Str.get(R.string.hql_settings_info, LinkState.video.isEmpty() ? "—" : LinkState.video, VideoProfile.reason()), 20, CarStyle.TEXT_DIM);
         info.setPadding(8, 8, 8, 0);

@@ -82,11 +82,11 @@ final class GlFrameRelay {
     /** Tamaño del frame de AA: se conoce de verdad al llegar el primero (ver setSourceSize). */
     private volatile int srcW;
     private volatile int srcH;
-    private long minIntervalNs;
-    private final long periodNs;
-    /** Cadencia fija (perfil Medio, 45 fps con AA a 60): un frame por tic, siempre el último. */
-    private boolean fixedRate;
-    private long nextTickNs;
+    /**
+     * Ritmo de dibujo (hilo GL): como mucho los fps del vídeo de media; con cadencia fija (perfil Medio, 45 fps con AA
+     * a 60), un frame por tic, siempre el último.
+     */
+    private final FramePacer pacer;
     /** Ancho de la zona de AA en la salida (cambia si el panel se oculta, ver setAaRegion). */
     private volatile int aaOutW;
     /** Posición x de la zona de AA en la salida (el panel propio va a su izquierda). */
@@ -122,7 +122,6 @@ final class GlFrameRelay {
 
     private boolean hasNew;
     private long frameNs;
-    private long lastDrawNs;
     private boolean scheduled;
     private boolean released;
 
@@ -154,10 +153,9 @@ final class GlFrameRelay {
         this.ovH = outH;
         this.srcW = srcW;
         this.srcH = srcH;
-        // Solo frena ráfagas: AA entrega a intervalos irregulares y con el 90 % del periodo el frame
-        // que llegaba pronto esperaba y lo pisaba el siguiente (5-20 % descartados a 60 fps).
-        this.periodNs = maxFps > 0 ? 1_000_000_000L / maxFps : 0;
-        this.minIntervalNs = periodNs / 2;
+        // Sin rejilla, medio periodo de tolerancia: AA entrega a intervalos irregulares y con el 90 % del periodo
+        // el frame que llegaba pronto esperaba y lo pisaba el siguiente (5-20 % descartados a 60 fps).
+        this.pacer = new FramePacer(maxFps);
     }
 
     /**
@@ -166,8 +164,20 @@ final class GlFrameRelay {
      * quedan iguales (45 constantes es mejor que 50 y pico irregulares).
      */
     void setFixedRate(boolean on) {
-        fixedRate = on && periodNs > 0;
-        if (fixedRate) minIntervalNs = periodNs;
+        pacer.setFps(pacer.fps(), on);
+    }
+
+    /** fps máximos en marcha (adaptación térmica) y si van en rejilla; se aplica en el hilo GL sin parar nada. */
+    void setMaxFps(int fps, boolean fixed) {
+        Handler hh = h;
+        if (hh == null) {
+            pacer.setFps(fps, fixed);
+            return;
+        }
+        hh.post(() -> {
+            pacer.setFps(fps, fixed);
+            L.i("GL relay: ritmo " + fps + " fps" + (pacer.fixed() ? " en rejilla" : ""));
+        });
     }
 
     /** El tamaño negociado con AA puede cambiar tras crear el relay (al arrancar en frío vale 800x480). */
@@ -229,6 +239,20 @@ final class GlFrameRelay {
 
     void setGate(Gate g) {
         gate = g;
+    }
+
+    /**
+     * Vuelve a dibujar el último frame aunque no haya llegado otro (qdauto §4.10): al enganchar una sesión nueva, el
+     * IDR pedido al encoder sale con el siguiente frame dibujado, aunque AA no cambie la imagen.
+     */
+    void redraw() {
+        Handler hh = h;
+        if (hh == null) return;
+        hh.post(() -> {
+            if (!hasNew) frameNs = System.nanoTime();
+            hasNew = true;
+            tryDraw();
+        });
     }
 
     /** Arranca el hilo GL y devuelve la Surface donde debe pintar el decodificador de AA. */
@@ -378,7 +402,7 @@ final class GlFrameRelay {
      * animaciones salen a intervalos iguales en vez de al ritmo del móvil, que puede ser 120 Hz).
      */
     private boolean paced() {
-        return periodNs > 0 && (fixedRate || ownScreenOnTop());
+        return pacer.periodNs() > 0 && (pacer.fixed() || ownScreenOnTop());
     }
 
     private final Runnable retry = () -> {
@@ -390,7 +414,7 @@ final class GlFrameRelay {
         if (released || !hasNew) return;
         long now = System.nanoTime();
         boolean paced = paced();
-        long wait = paced ? nextTickNs - now : lastDrawNs + minIntervalNs - now;
+        long wait = pacer.waitNs(now, paced);
         Gate g = gate;
         boolean early = wait > 0;
         boolean closed = !early && g != null && !g.ready();
@@ -411,12 +435,9 @@ final class GlFrameRelay {
         statMaxWaitMs = Math.max(statMaxWaitMs, waitedMs);
         PerfTrace.event("relay_draw", waitedMs);
         hasNew = false;
-        lastDrawNs = now;
-        if (paced) {
-            // Siguiente tic de la rejilla; si nos hemos retrasado más de un periodo (enlace cerrado,
-            // sin frames), la rejilla vuelve a empezar aquí.
-            nextTickNs = now - nextTickNs > periodNs ? now + periodNs : nextTickNs + periodNs;
-        }
+        // Siguiente dibujo: en rejilla, el tic siguiente (si nos hemos retrasado más de un periodo, por el enlace
+        // cerrado o sin frames, la rejilla vuelve a empezar aquí); si no, el ritmo medio.
+        pacer.onDraw(now, paced);
         statDrawn++;
         maybeLogStats();
     }

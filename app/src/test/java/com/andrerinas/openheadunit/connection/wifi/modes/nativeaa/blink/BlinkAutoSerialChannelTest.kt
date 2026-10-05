@@ -133,7 +133,14 @@ class BlinkAutoSerialChannelTest {
             pidof() { $pidofBody; }
             $guard
         """.trimIndent()
-        return ProcessBuilder("sh", "-c", script).start().waitFor()
+        // headqlink: en Windows sin `sh` en el PATH la prueba se salta (no es un fallo del guard).
+        val process = try {
+            ProcessBuilder("sh", "-c", script).start()
+        } catch (e: IOException) {
+            org.junit.Assume.assumeNoException("sin sh en este equipo", e)
+            throw e
+        }
+        return process.waitFor()
     }
 
     private fun expectIOException(block: () -> Unit) {

@@ -45,6 +45,40 @@ final class Config {
     /** Android Auto con panel propio y pantallas nuestras (fotos, vídeos). */
     static final String MODE_AA_EXT = "aa_ext";
 
+    /**
+     * Conexión con el coche (qdauto §5.1): Wi-Fi Direct (el coche crea la red, como siempre) o la zona Wi-Fi del móvil
+     * (el coche se une a ella). Se aplica al arrancar el transporte (al volver a conectar).
+     */
+    static final String LINK_MODE = "link_mode";
+    static final String LINK_P2P = "p2p";
+    static final String LINK_HOTSPOT = "hotspot";
+
+    /**
+     * Motor de protocolo (qdauto §4.3): QDAuto (núcleo validado en el C10) u original (SspSession). Se lee al arrancar el
+     * transporte: un cambio se aplica al desconectar y volver a conectar.
+     */
+    static final String LINK_ENGINE = "link_engine";
+    static final String ENGINE_QDAUTO = "qdauto";
+    static final String ENGINE_ORIGINAL = "original";
+    /**
+     * Motor por defecto mientras no se elija otro: QDAuto. El original sigue disponible como respaldo (Ajustes de imagen ›
+     * Avanzado › Motor de protocolo, o el extra link_engine=original).
+     */
+    static final String DEFAULT_ENGINE = ENGINE_QDAUTO;
+    /** Mantener el vídeo (y Android Auto) vivo entre sesiones con el coche (qdauto §6); false = como el fork. */
+    static final String QD_KEEP_VIDEO = "qd_keep_video";
+    static final boolean DEFAULT_KEEP_VIDEO = true;
+    /** Tras perder al coche, cuánto se espera a que vuelva antes de cerrarlo todo (ms). */
+    static final String CAR_GONE_MS = "car_gone_ms";
+    /** Filtro de pares estricto: los orígenes «aceptar con aviso» se rechazan. */
+    static final String PEER_STRICT = "peer_strict";
+    /** Relevo de la sesión cuando el coche se vuelve a anunciar con ella abierta. */
+    static final String QD_SUPERSEDE = "qd_supersede";
+    /** PHONE_INFO y ACK: "fork" (MODEL, UUID propio y tamaño del vídeo) o "qdlink" (vacíos y geometría de QDLink). */
+    static final String QD_PHONE_INFO = "qd_phone_info";
+    /** Modo guardado al activar la prueba con patrón desde Diagnóstico. */
+    static final String MODE_BEFORE_PATTERN = "mode_before_pattern";
+
     /** Modos que usan Android Auto (servidor de AA, accesibilidad, freno…). */
     static boolean isAa(String mode) {
         return MODE_AA.equals(mode) || MODE_AA_EXT.equals(mode);
@@ -107,6 +141,19 @@ final class Config {
         if (i.hasExtra(AA_BRAKE)) e.putBoolean(AA_BRAKE, i.getBooleanExtra(AA_BRAKE, true));
         if (i.hasExtra(AA_WINDOW)) e.putInt(AA_WINDOW, i.getIntExtra(AA_WINDOW, 0));
         if (i.hasExtra(MODE)) e.putString(MODE, i.getStringExtra(MODE));
+        if (i.hasExtra(LINK_MODE)) {
+            String lm = i.getStringExtra(LINK_MODE);
+            if (LINK_P2P.equals(lm) || LINK_HOTSPOT.equals(lm)) e.putString(LINK_MODE, lm);
+        }
+        if (i.hasExtra(LINK_ENGINE)) {
+            String en = i.getStringExtra(LINK_ENGINE);
+            if (ENGINE_QDAUTO.equals(en) || ENGINE_ORIGINAL.equals(en)) e.putString(LINK_ENGINE, en);
+        }
+        for (String k : new String[]{QD_KEEP_VIDEO, PEER_STRICT, QD_SUPERSEDE}) {
+            if (i.hasExtra(k)) e.putBoolean(k, i.getBooleanExtra(k, false));
+        }
+        if (i.hasExtra(CAR_GONE_MS)) e.putInt(CAR_GONE_MS, i.getIntExtra(CAR_GONE_MS, 0));
+        if (i.hasExtra(QD_PHONE_INFO)) e.putString(QD_PHONE_INFO, i.getStringExtra(QD_PHONE_INFO));
         if (i.hasExtra(PKG)) e.putString(PKG, i.getStringExtra(PKG));
         if (i.hasExtra("force_legacy_launch")) e.putBoolean("force_legacy_launch", i.getBooleanExtra("force_legacy_launch", false));
         e.apply();
@@ -143,6 +190,16 @@ final class Config {
 
     boolean sendWhitelist() {
         return sp.getBoolean(SEND_WHITELIST, true);
+    }
+
+    /**
+     * «Mantener la pantalla del móvil encendida» (por defecto, no): el modo coche de Android sin
+     * ENABLE_CAR_MODE_ALLOW_SLEEP, como antes; enchufado, Android no deja apagar la pantalla (PhoneScreen).
+     */
+    static final String KEEP_SCREEN_ON = "keep_screen_on";
+
+    boolean keepScreenOn() {
+        return sp.getBoolean(KEEP_SCREEN_ON, false);
     }
 
     /** Tema elegido en el menú: 0 según el sistema, 1 claro, 2 oscuro (lo aplica UiModeManager). */
@@ -256,11 +313,11 @@ final class Config {
         return videoProfile().reencode;
     }
 
-    /** fps de Android Auto: ajuste manual o los del perfil. */
+    /** fps de Android Auto: ajuste manual o los del perfil (en Coche, los que pide el coche en VIDEO_ARGS). */
     int aaFps(int carFps) {
         int v = sp.getInt(FPS, 0);
         if (v > 0) return v;
-        return videoProfile().fps;
+        return videoProfile().fpsFor(carFps);
     }
 
     /** Cadencia fija del relay: la del perfil, salvo fps manuales (adb). */
@@ -345,6 +402,79 @@ final class Config {
         sp.edit().putString(MODE, m).apply();
     }
 
+    /** Conexión con el coche: LINK_P2P (por defecto, como hasta ahora) o LINK_HOTSPOT. */
+    String linkMode() {
+        String m = sp.getString(LINK_MODE, LINK_P2P);
+        return LINK_HOTSPOT.equals(m) ? LINK_HOTSPOT : LINK_P2P;
+    }
+
+    void setLinkMode(String m) {
+        sp.edit().putString(LINK_MODE, LINK_HOTSPOT.equals(m) ? LINK_HOTSPOT : LINK_P2P).apply();
+    }
+
+    boolean isHotspotMode() {
+        return LINK_HOTSPOT.equals(linkMode());
+    }
+
+    /** Motor de protocolo: ENGINE_QDAUTO u ENGINE_ORIGINAL. */
+    String linkEngine() {
+        String en = sp.getString(LINK_ENGINE, DEFAULT_ENGINE);
+        return ENGINE_QDAUTO.equals(en) || ENGINE_ORIGINAL.equals(en) ? en : DEFAULT_ENGINE;
+    }
+
+    void setLinkEngine(String en) {
+        sp.edit().putString(LINK_ENGINE, ENGINE_QDAUTO.equals(en) ? ENGINE_QDAUTO : ENGINE_ORIGINAL).apply();
+    }
+
+    boolean isQdEngine() {
+        return ENGINE_QDAUTO.equals(linkEngine());
+    }
+
+    boolean qdKeepVideo() {
+        return sp.getBoolean(QD_KEEP_VIDEO, DEFAULT_KEEP_VIDEO);
+    }
+
+    /** Espera a que vuelva el coche antes de cerrarlo todo (por defecto 30 s; entre 5 s y 10 min). */
+    long carGoneMs() {
+        int v = sp.getInt(CAR_GONE_MS, 0);
+        return v > 0 ? Math.max(5_000, Math.min(600_000, v)) : 30_000;
+    }
+
+    boolean peerStrict() {
+        return sp.getBoolean(PEER_STRICT, false);
+    }
+
+    boolean qdSupersede() {
+        return sp.getBoolean(QD_SUPERSEDE, true);
+    }
+
+    /** "fork" (por defecto) o "qdlink". */
+    String qdPhoneInfo() {
+        return "qdlink".equals(sp.getString(QD_PHONE_INFO, "fork")) ? "qdlink" : "fork";
+    }
+
+    String getString(String k) {
+        return sp.getString(k, null);
+    }
+
+    void putString(String k, String v) {
+        if (v == null) sp.edit().remove(k).apply();
+        else sp.edit().putString(k, v).apply();
+    }
+
+    /**
+     * Huella de todos los ajustes que cambian el vídeo de una sesión (qdauto §4.7): si cambia, la VideoPipeline viva no
+     * sirve para la sesión siguiente y se recrea.
+     */
+    String videoFingerprint() {
+        return "mode=" + mode() + " perfil=" + (isAa(mode()) ? videoProfile().id : "") + " reencode=" + aaReencode()
+                + " brake=" + aaBrake() + " window=" + aaWindow() + " fps=" + sp.getInt(FPS, 0) + " kbps=" + sp.getInt(KBPS, 0)
+                + " size=" + sp.getInt(WIDTH, 0) + "x" + sp.getInt(HEIGHT, 0) + " h264=" + profile() + " prepend=" + prependSpsPps()
+                + " lowlat=" + lowLatency() + " maxclk=" + encMaxClocks() + " norepeat=" + getBool("enc_no_repeat")
+                + " cbr=" + getBool("enc_cbr") + " noir=" + getBool("enc_no_ir") + " aadpi=" + aaDpi() + " dpi=" + dpi()
+                + " pkg=" + targetPackage();
+    }
+
     String targetPackage() {
         return sp.getString(PKG, "");
     }
@@ -382,6 +512,9 @@ final class Config {
         return "fps=" + sp.getInt(FPS, 0) + " kbps=" + sp.getInt(KBPS, 0) + " size=" + sp.getInt(WIDTH, 0) + "x"
                 + sp.getInt(HEIGHT, 0) + " profile=" + profile() + " prepend=" + prependSpsPps()
                 + " mode=" + mode() + (MODE_APP.equals(mode()) ? " pkg=" + targetPackage() + " dpi=" + dpi() : "")
+                + " link=" + linkMode() + " engine=" + linkEngine() + " pantallaEncendida=" + keepScreenOn()
+                + (isQdEngine() ? " keepVideo=" + qdKeepVideo() + " supersede=" + qdSupersede() + " phoneInfo=" + qdPhoneInfo()
+                + " carGone=" + carGoneMs() / 1000 + "s" + (peerStrict() ? " strict" : "") : "")
                 + " (0 = lo que pida el coche)";
     }
 }

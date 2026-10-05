@@ -14,6 +14,21 @@ final class Http {
     private Http() {
     }
 
+    private static final java.util.regex.Pattern URL_PATTERN = java.util.regex.Pattern.compile("[a-zA-Z][a-zA-Z0-9+.-]*://([^/\\s?#:]+)\\S*");
+
+    /**
+     * Un error para el registro sin la ubicación (el log se exporta y no debe llevar GPS, qdauto §7.5): las URLs de
+     * Open-Meteo, OSRM o Nominatim llevan la posición o el destino en la ruta o en la consulta, así que de cada URL
+     * queda solo el host; de un JSON inesperado, solo el tipo (su texto puede traer direcciones).
+     */
+    static String safeError(Throwable e) {
+        if (e == null) return "";
+        if (e instanceof org.json.JSONException) return "respuesta inesperada (" + e.getClass().getSimpleName() + ")";
+        String m = e.getMessage();
+        String s = e.getClass().getSimpleName() + (m != null ? ": " + m : "");
+        return URL_PATTERN.matcher(s).replaceAll("$1");
+    }
+
     static String get(String url) throws Exception {
         return request(url, null);
     }

@@ -16,6 +16,8 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
         <package android:name="com.google.android.projection.gearhead" />
+        <!-- headqlink: QDLink (ocupa el UDP 18463; la comprobación de requisitos avisa de cerrarlo) -->
+        <package android:name="com.neusoft.qdrivelink" />
         <!-- headqlink: gestores de batería de fabricante (PowerHelper) -->
         <package android:name="com.hihonor.systemmanager" />
         <package android:name="com.huawei.systemmanager" />
@@ -204,15 +206,6 @@
                 android:resource="@xml/shortcuts" />
 
             <!-- Navigation Intent Filters & Deep Links -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data android:scheme="headunit" />
-                <data android:host="selfmode" />
-            </intent-filter>
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -305,7 +298,7 @@
              actions are refused unless the user turns on "Allow external configuration". -->
         <receiver
             android:name=".automation.AutomationReceiver"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="com.andrerinas.openheadunit.ACTION_CONNECT" />
                 <action android:name="com.andrerinas.openheadunit.ACTION_DISCONNECT" />
@@ -439,7 +432,7 @@
         <activity
             android:name=".main.AutomationActivity"
             android:excludeFromRecents="true"
-            android:exported="true"
+            android:exported="false"
             android:noHistory="true"
             android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar">
@@ -508,6 +501,12 @@
             android:theme="@style/Theme.HeadQLink" />
 
         <activity
+            android:name="com.headqlink.link.ChecklistActivity"
+            android:exported="false"
+            android:label="@string/hql_req_title"
+            android:theme="@style/Theme.HeadQLink" />
+
+        <activity
             android:name="com.headqlink.link.LatencyActivity"
             android:exported="false"
             android:label="@string/hql_measure_latency"
@@ -527,7 +526,7 @@
 
         <service
             android:name="com.headqlink.link.LinkService"
-            android:exported="true"
+            android:exported="false"
             android:foregroundServiceType="connectedDevice|location" />
 
         <service

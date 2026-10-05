@@ -28,8 +28,32 @@ interface VideoSource {
     default void requestKeyFrame() {
     }
 
+    /** Como requestKeyFrame(), avisando (hilo principal) de si el ciclo empezó. */
+    default void requestKeyFrame(KeyframeCallback cb) {
+        requestKeyFrame();
+        if (cb != null) cb.onResult(true);
+    }
+
+    /**
+     * Fuentes con encoder: dibujar ya un frame aunque la imagen no haya cambiado, para que el IDR pedido al encoder
+     * salga al momento (al volver a enganchar una sesión).
+     */
+    default void redraw() {
+    }
+
+    /** La fuente sigue viva y vuelve a tener una sesión con el coche (reconexión sin recrear el vídeo). */
+    default void onReattached() {
+    }
+
     /** fps objetivo (lo que pide el coche en VIDEO_ARGS, o el ajuste manual). */
     default void setTargetFps(int fps) {
+    }
+
+    /**
+     * Tope de fps en marcha (adaptación térmica), sin parar nada: hilo hql-video. Solo lo aplican las fuentes con
+     * relay GL ("último frame"); con los fps objetivo, vuelve a como empezó.
+     */
+    default void setMaxFps(int fps) {
     }
 
     /** El coche cambia entre modo día y noche (Global/DarkModeOn). */

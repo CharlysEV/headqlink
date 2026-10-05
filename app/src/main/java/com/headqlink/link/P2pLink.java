@@ -13,6 +13,8 @@ import android.net.wifi.p2p.nsd.WifiP2pUpnpServiceRequest;
 import android.os.Handler;
 import android.os.Looper;
 
+import com.andrerinas.openheadunit.R;
+
 /**
  * Une el móvil al grupo WiFi Direct del coche (el coche es Group Owner).
  * Descubrimiento UPnP (servicio del coche) y connect con groupOwnerIntent=0.
@@ -31,6 +33,9 @@ final class P2pLink {
     private volatile boolean inGroup;
     private boolean connecting;
     private boolean started;
+    /** Lo último publicado en la fila «Red» (para {@link #republish}). */
+    private volatile LinkState.Level lastLevel = LinkState.Level.IDLE;
+    private volatile String lastText = "";
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
@@ -73,6 +78,17 @@ final class P2pLink {
         return inGroup;
     }
 
+    private void publish(LinkState.Level level, String text) {
+        lastLevel = level;
+        lastText = text;
+        LinkState.setNetwork(level, text);
+    }
+
+    /** Vuelve a publicar el estado del grupo (p. ej. tras un error del UDP que ocupó la fila «Red»). */
+    void republish() {
+        LinkState.setNetwork(lastLevel, lastText);
+    }
+
     void start() {
         if (started) return;
         started = true;
@@ -105,11 +121,14 @@ final class P2pLink {
         if (inGroup && !was) {
             connecting = false;
             L.i("P2P en grupo del coche, GO=" + info.groupOwnerAddress + "; paro el descubrimiento");
+            publish(LinkState.Level.OK, Str.get(R.string.hql_p2p_in_group,
+                    info.groupOwnerAddress != null ? info.groupOwnerAddress.getHostAddress() : "?"));
             // El descubrimiento P2P saca la radio del canal y provoca picos de 100-350 ms.
             mgr.stopPeerDiscovery(ch, null);
             mgr.clearServiceRequests(ch, null);
         } else if (!inGroup && was) {
             L.w("P2P fuera del grupo");
+            publish(LinkState.Level.BUSY, Str.get(R.string.hql_p2p_searching));
         } else if (info != null && info.groupFormed && info.isGroupOwner) {
             L.w("P2P: el móvil es GO de otro grupo; el protocolo espera que el coche sea GO");
         }
@@ -117,6 +136,7 @@ final class P2pLink {
 
     private void discover() {
         L.i("P2P buscando coche (UPnP + peers)...");
+        publish(LinkState.Level.BUSY, Str.get(R.string.hql_p2p_searching));
         mgr.clearServiceRequests(ch, null);
         mgr.addServiceRequest(ch, WifiP2pUpnpServiceRequest.newInstance(), listener("addServiceRequest"));
         mgr.discoverServices(ch, listener("discoverServices"));

@@ -80,7 +80,7 @@ final class RoadInfo {
             try {
                 step();
             } catch (Exception e) {
-                L.w("vía: " + e.getMessage());
+                L.w("vía: " + Http.safeError(e));
             }
             SystemClock.sleep(3000);
         }

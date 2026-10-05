@@ -99,7 +99,7 @@ final class RoutePlanner {
                 try {
                     r.step();
                 } catch (Exception e) {
-                    L.w("ruta: " + e);
+                    L.w("ruta: " + Http.safeError(e));
                 }
             }, "route-now").start();
         }
@@ -198,7 +198,7 @@ final class RoutePlanner {
             try {
                 step();
             } catch (Exception e) {
-                L.w("ruta: " + e);
+                L.w("ruta: " + Http.safeError(e));
             }
             SystemClock.sleep(5000);
         }
@@ -233,12 +233,13 @@ final class RoutePlanner {
             plan = np;
             failedDestination = null;
             status = "";
-            L.i(String.format(Locale.US, "ruta: %s · %.1f km · %.1f kWh estimados · %d cargadores",
-                    np.destination, np.totalKm, np.kwhCum[np.n - 1], np.chargers.size()));
+            // Sin el nombre del destino: el log se exporta y no lleva ubicaciones (qdauto §7.5).
+            L.i(String.format(Locale.US, "ruta: %.1f km · %.1f kWh estimados · %d cargadores",
+                    np.totalKm, np.kwhCum[np.n - 1], np.chargers.size()));
         } catch (Exception e) {
             failedDestination = dest;
             status = Str.get(R.string.hql_route_failed, e.getMessage());
-            L.w("ruta: " + e);
+            L.w("ruta: " + Http.safeError(e));
         }
     }
 
@@ -381,7 +382,7 @@ final class RoutePlanner {
         try {
             findChargers(p);
         } catch (Exception e) {
-            L.w("ruta: sin cargadores: " + e.getMessage());
+            L.w("ruta: sin cargadores: " + Http.safeError(e));
         }
         p.progress = nearest(p, lat0, lon0, -1);
         return p;
@@ -423,7 +424,7 @@ final class RoutePlanner {
                         h.getJSONArray("weather_code").optDouble(best, -1)};
             }
         } catch (Exception e) {
-            L.w("ruta: sin tiempo previsto: " + e.getMessage());
+            L.w("ruta: sin tiempo previsto: " + Http.safeError(e));
         }
         return out;
     }

@@ -361,6 +361,9 @@ final class CarSensors implements SensorEventListener, LocationListener {
                 HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
                 con.setConnectTimeout(10_000);
                 con.setReadTimeout(10_000);
+                // Con un error HTTP, getInputStream lanza con la URL (latitud y longitud) en el mensaje: solo el código.
+                int code = con.getResponseCode();
+                if (code >= 400) throw new IllegalStateException("HTTP " + code + " en " + con.getURL().getHost());
                 String body;
                 try (InputStream in = con.getInputStream()) {
                     body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
@@ -374,7 +377,7 @@ final class CarSensors implements SensorEventListener, LocationListener {
                     updateHeadwind();
                 }
             } catch (Exception e) {
-                L.w("sensores: sin datos de viento: " + e.getMessage());
+                L.w("sensores: sin datos de viento: " + Http.safeError(e));
             }
         }, "weather").start();
     }

@@ -637,8 +637,15 @@ class AapService : Service() {
             when (action) {
                 Intent.ACTION_SCREEN_OFF -> {
                     screenOffTimestamp = SystemClock.elapsedRealtime()
-                    AppLog.i("WakeDetect: SCREEN_OFF")
-                    commManager.pauseForSleep()
+                    if (com.andrerinas.openheadunit.decoder.video.VideoTap.headless) {
+                        // headqlink: sin vista en el móvil, su pantalla no es la de la radio: Android Auto sigue
+                        // proyectando al coche, así que no se paran el decodificador (alimenta el «último frame»), el
+                        // audio ni el micrófono.
+                        AppLog.i("WakeDetect: SCREEN_OFF (headqlink sin pantalla: AA sigue, sin pausa)")
+                    } else {
+                        AppLog.i("WakeDetect: SCREEN_OFF")
+                        commManager.pauseForSleep()
+                    }
                     maybeInferredAccPowerLoss { goAsync() }
                 }
                 Intent.ACTION_SCREEN_ON -> {
@@ -1101,10 +1108,22 @@ class AapService : Service() {
             val mgr = getSystemService(UI_MODE_SERVICE) as? UiModeManager
             if (mgr != null) {
                 uiModeManager = mgr
-                mgr.enableCarMode(0)
+                // headqlink: con ENABLE_CAR_MODE_ALLOW_SLEEP (salvo el ajuste «Mantener la pantalla del móvil
+                // encendida»), Android no guarda su FULL_WAKE_LOCK de modo coche: la pantalla se puede apagar.
+                mgr.enableCarMode(com.headqlink.link.PhoneScreen.carModeFlags(this))
             }
         } catch (e: Exception) {
             AppLog.w("AapService: Failed to enable car mode: ${e.message}")
+        }
+    }
+
+    /** headqlink: vuelve a activar el modo coche con los indicadores del ajuste actual (solo si lo activó este servicio). */
+    private fun refreshCarMode() {
+        if (!::uiModeManager.isInitialized) return
+        try {
+            uiModeManager.enableCarMode(com.headqlink.link.PhoneScreen.carModeFlags(this))
+        } catch (e: Exception) {
+            AppLog.w("AapService: Failed to refresh car mode: ${e.message}")
         }
     }
 
@@ -3440,6 +3459,12 @@ class AapService : Service() {
         @Volatile
         var instance: AapService? = null
             private set
+
+        /** headqlink: el ajuste «Mantener la pantalla del móvil encendida» ha cambiado; se aplica ya (hilo principal). */
+        @JvmStatic
+        fun refreshCarModeFlags() {
+            instance?.refreshCarMode()
+        }
 
         /**
          * If set to `true`, the service will call [System.exit] at the very end of [onDestroy].

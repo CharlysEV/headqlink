@@ -188,6 +188,9 @@
     <string name="hql_profile_auto_named">Automatic (%1$s)</string>
     <string name="hql_profile_basic">Basic</string>
     <string name="hql_profile_basic_detail">720p at 30 fps, not re-encoded (the lightest for the phone)</string>
+    <string name="hql_keep_screen_on">Keep the phone screen on (more heat and battery; otherwise it turns off as usual and projection continues)</string>
+    <string name="hql_profile_car">Car</string>
+    <string name="hql_profile_car_detail">What the car asks for (on the C10, full resolution at 30 fps and about 5 Mbit/s), without pushing the phone: the least heat and battery</string>
     <string name="hql_profile_high">High</string>
     <string name="hql_profile_high_detail">Full resolution at 60 fps without pushing the phone: less battery and heat, a little more delay</string>
     <string name="hql_profile_low">Very low</string>
@@ -196,7 +199,7 @@
     <string name="hql_profile_max_detail">Full resolution at 60 fps with the lowest latency (more power use)</string>
     <string name="hql_profile_medium">Medium</string>
     <string name="hql_profile_medium_detail">720p at a steady 45 fps, re-encoded on the phone</string>
-    <string name="hql_profile_reason">%1$s · %2$d GB · 1080p60 encoder %3$s · 1080p60 decoder %4$s · 720p45 encoder %5$s</string>
+    <string name="hql_profile_reason">%1$s · %2$d GB · 1080p30 encoder %3$s · 1080p30 decoder %4$s · 720p45 encoder %5$s</string>
     <string name="hql_profile_reconnect_help">If you are connected, the car and Auto reconnect by themselves with the new profile (a few seconds).</string>
     <string name="hql_radio">Radio</string>
     <string name="hql_radio_list">Radio list</string>
@@ -327,7 +330,7 @@
     <string name="hql_welcome_parked">Do the setup with the car parked</string>
     <string name="hql_welcome_mirror">Mirroring app visible on the car\'s screen</string>
     <string name="hql_welcome_title">Your phone, on the C10\'s screen</string>
-    <string name="hql_welcome_wifi">The phone and the car connect over WiFi Direct; no cable needed.</string>
+    <string name="hql_welcome_wifi">The phone and the car connect over Wi-Fi (Wi-Fi Direct or the phone\'s hotspot); no cable needed.</string>
     <string name="hql_whkm_avg">average %1$.0f Wh/km</string>
     <string name="hql_whkm_now">%1$.0f Wh/km now</string>
     <string name="hql_width">width</string>
@@ -343,4 +346,100 @@
     <string name="hql_wx_snow_showers">Snow showers</string>
     <string name="hql_wx_storm">Thunderstorm</string>
     <string name="hql_yes">yes</string>
+    <!-- qdauto c6 -->
+    <string name="hql_link_title">Connection to the car</string>
+    <string name="hql_link_p2p">Wi-Fi Direct</string>
+    <string name="hql_link_p2p_detail">The car creates the network and the phone joins it. The phone\'s hotspot must be off.</string>
+    <string name="hql_link_hotspot">Phone hotspot</string>
+    <string name="hql_link_hotspot_detail">The car joins your phone\'s hotspot. Tested on the C10, also with the screen off.</string>
+    <string name="hql_hotspot_on">Hotspot on (%1$s)</string>
+    <string name="hql_hotspot_off">Hotspot off: turn it on</string>
+    <string name="hql_hotspot_unknown">Hotspot state unknown</string>
+    <string name="hql_hotspot_open">Open hotspot settings</string>
+    <string name="hql_hotspot_guide">1. Turn on the phone\'s hotspot (5 GHz and no auto-off is best).\n2. First time only: on the car, Settings › Wi-Fi › pick your phone\'s hotspot.\n3. Open the mirroring app on the car\'s screen. HeadQLink connects on its own, even with the phone locked.\nThe car may use your mobile data.</string>
+    <string name="hql_hotspot_guide_title">How to connect the car to the hotspot</string>
+    <string name="hql_hotspot_tips">Tips: the 5 GHz band works better (on 2.4 GHz the radio is shared with the car\'s Bluetooth) and it is best to turn off “Turn off hotspot when no devices are connected” (Samsung).</string>
+    <string name="hql_hotspot_row">Phone hotspot</string>
+    <string name="hql_hotspot_off_row">Hotspot off</string>
+    <string name="hql_hotspot_is_off">Off</string>
+    <string name="hql_hotspot_off_notif">Hotspot off: turn it on to connect with the car</string>
+    <string name="hql_p2p_needs_hotspot_off">Turn off the phone\'s hotspot to use Wi-Fi Direct.</string>
+    <string name="hql_hint_searching_hotspot">Make sure the car is connected to the phone\'s hotspot and open the mirroring app on its screen. You can lock the phone.</string>
+    <string name="hql_network">Network</string>
+    <string name="hql_p2p_in_group">Wi-Fi Direct: in the car\'s group (%1$s)</string>
+    <string name="hql_p2p_searching">Wi-Fi Direct: looking for the car</string>
+    <string name="hql_setup_perms_ok_hotspot">Bluetooth and notifications</string>
+    <!-- qdauto c7 -->
+    <string name="hql_udp_busy">Port 18463 is busy (is QDLink open?). Close it; retrying every 5 s.</string>
+    <string name="hql_engine_title">Protocol engine</string>
+    <string name="hql_engine_qdauto">QDAuto (recommended)</string>
+    <string name="hql_engine_original">Original headqlink</string>
+    <string name="hql_applies_on_reconnect">Applies on next connection.</string>
+    <string name="hql_link_pending">%1$s (on next connection: %2$s)</string>
+    <string name="hql_settings_connection">Connection</string>
+    <string name="hql_settings_link_line">%1$s · %2$s engine</string>
+    <string name="hql_settings_car_line">Car %1$s</string>
+    <!-- qdauto c8 -->
+    <string name="hql_reconnecting">Reconnecting… (Android Auto on hold)</string>
+    <!-- qdauto c9 -->
+    <string name="hql_export_log">Export log</string>
+    <string name="hql_export_running">Exporting the log…</string>
+    <string name="hql_export_done">Saved to %1$s</string>
+    <string name="hql_export_downloads">Downloads/%1$s</string>
+    <string name="hql_export_failed">Could not export: %1$s</string>
+    <string name="hql_export_share">Share HeadQLink log</string>
+    <string name="hql_pattern_test">Test without Android Auto (pattern)</string>
+    <string name="hql_log_paths">Logs in %1$s\nlogs/ full log · car/ car journal · perf/ performance · logcat/ · crash/</string>
+    <string name="hql_log_info">%1$s engine · %2$s</string>
+    <string name="hql_log_pending">On next connection: %1$s engine · %2$s</string>
+    <!-- qdauto: test options (formerly adb extras; LinkService is no longer exported) -->
+    <string name="hql_qd_test_options">Test options (QDAuto)</string>
+    <string name="hql_qd_options_help">For testing the QDAuto engine in the car. Normally leave them as they are.</string>
+    <string name="hql_qd_keep_video">Keep Android Auto between sessions (reconnect without restarting it)</string>
+    <string name="hql_qd_supersede">If the car announces itself again with the session open, treat it as dead and reconnect</string>
+    <string name="hql_qd_peer_strict">Strict filter: reject the car if it comes through an unexpected network</string>
+    <string name="hql_qd_phone_info_qdlink">Identify as QDLink (no phone name or UUID)</string>
+    <string name="hql_qd_car_gone">Wait for the car to come back, in seconds (5-600; empty = 30)</string>
+    <!-- qdauto: requirements check (Checklist) -->
+    <string name="hql_req_title">Requirements check</string>
+    <string name="hql_req_row">Requirements</string>
+    <string name="hql_req_all_ok">All set</string>
+    <plurals name="hql_req_missing">
+        <item quantity="one">%d thing missing</item>
+        <item quantity="other">%d things missing</item>
+    </plurals>
+    <string name="hql_req_sub_ok">Everything this mode needs is on.</string>
+    <string name="hql_req_sub_required">Without the required items HeadQLink won\'t connect. Each button takes you to its setting.</string>
+    <string name="hql_req_sub_recommended">The required items are done; the rest makes it more reliable.</string>
+    <string name="hql_req_required">Required</string>
+    <string name="hql_req_optional">Optional</string>
+    <string name="hql_req_tip">Tip</string>
+    <string name="hql_req_connect_anyway">Connect anyway</string>
+    <string name="hql_req_missing_title">Still missing</string>
+    <string name="hql_req_app_info">App info</string>
+    <string name="hql_req_acc_restricted">If Android says “Restricted setting”: App info › ⋮ › Allow restricted settings, then turn it on.</string>
+    <string name="hql_req_acc_stuck">On but not running (Android stopped it): turn it off and on again.</string>
+    <string name="hql_req_aa_disabled">Disabled: turn it on in its App info</string>
+    <string name="hql_req_dev_off">Off: in Android Auto, tap Version 10 times (see below)</string>
+    <string name="hql_req_dev_unchecked">Not checked yet: HeadQLink opens Android Auto for a moment</string>
+    <string name="hql_req_notif">Notifications</string>
+    <string name="hql_req_notif_why">To see the connection status and warnings</string>
+    <string name="hql_req_notif_blocked">Turned off: turn them on in Settings</string>
+    <string name="hql_req_blocked">Denied: allow it in App info › Permissions</string>
+    <string name="hql_req_nearby">Nearby Wi-Fi devices</string>
+    <string name="hql_req_location">Location</string>
+    <string name="hql_req_nearby_why">To join the car\'s Wi-Fi Direct network</string>
+    <string name="hql_req_wifi">Wi-Fi on</string>
+    <string name="hql_req_wifi_why">Wi-Fi Direct needs Wi-Fi on (no need to be connected to a network)</string>
+    <string name="hql_req_band">5 GHz band</string>
+    <string name="hql_req_band_why">Can\'t be read from here: in the hotspot settings choose 5 GHz and turn off auto-off</string>
+    <string name="hql_req_port_title">Port 18463</string>
+    <string name="hql_req_port_busy">Busy: QDLink (or another app) is open and the car can\'t find HeadQLink. Force stop it.</string>
+    <string name="hql_req_qdlink_why">Installed: close it before connecting (it takes port 18463). App info › Force stop.</string>
+    <string name="hql_req_force_stop">Force stop</string>
+    <string name="hql_req_bt">Bluetooth (nearby devices)</string>
+    <string name="hql_req_bt_why">To recognise the car\'s Bluetooth and connect by itself</string>
+    <string name="hql_req_battery_bt">Needed so the automatic connection can start in the background</string>
+    <string name="hql_req_samsung">Samsung: never sleeping apps</string>
+    <string name="hql_req_samsung_why">Can\'t be read from here: Settings › Battery › Background usage limits › Never sleeping apps › add HeadQLink. The button opens its battery page: choose Unrestricted.</string>
 </resources>

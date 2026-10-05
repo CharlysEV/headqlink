@@ -213,7 +213,7 @@ class Settings(private val context: Context) {
         }
 
     var useGpsForNavigation: Boolean
-        get() = prefs.getBoolean("gps-navigation", true)
+        get() = prefs.getBoolean("gps-navigation", false)
         set(value) {
             prefs.edit().putBoolean("gps-navigation", value).apply()
         }

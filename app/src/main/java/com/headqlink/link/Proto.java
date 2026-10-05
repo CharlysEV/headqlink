@@ -174,10 +174,15 @@ final class Proto {
         return len >= 4 ? ByteBuffer.wrap(p, off, 4).getInt() : 0;
     }
 
+    /**
+     * Dedos de un evento táctil. Con menos de 5 bytes (sin cabecera) devuelve un array vacío, y nunca más dedos de los
+     * que caben en el payload: un táctil corto o truncado no puede lanzar una excepción en el hilo lector.
+     */
     static Finger[] parseTouch(byte[] p, int off, int len) {
+        if (p == null || len < 5 || off < 0 || off + len > p.length) return new Finger[0];
         ByteBuffer bb = ByteBuffer.wrap(p, off, len);
         bb.getInt(); // ACTION global
-        int count = bb.get() & 0xff;
+        int count = Math.min(bb.get() & 0xff, (len - 5) / 10);
         Finger[] f = new Finger[count];
         for (int i = 0; i < count && bb.remaining() >= 10; i++) {
             Finger fi = new Finger();

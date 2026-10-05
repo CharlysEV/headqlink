@@ -25,8 +25,16 @@ import java.util.List;
 
 /** Piezas comunes de la interfaz de HeadQLink. */
 final class Ui {
-    static final String[] RUNTIME_PERMS = {Manifest.permission.NEARBY_WIFI_DEVICES, Manifest.permission.POST_NOTIFICATIONS,
-            Manifest.permission.BLUETOOTH_CONNECT};
+    // Los permisos que pide cada modo y conexión los decide la comprobación de requisitos (Requirements/Checklist).
+
+    /** Nombre de la conexión con el coche. */
+    static String linkTitle(String linkMode) {
+        return Config.LINK_HOTSPOT.equals(linkMode) ? Str.get(R.string.hql_link_hotspot) : Str.get(R.string.hql_link_p2p);
+    }
+
+    static String linkDetail(String linkMode) {
+        return Config.LINK_HOTSPOT.equals(linkMode) ? Str.get(R.string.hql_link_hotspot_detail) : Str.get(R.string.hql_link_p2p_detail);
+    }
 
     private Ui() {
     }
@@ -84,13 +92,6 @@ final class Ui {
             default:
                 return Str.get(R.string.hql_mode_pattern_detail);
         }
-    }
-
-    static boolean permsGranted(Context ctx) {
-        for (String p : RUNTIME_PERMS) {
-            if (ctx.checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) return false;
-        }
-        return true;
     }
 
     static String appLabel(Context ctx, String pkg) {

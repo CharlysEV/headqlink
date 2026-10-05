@@ -54,6 +54,8 @@ final class VideoEncoder {
     private Surface input;
     private Thread drain;
     private volatile boolean running;
+    /** El códec dejó de funcionar sin que lo paráramos (error o reclamado por el sistema): ya no dará frames. */
+    private volatile boolean failed;
     private byte[] outBuf = new byte[512 * 1024];
 
     VideoEncoder(Params p, Sink sink) {
@@ -111,6 +113,11 @@ final class VideoEncoder {
         drain = new Thread(this::drainLoop, "enc-drain");
         drain.start();
         return input;
+    }
+
+    /** El códec falló por su cuenta (no por stop): no sirve para otra sesión. */
+    boolean failed() {
+        return failed;
     }
 
     void requestKeyFrame() {
@@ -259,6 +266,10 @@ final class VideoEncoder {
             try {
                 idx = codec.dequeueOutputBuffer(info, 10_000);
             } catch (IllegalStateException e) {
+                if (running) {
+                    failed = true;
+                    L.w("encoder: el códec ha dejado de funcionar: " + e);
+                }
                 break;
             }
             if (idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {

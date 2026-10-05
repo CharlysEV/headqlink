@@ -61,8 +61,6 @@ final class SspSession {
     private static final int GATE_MAX_PENDING = 3;
     /** Si el encoder no devuelve un frame dibujado en este tiempo, se deja de esperarlo. */
     private static final long GATE_PENDING_TIMEOUT_NS = 200_000_000L;
-    /** Bitrate por defecto del modo "último frame" (si no hay ajuste manual). */
-    private static final int REENCODE_DEFAULT_BPS = 8_000_000;
     /** Un frame que lleva más de esto esperando se considera atrasado: vaciamos y pedimos IDR. */
     private static final long MAX_LAG_NS = 150_000_000L;
     /** DSCP CS5 (0xA0) -> categoría WMM de vídeo (AC_VI). */
@@ -682,10 +680,10 @@ final class SspSession {
             vp.intraRefreshFrames = cfg.getBool("enc_no_ir") ? 0 : vp.fps;
             vp.iFrameIntervalSec = cfg.getBool("enc_no_ir") ? 10 : 30;
             vp.repeatAfterUs = 100_000;
-            // Bitrate del perfil (adaptable en Alto y Muy alto), salvo kbps manual.
+            // Bitrate del perfil (adaptable en Alto y Muy alto; en Coche, el que pide el coche), salvo kbps manual.
             VideoProfile prof = cfg.videoProfile();
             if (cfg.getInt(Config.KBPS) <= 0) {
-                vp.bitrate = prof.bitrate > 0 ? prof.bitrate : videoW <= 1280 ? 5_000_000 : REENCODE_DEFAULT_BPS;
+                vp.bitrate = prof.startBitrate(carBitrate, videoW);
                 if (prof.adaptiveBitrate()) {
                     abrBps = vp.bitrate;
                     abrMin = prof.minBitrate;

@@ -28,10 +28,20 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     private View carRow;
     private View videoRow;
     private View sourceRow;
+    private View networkRow;
     private boolean starting;
+    /** Estado de la zona Wi-Fi visto desde esta pantalla (antes de conectar). */
+    private volatile HotspotWatcher.Probe hotspotProbe;
     private android.widget.CompoundButton btAuto;
+    /** Fila «Requisitos»: «Todo listo» o «Faltan N cosas»; al tocarla, la pantalla «Comprobación». */
+    private View reqRow;
+    /** Comprobando los requisitos antes de conectar (un toque más se ignora). */
+    private boolean checking;
+    /** Desde la configuración terminada «igualmente»: ya se avisó de lo que falta, se conecta sin volver a avisar. */
+    static final String EXTRA_SKIP_CHECK = "skip_check";
     private static final int REQ_IPTV_FILE = 10;
     private static final int REQ_RADIO_FILE = 11;
+    private static final int REQ_CHECKLIST = 12;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -56,8 +66,15 @@ public class HomeActivity extends Activity implements LinkState.Listener {
 
         LinearLayout status = findViewById(R.id.hql_home_status);
         carRow = statusRow(status, Str.get(R.string.hql_car));
+        networkRow = statusRow(status, Str.get(R.string.hql_network));
+        networkRow.setOnClickListener(v -> {
+            if (hotspotNow() && networkLevel() != LinkState.Level.OK) HotspotWatcher.openSettings(this);
+        });
         videoRow = statusRow(status, Str.get(R.string.hql_image));
         sourceRow = statusRow(status, "");
+        reqRow = statusRow(status, Str.get(R.string.hql_req_row));
+        reqRow.setOnClickListener(v -> startActivity(new Intent(this, ChecklistActivity.class)));
+        setRow(reqRow, LinkState.Level.IDLE, Str.get(R.string.hql_checking));
 
         findViewById(R.id.hql_home_change).setOnClickListener(v ->
                 startActivity(new Intent(this, SetupActivity.class).putExtra(SetupActivity.EXTRA_STEP, 1)));
@@ -69,7 +86,10 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             }
         });
 
-        if (b == null && !LinkState.running) connect();
+        if (b == null && !LinkState.running) {
+            if (getIntent().getBooleanExtra(EXTRA_SKIP_CHECK, false)) startLink();
+            else connect();
+        }
     }
 
     @Override
@@ -78,6 +98,24 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         if (modeView == null) return;
         LinkState.addListener(this);
         render();
+        if (hotspotNow()) {
+            // Estado de la zona Wi-Fi también sin conectar (fuera del hilo principal: escanea interfaces).
+            new Thread(() -> {
+                hotspotProbe = HotspotWatcher.probe(this);
+                runOnUiThread(this::render);
+            }, "hql-hotspot-probe").start();
+        }
+        // Requisitos (también lo lento: zona Wi-Fi y puerto UDP), fuera del hilo principal.
+        new Thread(() -> {
+            java.util.List<Requirements.Item> items = Checklist.evaluateNow(this);
+            int n = Requirements.missingCount(items);
+            boolean blocks = !Requirements.blocking(items).isEmpty();
+            runOnUiThread(() -> {
+                if (isDestroyed()) return;
+                setRow(reqRow, n == 0 ? LinkState.Level.OK : blocks ? LinkState.Level.ERROR : LinkState.Level.BUSY,
+                        n == 0 ? Str.get(R.string.hql_req_all_ok) : getResources().getQuantityString(R.plurals.hql_req_missing, n, n));
+            });
+        }, "hql-req-home").start();
     }
 
     @Override
@@ -92,20 +130,34 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     }
 
     /**
+     * Conectar: antes, la comprobación de requisitos (fuera del hilo principal). Si falta algo obligatorio se abre la
+     * pantalla «Comprobación» con «Conectar igualmente»; si no, se arranca el enlace.
+     */
+    private void connect() {
+        if (checking) return;
+        checking = true;
+        new Thread(() -> {
+            java.util.List<Requirements.Item> blocking = Requirements.blocking(Checklist.evaluateNow(this));
+            runOnUiThread(() -> {
+                checking = false;
+                if (isFinishing() || isDestroyed() || LinkState.running) return;
+                if (blocking.isEmpty()) {
+                    startLink();
+                    return;
+                }
+                L.i("conectar: faltan requisitos obligatorios " + blocking + "; abro la comprobación");
+                startActivityForResult(new Intent(this, ChecklistActivity.class).putExtra(ChecklistActivity.EXTRA_GATE, true),
+                        REQ_CHECKLIST);
+            });
+        }, "hql-req-connect").start();
+    }
+
+    /**
      * Arranca el enlace. En modo Android Auto, antes se asegura de que el servidor de AA está en
      * marcha (ahora el móvil está desbloqueado; la automatización queda tapada por una capa).
      */
-    private void connect() {
+    private void startLink() {
         Intent link = new Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY);
-        if (Config.isAa(cfg.mode()) && TouchService.instance == null) {
-            new MaterialAlertDialogBuilder(this)
-                    .setTitle(Str.get(R.string.hql_accessibility_missing))
-                    .setMessage(Str.get(R.string.hql_accessibility_missing_msg))
-                    .setPositiveButton(Str.get(R.string.hql_enable), (d, w) -> startActivity(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)))
-                    .setNegativeButton(Str.get(R.string.hql_cancel), null)
-                    .show();
-            return;
-        }
         if (!Config.isAa(cfg.mode()) || AaServerStarter.cannotRunReason(this) != null) {
             startForegroundService(link);
             return;
@@ -123,9 +175,26 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         }, "aa-connect").start();
     }
 
+    /** La conexión es la zona Wi-Fi: la del servicio en marcha o, parado, la configurada. */
+    private boolean hotspotNow() {
+        return Config.LINK_HOTSPOT.equals(LinkState.linkModeFor(cfg));
+    }
+
+    /** Nivel de la fila «Red»: el del servicio en marcha o, sin él, el de la comprobación de esta pantalla. */
+    private LinkState.Level networkLevel() {
+        if (LinkState.running && !LinkState.network.isEmpty()) return LinkState.networkLevel;
+        HotspotWatcher.Probe p = hotspotProbe;
+        return p != null ? HotspotWatcher.level(p.getState()) : LinkState.Level.IDLE;
+    }
+
     private void render() {
         String mode = cfg.mode();
-        modeView.setText(Ui.modeTitle(mode));
+        // La conexión con la que va el servicio; si se cambió en marcha, la nueva se aplica al volver a conectar.
+        String link = Ui.linkTitle(LinkState.linkModeFor(cfg));
+        if (LinkState.running && !LinkState.activeLinkMode.isEmpty() && !LinkState.activeLinkMode.equals(cfg.linkMode())) {
+            link = Str.get(R.string.hql_link_pending, link, Ui.linkTitle(cfg.linkMode()));
+        }
+        modeView.setText(Ui.modeTitle(mode) + " · " + link);
         if (Config.MODE_APP.equals(mode)) {
             String label = Ui.appLabel(this, cfg.targetPackage());
             modeDetail.setText(label != null ? Str.get(R.string.hql_home_opens_app, label) : Str.get(R.string.hql_home_no_app));
@@ -141,12 +210,18 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             case SEEN:
                 setRow(carRow, LinkState.Level.BUSY, Str.get(R.string.hql_found_connecting));
                 break;
+            case RECONNECTING:
+                setRow(carRow, LinkState.Level.BUSY, Str.get(R.string.hql_reconnecting));
+                break;
             case SEARCHING:
                 setRow(carRow, LinkState.Level.BUSY, Str.get(R.string.hql_searching));
                 break;
             default:
                 setRow(carRow, LinkState.Level.IDLE, Str.get(R.string.hql_disconnected));
         }
+        String net = LinkState.running ? LinkState.network : "";
+        if (net.isEmpty() && hotspotNow() && hotspotProbe != null) net = HotspotWatcher.text(hotspotProbe);
+        setRow(networkRow, networkLevel(), net.isEmpty() ? "—" : net);
         String video = LinkState.video;
         setRow(videoRow, video.isEmpty() ? LinkState.Level.IDLE : LinkState.Level.OK, video.isEmpty() ? "—" : video);
 
@@ -163,7 +238,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         if (!running) {
             hint.setText(Str.get(R.string.hql_hint_idle));
         } else if (LinkState.car != LinkState.Car.CONNECTED) {
-            hint.setText(Str.get(R.string.hql_hint_searching));
+            hint.setText(Str.get(hotspotNow() ? R.string.hql_hint_searching_hotspot : R.string.hql_hint_searching));
         } else {
             hint.setText(Str.get(R.string.hql_hint_connected));
         }
@@ -195,6 +270,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         cfg.putBool(Config.BT_AUTO, on);
         if (!on) return;
         if (checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            Checklist.markAsked(this, Checklist.KEY_BT);
             requestPermissions(new String[]{android.Manifest.permission.BLUETOOTH_CONNECT}, 3);
         }
         android.os.PowerManager pm = getSystemService(android.os.PowerManager.class);
@@ -233,13 +309,14 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     }
 
     /**
-     * Menú del engranaje: ajustes de imagen, listas de TV y radio (solo Auto extendido), idioma,
-     * tema y diagnóstico.
+     * Menú del engranaje: comprobación de requisitos, ajustes de imagen, listas de TV y radio (solo
+     * Auto extendido), idioma, tema y diagnóstico.
      */
     private void showMenu(View anchor) {
         android.widget.PopupMenu pm = new android.widget.PopupMenu(this, anchor);
         android.view.Menu m = pm.getMenu();
         boolean ext = Config.MODE_AA_EXT.equals(cfg.mode());
+        m.add(0, 7, 0, Str.get(R.string.hql_req_title));
         m.add(0, 1, 1, Str.get(R.string.hql_image_settings));
         if (ext) {
             m.add(0, 2, 2, Str.get(R.string.hql_tv_list));
@@ -264,6 +341,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     break;
                 case 5:
                     showTheme();
+                    break;
+                case 7:
+                    startActivity(new Intent(this, ChecklistActivity.class));
                     break;
                 default:
                     startActivity(new Intent(this, LogActivity.class));
@@ -294,16 +374,18 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     }
 
     /**
-     * Idioma de la app (Android 13+): el del sistema, español o inglés. Android recrea las pantallas
+     * Idioma de la app (Android 13+): el del sistema, español, inglés o portugués (Portugal o Brasil). Android recrea las pantallas
      * y la interfaz del coche usa el nuevo al volver a conectar.
      */
     @android.annotation.TargetApi(33)
     private void showLanguage() {
         android.app.LocaleManager lm = getSystemService(android.app.LocaleManager.class);
         String cur = lm.getApplicationLocales().isEmpty() ? "" : lm.getApplicationLocales().get(0).getLanguage();
-        String[] tags = {"", "es", "en"};
-        String[] names = {Str.get(R.string.hql_language_system), "Español", "English"};
-        int checked = cur.equals("es") ? 1 : cur.equals("en") ? 2 : 0;
+        String[] tags = {"", "es", "en", "pt-PT", "pt-BR"};
+        String[] names = {Str.get(R.string.hql_language_system), "Español", "English", "Português (Portugal)", "Português (Brasil)"};
+        String curTag = lm.getApplicationLocales().isEmpty() ? "" : lm.getApplicationLocales().get(0).toLanguageTag();
+        int checked = cur.equals("es") ? 1 : cur.equals("en") ? 2
+                : curTag.equals("pt-BR") ? 4 : cur.equals("pt") ? 3 : 0;
         new MaterialAlertDialogBuilder(this)
                 .setTitle(Str.get(R.string.hql_language))
                 .setSingleChoiceItems(names, checked, (d, which) -> {
@@ -350,6 +432,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+        if (req == REQ_CHECKLIST) {
+            // «Conectar» o «Conectar igualmente» en la comprobación.
+            if (res == RESULT_OK && !LinkState.running) startLink();
+            return;
+        }
         if (res != RESULT_OK || data == null) return;
         java.util.List<android.net.Uri> uris = new java.util.ArrayList<>();
         if (data.getClipData() != null) {
@@ -387,6 +474,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         android.widget.CheckBox brake = v.findViewById(R.id.hql_v_brake);
         android.widget.CheckBox lowLat = v.findViewById(R.id.hql_v_lowlatency);
         android.widget.CheckBox autoHide = v.findViewById(R.id.hql_v_autohide);
+        android.widget.CheckBox keepScreen = v.findViewById(R.id.hql_v_keep_screen);
         View advanced = v.findViewById(R.id.hql_v_advanced);
         TextView advToggle = v.findViewById(R.id.hql_v_adv_toggle);
         advToggle.setOnClickListener(x -> {
@@ -423,6 +511,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         boolean lowLatBefore = cfg.lowLatency();
         lowLat.setChecked(lowLatBefore);
         autoHide.setChecked(cfg.panelAutoHide());
+        boolean keepScreenBefore = cfg.keepScreenOn();
+        keepScreen.setChecked(keepScreenBefore);
         EditText window = v.findViewById(R.id.hql_v_window);
         brake.setChecked(cfg.aaBrake());
         fill(window, Config.AA_WINDOW);
@@ -432,6 +522,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         fill(h, Config.HEIGHT);
         profile.check("main".equals(cfg.profile()) ? R.id.hql_v_main
                 : "high".equals(cfg.profile()) ? R.id.hql_v_high : R.id.hql_v_baseline);
+        RadioGroup engine = v.findViewById(R.id.hql_v_engine);
+        String engineBefore = cfg.linkEngine();
+        engine.check(Config.ENGINE_QDAUTO.equals(engineBefore) ? R.id.hql_v_engine_qdauto : R.id.hql_v_engine_original);
         android.widget.ScrollView scroll = new android.widget.ScrollView(this);
         scroll.addView(v);
         new MaterialAlertDialogBuilder(this)
@@ -453,8 +546,23 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     // Ajuste manual solo si el usuario lo ha tocado; si no, manda el perfil.
                     if (lowLat.isChecked() != lowLatBefore) cfg.putBool(Config.LOW_LATENCY, lowLat.isChecked());
                     cfg.putBool(Config.PANEL_AUTOHIDE, autoHide.isChecked());
+                    if (keepScreen.isChecked() != keepScreenBefore) {
+                        // Se aplica ya si Android Auto está en marcha (modo coche con o sin ALLOW_SLEEP).
+                        cfg.putBool(Config.KEEP_SCREEN_ON, keepScreen.isChecked());
+                        L.i("pantalla: «Mantener la pantalla del móvil encendida» " + (keepScreen.isChecked() ? "sí" : "no"));
+                        com.andrerinas.openheadunit.aap.AapService.refreshCarModeFlags();
+                    }
                     int id = profile.getCheckedRadioButtonId();
                     cfg.setProfile(id == R.id.hql_v_main ? "main" : id == R.id.hql_v_high ? "high" : "baseline");
+                    String engineAfter = engine.getCheckedRadioButtonId() == R.id.hql_v_engine_qdauto
+                            ? Config.ENGINE_QDAUTO : Config.ENGINE_ORIGINAL;
+                    if (!engineAfter.equals(engineBefore)) {
+                        cfg.setLinkEngine(engineAfter);
+                        L.i("motor de protocolo: " + engineAfter + " (se aplica al volver a conectar)");
+                        if (LinkState.running) {
+                            android.widget.Toast.makeText(this, Str.get(R.string.hql_applies_on_reconnect), android.widget.Toast.LENGTH_LONG).show();
+                        }
+                    }
                     if (LinkState.running) {
                         // Sesión nueva con los ajustes; con otro perfil, también AA (resolución y fps se negocian al conectar).
                         startForegroundService(new Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY)

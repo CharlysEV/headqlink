@@ -30,8 +30,13 @@ final class SystemMonitor {
     private Handler h;
     private WifiManager.ScanResultsCallback scanCb;
     private ConnectivityManager.NetworkCallback wifiCb;
-    private PowerManager.OnThermalStatusChangedListener thermal;
     private long[] lastP2p;
+    private String lastIface;
+    /** Interfaz de la sesión con el coche (la fija el puente del motor QDAuto); null = p2p0 en Wi-Fi Direct. */
+    private static volatile String linkIface;
+    /** Sesión que fijó linkIface (0 = ninguna), con SystemMonitor.class. */
+    private static int linkIfaceOwner;
+    private final boolean p2pMode;
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context c, Intent i) {
@@ -55,13 +60,28 @@ final class SystemMonitor {
     private final Runnable p2pSampler = new Runnable() {
         @Override
         public void run() {
-            sampleP2p();
+            sampleLinkIface();
             h.postDelayed(this, 1000);
         }
     };
 
     SystemMonitor(Context ctx) {
         this.ctx = ctx.getApplicationContext();
+        // La conexión de este servicio (la configurada puede haber cambiado en marcha).
+        this.p2pMode = !Config.LINK_HOTSPOT.equals(LinkState.linkModeFor(new Config(ctx)));
+    }
+
+    /** Interfaz por la que va la sesión owner (su id): swlan0, p2p0… */
+    static synchronized void setLinkIface(String name, int owner) {
+        linkIface = name;
+        linkIfaceOwner = owner;
+    }
+
+    /** Sin sesión: solo si la interfaz sigue siendo la de owner (una sesión vieja que cierra tarde no borra la nueva). */
+    static synchronized void clearLinkIface(int owner) {
+        if (linkIfaceOwner != owner) return;
+        linkIface = null;
+        linkIfaceOwner = 0;
     }
 
     void start() {
@@ -88,12 +108,14 @@ final class SystemMonitor {
             @Override
             public void onAvailable(Network n) {
                 PerfTrace.event("sta_wifi", 1);
+                QdTrace.i("HQL/Red", "Wi-Fi cliente conectada");
                 CarTrace.note("WIFI", "el móvil se conecta a una red WiFi (cesan los escaneos de búsqueda)");
             }
 
             @Override
             public void onLost(Network n) {
                 PerfTrace.event("sta_wifi", 0);
+                QdTrace.i("HQL/Red", "Wi-Fi cliente desconectada");
                 CarTrace.note("WIFI", "el móvil queda sin red WiFi (Android buscará redes periódicamente)");
             }
         };
@@ -104,10 +126,7 @@ final class SystemMonitor {
             wifiCb = null;
         }
 
-        PowerManager pm = ctx.getSystemService(PowerManager.class);
-        thermal = status -> PerfTrace.event("thermal", status);
-        pm.addThermalStatusListener(ex, thermal);
-
+        // El estado térmico lo vigila ThermalGuard (traza «thermal» y log HQL/Térmico).
         IntentFilter f = new IntentFilter();
         f.addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED);
         f.addAction(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED);
@@ -134,7 +153,6 @@ final class SystemMonitor {
         }
         if (scanCb != null) ctx.getSystemService(WifiManager.class).unregisterScanResultsCallback(scanCb);
         if (wifiCb != null) ctx.getSystemService(ConnectivityManager.class).unregisterNetworkCallback(wifiCb);
-        if (thermal != null) ctx.getSystemService(PowerManager.class).removeThermalStatusListener(thermal);
         thread.quitSafely();
     }
 
@@ -150,7 +168,10 @@ final class SystemMonitor {
         PowerManager pm = ctx.getSystemService(PowerManager.class);
         PerfTrace.event("power_save", pm.isPowerSaveMode() ? 1 : 0);
         PerfTrace.event("doze", pm.isDeviceIdleMode() ? 1 : 0);
-        PerfTrace.event("thermal", pm.getCurrentThermalStatus());
+        int thermal = android.os.Build.VERSION.SDK_INT >= 29 ? pm.getCurrentThermalStatus() : -1;
+        PerfTrace.event("thermal", thermal);
+        QdTrace.i("HQL/Sistema", "ahorro de energía " + (pm.isPowerSaveMode() ? "sí" : "no") + " · doze "
+                + (pm.isDeviceIdleMode() ? "sí" : "no") + " · térmica " + thermal);
     }
 
     @SuppressWarnings("MissingPermission")
@@ -164,16 +185,28 @@ final class SystemMonitor {
             PerfTrace.event("bluetooth", on ? 1 : 0);
             PerfTrace.event("bt_a2dp", a2dp == BluetoothProfile.STATE_CONNECTED ? 1 : 0);
             PerfTrace.event("bt_hfp", hfp == BluetoothProfile.STATE_CONNECTED ? 1 : 0);
-            CarTrace.note("BLUETOOTH", (on ? "encendido" : "apagado") + " · audio " + (a2dp == BluetoothProfile.STATE_CONNECTED ? "conectado" : "no")
-                    + " · manos libres " + (hfp == BluetoothProfile.STATE_CONNECTED ? "conectado" : "no"));
+            String btText = (on ? "encendido" : "apagado") + " · audio " + (a2dp == BluetoothProfile.STATE_CONNECTED ? "conectado" : "no")
+                    + " · manos libres " + (hfp == BluetoothProfile.STATE_CONNECTED ? "conectado" : "no");
+            CarTrace.note("BLUETOOTH", btText);
+            QdTrace.i("HQL/Sistema", "Bluetooth " + btText);
         } catch (SecurityException e) {
             PerfTrace.note("bluetooth sin permiso: " + e.getMessage());
         }
     }
 
-    /** Paquetes/errores/descartes por segundo del interfaz WiFi Direct (si el sistema deja leerlos). */
-    private void sampleP2p() {
-        File base = new File("/sys/class/net/p2p0/statistics");
+    /**
+     * Paquetes/errores/descartes por segundo de la interfaz de la sesión (si el sistema deja leerlos): la que fije el
+     * puente; sin sesión, p2p0 en Wi-Fi Direct (nada en la zona Wi-Fi). p2p0 sale en la fila p2p0; las demás, en ifstat.
+     */
+    private void sampleLinkIface() {
+        String iface = linkIface;
+        if (iface == null) iface = p2pMode ? "p2p0" : null;
+        if (iface == null) return;
+        if (!iface.equals(lastIface)) {
+            lastIface = iface;
+            lastP2p = null;
+        }
+        File base = new File("/sys/class/net/" + iface + "/statistics");
         long[] v = new long[5];
         String[] names = {"tx_packets", "tx_errors", "tx_dropped", "rx_packets", "rx_dropped"};
         try {
@@ -182,13 +215,17 @@ final class SystemMonitor {
             }
         } catch (Exception e) {
             if (lastP2p == null) {
-                PerfTrace.note("contadores de p2p0 no accesibles: " + e.getClass().getSimpleName());
+                PerfTrace.note("contadores de " + iface + " no accesibles: " + e.getClass().getSimpleName());
                 lastP2p = new long[0];
             }
             return;
         }
         if (lastP2p != null && lastP2p.length == v.length) {
-            PerfTrace.p2p(v[0] - lastP2p[0], v[1] - lastP2p[1], v[2] - lastP2p[2], v[3] - lastP2p[3], v[4] - lastP2p[4]);
+            if ("p2p0".equals(iface)) {
+                PerfTrace.p2p(v[0] - lastP2p[0], v[1] - lastP2p[1], v[2] - lastP2p[2], v[3] - lastP2p[3], v[4] - lastP2p[4]);
+            } else {
+                PerfTrace.ifstat(iface, v[0] - lastP2p[0], v[1] - lastP2p[1], v[2] - lastP2p[2], v[3] - lastP2p[3], v[4] - lastP2p[4]);
+            }
         }
         lastP2p = v;
     }

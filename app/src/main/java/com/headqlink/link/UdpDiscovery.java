@@ -38,8 +38,10 @@ final class UdpDiscovery extends Thread {
             socket.setSoTimeout(1000);
             socket.bind(new InetSocketAddress(Proto.UDP_LISTEN_PORT));
             L.i("UDP escuchando en " + Proto.UDP_LISTEN_PORT);
+            LinkState.setUdpBusy(false);
         } catch (IOException e) {
             L.e("no se pudo abrir UDP " + Proto.UDP_LISTEN_PORT + " (¿otra app usando el puerto?)", e);
+            if (e instanceof java.net.BindException) LinkState.setUdpBusy(true);
             return;
         }
         byte[] buf = new byte[2048];

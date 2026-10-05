@@ -40,6 +40,8 @@ final class AaPassthroughSource implements VideoSource {
      * paraba ~0,9 s en total (300 + ~600 ms que tarda AA en volver a codificar).
      */
     private static final long FOCUS_CYCLE_GAP_MS = 100;
+    /** Arranques de Android Auto (Self-Mode) desde que arrancó el proceso; el resumen del viaje resta los de antes. */
+    static final java.util.concurrent.atomic.AtomicInteger AA_LAUNCHES = new java.util.concurrent.atomic.AtomicInteger();
 
     private final Context ctx;
     private final int dpi;
@@ -174,6 +176,17 @@ final class AaPassthroughSource implements VideoSource {
         if (fps > 0) targetFps = fps;
     }
 
+    /**
+     * "Último frame": tope de fps del relay GL en marcha (adaptación térmica). Por debajo de los de la sesión (AA sigue
+     * a los suyos), en rejilla para que salgan a intervalos iguales; con los de la sesión, como al empezar.
+     */
+    @Override
+    public void setMaxFps(int fps) {
+        GlFrameRelay r = relay;
+        if (r == null || fps <= 0) return;
+        r.setMaxFps(fps, fixedRate || fps < targetFps);
+    }
+
     @Override
     public void setCarSize(int width, int height) {
         if (width > 0 && height > 0) {
@@ -257,6 +270,7 @@ final class AaPassthroughSource implements VideoSource {
             return;
         }
         L.i("AA: lanzando Self-Mode");
+        AA_LAUNCHES.incrementAndGet();
         Intent i = new Intent(ctx, AapService.class).setAction(AapService.ACTION_START_SELF_MODE);
         ctx.startForegroundService(i);
     }
@@ -307,16 +321,47 @@ final class AaPassthroughSource implements VideoSource {
 
     @Override
     public void requestKeyFrame() {
+        requestKeyFrame(null);
+    }
+
+    /** Ciclo de foco de vídeo de AA para forzar un IDR; cb (hilo principal) dice si empezó. */
+    @Override
+    public void requestKeyFrame(KeyframeCallback cb) {
         main.post(() -> {
             CommManager cm = comm();
             PerfTrace.event("aa_idr", 0);
-            if (cm.releaseVideoFocusForKeyframe()) {
+            boolean started = cm.releaseVideoFocusForKeyframe();
+            if (started) {
                 main.postDelayed(cm::retakeVideoFocusForKeyframe, FOCUS_CYCLE_GAP_MS);
                 L.i("AA: ciclo de foco de vídeo para forzar IDR");
             } else {
                 L.i("AA: no se pudo pedir IDR (AA no conectado o ciclo en curso)");
             }
+            if (cb != null) cb.onResult(started);
         });
+    }
+
+    /** Modo «último frame»: vuelve a dibujar el último frame de AA (el encoder da el IDR pedido al momento). */
+    @Override
+    public void redraw() {
+        GlFrameRelay r = relay;
+        if (r != null) r.redraw();
+    }
+
+    /** Vuelve el coche sin haber parado el vídeo: si AA se desconectó mientras tanto, se relanza. */
+    @Override
+    public void onReattached() {
+        if (!comm().isConnected()) {
+            L.w("AA: no está conectado al volver el coche; lo relanzo");
+            ensureAaConnected();
+        }
+        redraw();
+    }
+
+    /** AA conectado o conectándose (para saber si el vídeo vivo sigue sirviendo). */
+    boolean aaAlive() {
+        CommManager cm = comm();
+        return cm.isConnected() || cm.getConnectionState().getValue() instanceof CommManager.ConnectionState.Connecting;
     }
 
     /**

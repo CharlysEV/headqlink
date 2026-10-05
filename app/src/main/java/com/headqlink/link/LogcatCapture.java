@@ -115,9 +115,15 @@ public final class LogcatCapture {
         Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((thread, ex) -> {
             try {
+                QdTrace.w("HQL/Fallo", thread.getName() + " :: " + Log.getStackTraceString(ex));
+                QdTrace.flush(500);
+            } catch (Throwable ignored) {
+            }
+            try {
                 File dir = new File(app.getExternalFilesDir(null), "crash");
                 //noinspection ResultOfMethodCallIgnored
                 dir.mkdirs();
+                LogRetention.prune(dir, "crash-", 49, Long.MAX_VALUE);
                 File f = new File(dir, "crash-" + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date()) + ".txt");
                 try (PrintWriter w = new PrintWriter(new FileWriter(f))) {
                     w.println("hilo: " + thread.getName());

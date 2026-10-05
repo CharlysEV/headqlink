@@ -17,6 +17,25 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp" />
 
+    <!-- Resumen de la comprobación («Todo listo» / «Faltan N cosas»); en la pantalla «Comprobación» va en el título. -->
+    <TextView
+        android:id="@+id/hql_check_summary"
+        style="@style/HQL.Text.RowTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:fontFamily="sans-serif-medium"
+        android:textSize="18sp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/hql_check_summary_detail"
+        style="@style/HQL.Text.RowDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:visibility="gone" />
+
     <LinearLayout
         android:id="@+id/hql_check_list"
         android:layout_width="match_parent"

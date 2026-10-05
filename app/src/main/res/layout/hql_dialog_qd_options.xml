@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- qdauto: opciones de prueba del motor QDAuto (claves del Anexo A sin ajuste propio), en Diagnóstico. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="24dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="24dp">
+
+    <TextView
+        style="@style/HQL.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:text="@string/hql_qd_options_help" />
+
+    <CheckBox
+        android:id="@+id/hql_qd_keep_video"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_qd_keep_video" />
+
+    <CheckBox
+        android:id="@+id/hql_qd_supersede"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_qd_supersede" />
+
+    <CheckBox
+        android:id="@+id/hql_qd_peer_strict"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_qd_peer_strict" />
+
+    <CheckBox
+        android:id="@+id/hql_qd_phone_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_qd_phone_info_qdlink" />
+
+    <TextView
+        style="@style/HQL.Text.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/hql_qd_car_gone" />
+
+    <EditText
+        android:id="@+id/hql_qd_car_gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="30"
+        android:importantForAutofill="no"
+        android:inputType="number" />
+
+    <TextView
+        style="@style/HQL.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:text="@string/hql_applies_on_reconnect" />
+</LinearLayout>

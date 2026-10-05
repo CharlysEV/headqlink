@@ -35,6 +35,12 @@
         android:layout_marginTop="8dp"
         android:text="@string/hql_autohide_panel_ext" />
 
+    <CheckBox
+        android:id="@+id/hql_v_keep_screen"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_keep_screen_on" />
+
     <TextView
         android:id="@+id/hql_v_adv_toggle"
         style="@style/HQL.Text.Label"
@@ -169,6 +175,40 @@
         android:layout_height="wrap_content"
         android:paddingBottom="8dp"
         android:text="@string/hql_brake_help" />
+
+    <!-- qdauto: motor de protocolo -->
+    <TextView
+        style="@style/HQL.Text.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/hql_engine_title" />
+
+    <RadioGroup
+        android:id="@+id/hql_v_engine"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/hql_v_engine_qdauto"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hql_engine_qdauto" />
+
+        <RadioButton
+            android:id="@+id/hql_v_engine_original"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hql_engine_original" />
+    </RadioGroup>
+
+    <TextView
+        style="@style/HQL.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:text="@string/hql_applies_on_reconnect" />
     </LinearLayout>
 
     <TextView

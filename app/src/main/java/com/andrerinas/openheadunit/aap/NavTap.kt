@@ -89,8 +89,9 @@ object NavTap {
         }
         i.updatedMs = SystemClock.elapsedRealtime()
         // Registro de cambios (a nivel INFO, para que salga también con el logcat filtrado): sirve
-        // para saber qué manda Google Maps (¿llega la dirección del destino?).
-        val summary = "activa=${i.active} destino=${i.destination ?: "—"} destinos=${state?.destinationsCount ?: 0} " +
+        // para saber qué manda Google Maps (¿llega la dirección del destino?). Solo si llega, no cuál:
+        // el logcat va en el log exportado, que no lleva ubicaciones.
+        val summary = "activa=${i.active} destino=${if (i.destination != null) "sí" else "—"} destinos=${state?.destinationsCount ?: 0} " +
             "pasos=${state?.stepsCount ?: 0} posición=${pos != null} falta=${i.remainingMeters} m"
         if (summary != lastSummary) {
             lastSummary = summary
