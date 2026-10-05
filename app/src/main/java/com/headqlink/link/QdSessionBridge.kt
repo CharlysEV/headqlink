@@ -437,6 +437,13 @@ internal class QdSessionBridge(
             context = stallContext(),
         )
         for (ev in stalls.onSample(sample)) emitStall(ev)
+        // Bitrate según el enlace (LinkRateController, en hql-video): la misma muestra, más los vaciados por retraso.
+        hub.onLinkSample(
+            port,
+            LinkRateController.Sample(
+                SystemClock.elapsedRealtime(), sample.outq, sample.unacked, sample.retrans, sample.rttMs, 0, session.videoFlushes(),
+            ),
+        )
     }
 
     private fun stallContext(): String {
@@ -518,6 +525,9 @@ internal class QdSessionBridge(
                 maxMessageBytes = st.maxVideoMessageBytes,
                 oversizedDrops = st.videoFramesOversized,
                 oversizedMaxBytes = st.maxOversizedBytes,
+                bitrateMinKbps = if (s.frames > 0) hub.linkMinKbps(port) else 0,
+                congestionEvents = if (s.frames > 0) hub.linkCongestionEvents(port) else 0,
+                writeStalls = st.writeStalls,
             )
             val block = SessionSummary.block(record)
             QdTrace.block("HQL/Resumen", block)

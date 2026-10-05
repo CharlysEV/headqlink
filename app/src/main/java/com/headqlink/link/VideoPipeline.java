@@ -34,8 +34,12 @@ import dev.qdauto.core.wire.VideoMessage;
  * encoder de AA: un IDR grande se descarta y se pide otro (KeyframePolicy); si se repite, aviso y peticiones espaciadas.
  */
 final class VideoPipeline {
-    /** "Último frame": se codifica uno nuevo solo con la cola del kernel por debajo de esto (SspSession.GATE_OUTQ). */
-    private static final int GATE_OUTQ = 64 * 1024;
+    /**
+     * "Último frame": se codifica uno nuevo solo con la cola del kernel por debajo de esto (SspSession.GATE_OUTQ tenía
+     * 64 KB: a 5 Mbit/s son ~100 ms de retardo en el kernel antes de contar nada; con 32 KB, la mitad). Configurable con
+     * gate_outq_kb (Config.GATE_OUTQ_KB).
+     */
+    static final int GATE_OUTQ = 32 * 1024;
     private static final int GATE_MAX_PENDING = 3;
     private static final long GATE_PENDING_TIMEOUT_NS = 200_000_000L;
     static final long ENCODER_HEALTH_NS = 2_000_000_000L;
@@ -82,9 +86,26 @@ final class VideoPipeline {
     private int abrMin;
     private int abrMax;
     private int abrCalm;
-    /** Adaptación térmica (ThermalPolicy, hilo hql-video): nivel, tope de bitrate (0 = sin tope) y fps máximos. */
+    /** Puerta: cola del kernel máxima (bytes) para codificar otro frame. */
+    private int gateOutq = GATE_OUTQ;
+    /** Esperas de la puerta por el enlace, para el controlador del enlace (se lee la diferencia cada 100 ms). */
+    private volatile int linkWaits;
+    private int linkWaitsSeen;
+    /**
+     * Bitrate según el enlace (LinkRateController, hilo hql-video) para los perfiles de bitrate fijo con relay GL;
+     * null sin él (ABR clásico de Muy alto/Alto, patrón, app, reenvío directo o link_fixed).
+     */
+    private volatile LinkRateController link;
+    /** Tope de fps del enlace (los de la sesión si no actúa). */
+    private int linkFpsCap;
+    /**
+     * Adaptación térmica (ThermalPolicy, hilo hql-video): nivel, protección elegida, tope de bitrate (0 = sin tope) y
+     * fps máximos. El tope de fps que se aplica es el menor del térmico y del enlace.
+     */
     private int thermalLevel = ThermalPolicy.NORMAL;
+    private String thermalMode = ThermalPolicy.MODE_NORMAL;
     private int thermalMaxBps;
+    private int thermalFpsCap;
     private volatile int fpsCap;
     private final Runnable abrTick = new Runnable() {
         @Override
@@ -150,6 +171,11 @@ final class VideoPipeline {
 
     private void start(Boolean carDark) throws IOException {
         fpsCap = plan.fps;
+        thermalFpsCap = plan.fps;
+        linkFpsCap = plan.fps;
+        thermalMode = cfg.thermalMode();
+        int gateKb = cfg.getInt(Config.GATE_OUTQ_KB);
+        gateOutq = gateKb > 0 ? gateKb * 1024 : GATE_OUTQ;
         source = VideoSource.create(ctx, cfg);
         source.setCarSize(plan.car.carW, plan.car.carH);
         source.setVideoSize(plan.videoW, plan.videoH);
@@ -245,12 +271,14 @@ final class VideoPipeline {
         vp.qpIMax = IdrSizeController.QP_MAX;
         boolean latestFrame = source instanceof AaPassthroughSource;
         if (latestFrame) {
-            // Como SspSession: sin IDR periódicos (el coche pide uno cuando lo necesita), VBR con tope, intra-refresh.
-            vp.cbr = cfg.getBool("enc_cbr");
+            // Como SspSession: sin IDR periódicos (el coche pide uno cuando lo necesita), intra-refresh. En Coche, tasa
+            // constante (si el códec la admite): sin las ráfagas VBR (P-frames de 276 KB a 15-19 Mbit/s en el coche) que
+            // atascan la radio; con enc_vbr se vuelve a VBR. En los demás perfiles, VBR salvo enc_cbr.
+            VideoProfile prof = cfg.videoProfile();
+            vp.cbr = cfg.getBool("enc_cbr") || (prof.followsCar && !cfg.getBool("enc_vbr"));
             vp.intraRefreshFrames = cfg.getBool("enc_no_ir") ? 0 : vp.fps;
             vp.iFrameIntervalSec = cfg.getBool("enc_no_ir") ? 10 : 30;
             vp.repeatAfterUs = 100_000;
-            VideoProfile prof = cfg.videoProfile();
             if (cfg.getInt(Config.KBPS) <= 0) {
                 // El del perfil; en Coche, el que pide el coche (VIDEO_ARGS BitRate; con Fluidez 60, 8-12 Mbit/s).
                 vp.bitrate = prof.startBitrate(carBitrate, plan.videoW);
@@ -266,6 +294,8 @@ final class VideoPipeline {
                         prof.fluidity, prof.id, vp.fps, vp.bitrate / 1e6, carFps, carBitrate / 1e6));
             }
             gated = true;
+            // Bitrate según el enlace para los perfiles de bitrate fijo (Coche a 30 y 60, Medio, Muy bajo).
+            if (abrMax <= 0 && !cfg.getBool("link_fixed")) link = new LinkRateController(vp.bitrate, vp.fps);
             source.setLinkGate(new GlFrameRelay.Gate() {
                 @Override
                 public boolean ready() {
@@ -306,6 +336,9 @@ final class VideoPipeline {
         idrCtl = ctl;
         L.i("VIDEO " + ctl.describe());
         source.start(in, plan.videoW, plan.videoH, vp.fps, vp.toString());
+        if (gated) L.i("VIDEO puerta «último frame»: cola del kernel < " + gateOutq / 1024 + " KB · modo de tasa " + encoder.bitrateMode());
+        LinkRateController lk = link;
+        if (lk != null) L.i("VIDEO " + lk.describe());
         if (abrMax > 0) {
             L.i(String.format(Locale.US, "bitrate adaptable %.1f-%.1f Mbps, empieza en %.1f", abrMin / 1e6, abrMax / 1e6, abrBps / 1e6));
             h.postDelayed(abrTick, 1000);
@@ -390,12 +423,53 @@ final class VideoPipeline {
             return false;
         }
         int q = p.gateOutq();
-        if (q >= GATE_OUTQ) {
+        if (q >= gateOutq) {
             denyKernel++;
             abrDenies++;
+            linkWaits++;
             return false;
         }
         return true;
+    }
+
+    /**
+     * Hilo hql-video, cada ~100 ms desde el monitor de red de la sesión activa: muestra de NetStat para el controlador
+     * del enlace, con las esperas de la puerta por el enlace desde la muestra anterior. Cada paso (bitrate o fps) se
+     * aplica al encoder o al relay GL y se registra («enlace: congestión (outq 96 KB, retrans +21) → bitrate 3.5 Mbit/s»).
+     */
+    void onLinkSample(SessionPort port, LinkRateController.Sample sample) {
+        LinkRateController lk = link;
+        VideoEncoder enc = encoder;
+        if (lk == null || enc == null || stopped || active != port) return;
+        int waits = linkWaits;
+        int delta = Math.max(0, waits - linkWaitsSeen);
+        linkWaitsSeen = waits;
+        LinkRateController.Step st = lk.onSample(sample.with(delta, sample.lateFlushes));
+        if (st == null) return;
+        if (st.bitrateChanged()) {
+            enc.setBitrate(st.bitrateAfter);
+            PerfTrace.event("link_kbps", st.bitrateAfter / 1000);
+        }
+        if (st.fpsChanged()) {
+            linkFpsCap = st.fpsAfter;
+            applyFpsCap();
+            PerfTrace.event("link_fps", st.fpsAfter);
+        }
+        if (st.congestion) PerfTrace.event("link_congestion", st.bitrateAfter / 1000);
+        if (st.congestion) L.w("enlace: " + st.text);
+        else L.i("enlace: " + st.text);
+    }
+
+    /** fps máximos: el menor del tope térmico y del enlace, al relay GL (con él) o los de la sesión (patrón, app). */
+    private void applyFpsCap() {
+        int fps = Math.min(thermalFpsCap, linkFpsCap);
+        if (!gated) {
+            fpsCap = vp != null ? vp.fps : plan.fps;
+            return;
+        }
+        if (fps == fpsCap) return;
+        fpsCap = fps;
+        source.setMaxFps(fps);
     }
 
     /** ABR (AIMD) cada segundo en hql-video, como SspSession.adaptBitrate, solo con sesión enganchada. */
@@ -435,37 +509,59 @@ final class VideoPipeline {
      * encoder (setParameters) y ritmo del relay GL. En el reenvío directo de AA no hay encoder propio: solo se registra.
      */
     void applyThermal(int level, int status) {
-        if (stopped || level == thermalLevel) return;
+        if (stopped) return;
+        String mode = cfg.thermalMode();
+        if (level == thermalLevel && mode.equals(thermalMode)) return;
         thermalLevel = level;
+        thermalMode = mode;
         VideoEncoder enc = encoder;
-        String head = "térmico " + status + " → perfil " + ThermalPolicy.name(level);
+        String head = "térmico " + status + " → perfil " + ThermalPolicy.name(level) + " (protección " + ThermalPolicy.modeName(mode) + ")";
         if (enc == null || vp == null) {
             L.i(head + ": reenvío directo de AA, sin encoder propio; no se cambia nada");
             return;
         }
         int base = abrMax > 0 ? abrInitial : vp.bitrate;
-        thermalMaxBps = level == ThermalPolicy.NORMAL ? 0 : ThermalPolicy.bitrateCap(level, base);
+        int cap = ThermalPolicy.bitrateCap(mode, level, base);
+        thermalMaxBps = cap >= base ? 0 : cap;
         int bps;
+        LinkRateController lk = link;
         if (abrMax > 0) {
-            abrBps = level == ThermalPolicy.NORMAL ? Math.max(abrBps, Math.min(abrInitial, abrMax)) : Math.min(abrBps, abrCeiling());
+            abrBps = thermalMaxBps == 0 ? Math.max(abrBps, Math.min(abrInitial, abrMax)) : Math.min(abrBps, abrCeiling());
             bps = abrBps;
+        } else if (lk != null) {
+            // El techo del enlace es el térmico (o el del perfil al enfriarse); el bitrate que lleva, el del enlace.
+            lk.setCeiling(thermalMaxBps > 0 ? thermalMaxBps : vp.bitrate);
+            bps = lk.bitrate();
         } else {
             bps = thermalMaxBps > 0 ? thermalMaxBps : vp.bitrate;
         }
         enc.setBitrate(bps);
-        int fps = ThermalPolicy.fpsCap(level, vp.fps);
+        thermalFpsCap = ThermalPolicy.fpsCap(mode, level, vp.fps);
         // Sin relay GL (patrón, app) la fuente dibuja a su ritmo: solo baja el bitrate.
-        fpsCap = gated ? fps : vp.fps;
-        source.setMaxFps(fps);
+        applyFpsCap();
         PerfTrace.event("thermal_fps", fpsCap);
         PerfTrace.event("thermal_kbps", bps / 1000);
-        L.i(String.format(Locale.US, "%s: %d fps (sesión %d) · %.1f Mbit/s (sesión %.1f)%s", head, fpsCap, vp.fps,
-                bps / 1e6, base / 1e6, gated ? "" : " · sin relay GL, solo el bitrate"));
+        L.i(String.format(Locale.US, "%s: %d fps (sesión %d%s) · %.1f Mbit/s (sesión %.1f%s)%s", head, fpsCap, vp.fps,
+                lk != null && linkFpsCap < vp.fps ? ", enlace " + linkFpsCap : "", bps / 1e6, base / 1e6,
+                lk != null && lk.bitrate() < lk.ceiling() ? ", techo " + LinkRateController.mbit(lk.ceiling()) : "",
+                gated ? "" : " · sin relay GL, solo el bitrate"));
     }
 
-    /** fps máximos ahora (los de la sesión, o el tope térmico). */
+    /** fps máximos ahora (los de la sesión, o el tope térmico o del enlace). */
     int fpsCap() {
         return fpsCap;
+    }
+
+    /** Bitrate más bajo que aplicó el controlador del enlace en la sesión activa (bps), o 0 sin controlador. */
+    int linkMinBps() {
+        LinkRateController lk = link;
+        return lk != null ? lk.minBitrate() : 0;
+    }
+
+    /** Pasos por congestión del enlace en la sesión activa, o 0 sin controlador. */
+    int linkCongestionEvents() {
+        LinkRateController lk = link;
+        return lk != null ? lk.congestionEvents() : 0;
     }
 
     private void noteIdr() {
@@ -502,6 +598,17 @@ final class VideoPipeline {
         if (abrMax > 0 && abrBps > Math.min(abrInitial, abrCeiling()) && encoder != null) {
             abrBps = Math.min(abrInitial, abrCeiling());
             encoder.setBitrate(abrBps);
+        }
+        LinkRateController lk = link;
+        if (lk != null && encoder != null) {
+            // Enlace nuevo: se empieza en el techo (el del perfil o el térmico) y con los fps de la sesión.
+            boolean wasLow = lk.bitrate() < lk.ceiling() || lk.fpsCap() < lk.sessionFps();
+            lk.beginSession();
+            linkWaitsSeen = linkWaits;
+            encoder.setBitrate(lk.bitrate());
+            linkFpsCap = lk.fpsCap();
+            applyFpsCap();
+            if (wasLow) L.i("enlace: sesión nueva → bitrate " + LinkRateController.mbit(lk.bitrate()) + " · " + lk.fpsCap() + " fps");
         }
         port.setSocketJitter(new Jitter("socket", Math.max(1, vp != null ? vp.fps : plan.fps)));
         long lost = droppedNoSession.getAndSet(0);
@@ -706,6 +813,8 @@ final class VideoPipeline {
         }
         if (jit.length() > 0) out.add(jit.toString());
         if (abrMax > 0) out.add(String.format(Locale.US, "bitrate %.1f Mbps (%.1f-%.1f)", abrBps / 1e6, abrMin / 1e6, abrMax / 1e6));
+        LinkRateController lk = link;
+        if (lk != null && lk.active()) out.add(lk.statsLine());
         String gate = idrGate.takeWindowLine();
         if (gate != null) out.add(gate);
         return out;

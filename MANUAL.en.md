@@ -280,6 +280,25 @@ Tap **"Finish"**. If something required is missing, the "Still missing" prompt t
 - If you tap "Connect" and no car shows up within **5 minutes** (or "Wait for the car", if longer), HeadQLink stops by
   itself. As long as the car keeps announcing itself, even if it doesn't connect, the wait starts over.
 
+### The video adapts to the link
+
+The radio between the phone and the car doesn't always carry the 5 Mbit/s the C10 asks for: with the car far from the
+phone, on 2.4 GHz or with interference, the picture stuttered and lagged. Now, with the "Car", "Automatic", "Medium"
+and "Very low" profiles (the ones that re-encode on the phone):
+
+- HeadQLink measures the link ten times a second (data waiting to be sent, retransmissions, round-trip time) and, if it
+  clogs, **lowers the bitrate** (×0.7 each step, down to 1.5 Mbit/s) within half a second; if it's still clogged, it
+  drops to **24 fps**. Once the link has been clean for 5 seconds it comes back gradually (fps first, then +15 % bitrate
+  every 5 s) up to what the car asks for. You'll see a slightly softer picture for a few seconds instead of stutter.
+- The "Car" profile encodes at a **constant rate** (no bursts), and whatever doesn't fit in the link is dropped on the
+  phone before lag builds up (at most ~150 ms queued).
+- If the car stops reading for a moment but keeps talking (heartbeats, touches), the session holds on for up to **20 s**
+  before giving it up (it used to be 10 s), discarding the old video and sending a fresh picture as soon as it can.
+
+In the log (section 8) it shows as `enlace: congestión (outq 96 KB 300 ms, retrans +21) → bitrate 3.6 Mbit/s`,
+`enlace: enlace limpio 5 s → bitrate 4.1 Mbit/s`, and in each session summary `enlace: bitrate mín. 2.5 Mbit/s ·
+congestiones 4`.
+
 ### At the end of the trip
 
 - Switch the car off (HeadQLink closes by itself when "Wait for the car" runs out, 5 minutes by default) or tap
@@ -359,6 +378,14 @@ If you're connected, saving another profile makes the car and Android Auto recon
 - "Hide the side panel after a few seconds (Auto extended)": on by default.
 - "Keep the phone screen on (more heat and battery; otherwise it turns off as usual and projection continues)": off by
   default. **Leave it off** unless you need it.
+- "Heat protection": what HeadQLink does when Android reports the phone is getting hot (section 6).
+  - "Normal (recommended)": drops to 30 fps at "moderate" (only if the session runs at 60), to 24 fps at "severe" and
+    to 20 fps at "critical", always with less bitrate.
+  - "Gentle": only lowers the bitrate; the fps never go below 30 except at "critical" (20 fps). For those who prefer
+    smoothness even if the phone runs hotter.
+  - "Off": changes nothing, it's only logged.
+
+  Applies at once, without reconnecting.
 - "Advanced ▾" › "Protocol engine":
   - "QDAuto (recommended)": the default engine, with reconnection without restarting Android Auto and heat adaptation.
   - "Original headqlink": the original HeadQLink engine, as a **fallback** if QDAuto gives you trouble.
@@ -409,15 +436,17 @@ version brings three changes:
 3. **Automatic heat adaptation** (Android 10 or later and the QDAuto engine; it does nothing with "Basic" in "Auto"
    mode, because that profile doesn't re-encode):
 
-| Android thermal state | What HeadQLink does |
-|---|---|
-| Normal or light | Nothing: the session's fps and bitrate. |
-| Moderate | Drops to **24 fps** (to **30 fps** if the session runs at 60 because of "Smoothness") and 70 % of the bitrate. |
-| Severe or worse | Drops to **20 fps** and at most **3 Mbit/s**. |
+| Android thermal state | "Heat protection" Normal (recommended) | "Gentle" |
+|---|---|---|
+| Normal or light | Nothing: the session's fps and bitrate. | Nothing. |
+| Moderate | To **30 fps** if the session runs at 60 because of "Smoothness" (at 30, the same fps) and 80 % of the bitrate. | Only the bitrate, to 80 %. |
+| Severe | Drops to **24 fps** and at most **3.5 Mbit/s**. | **30 fps** at most and 3.5 Mbit/s. |
+| Critical or worse | Drops to **20 fps** and at most **3 Mbit/s**. | The same: 20 fps and 3 Mbit/s. |
 
-It steps down straight away. It goes back to normal once the phone has been cooler for **60 seconds in a row**. It does
+It steps down straight away. It goes back to normal once the phone has been cooler for **30 seconds in a row**. It does
 this without cutting the session or restarting Android Auto, and without any warning: you'll just notice a slightly less
-smooth picture. It's recorded in the log.
+smooth picture. It's recorded in the log. With "Heat protection" set to "Off" nothing changes (it's only logged). If the
+link is also tight, the lower of the two caps (heat or link) applies.
 
 **Tips**
 
@@ -442,7 +471,7 @@ Always start with the ⚙ menu › "Requirements check": every red row has its o
 | "Port 18463 is busy (is QDLink open?)", or "Port 18463 · Busy" in the "Requirements check" | The QDLink app (or another one) is open on the phone and holds the port. | "Force stop" QDLink. HeadQLink retries every 5 s and the warning clears by itself. |
 | Black screen in the car, or an error in the "Auto" row | Android Auto didn't start: the phone was locked ("Doesn't start: unlock the phone"), or developer mode or accessibility is missing. | Unlock the phone (with the "Unlock the phone to start Android Auto" notification, it starts by itself when you unlock). If it still fails, check the "Requirements check" and tap "Disconnect" and "Connect". To find out what's failing, turn on Diagnostics › "Test without Android Auto (pattern)": if you see the test image, the connection is fine and the problem is Android Auto (turn it off afterwards). If nothing works, try the "Original headqlink" engine. |
 | Choppy or delayed picture | Hotspot on 2.4 GHz, hot phone, profile too high, or phone screen on (with the screen on, Android scans for Wi-Fi networks often). | Hotspot on 5 GHz, "Automatic" or "Car" profile, lock the phone and cool it down. If it continues, try "Medium". |
-| The picture is less smooth than with the original HeadQLink | The original sent 60 fps; HeadQLink sends 30 (what the car asks for) so the phone doesn't overheat. Or the phone is already hot and the heat adaptation has lowered the fps. | "Picture settings" › "Smoothness" › "60 fps · maximum smoothness" (with the "Car" or "Automatic" profile). If it continues, check the thermal state: in the log, the "HQL/Térmico" lines ("estado térmico 2" or higher lowers the fps); cool the phone down (section 6). |
+| The picture is less smooth than with the original HeadQLink | The original sent 60 fps; HeadQLink sends 30 (what the car asks for) so the phone doesn't overheat. Or the phone is already hot and the heat adaptation has lowered the fps, or the link is tight and the bitrate or fps were lowered. | "Picture settings" › "Smoothness" › "60 fps · maximum smoothness" (with the "Car" or "Automatic" profile). If heat lowers the fps, "Heat protection" › "Gentle" (section 6). In the log, the "HQL/Térmico" lines ("estado térmico 2" or higher) and the "enlace:" lines tell you which of the two it is. |
 | The picture freezes for about 10 s and then reconnects | In earlier versions, a full frame larger than ~512 KB hung the car's receiver, which stopped reading until the connection dropped. **Fixed**: HeadQLink no longer sends any that large and keeps them at about 300 KB at most. | Update HeadQLink. If it happens with the "Basic" profile (there Android Auto decides the size), use "Automatic" or "Car". If it continues, export the log (section 8). |
 | It disconnects often | Hotspot auto-off, battery saving, QDLink open, or the car's mirroring app closed. | Short dropouts reconnect by themselves ("Reconnecting…"). If they're long or frequent: "No battery restrictions", "Samsung: never sleeping apps", turn off the hotspot's auto-off and close QDLink. If it continues, export the log (section 8). |
 | Accessibility turns itself off | Android turns it off when the app is updated, or if the app crashed. Some manufacturers do too. | "Requirements check" › "Turn on". If it says "On but not running", turn it off and on. If it says "Restricted setting", use "Allow restricted settings" (section 3). Remove the battery restrictions. |

@@ -21,6 +21,9 @@ internal class SessionCounters {
     val garbageBytes = AtomicLong()
     val videoRate = RateWindow()
 
+    /** hql: writes bloqueados con el coche hablando que la sesión aguantó (más de `writeStallTimeoutMs`). */
+    val writeStalls = AtomicLong()
+
     /** hql: mensaje de vídeo más grande escrito (solo lo actualiza el hilo escritor). */
     @Volatile
     var maxVideoMessageBytes = 0L
@@ -103,6 +106,7 @@ internal class SessionCounters {
             maxVideoMessageBytes = maxVideoMessageBytes,
             videoFramesOversized = queue.oversizedFrames,
             maxOversizedBytes = maxOversized.get(),
+            writeStalls = writeStalls.get(),
         )
     }
 }

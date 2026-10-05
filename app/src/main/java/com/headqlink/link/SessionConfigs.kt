@@ -32,6 +32,22 @@ internal object SessionConfigs {
     /** Freno: el siguiente frame no sale hasta que la cola del kernel baja de esto (SspSession.BRAKE_OUTQ). */
     const val BRAKE_OUTQ = 24 * 1024
 
+    /**
+     * Reenvío directo: espera máxima de un frame ante la puerta del freno. Con 250 ms cada frame podía esperar un cuarto de
+     * segundo en la cola del núcleo antes de salir (viaje 5: retrasos de 300-373 ms); con 100 ms el que espera es el ack
+     * a AA (AaAckBrake), que frena la fuente en vez de encolar.
+     */
+    const val BRAKE_GATE_MAX_WAIT_MS = 100L
+
+    /** Write bloqueado: cierre a los 10 s si el coche también está callado. */
+    const val WRITE_STALL_MS = 10_000L
+
+    /** Write bloqueado con el coche hablando (heartbeats, táctil): se aguanta hasta esto (Config.WRITE_STALL_MS). */
+    const val WRITE_STALL_CAR_TALKING_MS = 20_000L
+
+    /** El coche cuenta como «hablando» si ha mandado algo en este rato (manda un heartbeat cada ~3 s). */
+    const val WRITE_STALL_CAR_WINDOW_MS = 5_000L
+
     /** Reenvío directo: el coche o el núcleo piden IDR, pero cada ciclo de foco congela la imagen; 1,5 s entre peticiones. */
     const val PASSTHROUGH_MIN_KEYFRAME_MS = 1_500L
 
@@ -46,6 +62,7 @@ internal object SessionConfigs {
         val passthrough = Config.MODE_AA == mode && !cfg.aaReencode()
         val brake = Config.isAa(mode) && cfg.aaBrake()
         val qdlinkPhoneInfo = "qdlink" == cfg.qdPhoneInfo()
+        val stallTalking = cfg.getInt(Config.WRITE_STALL_MS).let { if (it > 0) it.toLong() else WRITE_STALL_CAR_TALKING_MS }
         return SessionConfig(
             tcpNoDelay = true,
             sendBufferBytes = if (brake) BRAKE_SEND_BUFFER else SEND_BUFFER,
@@ -61,7 +78,9 @@ internal object SessionConfigs {
             // Como el fork (SspSession.lastRx desde el accept): un coche que abre el TCP y nunca manda un 5A5A también se
             // corta a los 10 s. El núcleo, como QDLink, no cortaba hasta el primer 5A5A.
             watchdogRequiresCarTraffic = false,
-            writeStallTimeoutMs = 10_000,
+            writeStallTimeoutMs = WRITE_STALL_MS,
+            writeStallCarTalkingTimeoutMs = maxOf(WRITE_STALL_MS, stallTalking),
+            writeStallCarWindowMs = WRITE_STALL_CAR_WINDOW_MS,
             whitelistMode = if (cfg.sendWhitelist()) WhitelistMode.ALWAYS else WhitelistMode.NEVER,
             whitelistValue = 1,
             whitelistInitialDelayMs = 1_000,
@@ -75,7 +94,7 @@ internal object SessionConfigs {
             videoMaxLagMs = 150,
             minKeyframeRequestIntervalMs = if (passthrough) PASSTHROUGH_MIN_KEYFRAME_MS else 1_000,
             videoWriteGate = if (passthrough && brake) brakeGate(portFor) else null,
-            videoWriteGateMaxWaitMs = 250,
+            videoWriteGateMaxWaitMs = BRAKE_GATE_MAX_WAIT_MS,
             videoWriteGatePollMs = 2,
             maxVideoMessageBytes = MAX_VIDEO_MESSAGE_BYTES,
         )

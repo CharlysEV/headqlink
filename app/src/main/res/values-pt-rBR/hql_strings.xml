@@ -193,6 +193,11 @@
     <string name="hql_profile_basic">Básico</string>
     <string name="hql_profile_basic_detail">720p a 30 fps, sem recodificação (o mais leve para o celular)</string>
     <string name="hql_keep_screen_on">Manter a tela do celular ligada (mais calor e bateria; caso contrário, ela desliga como sempre e a projeção continua)</string>
+    <string name="hql_thermal_mode">Proteção térmica</string>
+    <string name="hql_thermal_normal">Normal (recomendada)</string>
+    <string name="hql_thermal_soft">Suave · só baixa a taxa de bits; nunca abaixo de 30 fps, salvo em estado crítico</string>
+    <string name="hql_thermal_off">Desligada · só é registrada</string>
+    <string name="hql_thermal_help">Quando o Android avisa de calor: Normal baixa para 30 fps em «moderado» (se a sessão vai a 60), para 24 fps em «grave» e para 20 fps em «crítico», com menos taxa de bits; Suave mantém os fps e só baixa a taxa de bits (30 fps no máximo em «grave»). Volta ao normal após 30 s mais fresco. Aplica-se na hora.</string>
     <string name="hql_profile_car">Carro</string>
     <string name="hql_profile_car_detail">O que o carro pede (no C10, resolução completa a 30 fps e cerca de 5 Mbit/s), sem forçar o celular: o mínimo de calor e bateria</string>
     <string name="hql_profile_high">Alto</string>

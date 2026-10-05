@@ -29,6 +29,17 @@ final class ThermalGuard {
     /** Último estado térmico (-1 = no se sabe) y nivel, para los resúmenes de sesión. */
     private static volatile int currentStatus = -1;
     private static volatile int currentLevel = ThermalPolicy.NORMAL;
+    /** El vigía en marcha (para volver a aplicar el nivel al cambiar la «Protección térmica»). */
+    private static volatile ThermalGuard active;
+
+    /** Cambió la «Protección térmica» en los ajustes: el nivel actual se vuelve a aplicar con el modo nuevo. */
+    static void onModeChanged() {
+        ThermalGuard g = active;
+        if (g == null || g.h == null) return;
+        g.h.post(() -> {
+            if (currentStatus >= 0) g.apply(currentStatus);
+        });
+    }
 
     private final Context ctx;
     private final Sink sink;
@@ -65,6 +76,8 @@ final class ThermalGuard {
     void start() {
         thread.start();
         h = new Handler(thread.getLooper());
+        active = this;
+        QdTrace.i("HQL/Térmico", "protección térmica: " + ThermalPolicy.modeName(new Config(ctx).thermalMode()));
         if (Build.VERSION.SDK_INT >= 29) {
             startListener();
         } else {
@@ -99,6 +112,7 @@ final class ThermalGuard {
         }
         h.removeCallbacksAndMessages(null);
         thread.quitSafely();
+        if (active == this) active = null;
         currentStatus = -1;
         currentLevel = ThermalPolicy.NORMAL;
     }
@@ -127,7 +141,9 @@ final class ThermalGuard {
         int level = policy.level();
         currentLevel = level;
         PerfTrace.event("thermal_level", level);
-        String line = "térmico " + status + " → perfil " + ThermalPolicy.name(level) + " (" + ThermalPolicy.describe(level) + ")";
+        String mode = new Config(ctx).thermalMode();
+        String line = "térmico " + status + " → perfil " + ThermalPolicy.name(level) + " (protección " + ThermalPolicy.modeName(mode)
+                + ": " + ThermalPolicy.describe(mode, level, 0) + ")";
         if (sink == null) {
             L.i(line + "; motor original: solo se registra");
             return;

@@ -488,6 +488,8 @@ class PhoneSession(
 
     /** hql (C2): avisa a la finalización de [item] (si la tiene) y registra la excepción del callback. */
     internal fun finish(item: Outgoing, outcome: FrameOutcome) {
+        val stalled = stalledWriteStart
+        if (stalled != 0L && item.writeStartNanos == stalled) stalledWriteReturned(item, outcome)
         val error = item.complete(outcome, queue.videoFrameDepth()) ?: return
         log.e(tag, "excepción en FrameCompletion ($outcome)", error)
     }
@@ -527,15 +529,15 @@ class PhoneSession(
         }
     }
 
+    /** hql: inicio del `write()` bloqueado que se está aguantando (el coche habla), o 0. */
+    @Volatile
+    private var stalledWriteStart = 0L
+
     /** Watchdog de recepción (QDLink: LC/a.java:689-703) y detector de `write()` bloqueado. */
     private fun watchdogTick() {
         if (closed.get()) return
         val now = System.nanoTime()
-        val ws = writer.writeStartNanos
-        if (config.writeStallTimeoutMs > 0 && ws != 0L && (now - ws) / 1_000_000 > config.writeStallTimeoutMs) {
-            closeWith(CloseReason(CloseReason.Kind.WRITE_STALL, "un write() lleva más de ${config.writeStallTimeoutMs} ms bloqueado"))
-            return
-        }
+        if (checkWriteStall(now)) return
         if (!config.watchdogEnabled) return
         val r = reader ?: return
         val silentMs = (now - r.lastActivityNanos) / 1_000_000
@@ -552,6 +554,70 @@ class PhoneSession(
         } else {
             watchdogWarned = false
         }
+    }
+
+    /**
+     * hql: `write()` bloqueado. Pasado [SessionConfig.writeStallTimeoutMs]: si el coche está callado, se cierra (la radio
+     * se fue del todo). Si el coche sigue hablando (heartbeats, táctil en los últimos [SessionConfig.writeStallCarWindowMs]),
+     * la sesión aguanta hasta [SessionConfig.writeStallCarTalkingTimeoutMs]: en cada comprobación se tira el vídeo
+     * encolado (ya es viejo) y, al volver el `write()`, se pide un IDR ([finish]). `true` si se cerró.
+     */
+    private fun checkWriteStall(now: Long): Boolean {
+        val ws = writer.writeStartNanos
+        if (config.writeStallTimeoutMs <= 0 || ws == 0L) return false
+        val stuckMs = (now - ws) / 1_000_000
+        if (stuckMs <= config.writeStallTimeoutMs) return false
+        val rxAgoMs = (now - (reader?.lastActivityNanos ?: createdNanos)) / 1_000_000
+        val talking = config.writeStallCarTalkingTimeoutMs > config.writeStallTimeoutMs && rxAgoMs < config.writeStallCarWindowMs
+        val label = writer.current?.label ?: "?"
+        if (!talking) {
+            closeWith(
+                CloseReason(
+                    CloseReason.Kind.WRITE_STALL,
+                    "un write() ($label) lleva más de ${config.writeStallTimeoutMs} ms bloqueado ($stuckMs ms) y el coche lleva $rxAgoMs ms callado",
+                ),
+            )
+            return true
+        }
+        if (stuckMs > config.writeStallCarTalkingTimeoutMs) {
+            closeWith(
+                CloseReason(
+                    CloseReason.Kind.WRITE_STALL,
+                    "un write() ($label) lleva más de ${config.writeStallCarTalkingTimeoutMs} ms bloqueado ($stuckMs ms) aunque el coche " +
+                        "sigue hablando (último mensaje hace $rxAgoMs ms)",
+                ),
+            )
+            return true
+        }
+        val dropped = queue.flushVideo()
+        for (d in dropped) finish(d, FrameOutcome.DROPPED)
+        if (stalledWriteStart != ws) {
+            stalledWriteStart = ws
+            counters.writeStalls.incrementAndGet()
+            log.w(
+                tag,
+                "un write() ($label) lleva $stuckMs ms bloqueado pero el coche sigue hablando (último mensaje hace $rxAgoMs ms): " +
+                    "aguanto hasta ${config.writeStallCarTalkingTimeoutMs} ms; vídeo encolado descartado (${dropped.size} frames) y, " +
+                    "al volver el write, se pedirá un IDR",
+            )
+        } else if (dropped.isNotEmpty()) {
+            log.d(tag, "write bloqueado $stuckMs ms: ${dropped.size} frames más descartados")
+        }
+        return false
+    }
+
+    /** hql: el `write()` que se aguantaba ha vuelto: lo encolado mientras tanto fuera y un IDR nuevo. */
+    private fun stalledWriteReturned(item: Outgoing, outcome: FrameOutcome) {
+        stalledWriteStart = 0L
+        val ms = ((if (item.writeEndNanos != 0L) item.writeEndNanos else System.nanoTime()) - item.writeStartNanos) / 1_000_000
+        if (outcome != FrameOutcome.WRITTEN || closed.get()) {
+            log.w(tag, "el write bloqueado (${item.label}) terminó tras $ms ms: $outcome")
+            return
+        }
+        val dropped = queue.flushVideo()
+        for (d in dropped) finish(d, FrameOutcome.DROPPED)
+        log.w(tag, "el write bloqueado (${item.label}) volvió tras $ms ms: ${dropped.size} frames descartados, pido un IDR")
+        requestKeyframe(KeyframeReason.BACKLOG, force = true)
     }
 
     private fun configMessage(payload: ByteArray, params: VideoParams): Outgoing =

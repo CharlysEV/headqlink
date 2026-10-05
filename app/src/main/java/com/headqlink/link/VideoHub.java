@@ -114,10 +114,31 @@ final class VideoHub {
         });
     }
 
-    /** fps máximos del vídeo vivo (los de la sesión o el tope térmico), o 0 sin vídeo. */
+    /** fps máximos del vídeo vivo (los de la sesión o el tope térmico o del enlace), o 0 sin vídeo. */
     int fpsCap() {
         VideoPipeline p = live;
         return p != null ? p.fpsCap() : 0;
+    }
+
+    /** Muestra de red de la sesión (cada ~100 ms, hilo net-monitor) para el bitrate según el enlace. */
+    void onLinkSample(SessionPort port, LinkRateController.Sample sample) {
+        if (live == null) return;
+        h.post(() -> {
+            VideoPipeline p = pipeline;
+            if (p != null) p.onLinkSample(port, sample);
+        });
+    }
+
+    /** Bitrate más bajo aplicado por el enlace en la sesión de port (kbps), o 0. */
+    int linkMinKbps(SessionPort port) {
+        VideoPipeline p = live;
+        return p != null && p.active() == port ? p.linkMinBps() / 1000 : 0;
+    }
+
+    /** Pasos por congestión del enlace en la sesión de port, o 0. */
+    int linkCongestionEvents(SessionPort port) {
+        VideoPipeline p = live;
+        return p != null && p.active() == port ? p.linkCongestionEvents() : 0;
     }
 
     /** Para el vídeo (ajustes o fin del servicio). */

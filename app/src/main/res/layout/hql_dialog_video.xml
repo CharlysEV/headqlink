@@ -76,6 +76,47 @@
         android:layout_height="wrap_content"
         android:text="@string/hql_keep_screen_on" />
 
+    <!-- Protección térmica: Normal / Suave / Apagada (ThermalPolicy); se aplica en el acto -->
+    <TextView
+        style="@style/HQL.Text.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/hql_thermal_mode" />
+
+    <RadioGroup
+        android:id="@+id/hql_v_thermal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/hql_v_thermal_normal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hql_thermal_normal" />
+
+        <RadioButton
+            android:id="@+id/hql_v_thermal_soft"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hql_thermal_soft" />
+
+        <RadioButton
+            android:id="@+id/hql_v_thermal_off"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hql_thermal_off" />
+    </RadioGroup>
+
+    <TextView
+        style="@style/HQL.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:alpha="0.7"
+        android:text="@string/hql_thermal_help"
+        android:textSize="12sp" />
+
     <TextView
         android:id="@+id/hql_v_adv_toggle"
         style="@style/HQL.Text.Label.Accent"

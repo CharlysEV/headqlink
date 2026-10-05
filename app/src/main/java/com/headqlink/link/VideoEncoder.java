@@ -85,6 +85,30 @@ final class VideoEncoder {
     private volatile double lastIdrDip;
     /** Una bajada sin IDR (el encoder no lo dio) se repone igualmente pasado esto. */
     private static final long DIP_TIMEOUT_NS = 1_000_000_000L;
+    /** Modo de tasa con que se configuró (CBR, VBR o VBR con tope de picos), para el log. */
+    private volatile String bitrateMode = "VBR";
+    /** MediaFormat.KEY_MAX_BITRATE (constante de la API 33; la clave existe desde antes). */
+    private static final String MAX_BITRATE = "max-bitrate";
+    private static final String INTRA_REFRESH = "intra-refresh-period";
+    private boolean intraRefreshChecked;
+
+    /** CBR, VBR o VBR con tope de picos. */
+    String bitrateMode() {
+        return bitrateMode;
+    }
+
+    /** ¿Declara el códec que admite tasa constante? (API 21+; antes se da por bueno.) */
+    private static boolean supportsCbr(MediaCodec c) {
+        if (android.os.Build.VERSION.SDK_INT < 21) return true;
+        try {
+            MediaCodecInfo.CodecCapabilities caps = c.getCodecInfo().getCapabilitiesForType(MediaFormat.MIMETYPE_VIDEO_AVC);
+            MediaCodecInfo.EncoderCapabilities ec = caps != null ? caps.getEncoderCapabilities() : null;
+            return ec == null || ec.isBitrateModeSupported(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR);
+        } catch (RuntimeException e) {
+            L.w("encoder: no se pudo consultar si admite CBR: " + e.getMessage());
+            return true;
+        }
+    }
 
     VideoEncoder(Params p, Sink sink) {
         this.p = p;
@@ -97,9 +121,16 @@ final class VideoEncoder {
         f.setInteger(MediaFormat.KEY_BIT_RATE, p.bitrate);
         f.setInteger(MediaFormat.KEY_FRAME_RATE, p.fps);
         f.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, p.iFrameIntervalSec);
-        f.setInteger(MediaFormat.KEY_BITRATE_MODE, p.cbr
+        String name = pickHardwareEncoder(p.width, p.height, p.fps);
+        codec = name != null ? MediaCodec.createByCodecName(name) : MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
+        // Tasa constante si se pide y el códec la admite; si no, VBR con tope de picos (KEY_MAX_BITRATE) en el bitrate
+        // pedido, para que las ráfagas (P-frames de 276 KB a 15-19 Mbit/s en el coche) no atasquen la radio.
+        boolean cbr = p.cbr && supportsCbr(codec);
+        bitrateMode = cbr ? "CBR" : p.cbr ? "VBR con tope de picos" : "VBR";
+        f.setInteger(MediaFormat.KEY_BITRATE_MODE, cbr
                 ? MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR
                 : MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR);
+        if (p.cbr && !cbr) f.setInteger(MAX_BITRATE, p.bitrate);
         if (p.intraRefreshFrames > 0) f.setInteger(MediaFormat.KEY_INTRA_REFRESH_PERIOD, p.intraRefreshFrames);
         f.setInteger(MediaFormat.KEY_PRIORITY, 0);
         f.setInteger(MediaFormat.KEY_LATENCY, 1);
@@ -113,9 +144,8 @@ final class VideoEncoder {
 
         bitrate = p.bitrate;
 
-        String name = pickHardwareEncoder(p.width, p.height, p.fps);
-        codec = name != null ? MediaCodec.createByCodecName(name) : MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
-        L.i("encoder " + codec.getName() + " " + p + (p.lowLatency ? " · baja latencia" : ""));
+        L.i("encoder " + codec.getName() + " " + p + (p.lowLatency ? " · baja latencia" : "") + " · modo de tasa " + bitrateMode
+                + (p.cbr && !cbr ? " (el códec no admite CBR; tope de picos " + p.bitrate / 1000 + " kbps)" : ""));
         // Intentos, de más a menos: baja latencia (si se pide) y control del tamaño de los IDR; se quita lo que el
         // códec rechace (un encoder que no admite las claves de baja latencia acaba con la configuración normal).
         MediaFormat sized = withIdrSizeControl(f);
@@ -426,6 +456,17 @@ final class VideoEncoder {
                     L.i("encoder output format: " + of);
                     lastCsd = csd;
                     sink.onCodecConfig(csd);
+                }
+                if (!intraRefreshChecked && p.intraRefreshFrames > 0) {
+                    // Con CBR algunos códecs apagan el refresco intra: si lo informa, se comprueba que sigue.
+                    intraRefreshChecked = true;
+                    if (!of.containsKey(INTRA_REFRESH)) {
+                        L.i("encoder: el códec no informa del intra-refresh (pedido " + p.intraRefreshFrames + " frames, " + bitrateMode + ")");
+                    } else if (of.getInteger(INTRA_REFRESH) <= 0) {
+                        L.w("encoder: intra-refresh apagado por el códec (pedido " + p.intraRefreshFrames + " frames, " + bitrateMode + ")");
+                    } else {
+                        L.i("encoder: intra-refresh " + of.getInteger(INTRA_REFRESH) + " frames confirmado (" + bitrateMode + ")");
+                    }
                 }
             } else if (idx >= 0) {
                 ByteBuffer bb = codec.getOutputBuffer(idx);

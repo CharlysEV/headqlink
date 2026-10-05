@@ -582,6 +582,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         autoHide.setChecked(cfg.panelAutoHide());
         boolean keepScreenBefore = cfg.keepScreenOn();
         keepScreen.setChecked(keepScreenBefore);
+        // Protección térmica: Normal, Suave o Apagada (ThermalPolicy); se aplica al vídeo vivo al guardar.
+        RadioGroup thermal = v.findViewById(R.id.hql_v_thermal);
+        String thermalBefore = cfg.thermalMode();
+        thermal.check(ThermalPolicy.MODE_SOFT.equals(thermalBefore) ? R.id.hql_v_thermal_soft
+                : ThermalPolicy.MODE_OFF.equals(thermalBefore) ? R.id.hql_v_thermal_off : R.id.hql_v_thermal_normal);
         EditText window = v.findViewById(R.id.hql_v_window);
         brake.setChecked(cfg.aaBrake());
         fill(window, Config.AA_WINDOW);
@@ -638,6 +643,14 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                         cfg.putBool(Config.KEEP_SCREEN_ON, keepScreen.isChecked());
                         L.i("pantalla: «Mantener la pantalla del móvil encendida» " + (keepScreen.isChecked() ? "sí" : "no"));
                         com.andrerinas.openheadunit.aap.AapService.refreshCarModeFlags();
+                    }
+                    int thermalId = thermal.getCheckedRadioButtonId();
+                    String thermalAfter = thermalId == R.id.hql_v_thermal_soft ? ThermalPolicy.MODE_SOFT
+                            : thermalId == R.id.hql_v_thermal_off ? ThermalPolicy.MODE_OFF : ThermalPolicy.MODE_NORMAL;
+                    if (!thermalAfter.equals(thermalBefore)) {
+                        cfg.setThermalMode(thermalAfter);
+                        L.i("protección térmica: " + ThermalPolicy.modeName(thermalAfter) + " (se aplica en el acto)");
+                        ThermalGuard.onModeChanged();
                     }
                     int id = profile.getCheckedRadioButtonId();
                     cfg.setProfile(id == R.id.hql_v_main ? "main" : id == R.id.hql_v_high ? "high" : "baseline");

@@ -193,6 +193,11 @@
     <string name="hql_profile_basic">Basic</string>
     <string name="hql_profile_basic_detail">720p at 30 fps, not re-encoded (the lightest for the phone)</string>
     <string name="hql_keep_screen_on">Keep the phone screen on (more heat and battery; otherwise it turns off as usual and projection continues)</string>
+    <string name="hql_thermal_mode">Heat protection</string>
+    <string name="hql_thermal_normal">Normal (recommended)</string>
+    <string name="hql_thermal_soft">Gentle · only lowers the bitrate; never below 30 fps unless the phone is critical</string>
+    <string name="hql_thermal_off">Off · only logged</string>
+    <string name="hql_thermal_help">When Android reports heat: Normal drops to 30 fps at "moderate" (if the session runs at 60), 24 fps at "severe" and 20 fps at "critical", with less bitrate; Gentle keeps the fps and only lowers the bitrate (30 fps at most when severe). Back to normal after 30 s cooler. Applies at once.</string>
     <string name="hql_profile_car">Car</string>
     <string name="hql_profile_car_detail">What the car asks for (on the C10, full resolution at 30 fps and about 5 Mbit/s), without pushing the phone: the least heat and battery</string>
     <string name="hql_profile_high">High</string>

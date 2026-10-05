@@ -286,6 +286,26 @@ HeadQLink. La fila «Red» pasará de «Wi-Fi Direct: buscando el coche» a «Wi
 - Si pulsas «Conectar» y en **5 minutos** (o «Esperar al coche», si es más) no aparece ningún coche, HeadQLink se para
   sola. Mientras el coche se siga anunciando, aunque no llegue a conectar, la espera vuelve a empezar.
 
+### El vídeo se adapta al enlace
+
+La radio entre el móvil y el coche no siempre lleva los 5 Mbit/s que pide el C10: con el coche lejos del móvil, en
+2,4 GHz o con interferencias, la imagen iba a saltos y con retraso. Ahora, con los perfiles «Coche», «Automático»,
+«Medio» y «Muy bajo» (los que recodifican en el móvil):
+
+- HeadQLink mide el enlace diez veces por segundo (datos pendientes de enviar, retransmisiones, tiempo de ida y vuelta)
+  y, si se atasca, **baja el bitrate** (×0,7 cada vez, hasta 1,5 Mbit/s) en medio segundo; si aun así sigue atascado,
+  baja a **24 fps**. Cuando el enlace lleva 5 segundos limpio vuelve poco a poco (primero los fps, luego +15 % de
+  bitrate cada 5 s) hasta lo que pide el coche. Se nota como una imagen algo más blanda durante unos segundos, en vez
+  de a tirones.
+- El perfil «Coche» codifica a **tasa constante** (sin ráfagas), y lo que no cabe en el enlace se descarta en el móvil
+  antes de acumular retraso (como mucho ~150 ms en cola).
+- Si el coche deja de leer un momento pero sigue hablando (heartbeats, toques), la sesión aguanta hasta **20 s** antes
+  de darla por perdida (antes, 10 s), tirando el vídeo viejo y mandando una imagen fresca en cuanto puede.
+
+En el log (sección 8) lo ves como `enlace: congestión (outq 96 KB 300 ms, retrans +21) → bitrate 3.6 Mbit/s`,
+`enlace: enlace limpio 5 s → bitrate 4.1 Mbit/s`, y en el resumen de cada sesión `enlace: bitrate mín. 2.5 Mbit/s ·
+congestiones 4`.
+
 ### Al terminar el viaje
 
 - Apaga el coche (HeadQLink se cierra sola cuando vence «Esperar al coche», a los 5 minutos por defecto) o pulsa
@@ -365,6 +385,14 @@ Si estás conectado, al guardar otro perfil el coche y Android Auto se reconecta
 - «Ocultar el panel lateral tras unos segundos (Auto extendido)»: activada por defecto.
 - «Mantener la pantalla del móvil encendida (más calor y batería; si no, se apaga como siempre y la proyección sigue)»:
   desactivada por defecto. **Déjala desactivada** salvo que la necesites.
+- «Protección térmica»: qué hace HeadQLink cuando Android avisa de que el móvil se calienta (sección 6).
+  - «Normal (recomendada)»: baja a 30 fps en «moderado» (solo si la sesión va a 60), a 24 fps en «grave» y a 20 fps en
+    «crítico», siempre con menos bitrate.
+  - «Suave»: solo baja el bitrate; los fps no bajan de 30 salvo en «crítico» (20 fps). Para quien prefiere la fluidez
+    aunque el móvil vaya más caliente.
+  - «Apagada»: no cambia nada, solo lo anota en el log.
+
+  Se aplica en el acto, sin reconectar.
 - «Avanzado ▾» › «Motor de protocolo»:
   - «QDAuto (recomendado)»: el motor por defecto, con reconexión sin reiniciar Android Auto y adaptación al calor.
   - «Original de headqlink»: el motor del HeadQLink original, como **plan B** si QDAuto te da problemas.
@@ -416,15 +444,17 @@ versión trae tres cambios:
 3. **Adaptación térmica automática** (Android 10 o superior y motor QDAuto; con «Básico» en el modo «Auto» no actúa,
    porque ese perfil no recodifica):
 
-| Estado térmico de Android | Qué hace HeadQLink |
-|---|---|
-| Normal o ligero | Nada: los fps y el bitrate de la sesión. |
-| Moderado | Baja a **24 fps** (a **30 fps** si la sesión va a 60 por «Fluidez») y al 70 % del bitrate. |
-| Grave o peor | Baja a **20 fps** y como mucho **3 Mbit/s**. |
+| Estado térmico de Android | «Protección térmica» Normal (recomendada) | «Suave» |
+|---|---|---|
+| Normal o ligero | Nada: los fps y el bitrate de la sesión. | Nada. |
+| Moderado | A **30 fps** si la sesión va a 60 por «Fluidez» (a 30, los mismos fps) y al 80 % del bitrate. | Solo el bitrate al 80 %. |
+| Grave | Baja a **24 fps** y como mucho **3,5 Mbit/s**. | **30 fps** como mucho y 3,5 Mbit/s. |
+| Crítico o peor | Baja a **20 fps** y como mucho **3 Mbit/s**. | Lo mismo: 20 fps y 3 Mbit/s. |
 
-Sube de nivel en el acto. Vuelve a lo normal cuando el móvil lleva **60 segundos seguidos** más fresco. Lo hace sin
+Sube de nivel en el acto. Vuelve a lo normal cuando el móvil lleva **30 segundos seguidos** más fresco. Lo hace sin
 cortar la sesión ni reiniciar Android Auto, y sin avisos: solo notarás la imagen algo menos fluida. Queda anotado en el
-log.
+log. Con «Protección térmica» en «Apagada» no cambia nada (solo lo anota). Si además el enlace va justo, manda el tope
+más bajo de los dos (calor o enlace).
 
 **Consejos**
 
@@ -448,8 +478,8 @@ Empieza siempre por el menú ⚙ › «Comprobación»: cada fila en rojo tiene 
 | El coche no aparece («Buscando…» todo el rato) | El coche no está en la zona Wi-Fi del móvil, la zona Wi-Fi se apagó sola, o la app de espejo no está abierta en el coche. Con Wi-Fi Direct: la zona Wi-Fi encendida o el Wi-Fi apagado. | Mira la fila «Red»: debe decir «Zona Wi-Fi activa (…)». Une el coche a la zona Wi-Fi (Ajustes › Wi-Fi del coche) y abre la app de espejo. Quita el apagado automático de la zona Wi-Fi. A los 5 minutos sin anuncios del coche HeadQLink se para: pulsa «Conectar» otra vez. |
 | «El puerto 18463 está ocupado (¿QDLink abierto?)», o «Puerto 18463 · Ocupado» en la «Comprobación» | La app QDLink (u otra) está abierta en el móvil y ocupa el puerto. | «Forzar detención» de QDLink. HeadQLink lo reintenta cada 5 s y el aviso desaparece solo. |
 | Pantalla negra en el coche, o la fila «Auto» con un error | Android Auto no arrancó: el móvil estaba bloqueado («No arranca: desbloquea el móvil»), falta el modo desarrollador o la accesibilidad. | Desbloquea el móvil (con el aviso «Desbloquea el móvil para iniciar Android Auto», arranca solo al desbloquear). Si sigue, revisa la «Comprobación» y pulsa «Desconectar» y «Conectar». Para saber qué falla, activa Diagnóstico › «Prueba sin Android Auto (patrón)»: si ves la imagen de prueba, la conexión va bien y el problema es Android Auto (apágala después). Si nada funciona, prueba el motor «Original de headqlink». |
-| La imagen va a tirones o con retraso | Zona Wi-Fi en 2,4 GHz, móvil caliente, perfil demasiado alto o pantalla del móvil encendida (con ella Android busca redes Wi-Fi a menudo). | Zona Wi-Fi en 5 GHz, perfil «Automático» o «Coche», bloquea el móvil y enfríalo. Si sigue, prueba «Medio». |
-| La imagen va menos fluida que con el HeadQLink original | El original enviaba 60 fps; HeadQLink envía 30 (lo que pide el coche) para que el móvil no se caliente. O el móvil ya está caliente y la adaptación térmica ha bajado los fps. | «Ajustes de imagen» › «Fluidez» › «60 fps · máxima fluidez» (con el perfil «Coche» o «Automático»). Si sigue, mira el estado térmico: en el log, las líneas «HQL/Térmico» («estado térmico 2» o más baja los fps); enfría el móvil (sección 6). |
+| La imagen va a tirones o con retraso | Zona Wi-Fi en 2,4 GHz, coche lejos del móvil, móvil caliente, perfil demasiado alto o pantalla del móvil encendida (con ella Android busca redes Wi-Fi a menudo). | Zona Wi-Fi en 5 GHz, perfil «Automático» o «Coche» (se adaptan solos al enlace: en el log, líneas `enlace: congestión…`), bloquea el móvil y enfríalo. Si sigue, prueba «Medio». |
+| La imagen va menos fluida que con el HeadQLink original | El original enviaba 60 fps; HeadQLink envía 30 (lo que pide el coche) para que el móvil no se caliente. O el móvil ya está caliente y la adaptación térmica ha bajado los fps, o el enlace va justo y se han bajado el bitrate o los fps. | «Ajustes de imagen» › «Fluidez» › «60 fps · máxima fluidez» (con el perfil «Coche» o «Automático»). Si el calor baja los fps, «Protección térmica» › «Suave» (sección 6). En el log, las líneas «HQL/Térmico» («estado térmico 2» o más) y «enlace:» dicen cuál de las dos cosas pasa. |
 | La imagen se congela unos 10 s y luego se reconecta | En versiones anteriores, un fotograma completo de más de ~512 KB colgaba el receptor del coche, que dejaba de leer hasta que se cortaba la conexión. **Corregido**: HeadQLink ya no envía ninguno tan grande y los mantiene en unos 300 KB como mucho. | Actualiza HeadQLink. Si te pasa con el perfil «Básico» (ahí el tamaño lo decide Android Auto), usa «Automático» o «Coche». Si sigue, exporta el log (sección 8). |
 | Se desconecta a menudo | Apagado automático de la zona Wi-Fi, ahorro de batería, QDLink abierta o la app de espejo del coche cerrada. | Los cortes cortos se reconectan solos («Reconectando…»). Si son largos o frecuentes: «Batería sin restricciones», «Samsung: apps que nunca se suspenden», quita el apagado automático y cierra QDLink. Si sigue, exporta el log (sección 8). |
 | La accesibilidad se desactiva sola | Android la desactiva al actualizar la app, o si la app se cerró de golpe. Algunos fabricantes también. | «Comprobación» › «Activar». Si dice «Activada pero sin funcionar», apágala y enciéndela. Si dice «Ajuste restringido», «Permitir ajustes restringidos» (sección 3). Quita las restricciones de batería. |

@@ -70,6 +70,12 @@ internal object SessionSummary {
         /** Frames descartados por pasar del tope de tamaño, y el mayor de ellos (bytes). */
         val oversizedDrops: Long = 0,
         val oversizedMaxBytes: Long = 0,
+        /** Bitrate más bajo que aplicó el controlador del enlace (kbps; 0 = sin controlador o sin vídeo). */
+        val bitrateMinKbps: Int = 0,
+        /** Pasos por congestión del enlace (bajadas de bitrate o de fps). */
+        val congestionEvents: Int = 0,
+        /** Writes bloqueados más de 10 s con el coche hablando (la sesión aguantó hasta 20 s). */
+        val writeStalls: Long = 0,
     ) {
         val durationS: Double get() = (endWallMs - startWallMs) / 1000.0
         val fps: Double get() = if (videoSeconds > 0) frames / videoSeconds else 0.0
@@ -121,6 +127,11 @@ internal object SessionSummary {
             append(" · térmico ").append(r.thermalEnd).append(" (máx. ").append(r.thermalMax).append(')')
         }
         if (r.fpsCapEnd > 0) append(" · tope ").append(r.fpsCapEnd).append(" fps (mín. ").append(r.fpsCapMin).append(')')
+        if (r.bitrateMinKbps > 0 || r.congestionEvents > 0) {
+            append(" · enlace: bitrate mín. ").append(String.format(Locale.getDefault(), "%.1f", r.bitrateMinKbps / 1000.0))
+                .append(" Mbit/s · congestiones ").append(r.congestionEvents)
+        }
+        if (r.writeStalls > 0) append(" · writes bloqueados ").append(r.writeStalls)
         append('\n')
         append("coche: ").append(r.carHeartbeats).append(" heartbeats")
         if (r.heartbeatMinMs >= 0) {
@@ -138,7 +149,7 @@ internal object SessionSummary {
         "frames", "fps", "kbps", "idr", "keyframe_req_coche", "descartados", "vaciados", "max_write_ms", "max_cola_ms",
         "heartbeats_coche", "toques", "max_hueco_coche_ms", "cortes", "max_corte_ms", "retrans", "reconexion_ms",
         "video_reutilizado", "ciclos_foco_aa", "termico_fin", "termico_max", "tope_fps_fin", "tope_fps_min",
-        "frame_max_kb", "descartados_grandes",
+        "frame_max_kb", "descartados_grandes", "bitrate_min_kbps", "congestiones", "writes_bloqueados",
     ).joinToString(",")
 
     fun csvRow(r: Record): String = listOf(
@@ -150,7 +161,8 @@ internal object SessionSummary {
         r.carHeartbeats.toString(), r.touches.toString(), r.maxCarGapMs.toString(), r.stalls.toString(), r.maxStallMs.toString(),
         r.retrans.toString(), r.reconnectMs.toString(), if (r.videoVerdict == "REUTILIZADO") "1" else "0", r.aaCycles.toString(),
         r.thermalEnd.toString(), r.thermalMax.toString(), r.fpsCapEnd.toString(), r.fpsCapMin.toString(),
-        kb(r.maxMessageBytes).toString(), r.oversizedDrops.toString(),
+        kb(r.maxMessageBytes).toString(), r.oversizedDrops.toString(), r.bitrateMinKbps.toString(), r.congestionEvents.toString(),
+        r.writeStalls.toString(),
     ).joinToString(",") { csv(it) }
 
     private val NUMBER = Regex("-?[0-9]+(\\.[0-9]+)?")
@@ -248,6 +260,13 @@ internal object SessionSummary {
             append("mensajes de vídeo: máx. ").append(kb(maxMsg)).append(" KB · descartados por tamaño ")
                 .append(trip.sumOf { it.oversizedDrops }).append('\n')
         }
+        val congestions = trip.sumOf { it.congestionEvents }
+        if (congestions > 0) {
+            append("enlace: ").append(congestions).append(" congestiones · bitrate mín. ")
+                .append(f1((trip.filter { it.bitrateMinKbps > 0 }.minOfOrNull { it.bitrateMinKbps } ?: 0) / 1000.0)).append(" Mbit/s\n")
+        }
+        val stalls = trip.sumOf { it.writeStalls }
+        if (stalls > 0) append("writes bloqueados más de 10 s con el coche hablando: ").append(stalls).append('\n')
         val thermalMax = trip.maxOfOrNull { it.thermalMax } ?: -1
         if (thermalMax >= 0) {
             append("térmico: máx. ").append(thermalMax)

@@ -15,7 +15,6 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
-import java.util.Collections
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.AfterTest
@@ -260,7 +259,9 @@ class PhoneLinkReconnectTest {
 
     @Test
     fun mirrorServerListensOnTheChosenAddressAndFallsBackToTheWildcard() {
-        val lines = Collections.synchronizedList(ArrayList<String>())
+        // CopyOnWrite: se recorre mientras otros hilos siguen registrando (con synchronizedList saltaba
+        // ConcurrentModificationException de vez en cuando).
+        val lines = CopyOnWriteArrayList<String>()
         val log = QdLog { _, tag, message, _ -> lines += "$tag: $message" }
         val p = Ports()
         val events = Events()

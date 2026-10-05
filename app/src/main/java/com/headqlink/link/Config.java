@@ -149,15 +149,17 @@ final class Config {
     void applyExtras(Intent i) {
         if (i == null || i.getExtras() == null) return;
         SharedPreferences.Editor e = sp.edit();
-        for (String k : new String[]{FPS, KBPS, WIDTH, HEIGHT, DPI, "aa_dpi"}) {
+        for (String k : new String[]{FPS, KBPS, WIDTH, HEIGHT, DPI, "aa_dpi", GATE_OUTQ_KB, WRITE_STALL_MS}) {
             if (i.hasExtra(k)) e.putInt(k, i.getIntExtra(k, 0));
         }
+        if (i.hasExtra(THERMAL_MODE)) e.putString(THERMAL_MODE, ThermalPolicy.mode(i.getStringExtra(THERMAL_MODE)));
         if (i.hasExtra(PROFILE)) e.putString(PROFILE, i.getStringExtra(PROFILE));
         if (i.hasExtra(PREPEND)) e.putBoolean(PREPEND, i.getBooleanExtra(PREPEND, false));
         if (i.hasExtra(LOW_LATENCY)) e.putBoolean(LOW_LATENCY, i.getBooleanExtra(LOW_LATENCY, false));
         if (i.hasExtra("stop_aa_server")) e.putBoolean("stop_aa_server", i.getBooleanExtra("stop_aa_server", false));
         // Variantes de prueba del encoder (ver VideoEncoder.Params).
-        for (String k : new String[]{"enc_no_repeat", "enc_max_clocks", "enc_cbr", "enc_no_ir"}) {
+        // enc_vbr: el perfil Coche sin CBR; link_fixed: sin bitrate adaptable al enlace.
+        for (String k : new String[]{"enc_no_repeat", "enc_max_clocks", "enc_cbr", "enc_no_ir", "enc_vbr", "link_fixed"}) {
             if (i.hasExtra(k)) e.putBoolean(k, i.getBooleanExtra(k, false));
         }
         if (i.hasExtra(PANEL_AUTOHIDE)) e.putBoolean(PANEL_AUTOHIDE, i.getBooleanExtra(PANEL_AUTOHIDE, true));
@@ -230,6 +232,26 @@ final class Config {
     boolean keepScreenOn() {
         return sp.getBoolean(KEEP_SCREEN_ON, false);
     }
+
+    /**
+     * «Protección térmica» (Ajustes de imagen): ThermalPolicy.MODE_NORMAL (recomendada), MODE_SOFT (solo baja el bitrate;
+     * nunca por debajo de 30 fps salvo en estado crítico) o MODE_OFF (solo se registra). Se aplica en el acto.
+     */
+    static final String THERMAL_MODE = "thermal_mode";
+
+    String thermalMode() {
+        return ThermalPolicy.mode(sp.getString(THERMAL_MODE, ThermalPolicy.MODE_NORMAL));
+    }
+
+    void setThermalMode(String mode) {
+        sp.edit().putString(THERMAL_MODE, ThermalPolicy.mode(mode)).apply();
+    }
+
+    /** Puerta «último frame»: cola del kernel máxima en KB para codificar otro frame (0 = VideoPipeline.GATE_OUTQ). */
+    static final String GATE_OUTQ_KB = "gate_outq_kb";
+
+    /** Write bloqueado con el coche hablando: ms hasta cerrar la sesión (0 = SessionConfigs.WRITE_STALL_CAR_TALKING_MS). */
+    static final String WRITE_STALL_MS = "write_stall_ms";
 
     /** Tema elegido en el menú: 0 según el sistema, 1 claro, 2 oscuro (lo aplica UiModeManager). */
     static final String THEME = "theme";
@@ -529,7 +551,8 @@ final class Config {
                 + " brake=" + aaBrake() + " window=" + aaWindow() + " fps=" + sp.getInt(FPS, 0) + " kbps=" + sp.getInt(KBPS, 0)
                 + " size=" + sp.getInt(WIDTH, 0) + "x" + sp.getInt(HEIGHT, 0) + " h264=" + profile() + " prepend=" + prependSpsPps()
                 + " lowlat=" + lowLatency() + " maxclk=" + encMaxClocks() + " norepeat=" + getBool("enc_no_repeat")
-                + " cbr=" + getBool("enc_cbr") + " noir=" + getBool("enc_no_ir") + " aadpi=" + aaDpi() + " dpi=" + dpi()
+                + " cbr=" + getBool("enc_cbr") + " vbr=" + getBool("enc_vbr") + " noir=" + getBool("enc_no_ir")
+                + " linkfixed=" + getBool("link_fixed") + " gateoutq=" + getInt(GATE_OUTQ_KB) + " aadpi=" + aaDpi() + " dpi=" + dpi()
                 + " pkg=" + targetPackage();
     }
 
@@ -570,7 +593,7 @@ final class Config {
         return "fps=" + sp.getInt(FPS, 0) + " kbps=" + sp.getInt(KBPS, 0) + " size=" + sp.getInt(WIDTH, 0) + "x"
                 + sp.getInt(HEIGHT, 0) + " profile=" + profile() + " prepend=" + prependSpsPps()
                 + " fluidez=" + fluidity() + " mode=" + mode() + (MODE_APP.equals(mode()) ? " pkg=" + targetPackage() + " dpi=" + dpi() : "")
-                + " link=" + linkMode() + " engine=" + linkEngine() + " pantallaEncendida=" + keepScreenOn()
+                + " link=" + linkMode() + " engine=" + linkEngine() + " pantallaEncendida=" + keepScreenOn() + " termica=" + thermalMode()
                 + " esperarCoche=" + carWaitMin() + "min"
                 + (isQdEngine() ? " keepVideo=" + qdKeepVideo() + " supersede=" + qdSupersede() + " phoneInfo=" + qdPhoneInfo()
                 + " carGone=" + carGoneMs() / 1000 + "s" + (peerStrict() ? " strict" : "") : "")

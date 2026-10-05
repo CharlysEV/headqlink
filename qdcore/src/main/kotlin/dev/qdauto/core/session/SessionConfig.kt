@@ -104,8 +104,17 @@ data class SessionConfig(
     val watchdogTimeoutMs: Long = 15_000,
     /** Como QDLink (`W == "5A5A"`, LC/a.java:690): el watchdog no corta hasta que el coche ha mandado algún 5A5A. */
     val watchdogRequiresCarTraffic: Boolean = true,
-    /** Cierra la sesión si un `write()` lleva bloqueado más de esto (`0` = desactivado). */
+    /** Cierra la sesión si un `write()` lleva bloqueado más de esto y el coche está callado (`0` = desactivado). */
     val writeStallTimeoutMs: Long = 10_000,
+    /**
+     * hql: con un `write()` bloqueado más de [writeStallTimeoutMs] pero el coche todavía hablando (ha mandado algo en los
+     * últimos [writeStallCarWindowMs]: heartbeats, táctil), la sesión aguanta hasta esto. Mientras tanto se descarta el
+     * vídeo encolado (en cada comprobación del watchdog) y, en cuanto el `write()` vuelve, se pide un IDR. Un valor ≤
+     * [writeStallTimeoutMs] desactiva la prórroga. En el C10 (2026-10-05) la radio se atascó 8-10 s con el coche mandando
+     * heartbeats y el cierre a los 10 s costó una reconexión entera.
+     */
+    val writeStallCarTalkingTimeoutMs: Long = 20_000,
+    val writeStallCarWindowMs: Long = 5_000,
 
     // ---- Respuestas automáticas (spec §7.2, §10.2) ----
     /** `CAR_INFO` → `PHONE_INFO` (LC/a.java:1951-1966). */

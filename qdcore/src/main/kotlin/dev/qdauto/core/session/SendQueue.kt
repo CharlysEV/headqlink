@@ -251,6 +251,26 @@ internal class SendQueue(
     /** `KEY_FRAME_REQ`: SPS/PPS delante del siguiente frame aceptado. */
     fun requestConfigResend() = lock.withLock { pendingConfig = true }
 
+    /**
+     * hql: vacía todo el vídeo encolado (write bloqueado con el coche hablando: lo que hay en cola ya es viejo) y se
+     * espera un IDR con SPS/PPS delante. Devuelve los frames quitados (para avisar a sus finalizaciones fuera del
+     * candado); con cualquier política.
+     */
+    fun flushVideo(): List<Outgoing> = lock.withLock {
+        if (closed || video.isEmpty()) return emptyList()
+        val out = ArrayList<Outgoing>(video.size)
+        for (v in video) if (v.isFrame) out.add(v)
+        video.clear()
+        videoBytes = 0
+        videoFrames = 0
+        droppedFrames += out.size
+        if (out.isNotEmpty()) flushes++
+        setWaiting(true)
+        if (resendConfigAfterDrop) pendingConfig = true
+        updateViews()
+        out
+    }
+
     /** Empieza (o se reanuda) el vídeo: se arranca en un IDR precedido de SPS/PPS. */
     fun startStream() = lock.withLock {
         setWaiting(true)

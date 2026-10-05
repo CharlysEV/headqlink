@@ -99,6 +99,34 @@ class SendQueueTest {
         assertEquals(listOf("C9", "I1", "C10", "P2"), q.drain())
     }
 
+    /** hql: write bloqueado con el coche hablando: todo el vídeo encolado fuera, y se reanuda en un IDR con SPS/PPS. */
+    @Test
+    fun flushVideoDropsEverythingQueuedAndWaitsForAnIdrWithConfig() {
+        for (policy in VideoDropPolicy.values()) {
+            val q = SendQueue(backlogFrames = 100, backlogBytes = 10_000_000, hardLimitBytes = 100_000_000, resendConfigAfterDrop = true, dropPolicy = policy)
+            q.offerConfig(cfg(1))
+            q.offerFrame(key(1)) { null }
+            q.offerFrame(delta(1)) { null }
+            q.offerFrame(delta(2)) { null }
+            q.offerControl(ctl(1))
+            val dropped = q.flushVideo()
+            assertEquals(listOf("I1", "P1", "P2"), dropped.map { it.label }, policy.name)
+            assertEquals(0, q.videoFrameDepth())
+            assertEquals(0L, q.videoByteDepth())
+            assertEquals(1, q.controlDepth())
+            assertEquals(3L, q.droppedFrames)
+            assertEquals(1L, q.flushes)
+            assertTrue(q.isWaitingForIdr)
+            // Los P que lleguen se tiran; el IDR entra con SPS/PPS delante; el control sigue primero.
+            assertEquals(FrameOffer.DROPPED_WAITING_IDR, q.offerFrame(delta(3)) { cfg(9) })
+            assertEquals(FrameOffer.ACCEPTED, q.offerFrame(key(2)) { cfg(9) })
+            assertEquals(listOf("K1", "C9", "I2"), q.drain())
+            // Sin nada en cola no cuenta como vaciado.
+            assertTrue(q.flushVideo().isEmpty())
+            assertEquals(1L, q.flushes)
+        }
+    }
+
     /** hql: tope de mensaje de vídeo; el escenario del C10 (IDR de 538 KB) con todas las políticas. */
     @Test
     fun oversizedIdrIsDroppedAndItsDeltasWaitForTheNextIdr() {

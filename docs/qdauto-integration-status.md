@@ -455,12 +455,14 @@ necesitaba `sh` en el PATH (ahora se salta si no está).
 
 ### 8.3 Adaptación térmica
 
-- **Política** (`ThermalPolicy`, pura):
-  - estado ≥ MODERADO (2): **24 fps** y el bitrate ×0,7;
-  - estado ≥ GRAVE (3): **20 fps** y como mucho **3 Mbit/s** (nunca más que en moderado).
+- **Política** (`ThermalPolicy`, pura). *Revisada en §12.6 (2026-10-05): niveles más suaves, 30 s de histéresis y
+  la «Protección térmica» elegible (Normal, Suave, Apagada).* Con la protección Normal:
+  - estado MODERADO (2): **30 fps** si la sesión va a 60 (a 30, los mismos fps) y el bitrate ×0,8;
+  - estado GRAVE (3): **24 fps** y como mucho **3,5 Mbit/s**;
+  - estado CRÍTICO (4 o más): **20 fps** y como mucho **3 Mbit/s** (nunca más que en el nivel anterior).
 
-  Sube en el acto. Baja solo tras **60 s seguidos** por debajo del nivel actual, y al nivel más alto que se vio en ese
-  rato: para volver a normal, el estado tiene que estar en LIGERO (1) o menos durante 60 s.
+  Sube en el acto. Baja solo tras **30 s seguidos** por debajo del nivel actual, y al nivel más alto que se vio en ese
+  rato: para volver a normal, el estado tiene que estar en LIGERO (1) o menos durante 30 s.
 - **Escucha** (`ThermalGuard`, en `LinkService`). `PowerManager.addThermalStatusListener` solo con API 29+ (minSdk 16 en
   `github` y 21 en `playstore`); sin él no se adapta nada. Sustituye al aviso térmico de `SystemMonitor`, que además no
   estaba protegido por versión.
@@ -491,7 +493,7 @@ necesitaba `sh` en el PATH (ahora se salta si no está).
 | Ídem | `adb shell dumpsys power` | **ningún** `FULL_WAKE_LOCK 'UiModeManager'`, también **enchufado**; solo `PARTIAL_WAKE_LOCK 'headqlink:link'` del app |
 | Pantalla apagada y AA sigue | botón de encendido, enchufado y sin enchufar | se apaga; en el coche sigue el vídeo y el táctil; logcat: `WakeDetect: SCREEN_OFF (headqlink sin pantalla: AA sigue, sin pausa)` |
 | Ajuste «Mantener la pantalla…» | marcarlo con AA en marcha | `pantalla: modo coche de Android SIN ENABLE_CAR_MODE_ALLOW_SLEEP …` y, enchufado, vuelve el `FULL_WAKE_LOCK 'UiModeManager'` |
-| Térmico sin calentar el móvil | `adb shell cmd thermalservice override-status 2` (luego `3`, `1`; al acabar, `reset`) | `HQL/Térmico: estado térmico 2 (moderado)`, `térmico 2 → perfil moderado (24 fps y bitrate ×0.7)`, `térmico 2 → perfil moderado: 24 fps (sesión 30) · 3.6 Mbit/s (sesión 5.1)`, `GL relay: ritmo 24 fps en rejilla`; con `3`: 20 fps y 3,0 Mbit/s; con `1`, **60 s después**: `térmico 1 → perfil normal`, `GL relay: ritmo 30 fps` |
+| Térmico sin calentar el móvil | `adb shell cmd thermalservice override-status 2` (luego `3`, `1`; al acabar, `reset`) | `HQL/Térmico: estado térmico 2 (moderado)`, `térmico 2 → perfil moderado (protección normal: los fps de la sesión y bitrate ×0.8)`, `térmico 2 → perfil moderado (protección normal): 30 fps (sesión 30) · 4.1 Mbit/s (sesión 5.1)`; con `3`: `24 fps … 3.5 Mbit/s` y `GL relay: ritmo 24 fps en rejilla`; con `4`: 20 fps y 3,0 Mbit/s; con `1`, **30 s después**: `térmico 1 → perfil normal`, `GL relay: ritmo 30 fps` |
 | Batería cada minuto | log | `HQL/Térmico: batería 41.3 °C · 78 % · sin enchufar · estado térmico 1 · margen 0.65 · nivel normal` |
 | Resumen | `HQL/Resumen` y `sessions.csv` | `vídeo: … · térmico 1 (máx. 3) · tope 30 fps (mín. 20)`; columnas `termico_fin,termico_max,tope_fps_fin,tope_fps_min` |
 
@@ -775,5 +777,141 @@ cuelga.
   aplazamiento, urgente). Hay 4 casos nuevos en `LinkLifecycleTest` (anuncios sin sesión en búsqueda, en pausa y en
   VÍDEO VIVO; nunca acortan; una línea por minuto) y 1 en `SessionSummaryTest` (columnas `frame_max_kb` y
   `descartados_grandes`).
+
+Sin probar todavía en el móvil ni en el coche.
+
+---
+
+## 12. Vídeo adaptado al enlace y protección térmica suave (2026-10-05)
+
+**Informe (viaje 5, coche real, zona Wi-Fi, 21:40-22:25).** Sesiones buenas (S5, S8, S12: 29 fps, ≤ 1 ventana con
+retraso > 100 ms, 4-7 % de frames de AA descartados por ir atrasados) frente a sesiones malas:
+
+| Sesión | Qué pasó |
+|---|---|
+| S6 (Fluidez 60, 7,2 Mbit/s) | 13 % de frames de AA descartados por atrasados, 16 ventanas con write > 100 ms, 12 718 «esperas por enlace» (puerta de 64 KB), 1 388 retransmisiones en 6 min: enlace saturado. |
+| S7 (30 fps, 4,3 Mbit/s) | Cortes de radio con rtt 100-300 ms, 50-63 segmentos sin confirmar, P-frames de 276 KB (ráfagas VBR de 15-19 Mbit/s en un segundo) y un `write()` bloqueado > 10 s con el coche mandando heartbeats → `WRITE_STALL` cerró la sesión. Mensajes < 480 KiB: no es el cuelgue de 512 KiB; el coche simplemente deja de leer con la radio congestionada. |
+| S14/S16 (Básico, reenvío directo 720p30) | 9/17 ventanas con retraso en cola de 300-373 ms: la imagen iba con retardo visible (sin descartes posibles en el reenvío directo). |
+| S17 | Tope térmico a 24 fps + 22 % de descartes por atrasados + otro bloqueo → watchdog. |
+
+Los escaneos Wi-Fi del móvil cada 10 s (pantalla encendida, STA desconectada) **no** se correlacionan con los eventos
+(21 % dentro de ±1,5 s frente al 29 % que daría el azar). **Conclusión:** el bitrate ofrecido y sus ráfagas superan a
+ratos lo que la radio zona Wi-Fi ↔ coche puede llevar; el retraso se acumula en el kernel y en la cola; las ráfagas VBR
+y los P-frames grandes lo empeoran; un `write()` bloqueado mata la sesión.
+
+### 12.1 Bitrate según el enlace (`LinkRateController`)
+
+Clase pura en `[hql]LinkRateController.java`, para los perfiles de bitrate fijo con relay GL («Coche» a 30 y a 60 fps,
+«Automático» cuando es Coche, Medio, Muy bajo). Muy alto y Alto siguen con su ABR de siempre. Se alimenta cada ~100 ms
+desde el monitor de red de la sesión (`QdSessionBridge.checkStalls` → `VideoHub.onLinkSample` → hql-video) con la
+muestra de NetStat y lo que ve la puerta GL:
+
+| Regla | Detalle |
+|---|---|
+| **Congestión** | Cola del kernel ≥ **48 KB** (o la puerta GL cerrada por el enlace ≥ 15 veces en la muestra) durante ≥ **300 ms** seguidos; o las retransmisiones suben ≥ 2 en el último segundo; o el rtt pasa del **doble del mínimo** de la sesión (y de 50 ms); o el núcleo vació la cola por retraso (> 150 ms). |
+| **Bajar** | Bitrate × **0,7** (suelo **1,5 Mbit/s**), como mucho un paso cada **500 ms**, con `setParameters`. Si ya está en el suelo y la congestión sigue: tope de **24 fps** (si la sesión va por encima). Después, una línea «no hay más que bajar» y silencio. |
+| **Subir** | Tras **5 s** seguidos sin congestión: primero vuelven los fps de la sesión; luego bitrate × **1,15** cada 5 s limpios hasta el techo. Una muestra congestionada reinicia la cuenta. |
+| **Techo** | El bitrate del perfil (lo que pide el coche) o, con calor, el tope térmico: el menor. Bajar el techo recorta el bitrate en el acto. Los fps: el menor del tope térmico y del enlace (`VideoPipeline.applyFpsCap`). |
+| **Sesión nueva** | Se empieza en el techo y con los fps de la sesión; las estadísticas (bitrate mínimo, congestiones) son por sesión. |
+| **Con el control de los IDR** | Intacto: `IdrSizeController` (objetivo 300 KB, QP-I, bajada para el IDR pedido) actúa sobre el bitrate que diga el enlace (`VideoEncoder.setBitrate` respeta la bajada en curso). Tope de 480 KiB y SPS/PPS sin repetir, sin cambios. |
+
+Opción de prueba: `link_fixed` (booleano) desactiva el controlador.
+
+### 12.2 Ráfagas: CBR en el perfil Coche
+
+`VideoPipeline.startEncoder`: con el perfil Coche, `KEY_BITRATE_MODE_CBR` si el códec lo declara
+(`EncoderCapabilities.isBitrateModeSupported`); si no, VBR con `KEY_MAX_BITRATE` (tope de picos) en el bitrate pedido.
+Se registra el modo elegido («modo de tasa CBR») y, con el primer formato de salida, si el intra-refresh sigue
+(`intra-refresh-period` del formato de salida: «intra-refresh 30 frames confirmado (CBR)», o aviso si el códec lo apaga).
+`enc_vbr` vuelve a VBR; `enc_cbr` sigue forzando CBR en los demás perfiles. El objetivo de 300 KB por IDR no cambia.
+
+### 12.3 Cota de retardo
+
+- Puerta «último frame»: cola del kernel < **32 KB** (antes 64 KB; a 5 Mbit/s, 50 ms en vez de 100 antes de contar
+  nada). Configurable con `gate_outq_kb`. El descarte por retraso del núcleo (`MAX_LAG`, 150 ms) no cambia.
+- Reenvío directo (Básico): la puerta del escritor espera como mucho **100 ms** (antes 250: cada frame podía esperar un
+  cuarto de segundo en la cola del núcleo) y el freno a AA (`AaAckBrake`) retiene el ack mientras la cola del kernel
+  pase de 24 KB **o** el frame esperó más de **120 ms** en la cola y aún quedan frames detrás (`shouldHold`, puro). Es
+  AA quien espera (con su ventana de 2 frames) en vez de acumularse retraso. El tope de 250 ms desde el fin del write
+  sigue: ningún ack se retiene para siempre, y al cerrar la sesión o parar se sueltan todos (sin bloqueo posible).
+  Estadísticas de 5 s: `freno AA: N acks retenidos (cola del kernel a, retraso b, hasta el tope c), máx M ms · retraso
+  máx L ms`.
+
+### 12.4 Write bloqueado con el coche hablando
+
+`PhoneSession.checkWriteStall`: pasado `writeStallTimeoutMs` (10 s) con un `write()` bloqueado:
+- coche **callado** (nada recibido en los últimos 5 s): se cierra como antes (`WRITE_STALL … y el coche lleva N ms callado`);
+- coche **hablando** (heartbeats, táctil): se aguanta hasta `writeStallCarTalkingTimeoutMs` (**20 s**; `write_stall_ms`
+  en los ajustes de prueba), en cada comprobación del watchdog se tira el vídeo encolado (`SendQueue.flushVideo`, con
+  cualquier política) y, en cuanto el `write()` vuelve, se tira lo que entró mientras tanto y se pide un IDR forzado.
+  Se registra la decisión y se cuenta en `SessionStats.writeStalls`.
+
+### 12.5 Resumen y `sessions.csv`
+
+Columnas nuevas: `bitrate_min_kbps` (el más bajo aplicado por el enlace), `congestiones` (pasos por congestión) y
+`writes_bloqueados`. `max_cola_ms` sigue. En el bloque de la sesión: `enlace: bitrate mín. 2.5 Mbit/s · congestiones 4
+· writes bloqueados 1`; en el resumen del viaje, el total de congestiones y el bitrate mínimo.
+
+### 12.6 Protección térmica más suave y elegible
+
+Un usuario (móvil Qualcomm, Wi-Fi Direct, `aa_ext`) llegó al estado térmico 3 y se quedó a 20 fps el resto del viaje:
+«menos fluido que el headqlink original» (que no tenía tope). `ThermalPolicy` cambia:
+
+| Nivel (estado) | Normal (recomendada) | Suave | Apagada |
+|---|---|---|---|
+| Moderado (2) | 30 fps si la sesión va a 60; a 30, los mismos fps; bitrate ×0,8 | solo bitrate ×0,8 | solo se registra |
+| Grave (3) | 24 fps; bitrate ×0,8 y ≤ 3,5 Mbit/s | 30 fps como mucho; mismo bitrate | ídem |
+| Crítico (4+) | 20 fps; ≤ 3 Mbit/s | igual que Normal | ídem |
+
+Vuelta tras **30 s** más fresco (antes 60). Ajuste nuevo **«Protección térmica»** en Ajustes de imagen (Normal / Suave /
+Apagada; `thermal_mode` = `normal`, `suave`, `apagada`), en los cuatro idiomas de la app; se aplica en el acto al vídeo
+vivo (`ThermalGuard.onModeChanged` → `VideoPipeline.applyThermal`, que ahora también reacciona al cambio de modo). El
+controlador del enlace sigue tomando el menor de los dos topes (térmico y enlace).
+
+### 12.7 Qué buscar en el log
+
+| Línea | Significado |
+|---|---|
+| `encoder c2.qti.avc.encoder 1920x882@30 5080kbps baseline CBR … · modo de tasa CBR` | Perfil Coche con tasa constante. Si el códec no la admite: `modo de tasa VBR con tope de picos (el códec no admite CBR; tope de picos 5080 kbps)` |
+| `encoder: intra-refresh 30 frames confirmado (CBR)` | El refresco intra sigue con CBR. `W intra-refresh apagado por el códec` = hay que volver a VBR (`enc_vbr`) |
+| `VIDEO puerta «último frame»: cola del kernel < 32 KB · modo de tasa CBR` | Puerta nueva |
+| `VIDEO bitrate adaptable al enlace 1.5 Mbit/s-5.1 Mbit/s (baja ×0.7 con congestión, sube 15 % cada 5 s limpio; 24 fps si en el suelo sigue)` | Controlador activo |
+| `W enlace: congestión (outq 96 KB 310 ms, retrans +21) → bitrate 3.6 Mbit/s` | Paso de bajada, con la causa |
+| `W enlace: congestión (rtt 210 ms (mín. 18)) con el bitrate en el suelo (1.5 Mbit/s) → 24 fps` | Suelo alcanzado: fps |
+| `enlace: enlace limpio 5 s → 30 fps (bitrate 1.5 Mbit/s)` / `enlace: enlace limpio 5 s → bitrate 1.7 Mbit/s` | Recuperación |
+| `enlace: bitrate 3.6 Mbit/s (mín. 2.5 Mbit/s, techo 5.1 Mbit/s) · congestiones 3 (bajadas 3, subidas 1)` | Estadísticas de 5 s (solo si actuó) |
+| `térmico 3 → perfil grave (protección normal): 24 fps (sesión 30, enlace 24) · 3.5 Mbit/s (sesión 5.1, techo 3.5 Mbit/s)` | Tope térmico; con «Suave»: `30 fps`; con «Apagada»: `protección térmica apagada: solo se registra` |
+| `protección térmica: suave (se aplica en el acto)` | Cambio del ajuste |
+| `freno AA: 12 acks retenidos (cola del kernel 9, retraso 3, hasta el tope 1), máx 180 ms · retraso máx 140 ms` | Reenvío directo |
+| `W un write() (VIDEO_P) lleva 10050 ms bloqueado pero el coche sigue hablando (último mensaje hace 1200 ms): aguanto hasta 20000 ms; vídeo encolado descartado (2 frames) y, al volver el write, se pedirá un IDR` | Prórroga del write bloqueado |
+| `W el write bloqueado (VIDEO_P) volvió tras 12300 ms: 1 frames descartados, pido un IDR` | Vuelve el write |
+| `cerrando: WRITE_STALL: un write() (VIDEO_P) lleva más de 20000 ms bloqueado (20100 ms) aunque el coche sigue hablando …` / `… y el coche lleva 6000 ms callado` | Cierre, con la decisión |
+| `vídeo: … · enlace: bitrate mín. 2.5 Mbit/s · congestiones 4 · writes bloqueados 1` | Resumen de la sesión |
+
+### 12.8 Cómo comprobarlo en el coche
+
+1. Viaje con el perfil Coche: en `sessions.csv`, `max_cola_ms` ≤ ~150 en casi todas las sesiones, `congestiones` > 0
+   solo en las de radio floja, `bitrate_min_kbps` ≥ 1500, y ningún `WRITE_STALL` con el coche hablando antes de 20 s.
+2. Coche lejos del móvil (o zona Wi-Fi en 2,4 GHz): deben aparecer las líneas `enlace: congestión …` en menos de un
+   segundo desde que la imagen empieza a ir a saltos, y `enlace limpio` al acercarse.
+3. Perfil Básico: `freno AA: … retraso máx` por debajo de ~150 ms.
+4. `adb shell cmd thermalservice override-status 3` con «Normal»: 24 fps; con «Suave»: 30 fps; con «Apagada»: sin
+   cambios; `1` y 30 s después vuelve.
+
+### 12.9 Resultados en el PC
+
+`cmd /c ".\gradlew.bat :qdcore:test :app:testGithubDebugUnitTest :app:assembleGithubDebug --console=plain"`:
+**BUILD SUCCESSFUL**.
+
+- `:qdcore`: 122/122. `WriteStallTest` es nuevo (4: coche hablando aguanta, vacía la cola y cierra a los 20 s con el
+  motivo; coche callado cierra a los 10 s; al volver el write se pide un IDR y la sesión sigue; sin prórroga si el largo
+  no es mayor) y hay un caso nuevo en `SendQueueTest` (`flushVideo` con las tres políticas).
+- App: 2830 pruebas, 0 fallos y 1 saltada (la de `sh`); el paquete `com.headqlink.link`, 172/172. Nuevos:
+  `LinkRateControllerTest` (15: arranque, cola alta 300 ms y un paso cada 500 ms, reinicio de los 300 ms, puerta
+  sin NetStat, retransmisiones (y su ventana de 1 s), rtt (mínimo y suelo de 50 ms), vaciados por retraso, suelo de
+  1,5 Mbit/s → 24 fps → nada más, recuperación fps-primero y +15 % cada 5 s, reinicio de la calma, techo térmico,
+  Fluidez 60, perfil bajo el suelo, sesión nueva), `AaAckBrakeTest` (3), `ThermalPolicyTest` reescrito (niveles,
+  30 s, Normal/Suave/Apagada) y un caso nuevo en `SessionSummaryTest`. De paso, `PhoneLinkReconnectTest` recorría una
+  lista sincronizada mientras otros hilos registraban (fallo esporádico): ahora es `CopyOnWriteArrayList`.
 
 Sin probar todavía en el móvil ni en el coche.

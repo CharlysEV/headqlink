@@ -16,8 +16,11 @@ import dev.qdauto.core.session.FrameOutcome;
 
 /**
  * Freno a Android Auto en el reenvío directo (qdauto §4.8): el MediaAck de cada frame de AA se retiene hasta que ese
- * frame ha salido hacia el coche y la cola del kernel ha bajado de DRAIN_OUTQ (como mucho MAX_WAIT_MS desde el fin
- * del write). Con la ventana 2 de AA, AA nunca va más de dos frames por delante de lo que el coche recibe.
+ * frame ha salido hacia el coche y la cola del kernel ha bajado de DRAIN_OUTQ y, si el frame esperó más de LAG_HOLD_MS
+ * en la cola del núcleo, hasta que esa cola se vacía (como mucho MAX_WAIT_MS desde el fin del write). Con la ventana 2
+ * de AA, AA nunca va más de dos frames por delante de lo que el coche recibe, y con la radio floja es AA quien espera
+ * (produce menos) en vez de acumularse retraso en la cola (viaje 5: retrasos de 300-373 ms con el perfil Básico).
+ * El tope MAX_WAIT_MS garantiza que ningún ack se queda retenido para siempre: no hay bloqueo posible.
  *
  * Contrato de VideoTap.AckGate: hold(release) == true obliga a ejecutar release exactamente una vez (AckSlot).
  * lastSlot lo fija el sink en cada unidad (a la ranura nueva o a null) y lo consume gate.hold, los dos en el hilo de
@@ -27,7 +30,18 @@ import dev.qdauto.core.session.FrameOutcome;
 final class AaAckBrake {
     static final int DRAIN_OUTQ = 24 * 1024;
     static final long MAX_WAIT_MS = 250;
+    /** Un frame que esperó más de esto en la cola del núcleo retiene su ack hasta que la cola queda vacía. */
+    static final long LAG_HOLD_MS = 120;
     private static final long POLL_MS = 2;
+
+    /**
+     * ¿Sigue retenido el ack? (puro, lo prueban los tests): cola del kernel por encima de DRAIN_OUTQ (-1 = sin NetStat,
+     * no cuenta), o el frame esperó más de LAG_HOLD_MS en la cola del núcleo y aún quedan frames en ella.
+     */
+    static boolean shouldHold(int outq, long lagMs, int queuedFrames) {
+        if (outq > DRAIN_OUTQ) return true;
+        return lagMs > LAG_HOLD_MS && queuedFrames > 0;
+    }
 
     /** Hilo de vídeo de AA: ranura del último frame entregado (o null). */
     private AckSlot lastSlot;
@@ -47,14 +61,22 @@ final class AaAckBrake {
     private volatile long maxHeldWinMs;
     private final AtomicInteger heldTotal = new AtomicInteger();
     private volatile long maxHeldTotalMs;
+    /** Por qué se retuvo (ventana): cola del kernel, retraso en la cola del núcleo, y los que llegaron al tope. */
+    private final AtomicInteger heldQueueWin = new AtomicInteger();
+    private final AtomicInteger heldLagWin = new AtomicInteger();
+    private final AtomicInteger heldMaxWin = new AtomicInteger();
+    private volatile long maxLagWinMs;
 
     private static final class Drain {
         final AckSlot slot;
         final long writeEndNs;
+        /** Lo que el frame esperó en la cola del núcleo (ms). */
+        final long lagMs;
 
-        Drain(AckSlot slot, long writeEndNs) {
+        Drain(AckSlot slot, long writeEndNs, long lagMs) {
             this.slot = slot;
             this.writeEndNs = writeEndNs;
+            this.lagMs = lagMs;
         }
     }
 
@@ -82,7 +104,8 @@ final class AaAckBrake {
     FrameCompletion completionFor(AckSlot s) {
         return d -> {
             if (d.getOutcome() == FrameOutcome.WRITTEN && !stopped) {
-                written.offer(new Drain(s, d.getWriteEndNanos()));
+                long lag = d.getEnqueuedNanos() > 0 ? (d.getWriteStartNanos() - d.getEnqueuedNanos()) / 1_000_000 : 0;
+                written.offer(new Drain(s, d.getWriteEndNanos(), lag));
             } else {
                 release(s);
             }
@@ -101,16 +124,29 @@ final class AaAckBrake {
             if (d == null) continue;
             long deadline = d.writeEndNs + MAX_WAIT_MS * 1_000_000L;
             SessionPort port = d.slot.port instanceof SessionPort ? (SessionPort) d.slot.port : null;
+            boolean byQueue = false;
+            boolean byLag = false;
+            boolean toMax = false;
+            if (d.lagMs > maxLagWinMs) maxLagWinMs = d.lagMs;
             try {
-                while (!stopped && port != null && !port.getClosed() && System.nanoTime() < deadline) {
+                while (!stopped && port != null && !port.getClosed()) {
+                    if (System.nanoTime() >= deadline) {
+                        toMax = true;
+                        break;
+                    }
                     int q = port.drainOutq();
-                    if (q < 0 || q <= DRAIN_OUTQ) break;
+                    if (!shouldHold(q, d.lagMs, port.videoQueueFrames())) break;
+                    if (q > DRAIN_OUTQ) byQueue = true;
+                    else byLag = true;
                     Thread.sleep(POLL_MS);
                 }
             } catch (InterruptedException e) {
                 release(d.slot);
                 break;
             }
+            if (byQueue) heldQueueWin.incrementAndGet();
+            if (byLag) heldLagWin.incrementAndGet();
+            if (toMax) heldMaxWin.incrementAndGet();
             release(d.slot);
         }
         // Al parar, lo que quede se suelta (stop() ya lo hace; esto cubre la carrera).
@@ -131,12 +167,21 @@ final class AaAckBrake {
         }
     }
 
-    /** "freno AA: N acks retenidos, máx M ms" de la ventana, y la reinicia. */
+    /**
+     * «freno AA: N acks retenidos (cola del kernel a, retraso b, hasta el tope c), máx M ms · retraso máx L ms» de la
+     * ventana, y la reinicia.
+     */
     String takeWindowLine() {
         int n = heldWin.getAndSet(0);
         long max = maxHeldWinMs;
         maxHeldWinMs = 0;
-        return String.format(java.util.Locale.US, "freno AA: %d acks retenidos, máx %d ms", n, max);
+        int q = heldQueueWin.getAndSet(0);
+        int l = heldLagWin.getAndSet(0);
+        int m = heldMaxWin.getAndSet(0);
+        long lag = maxLagWinMs;
+        maxLagWinMs = 0;
+        return String.format(java.util.Locale.US, "freno AA: %d acks retenidos (cola del kernel %d, retraso %d, hasta el tope %d), máx %d ms · retraso máx %d ms",
+                n, q, l, m, max, lag);
     }
 
     int heldTotal() {

@@ -145,6 +145,8 @@ data class SessionStats(
     val videoFramesOversized: Long = 0,
     /** hql: el más grande de esos descartes (mensaje entero), o 0. */
     val maxOversizedBytes: Long = 0,
+    /** hql: `write()` bloqueados más de [SessionConfig.writeStallTimeoutMs] con el coche hablando (la sesión aguantó). */
+    val writeStalls: Long = 0,
 )
 
 /**
