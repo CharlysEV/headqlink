@@ -18,6 +18,15 @@
 >
 > Detalles técnicos en [docs/qdauto-integration-status.md](docs/qdauto-integration-status.md).
 
+## Manual de usuario
+
+Guía para conductores: instalación, primer arranque, uso en el coche, ajustes, calor y batería, solución de problemas y
+cómo exportar el log.
+
+- **Español:** [MANUAL.md](MANUAL.md)
+- **Português:** [MANUAL.pt.md](MANUAL.pt.md)
+- **English:** [MANUAL.en.md](MANUAL.en.md)
+
 
 Android app that brings **Android Auto** and a custom side panel with extra features to the
 **Leapmotor C10** screen, using the car's built-in mirroring connection (SSPLink over WiFi Direct).
