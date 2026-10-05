@@ -37,11 +37,9 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     static final String ACTION_UI_PREVIEW = "com.headqlink.link.UI_PREVIEW";
     /** Reinicia el servidor de head unit de Android Auto con la automatización de accesibilidad. */
     static final String ACTION_AA_SERVER_RESTART = "com.headqlink.link.AA_SERVER_RESTART";
+    /** Aviso «El servidor de Android Auto sigue encendido · Tocar para apagarlo» (AaServerStarter). */
+    static final String ACTION_AA_SERVER_OFF = "com.headqlink.link.AA_SERVER_OFF";
     private static final String CHANNEL = "link";
-    /** Tras perder al coche, cuánto esperamos a que vuelva antes de cerrarlo todo (por defecto; ver Config.carGoneMs). */
-    private static final long CAR_GONE_MS = 30_000;
-    /** Si al vencer la espera hay una sesión o un intento en marcha, se vuelve a mirar en este tiempo. */
-    private static final long CAR_GONE_RECHECK_MS = 5_000;
 
     static volatile String status = "parado";
 
@@ -53,7 +51,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     /** El transporte (red + descubrimiento) se arranca una sola vez por servicio. */
     private boolean transportStarted;
     private UdpDiscovery udp;
-    private SspSession session;
+    private volatile SspSession session;
     /** Motor QDAuto (qdauto §4.3): dueño del PhoneLink del núcleo, y el vídeo que vive entre sesiones. */
     private QdLinkHost qd;
     private VideoHub video;
@@ -61,13 +59,20 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     private WifiManager.WifiLock wifiLock;
     private WifiManager.MulticastLock mcLock;
     private final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
-    private boolean hadSession;
     /**
      * El servicio se está cerrando. Al cerrar la sesión en onDestroy, onSessionEnded volvía a armar
      * el temporizador de 30 s en esta instancia ya muerta; si el usuario reconectaba, ese temporizador
      * huérfano cerraba Android Auto en mitad de la sesión nueva.
      */
     private volatile boolean stopping;
+    /**
+     * Ciclo de vida (puro): búsqueda, sesión, vídeo vivo, AA en pausa esperando al coche y cierre. Solo en el hilo
+     * principal; su temporizador es lifeTimer.
+     */
+    private final LinkLifecycle life = new LinkLifecycle();
+    private final Runnable lifeTimer = this::onLifeTimer;
+    /** Android Auto ya cerrado o aparcado para el guardián (shutdownAll): onDestroy no lo repite. */
+    private boolean aaClosed;
     private SystemMonitor sysMonitor;
     /** Adaptación térmica del vídeo y temperatura de la batería cada minuto. */
     private ThermalGuard thermal;
@@ -90,33 +95,110 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             QdTrace.i("HQL/Sistema", "escaneo Wi-Fi del sistema" + (updated ? "" : " (sin resultados nuevos)"));
         }
     };
-    /** Sin llegar a conectar con el coche en este tiempo, se cierra todo (no se queda buscando). */
-    private static final long NO_CAR_MS = 5 * 60_000;
-    private final Runnable noCar = () -> {
-        if (stopping || LinkState.car == LinkState.Car.CONNECTED) return;
-        L.i("sin coche en " + NO_CAR_MS / 60_000 + " min: cierro todo");
-        shutdownAll();
-    };
+    // ---------------------------------------------------------------- ciclo de vida (LinkLifecycle)
 
-    private final Runnable carGone = new Runnable() {
-        @Override
-        public void run() {
-            if (stopping) return;
-            if (qd != null && qd.isBusy()) {
-                // El coche ha vuelto (o está conectando) justo ahora: no se apaga nada.
-                L.i("espera del coche vencida con una sesión o un intento en marcha: vuelvo a mirar en "
-                        + CAR_GONE_RECHECK_MS / 1000 + " s");
-                main.postDelayed(this, CAR_GONE_RECHECK_MS);
-                return;
+    private static long now() {
+        return android.os.SystemClock.elapsedRealtime();
+    }
+
+    /**
+     * Vídeo vivo tras perder al coche: car_gone_ms con el motor QDAuto y «mantener Android Auto»; si no, 0 (la sesión
+     * se lleva su vídeo, y AA, sin imagen que recibir, pasa a la pausa en el acto).
+     */
+    private long graceMs() {
+        return qd != null && cfg.qdKeepVideo() ? cfg.carGoneMs() : 0;
+    }
+
+    private boolean aaConnected() {
+        return com.andrerinas.openheadunit.App.Companion.provide(this).getCommManager().isConnected();
+    }
+
+    /** Hay una sesión o un intento con el coche (con el motor original, una sesión abierta tras su broadcast). */
+    private boolean linkBusy() {
+        if (qd != null) return qd.isBusy();
+        return session != null;
+    }
+
+    /** Lo que se ve del móvil ahora, para las decisiones del ciclo de vida. */
+    private LinkLifecycle.Env env() {
+        LinkLifecycle.Env e = new LinkLifecycle.Env();
+        // Con AA aparcado cuenta como modo AA aunque se haya cambiado el modo mientras tanto: hay que cerrarlo igual.
+        e.aaMode = Config.isAa(cfg.mode()) || AaPark.parked;
+        android.app.KeyguardManager km = getSystemService(android.app.KeyguardManager.class);
+        e.locked = km != null && km.isKeyguardLocked();
+        e.aaConnected = aaConnected();
+        e.aaParked = AaPark.parked;
+        e.guardActive = AaGuardService.active;
+        e.stopPending = AaServerStarter.stopPending(this);
+        e.serverOn = e.aaConnected || AaServerStarter.serverLikelyOn(this);
+        e.linkBusy = linkBusy();
+        e.canAutomate = TouchService.instance != null;
+        e.canStopWithoutUi = AaServerStarter.canStopWithoutUi();
+        e.stopServerOnExit = cfg.stopAaServerOnExit();
+        return e;
+    }
+
+    private void onLifeTimer() {
+        if (stopping) return;
+        apply(life.timer(now(), env()));
+    }
+
+    /** Hilo principal: registra los motivos y ejecuta, en orden, las acciones de una decisión del ciclo de vida. */
+    private void apply(LinkLifecycle.Decision d) {
+        if (stopping) return;
+        LinkLifecycle.Phase before = life.phase();
+        for (String r : d.reasons()) L.life(r);
+        for (LinkLifecycle.Action a : d.actions()) {
+            switch (a) {
+                case ADOPT_PARK:
+                    // AaPark sigue aparcado y con su ping: solo se va el guardián (sin apagar el servidor).
+                    AaGuardService.handOver(this, "el enlace vuelve a escuchar al coche");
+                    break;
+                case CANCEL_PENDING_STOP:
+                    AaServerStarter.cancelPendingStop(this);
+                    break;
+                case RESUME_AA:
+                    AaPark.resume("vuelve el coche");
+                    break;
+                case PARK_AA:
+                    // Antes de parar el vídeo: así la fuente, al pararse, no devuelve la vista al móvil.
+                    AaPark.park(this, "esperando al coche");
+                    LinkState.setSource(LinkState.Level.BUSY, Str.get(R.string.hql_auto_paused));
+                    break;
+                case STOP_VIDEO:
+                    if (video != null) video.stop("sin coche: vídeo en pausa");
+                    break;
+                case START_SERVER:
+                    startAaServerInBackground();
+                    break;
+                case START_SERVER_ON_UNLOCK:
+                    AaServerStarter.requestStartOnUnlock(this, "el coche lo necesitará y el móvil está bloqueado");
+                    break;
+                case SHUTDOWN:
+                    shutdownAll();
+                    return;
             }
-            L.i("coche desconectado más de " + carGoneMs() / 1000 + " s: cierro todo");
-            shutdownAll();
         }
-    };
+        scheduleLife();
+        if (life.phase() == LinkLifecycle.Phase.PARKED && before != LinkLifecycle.Phase.PARKED) {
+            // Sin vídeo y escuchando al coche: «Reconectando… (Android Auto en espera)» si AA quedó en pausa.
+            setStatus(Str.get(AaPark.parked ? R.string.hql_waiting_car_paused : R.string.hql_waiting_car));
+            LinkState.setCar(AaPark.parked ? LinkState.Car.RECONNECTING : LinkState.Car.SEARCHING, "");
+        }
+    }
 
-    /** Espera a que vuelva el coche: la del ajuste car_gone_ms con el motor QDAuto; 30 s con el original. */
-    private long carGoneMs() {
-        return qd != null ? cfg.carGoneMs() : CAR_GONE_MS;
+    private void scheduleLife() {
+        main.removeCallbacks(lifeTimer);
+        long dl = life.deadlineMs();
+        if (dl >= 0 && !stopping) main.postDelayed(lifeTimer, Math.max(0, dl - now()));
+    }
+
+    /** Arranque anticipado del servidor de AA (Bluetooth del coche o coche anunciado, móvil desbloqueado). */
+    private void startAaServerInBackground() {
+        new Thread(() -> {
+            boolean ok = AaServerStarter.startAndWait(this);
+            L.life("servidor de Android Auto " + (ok ? "listo" : "no confirmado") + " (arranque anticipado)");
+        }, "aa-prestart").start();
     }
 
     @Override
@@ -151,16 +233,30 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             // Primero en primer plano: si llega con startForegroundService y el servicio estaba
             // parado, sin esto Android cierra la app (y con ella el apagado del servidor a medias).
             goForeground(Str.get(R.string.hql_disconnect));
+            L.life("Desconectar pulsado: cierro todo");
+            shutdownAll(true);
+            return START_NOT_STICKY;
+        }
+        if (ACTION_AA_SERVER_OFF.equals(intent.getAction())) {
+            // Tocado el aviso «El servidor de Android Auto sigue encendido»: llega con startForegroundService.
+            AaServerStarter.cancelServerStillOn(this);
+            if (!goForeground(transportStarted ? status : Str.get(R.string.hql_cover_stopping))) return START_NOT_STICKY;
+            if (transportStarted) {
+                L.life("aviso «servidor encendido» tocado con el enlace en marcha: lo apagará el cierre del enlace");
+                return START_NOT_STICKY;
+            }
+            L.life("aviso «servidor encendido» tocado: apago Android Auto y su servidor");
+            // El guardián se va sin avisar (si no, al caer AA diría «servidor abierto»); el cierre decide de nuevo.
+            AaGuardService.handOver(this, "apagado pedido desde el aviso");
             shutdownAll(true);
             return START_NOT_STICKY;
         }
         if (ACTION_BT_CAR_GONE.equals(intent.getAction())) {
-            if (LinkState.car != LinkState.Car.CONNECTED) {
-                L.i("Bluetooth del coche fuera sin sesión: me detengo");
-                shutdownAll();
-            } else {
-                L.i("Bluetooth del coche fuera con la sesión en marcha: sigo (se cierra si el coche se va)");
+            if (!transportStarted) {
+                stopSelf(startId);
+                return START_NOT_STICKY;
             }
+            apply(life.btGone(now(), env()));
             return START_NOT_STICKY;
         }
         if (ACTION_BT_CAR.equals(intent.getAction())) {
@@ -289,8 +385,13 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             VideoHub hub = video;
             thermal = new ThermalGuard(this, hub != null ? hub::setThermalLevel : null);
             thermal.start();
-            main.postDelayed(noCar, NO_CAR_MS);
             setStatus(Str.get(R.string.hql_waiting_car));
+            // El enlace va a usar el servidor de AA: un aviso viejo de «sigue encendido» ya no vale.
+            AaServerStarter.cancelServerStillOn(this);
+            String action = intent.getAction();
+            LinkLifecycle.Trigger trigger = ACTION_BT_CAR.equals(action) ? LinkLifecycle.Trigger.BLUETOOTH
+                    : ACTION_APPLY.equals(action) ? LinkLifecycle.Trigger.USER : LinkLifecycle.Trigger.OTHER;
+            apply(life.start(now(), trigger, env(), cfg.carWaitMs()));
         } else {
             L.i("ajustes actualizados: " + cfg.summary() + " (se aplican en la próxima sesión)");
         }
@@ -338,16 +439,15 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             L.i("coche anunciado: " + name);
             setStatus(Str.get(R.string.hql_car_detected));
             LinkState.setCar(LinkState.Car.SEEN, name);
+            apply(life.carSeen(now(), env()));
         }
 
         @Override
         public void onCarConnected(String detail) {
-            hadSession = true;
             // Si el tamaño del coche (CAR_INFO) ya llegó, se conserva.
             LinkState.setCar(LinkState.Car.CONNECTED, LinkState.car == LinkState.Car.CONNECTED ? LinkState.carDetail : "");
-            main.removeCallbacks(carGone);
-            main.removeCallbacks(noCar);
             setStatus(Str.get(R.string.hql_car_connected));
+            apply(life.carConnected(now(), env()));
         }
 
         @Override
@@ -367,10 +467,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                 setStatus(Str.get(R.string.hql_session_ended));
                 LinkState.setCar(LinkState.Car.SEARCHING, "");
             }
-            if (hadSession && !stopping) {
-                main.removeCallbacks(carGone);
-                main.postDelayed(carGone, carGoneMs());
-            }
+            apply(life.carLost(now(), env(), graceMs(), cfg.carWaitMs()));
         }
 
         @Override
@@ -443,6 +540,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             }
             setStatus(Str.get(R.string.hql_car_detected));
             LinkState.setCar(LinkState.Car.SEEN, info.optString("DeviceName"));
+            main.post(() -> apply(life.carSeen(now(), env())));
         }
         // Reenviamos el ACK en cada broadcast mientras el coche no se conecte.
         udp.sendAck(carIp, session.ackJson());
@@ -450,10 +548,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
 
     @Override
     public void onSessionConnected(SspSession s) {
-        hadSession = true;
         LinkState.setCar(LinkState.Car.CONNECTED, "");
-        main.removeCallbacks(carGone);
-        main.removeCallbacks(noCar);
+        main.post(() -> apply(life.carConnected(now(), env())));
     }
 
     @Override
@@ -461,10 +557,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         if (session == s) session = null;
         setStatus(Str.get(R.string.hql_session_ended));
         LinkState.setCar(LinkState.Car.SEARCHING, "");
-        if (hadSession && !stopping) {
-            main.removeCallbacks(carGone);
-            main.postDelayed(carGone, CAR_GONE_MS);
-        }
+        // El motor original se lleva el vídeo con la sesión: AA pasa a la pausa en el acto (sin vídeo vivo).
+        main.post(() -> apply(life.carLost(now(), env(), graceMs(), cfg.carWaitMs())));
     }
 
     /**
@@ -482,36 +576,48 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
      */
     private void shutdownAll(boolean userAction) {
         stopping = true;
-        main.removeCallbacks(carGone);
-        main.removeCallbacks(noCar);
-        if (Config.isAa(cfg.mode())) {
-            android.app.KeyguardManager km = getSystemService(android.app.KeyguardManager.class);
-            boolean locked = km != null && km.isKeyguardLocked();
-            boolean aaConnected = com.andrerinas.openheadunit.App.Companion.provide(this).getCommManager().isConnected();
-            // Con el botón «Detener» de la notificación del servidor se apaga ya, bloqueado o no; sin
-            // él, con el móvil bloqueado se aparca la sesión hasta desbloquear.
-            if (cfg.stopAaServerOnExit() && locked && aaConnected && TouchService.instance != null
-                    && !AaServerStarter.canStopWithoutUi()) {
+        life.close();
+        main.removeCallbacks(lifeTimer);
+        closeAa(userAction);
+        stopSelf();
+    }
+
+    /** Cierra Android Auto por el camino de siempre (LinkLifecycle.shutdownPlan). Una vez por servicio. */
+    private void closeAa(boolean userAction) {
+        if (aaClosed) return;
+        aaClosed = true;
+        AaServerStarter.cancelStartOnUnlock(this, "el enlace se cierra");
+        LinkLifecycle.ShutdownPlan plan = LinkLifecycle.shutdownPlan(env());
+        switch (plan) {
+            case PARK_UNTIL_UNLOCK:
                 // Móvil bloqueado: el servidor (abierto en toda la red) no se puede apagar hasta
                 // desbloquear. Nuestra head unit lo sigue ocupando, sin vídeo, hasta entonces.
+                L.life("cierre" + (userAction ? " (a mano)" : "") + " con el móvil bloqueado: Android Auto aparcado"
+                        + " hasta desbloquear, y entonces apago su servidor");
                 AaServerStarter.requestStop(this);
                 AaGuardService.park(this);
-                stopSelf();
                 return;
-            }
-            try {
-                startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
-                        .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_STOP_SERVICE));
-            } catch (RuntimeException e) {
-                L.e("no se pudo parar Android Auto", e);
-            }
-            if (cfg.stopAaServerOnExit()) {
-                AaServerStarter.requestStop(this);
-            } else {
-                AaServerStarter.stopIfUnlocked(this);
-            }
+            case STOP_SERVER:
+            case STOP_SERVER_IF_UNLOCKED:
+                L.life("cierre" + (userAction ? " (a mano)" : "") + ": paro Android Auto y "
+                        + (plan == LinkLifecycle.ShutdownPlan.STOP_SERVER ? "apago su servidor (ya o al desbloquear)"
+                        : "su servidor solo si se puede ahora"));
+                AaPark.release("cierre del enlace");
+                try {
+                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
+                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_STOP_SERVICE));
+                } catch (RuntimeException e) {
+                    L.e("no se pudo parar Android Auto", e);
+                }
+                if (plan == LinkLifecycle.ShutdownPlan.STOP_SERVER) {
+                    AaServerStarter.requestStop(this);
+                } else {
+                    AaServerStarter.stopIfUnlocked(this);
+                }
+                return;
+            default:
+                L.life("cierre" + (userAction ? " (a mano)" : "") + ": sin Android Auto que cerrar");
         }
-        stopSelf();
     }
 
     @Override
@@ -587,8 +693,11 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     @Override
     public void onDestroy() {
         stopping = true;
-        main.removeCallbacks(carGone);
-        main.removeCallbacks(noCar);
+        life.close();
+        main.removeCallbacks(lifeTimer);
+        // Cerrado sin pasar por shutdownAll (p. ej. sin poder pasar a primer plano) con AA en pausa: que no quede
+        // aparcado y con su servidor encendido sin nadie que lo cierre.
+        if (!aaClosed && AaPark.parked && !AaGuardService.active) closeAa(false);
         if (sysMonitor != null) sysMonitor.stop();
         if (qd != null) {
             // Primero se cierra la sesión en curso y se espera su resumen (como mucho 500 ms), para que el del viaje

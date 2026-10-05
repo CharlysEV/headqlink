@@ -128,7 +128,7 @@ public class LogActivity extends Activity {
                     cfg.putInt(Config.CAR_GONE_MS, secs > 0 ? Math.max(5, Math.min(600, secs)) * 1000 : 0);
                     L.i("opciones de prueba de QDAuto: mantener vídeo " + cfg.qdKeepVideo() + " · relevo " + cfg.qdSupersede()
                             + " · filtro estricto " + cfg.peerStrict() + " · PHONE_INFO " + cfg.qdPhoneInfo()
-                            + " · espera del coche " + cfg.carGoneMs() / 1000 + " s (se aplica al volver a conectar)");
+                            + " · vídeo vivo sin coche " + cfg.carGoneMs() / 1000 + " s (en la próxima pérdida del coche)");
                     if (LinkState.running) {
                         ToastUtils.showToast(this, Str.get(R.string.hql_applies_on_reconnect), Toast.LENGTH_LONG, true);
                     }

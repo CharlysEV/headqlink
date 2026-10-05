@@ -16,8 +16,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 /**
  * Pantalla principal de HeadQLink: modo elegido, estado (coche, imagen, Android Auto/app) y
- * Conectar/Desconectar. Abrirla ya configurada lo pone todo en marcha; al desconectarse el
- * coche, LinkService lo cierra todo.
+ * Conectar/Desconectar. Abrirla ya configurada lo pone todo en marcha; si el coche se va,
+ * LinkService lo espera con Android Auto en pausa («Esperar al coche») y después lo cierra todo.
  */
 public class HomeActivity extends Activity implements LinkState.Listener {
     private Config cfg;
@@ -181,6 +181,14 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     private void startLink() {
         Intent link = new Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY);
         if (!Config.isAa(cfg.mode()) || AaServerStarter.cannotRunReason(this) != null) {
+            startForegroundService(link);
+            return;
+        }
+        if (AaPark.parked || com.andrerinas.openheadunit.App.Companion.provide(this).getCommManager().isConnected()) {
+            // AA sigue conectado (en pausa, esperando al coche): su servidor está encendido. Nada que arrancar ni apagar:
+            // el enlace lo reanuda en cuanto llegue el coche.
+            L.life("conectar: Android Auto sigue conectado (en pausa); no hace falta arrancar su servidor");
+            AaServerStarter.cancelPendingStop(this);
             startForegroundService(link);
             return;
         }
@@ -582,6 +590,18 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         RadioGroup engine = v.findViewById(R.id.hql_v_engine);
         String engineBefore = cfg.linkEngine();
         engine.check(Config.ENGINE_QDAUTO.equals(engineBefore) ? R.id.hql_v_engine_qdauto : R.id.hql_v_engine_original);
+        // «Esperar al coche»: una opción por minuto de Config.CAR_WAIT_CHOICES; la de por defecto, marcada.
+        RadioGroup carWait = v.findViewById(R.id.hql_v_car_wait);
+        int waitBefore = cfg.carWaitMin();
+        for (int min : Config.CAR_WAIT_CHOICES) {
+            android.widget.RadioButton rb = new android.widget.RadioButton(this);
+            rb.setId(View.generateViewId());
+            rb.setTag(min);
+            rb.setText(min == Config.DEFAULT_CAR_WAIT_MIN
+                    ? Str.get(R.string.hql_car_wait_option_default, min) : Str.get(R.string.hql_car_wait_option, min));
+            carWait.addView(rb);
+            if (min == waitBefore) rb.setChecked(true);
+        }
         android.widget.ScrollView scroll = new android.widget.ScrollView(this);
         scroll.addView(v);
         new MaterialAlertDialogBuilder(this)
@@ -611,6 +631,12 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     }
                     int id = profile.getCheckedRadioButtonId();
                     cfg.setProfile(id == R.id.hql_v_main ? "main" : id == R.id.hql_v_high ? "high" : "baseline");
+                    View waitSel = carWait.findViewById(carWait.getCheckedRadioButtonId());
+                    if (waitSel != null && (int) waitSel.getTag() != waitBefore) {
+                        // Se lee al perder al coche: vale ya para la próxima espera, sin reconectar.
+                        cfg.setCarWaitMin((int) waitSel.getTag());
+                        L.life("«Esperar al coche»: " + cfg.carWaitMin() + " min (vale para la próxima espera)");
+                    }
                     String engineAfter = engine.getCheckedRadioButtonId() == R.id.hql_v_engine_qdauto
                             ? Config.ENGINE_QDAUTO : Config.ENGINE_ORIGINAL;
                     if (!engineAfter.equals(engineBefore)) {

@@ -70,8 +70,18 @@ final class Config {
     /** Mantener el vídeo (y Android Auto) vivo entre sesiones con el coche (qdauto §6); false = como el fork. */
     static final String QD_KEEP_VIDEO = "qd_keep_video";
     static final boolean DEFAULT_KEEP_VIDEO = true;
-    /** Tras perder al coche, cuánto se espera a que vuelva antes de cerrarlo todo (ms). */
+    /**
+     * Tras perder al coche, cuánto sigue vivo el vídeo (y AA proyectando) para una reconexión sin cortes (ms). Después,
+     * AA queda en pausa hasta que vence «Esperar al coche» (CAR_WAIT_MIN).
+     */
     static final String CAR_GONE_MS = "car_gone_ms";
+    /**
+     * «Esperar al coche» (minutos): tras perderlo, el enlace sigue escuchando y AA en pausa este tiempo; si vuelve, se
+     * reanuda al instante. Después se cierra todo (y se apaga el servidor de AA). Opciones: CAR_WAIT_CHOICES.
+     */
+    static final String CAR_WAIT_MIN = "car_wait_min";
+    static final int[] CAR_WAIT_CHOICES = {1, 5, 15};
+    static final int DEFAULT_CAR_WAIT_MIN = 5;
     /** Filtro de pares estricto: los orígenes «aceptar con aviso» se rechazan. */
     static final String PEER_STRICT = "peer_strict";
     /** Relevo de la sesión cuando el coche se vuelve a anunciar con ella abierta. */
@@ -155,6 +165,7 @@ final class Config {
             if (i.hasExtra(k)) e.putBoolean(k, i.getBooleanExtra(k, false));
         }
         if (i.hasExtra(CAR_GONE_MS)) e.putInt(CAR_GONE_MS, i.getIntExtra(CAR_GONE_MS, 0));
+        if (i.hasExtra(CAR_WAIT_MIN)) e.putInt(CAR_WAIT_MIN, carWaitMinFor(i.getIntExtra(CAR_WAIT_MIN, 0)));
         if (i.hasExtra(QD_PHONE_INFO)) e.putString(QD_PHONE_INFO, i.getStringExtra(QD_PHONE_INFO));
         if (i.hasExtra(PKG)) e.putString(PKG, i.getStringExtra(PKG));
         if (i.hasExtra("force_legacy_launch")) e.putBoolean("force_legacy_launch", i.getBooleanExtra("force_legacy_launch", false));
@@ -444,10 +455,31 @@ final class Config {
         return sp.getBoolean(QD_KEEP_VIDEO, DEFAULT_KEEP_VIDEO);
     }
 
-    /** Espera a que vuelva el coche antes de cerrarlo todo (por defecto 30 s; entre 5 s y 10 min). */
+    /** Vídeo vivo tras perder al coche (por defecto 30 s; entre 5 s y 10 min). */
     long carGoneMs() {
         int v = sp.getInt(CAR_GONE_MS, 0);
         return v > 0 ? Math.max(5_000, Math.min(600_000, v)) : 30_000;
+    }
+
+    /** «Esperar al coche», en minutos (una de CAR_WAIT_CHOICES). */
+    int carWaitMin() {
+        return carWaitMinFor(sp.getInt(CAR_WAIT_MIN, 0));
+    }
+
+    long carWaitMs() {
+        return carWaitMin() * 60_000L;
+    }
+
+    void setCarWaitMin(int min) {
+        sp.edit().putInt(CAR_WAIT_MIN, carWaitMinFor(min)).apply();
+    }
+
+    /** Lo guardado si es una de las opciones; si no (o sin guardar), DEFAULT_CAR_WAIT_MIN. */
+    static int carWaitMinFor(int stored) {
+        for (int c : CAR_WAIT_CHOICES) {
+            if (c == stored) return c;
+        }
+        return DEFAULT_CAR_WAIT_MIN;
     }
 
     boolean peerStrict() {
@@ -523,6 +555,7 @@ final class Config {
                 + sp.getInt(HEIGHT, 0) + " profile=" + profile() + " prepend=" + prependSpsPps()
                 + " mode=" + mode() + (MODE_APP.equals(mode()) ? " pkg=" + targetPackage() + " dpi=" + dpi() : "")
                 + " link=" + linkMode() + " engine=" + linkEngine() + " pantallaEncendida=" + keepScreenOn()
+                + " esperarCoche=" + carWaitMin() + "min"
                 + (isQdEngine() ? " keepVideo=" + qdKeepVideo() + " supersede=" + qdSupersede() + " phoneInfo=" + qdPhoneInfo()
                 + " carGone=" + carGoneMs() / 1000 + "s" + (peerStrict() ? " strict" : "") : "")
                 + " (0 = lo que pida el coche)";

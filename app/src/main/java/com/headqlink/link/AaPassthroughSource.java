@@ -17,6 +17,7 @@ import com.andrerinas.openheadunit.App;
 import com.andrerinas.openheadunit.aap.AapService;
 import com.andrerinas.openheadunit.connection.wifi.WifiLauncherMode;
 import com.andrerinas.openheadunit.aap.protocol.messages.TouchEvent;
+import com.andrerinas.openheadunit.aap.protocol.messages.VideoFocusEvent;
 import com.andrerinas.openheadunit.aap.protocol.proto.Input;
 import com.andrerinas.openheadunit.connection.CommManager;
 import com.andrerinas.openheadunit.decoder.video.HeadlessDriver;
@@ -237,7 +238,20 @@ final class AaPassthroughSource implements VideoSource {
         attachOffscreenSurface();
         HeadlessDriver.start(ctx);
         ensureAaConnected();
-        requestKeyFrame();
+        requestKeyFrameAfterStart();
+    }
+
+    /**
+     * IDR del vídeo recién creado (ciclo de foco). Si AA venía de la pausa (AaPark) y el ciclo no pudo empezar, se le
+     * devuelve el foco directamente: con el foco en nativo no mandaría imagen. Ya hay superficie que la reciba.
+     */
+    private void requestKeyFrameAfterStart() {
+        requestKeyFrame(started -> {
+            if (AaPark.takeFocusOwed() && !started && comm().isConnected()) {
+                L.life("Android Auto vuelve de la pausa: le devuelvo el foco de vídeo");
+                comm().send(new VideoFocusEvent(true, true));
+            }
+        });
     }
 
     /**
@@ -354,6 +368,10 @@ final class AaPassthroughSource implements VideoSource {
         if (!comm().isConnected()) {
             L.w("AA: no está conectado al volver el coche; lo relanzo");
             ensureAaConnected();
+        } else if (AaPark.takeFocusOwed()) {
+            // Volvía de la pausa con este mismo vídeo vivo: foco de vuelta (el IDR lo pide la sesión al enganchar).
+            L.life("Android Auto vuelve de la pausa: le devuelvo el foco de vídeo");
+            comm().send(new VideoFocusEvent(true, true));
         }
         redraw();
     }
@@ -441,7 +459,7 @@ final class AaPassthroughSource implements VideoSource {
         App.Companion.provide(ctx).getVideoDecoder().setSurface(relayInput);
         HeadlessDriver.start(ctx);
         ensureAaConnected();
-        requestKeyFrame();
+        requestKeyFrameAfterStart();
     }
 
     /**
@@ -583,10 +601,14 @@ final class AaPassthroughSource implements VideoSource {
     public void stop() {
         HeadlessDriver.stop();
         App.Companion.provide(ctx).getSettings().setNightMode(Settings.NightMode.AUTO);
-        LinkState.setSource(LinkState.Level.IDLE, "");
         VideoTap.setSink(null);
-        // Con la sesión aparcada (AaGuardService), AA sigue conectado: nada de vista en el móvil.
-        if (!AaGuardService.parked) VideoTap.setHeadless(false);
+        // Con AA aparcado (esperando al coche, o AaGuardService), sigue conectado: nada de vista en el móvil.
+        if (AaPark.parked) {
+            LinkState.setSource(LinkState.Level.BUSY, Str.get(R.string.hql_auto_paused));
+        } else {
+            LinkState.setSource(LinkState.Level.IDLE, "");
+            VideoTap.setHeadless(false);
+        }
         HeadUnitScreenConfig.setExternalCanvas(null);
         HeadUnitScreenConfig.setExternalDpi(0);
         if (offscreen != null) {

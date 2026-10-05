@@ -95,6 +95,18 @@ final class L {
         CarTrace.problem("AVISO", msg);
     }
 
+    /**
+     * Decisión del ciclo de vida del enlace y de Android Auto (esperas, pausa, reanudar, apagados, capa, avisos): con el
+     * prefijo «ciclo:» para encontrarlas juntas en el log unificado.
+     */
+    static void life(String msg) {
+        i("ciclo: " + msg);
+    }
+
+    static void lifeWarn(String msg) {
+        w("ciclo: " + msg);
+    }
+
     static void e(String msg, Throwable t) {
         Log.e(TAG, msg, t);
         write("E", msg + (t != null ? " :: " + t : ""), true);

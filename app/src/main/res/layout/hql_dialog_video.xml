@@ -210,6 +210,27 @@
         android:layout_height="wrap_content"
         android:paddingBottom="8dp"
         android:text="@string/hql_applies_on_reconnect" />
+
+    <!-- Esperar al coche: tras perderlo, el enlace sigue escuchando y Android Auto en pausa este tiempo -->
+    <TextView
+        style="@style/HQL.Text.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/hql_car_wait_title" />
+
+    <RadioGroup
+        android:id="@+id/hql_v_car_wait"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <TextView
+        style="@style/HQL.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:text="@string/hql_car_wait_help" />
     </LinearLayout>
 
     <TextView

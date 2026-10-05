@@ -399,7 +399,7 @@
     <string name="hql_qd_supersede">Se o carro se anunciar de novo com a sessão aberta, considerá-la perdida e reconectar</string>
     <string name="hql_qd_peer_strict">Filtro estrito: rejeitar o carro se ele vier por uma rede inesperada</string>
     <string name="hql_qd_phone_info_qdlink">Identificar-se como QDLink (sem nome nem UUID do celular)</string>
-    <string name="hql_qd_car_gone">Esperar o carro voltar, em segundos (5-600; vazio = 30)</string>
+    <string name="hql_qd_car_gone">Vídeo ativo sem o carro, em segundos (5-600; vazio = 30). Depois, Android Auto em pausa até terminar “Esperar o carro”</string>
     <!-- qdauto: verificação de requisitos (Checklist) -->
     <string name="hql_req_title">Verificação</string>
     <string name="hql_req_row">Requisitos</string>
@@ -454,4 +454,16 @@
     <string name="hql_app_opened_in_car">Aberto no carro</string>
     <string name="hql_app_open_blocked">O Android não permite abri-lo no carro</string>
     <string name="hql_list_url_hint">https://…/lista.m3u</string>
+    <!-- Ciclo de vida: esperar al coche, Android Auto en pausa, arrancar al desbloquear y servidor encendido. -->
+    <string name="hql_auto_paused">Em pausa até o carro voltar</string>
+    <string name="hql_waiting_car_paused">Aguardando o carro · Android Auto em pausa</string>
+    <string name="hql_unlock_channel">Início do Android Auto</string>
+    <string name="hql_unlock_start_title">Desbloqueie o celular para iniciar o Android Auto</string>
+    <string name="hql_unlock_start_text">O carro está pronto. Ao desbloquear, o HeadQLink inicia o Android Auto sozinho; não precisa abrir o app.</string>
+    <string name="hql_server_on_title">O servidor do Android Auto continua ligado</string>
+    <string name="hql_server_on_text">Toque para desligá-lo</string>
+    <string name="hql_car_wait_title">Esperar o carro</string>
+    <string name="hql_car_wait_option">%1$d min</string>
+    <string name="hql_car_wait_option_default">%1$d min (recomendado)</string>
+    <string name="hql_car_wait_help">Se o carro desligar ou a conexão cair, o HeadQLink continua escutando e deixa o Android Auto em pausa durante esse tempo: se o carro voltar, a imagem volta na hora, sem desbloquear. Depois fecha tudo e desliga o servidor do Android Auto.</string>
 </resources>

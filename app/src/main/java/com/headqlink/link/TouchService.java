@@ -29,11 +29,11 @@ public class TouchService extends AccessibilityService {
     private float pendY;
     private boolean pendUp;
 
-    /** Al desbloquear, ejecuta el apagado pendiente del servidor de AA (si lo hay). */
+    /** Al desbloquear: el arranque del servidor de AA pedido con el móvil bloqueado o, si no, su apagado pendiente. */
     private final android.content.BroadcastReceiver userPresent = new android.content.BroadcastReceiver() {
         @Override
         public void onReceive(android.content.Context c, android.content.Intent i) {
-            main.postDelayed(() -> AaServerStarter.runPendingStop(TouchService.this), 800);
+            main.postDelayed(() -> AaServerStarter.onUnlock(TouchService.this), 800);
         }
     };
 
@@ -48,6 +48,7 @@ public class TouchService extends AccessibilityService {
     @Override
     public boolean onUnbind(android.content.Intent intent) {
         instance = null;
+        main.removeCallbacks(coverWatchdog);
         try {
             unregisterReceiver(userPresent);
         } catch (IllegalArgumentException ignored) {
@@ -57,17 +58,44 @@ public class TouchService extends AccessibilityService {
 
     // ---------------------------------------------------------------- capa que tapa la automatización
 
+    /** La capa nunca se queda puesta: a los 15 s del último uso se quita sola (con aviso si era un apagado). */
+    static final long COVER_MAX_MS = 15_000;
+
     private android.view.View cover;
     private int coverRefs;
+    /** La capa tapa un apagado del servidor («Cerrando Auto…»): si vence, el servidor puede seguir encendido. */
+    private boolean coverStopping;
+    private final Runnable coverWatchdog = () -> {
+        if (cover == null) return;
+        boolean stopping = coverStopping;
+        removeCover();
+        coverRefs = 0;
+        AaServerStarter.onCoverTimeout(this, stopping, COVER_MAX_MS);
+    };
+
+    private void removeCover() {
+        main.removeCallbacks(coverWatchdog);
+        if (cover == null) return;
+        try {
+            getSystemService(android.view.WindowManager.class).removeView(cover);
+        } catch (RuntimeException ignored) {
+        }
+        cover = null;
+        coverStopping = false;
+    }
 
     /**
      * Muestra encima de todo una pantalla "Conectando con Android Auto…" mientras se pulsa el menú de
      * AA por debajo (las acciones de accesibilidad actúan sobre los nodos, no con toques, así que la
      * capa no las bloquea). Con contador: varias acciones encadenadas comparten la misma capa.
+     * stopping: tapa el apagado del servidor. Cada uso vuelve a contar los COVER_MAX_MS de la capa.
      */
-    void acquireCover(String text) {
+    void acquireCover(String text, boolean stopping) {
         main.post(() -> {
             coverRefs++;
+            if (stopping) coverStopping = true;
+            main.removeCallbacks(coverWatchdog);
+            main.postDelayed(coverWatchdog, COVER_MAX_MS);
             if (cover != null) return;
             android.widget.TextView tv = new android.widget.TextView(this);
             tv.setText(text);
@@ -88,8 +116,10 @@ public class TouchService extends AccessibilityService {
             try {
                 getSystemService(android.view.WindowManager.class).addView(tv, lp);
                 cover = tv;
+                coverStopping = stopping;
             } catch (RuntimeException e) {
                 L.e("no se pudo mostrar la capa", e);
+                main.removeCallbacks(coverWatchdog);
             }
         });
     }
@@ -98,13 +128,7 @@ public class TouchService extends AccessibilityService {
     void releaseCover(long delayMs) {
         main.postDelayed(() -> {
             if (coverRefs > 0) coverRefs--;
-            if (coverRefs == 0 && cover != null) {
-                try {
-                    getSystemService(android.view.WindowManager.class).removeView(cover);
-                } catch (RuntimeException ignored) {
-                }
-                cover = null;
-            }
+            if (coverRefs == 0) removeCover();
         }, delayMs);
     }
 
