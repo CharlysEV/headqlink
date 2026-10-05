@@ -13,6 +13,7 @@ Os nomes de botões e menus aparecem «entre aspas», tal como a aplicação os 
 > | «Ligar» / «Desligar» | «Conectar» / «Desconectar» |
 > | «Definições» | «Configurações» |
 > | «Hotspot do telemóvel» | «Ponto de acesso do celular» |
+> | «Estado» · «Em direto» | «Status» · «Ao vivo» |
 > | «Exportar registo» | «Exportar log» |
 > | «Info. da aplicação» · «Forçar paragem» | «Info do app» · «Forçar parada» |
 > | «Modo de programador» | «Modo de desenvolvedor» |
@@ -61,7 +62,7 @@ Há dois modos à escolha:
 | | |
 |---|---|
 | Carro | Leapmotor C10 com a aplicação de espelhamento (projeção do telemóvel) no ecrã. |
-| Telemóvel | Android com o **Android Auto** instalado. Recomenda-se **Android 10 ou superior**; algumas funções precisam do Android 12 (tema) ou 13 (idioma). |
+| Telemóvel | Android com o **Android Auto** instalado. Recomenda-se **Android 10 ou superior**; escolher o idioma da aplicação precisa do Android 13. |
 | Testado em | Samsung Galaxy **S25 Ultra** com **Android 16** e Android Auto 17.7. Outros telemóveis podem funcionar, mas não foram testados. |
 | Android Auto 17.4 ou superior | É preciso ativar uma vez o **modo de programador** do Android Auto e o serviço de **acessibilidade** do HeadQLink. A aplicação guia-o (secção 3). Com versões anteriores não é preciso. |
 | Internet (opcional) | Só para funções do «Auto estendido», como rotas, meteorologia ou rádio. |
@@ -146,7 +147,8 @@ Ecrã «O seu telemóvel, no ecrã do C10», com o que é preciso «Antes de com
 | «Wi-Fi Direct» | O carro cria a rede e o telemóvel liga-se a ela. O hotspot do telemóvel tem de estar desligado. | É a ligação do HeadQLink original. Com o motor QDAuto ainda não foi testada no carro. |
 
 > [!TIP]
-> A aplicação vem com «Wi-Fi Direct» selecionado. Se quiser usar o hotspot, toque nele antes de tocar em «Continuar».
+> A aplicação vem com «Hotspot do telemóvel» selecionado, com a etiqueta «Recomendado». Se preferir «Wi-Fi Direct»,
+> toque nele antes de tocar em «Continuar».
 
 Toque em «Continuar». Pode alterar o modo e a ligação quando quiser com o botão «Alterar» do ecrã principal.
 
@@ -228,7 +230,10 @@ mesmo assim» e completar mais tarde.
 
 - No topo, o modo e a ligação (por exemplo «Auto estendido · Hotspot do telemóvel») com o botão «Alterar», e o menu ⚙.
 - O interruptor «Ligar ao detetar o Bluetooth do carro».
-- O painel de estado:
+- O cartão «Estado». No topo, o painel «Em direto»: dois números grandes, os **fps** (imagens por segundo) e os
+  **Mbps** (Mbit/s) do vídeo que chega ao carro, cada um com uma barra que enche conforme o que o seu perfil de imagem
+  dá (com «Carro», 30 fps). O ponto de «Em direto» pisca enquanto chega vídeo; sem vídeo, os números mostram «—». Por
+  baixo, uma linha para cada parte da ligação:
 
 | Linha | O que lhe diz |
 |---|---|
@@ -315,7 +320,7 @@ Depois:
 ## 5. Definições úteis
 
 Está tudo no menu ⚙ do ecrã principal: «Verificação», «Definições de imagem», «Lista de TV» e «Lista de rádio» (só no
-«Auto estendido»), «Idioma», «Tema» e «Diagnóstico».
+«Auto estendido»), «Idioma» e «Diagnóstico».
 
 ### «Definições de imagem»
 
@@ -343,9 +348,8 @@ Se estiver ligado, ao guardar outro perfil o carro e o Android Auto voltam a lig
 **Outras opções de «Definições de imagem»:**
 
 - «Ocultar o painel lateral após alguns segundos (Auto estendido)»: ativada por predefinição.
-- Manter o ecrã do telemóvel ligado: desativada por predefinição. **Deixe-a desativada**, salvo se precisar dela. Nesta
-  versão aparece em inglês: «Keep the phone screen on (more heat and battery; otherwise it turns off as usual and
-  projection continues)».
+- «Manter o ecrã do telemóvel ligado (mais calor e bateria; caso contrário, desliga-se como sempre e a projeção
+  continua)»: desativada por predefinição. **Deixe-a desativada**, salvo se precisar dela.
 - «Avançado ▾» › «Motor do protocolo»:
   - «QDAuto (recomendado)»: o motor predefinido, com religação sem reiniciar o Android Auto e adaptação ao calor.
   - «headqlink original»: o motor do HeadQLink original, como **plano B** se o QDAuto lhe der problemas.
@@ -360,12 +364,11 @@ O botão «Definições» do painel do carro permite mudar o perfil de imagem (�
 segundos»), ocultar o painel sozinho e as otimizações de latência, e ver a ligação e o motor em uso. Use-o só com o
 carro parado.
 
-### «Idioma» e «Tema»
+### «Idioma»
 
-- «Idioma» (Android 13 ou superior): «Idioma do sistema», «Español», «English», «Português (Portugal)» ou «Português
-  (Brasil)». A interface do carro muda na próxima ligação. No Android 12 ou anterior, a aplicação usa o idioma do
-  sistema.
-- «Tema» (Android 12 ou superior): «Padrão do sistema», «Claro» ou «Escuro».
+«Idioma» (Android 13 ou superior): «Idioma do sistema», «Español», «English», «Português (Portugal)» ou «Português
+(Brasil)». A interface do carro muda na próxima ligação. No Android 12 ou anterior, a aplicação usa o idioma do
+sistema.
 
 ### «Lista de TV» e «Lista de rádio» («Auto estendido»)
 

@@ -48,7 +48,7 @@ There are two modes:
 | | |
 |---|---|
 | Car | Leapmotor C10 with its mirroring (phone projection) app on the screen. |
-| Phone | Android with **Android Auto** installed. **Android 10 or later** is recommended; some features need Android 12 (theme) or 13 (language). |
+| Phone | Android with **Android Auto** installed. **Android 10 or later** is recommended; choosing the app language needs Android 13. |
 | Tested on | Samsung Galaxy **S25 Ultra** with **Android 16** and Android Auto 17.7. Other phones may work but haven't been tested. |
 | Android Auto 17.4 or later | You need to turn on Android Auto's **developer mode** once and HeadQLink's **accessibility** service. The app guides you (section 3). Older versions don't need either. |
 | Internet (optional) | Only for "Auto extended" features such as routes, weather or radio. |
@@ -133,7 +133,8 @@ The "Your phone, on the C10's screen" screen, with what you need "Before you sta
 | "Wi-Fi Direct" | The car creates the network and the phone joins it. The phone's hotspot must be off. | The original HeadQLink's connection. Not yet tested in the car with the QDAuto engine. |
 
 > [!TIP]
-> The app selects "Wi-Fi Direct" by default. To use the hotspot, tap it before tapping "Continue".
+> The app selects "Phone hotspot" by default, with the "Recommended" tag. If you prefer "Wi-Fi Direct", tap it before
+> tapping "Continue".
 
 Tap "Continue". You can change the mode and the connection at any time with the "Change" button on the main screen.
 
@@ -215,7 +216,10 @@ Tap **"Finish"**. If something required is missing, the "Still missing" prompt t
 - At the top, the mode and connection (for example "Auto extended · Phone hotspot") with the "Change" button, and the ⚙
   menu.
 - The "Connect when the car's Bluetooth is detected" switch.
-- The status panel:
+- The "Status" card. At the top, the "Live" panel: two big numbers, the **fps** (frames per second) and the **Mbps**
+  (Mbit/s) of the video reaching the car, each with a bar that fills up against what your picture profile delivers
+  (30 fps with "Car"). The dot next to "Live" blinks while video is flowing; with no video, the numbers show "—".
+  Below it, one row for each part of the connection:
 
 | Row | What it tells you |
 |---|---|
@@ -301,7 +305,7 @@ After that:
 ## 5. Useful settings
 
 Everything is in the ⚙ menu on the main screen: "Requirements check", "Picture settings", "TV list" and "Radio list"
-(only in "Auto extended"), "Language", "Theme" and "Diagnostics".
+(only in "Auto extended"), "Language" and "Diagnostics".
 
 ### "Picture settings"
 
@@ -344,12 +348,11 @@ The "Settings" button on the car's panel lets you change the picture profile ("A
 auto-hide the panel and latency optimizations, and see the connection and engine in use. Only use it with the car
 stopped.
 
-### "Language" and "Theme"
+### "Language"
 
-- "Language" (Android 13 or later): "System language", "Español", "English", "Português (Portugal)" or "Português
-  (Brasil)". The car interface switches on the next connection. On Android 12 or earlier, the app uses the system
-  language.
-- "Theme" (Android 12 or later): "System default", "Light" or "Dark".
+"Language" (Android 13 or later): "System language", "Español", "English", "Português (Portugal)" or "Português
+(Brasil)". The car interface switches on the next connection. On Android 12 or earlier, the app uses the system
+language.
 
 ### "TV list" and "Radio list" ("Auto extended")
 

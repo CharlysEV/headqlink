@@ -48,7 +48,7 @@ Puedes elegir entre dos modos:
 | | |
 |---|---|
 | Coche | Leapmotor C10 con su app de espejo (proyección del móvil) en la pantalla. |
-| Móvil | Android con **Android Auto** instalado. Se recomienda **Android 10 o superior**; algunas funciones necesitan Android 12 (tema) o 13 (idioma). |
+| Móvil | Android con **Android Auto** instalado. Se recomienda **Android 10 o superior**; elegir el idioma de la app necesita Android 13. |
 | Probado en | Samsung Galaxy **S25 Ultra** con **Android 16** y Android Auto 17.7. Otros móviles pueden funcionar, pero no se han probado. |
 | Android Auto 17.4 o superior | Hace falta activar una vez su **modo desarrollador** y el servicio de **accesibilidad** de HeadQLink. La app te guía (sección 3). Con versiones anteriores no hace falta. |
 | Internet (opcional) | Solo para funciones de «Auto extendido» como rutas, tiempo o radio. |
@@ -134,7 +134,8 @@ Pantalla «Tu móvil, en la pantalla del C10», con lo que hace falta «Antes de
 | «Wi-Fi Direct» | El coche crea la red y el móvil se une. La zona Wi-Fi del móvil tiene que estar apagada. | Es la conexión del HeadQLink original. Con el motor QDAuto aún no se ha probado en el coche. |
 
 > [!TIP]
-> La app marca «Wi-Fi Direct» por defecto. Si quieres usar la zona Wi-Fi, tócala antes de pulsar «Continuar».
+> La app marca por defecto «Punto de acceso del móvil», con la etiqueta «Recomendado». Si prefieres «Wi-Fi Direct»,
+> tócala antes de pulsar «Continuar».
 
 Pulsa «Continuar». Podrás cambiar el modo y la conexión cuando quieras con el botón «Cambiar» de la pantalla principal.
 
@@ -218,7 +219,10 @@ igualmente» y completarlo más tarde.
 - Arriba, el modo y la conexión (por ejemplo «Auto extendido · Punto de acceso del móvil») con el botón «Cambiar», y
   el menú ⚙.
 - El interruptor «Conectar al detectar el Bluetooth del coche».
-- El panel de estado:
+- La tarjeta «Estado». Arriba, el panel «En directo»: dos cifras grandes, los **fps** (imágenes por segundo) y los
+  **Mbps** (Mbit/s) del vídeo que llega al coche, cada una con una barra que se llena según lo que da tu perfil de
+  imagen (con «Coche», 30 fps). El punto de «En directo» parpadea mientras llega vídeo; sin vídeo, las cifras muestran
+  «—». Debajo, una fila para cada parte de la conexión:
 
 | Fila | Qué te dice |
 |---|---|
@@ -306,7 +310,7 @@ Después:
 ## 5. Ajustes útiles
 
 Todo está en el menú ⚙ de la pantalla principal: «Comprobación», «Ajustes de imagen», «Lista de TV» y «Lista de radio»
-(solo en «Auto extendido»), «Idioma», «Tema» y «Diagnóstico».
+(solo en «Auto extendido»), «Idioma» y «Diagnóstico».
 
 ### «Ajustes de imagen»
 
@@ -349,12 +353,11 @@ El botón «Ajustes» del panel del coche permite cambiar el perfil de imagen (�
 ocultar el panel solo y las optimizaciones de latencia, y ver la conexión y el motor que se están usando. Úsalo solo con
 el coche parado.
 
-### «Idioma» y «Tema»
+### «Idioma»
 
-- «Idioma» (Android 13 o superior): «Idioma del sistema», «Español», «English», «Português (Portugal)» o «Português
-  (Brasil)». La interfaz del coche cambia al volver a conectar. En Android 12 o anterior, la app usa el idioma del
-  sistema.
-- «Tema» (Android 12 o superior): «Según el sistema», «Claro» u «Oscuro».
+«Idioma» (Android 13 o superior): «Idioma del sistema», «Español», «English», «Português (Portugal)» o «Português
+(Brasil)». La interfaz del coche cambia al volver a conectar. En Android 12 o anterior, la app usa el idioma del
+sistema.
 
 ### «Lista de TV» y «Lista de radio» («Auto extendido»)
 
