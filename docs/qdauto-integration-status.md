@@ -29,7 +29,9 @@ Rutas relativas a `hql\`. `[hql]` = `app/src/main/java/com/headqlink/link/`.
   - reutiliza ese vídeo si el plan coincide y está sano;
   - manda SPS/PPS en caché y un IDR real.
 
-  También hay relevo de sesión (el coche se reanuncia con la sesión abierta) y re-ACK.
+  También hay relevo de sesión (el coche se reanuncia con la sesión abierta) y re-ACK. Pasado `car_gone_ms`, el vídeo
+  se para pero el enlace sigue escuchando con Android Auto en pausa hasta «Esperar al coche» (5 min): si el coche
+  vuelve, AA sale de la pausa al instante (§10).
 - **Registro de viajes.**
   - Log unificado rotativo `logs/qd-*.log`.
   - Detector de cortes de radio.
@@ -203,7 +205,8 @@ PASS` y código 0. `qdsim.bat --help` lista todas las opciones.
 | Relevo de sesión (`qd_supersede`) | Ídem | Sí | Al volver a conectar |
 | Filtro estricto de pares (`peer_strict`) | Ídem | No | Al volver a conectar |
 | Presentarse como QDLink (`qd_phone_info`) | Ídem | No (identidad del fork) | Al volver a conectar |
-| Espera a que vuelva el coche (`car_gone_ms`) | Ídem | 30 s (de 5 a 600) | En la próxima pérdida del coche |
+| Vídeo vivo sin coche (`car_gone_ms`) | Ídem | 30 s (de 5 a 600) | En la próxima pérdida del coche |
+| Esperar al coche (`car_wait_min`, §10) | Inicio › ⋮ › Ajustes de imagen › Avanzado | 5 min (1, 5 o 15) | En la próxima pérdida del coche |
 | Exportar log | Diagnóstico | — | — |
 
 «Volver a conectar» = «Desconectar» y «Conectar» en Inicio.
@@ -268,7 +271,8 @@ defecto).
   - IDR ≤ 500 ms.
   - La radio y el viaje de la interfaz del coche no se cortan.
   - AA sigue en modo noche en S2-S10: S1 manda `DarkModeOn:1`.
-- **Espera:** con más de 30 s sin coche se apaga todo, como en el fork. El siguiente «Conectar» vuelve a lanzar AA.
+- **Espera (§10):** a los 30 s sin coche se para el vídeo y AA queda en pausa (sin «AA: lanzando Self-Mode» al volver);
+  pasado «Esperar al coche» se apaga todo, como en el fork, y el siguiente «Conectar» vuelve a lanzar AA.
 - **Básico (reenvío directo: modo «Auto» con el perfil de imagen «Básico»):**
   - la reconexión, con su ciclo de foco, en ≤ 1,5 s;
   - «freno AA: N acks retenidos» con N > 0;
@@ -337,7 +341,8 @@ Si la reconexión diera problemas en el coche:
 7. **Diario del coche (`car/`) con QDAuto.** Lleva solo el resumen (UDP, ACK, sesiones, vídeo cada 5 s, cortes y
    avisos), como preveía §7.1. El detalle completo está en `logs/`.
 8. **Coste de la espera.** Mantener AA y el encoder vivos sin coche gasta batería y radio durante `car_gone_ms`. Es
-   el mismo orden de magnitud que el fork, que ya mantenía AA 30 s.
+   el mismo orden de magnitud que el fork, que ya mantenía AA 30 s. Después, hasta «Esperar al coche» (§10), solo
+   quedan el enlace escuchando (con sus *locks* de Wi-Fi y CPU) y AA conectado sin codificar, con un ping cada 5 s.
 9. **Cierres bruscos en el log.** Un cierre con RST del coche deja un `READ_ERROR … Connection reset` con su traza
    Java en el log unificado. Es esperado e informativo, no un fallo.
 10. **Android lint.** Corrido sobre el app (`app\build\reports\lint-results-githubDebug.html`). En el código nuevo no
@@ -582,3 +587,103 @@ Lo lento (zona Wi-Fi y puerto) va en un hilo y, mientras, sale «Comprobando…�
   N», la versión de AA (17.4), la lectura de `ENABLED_ACCESSIBILITY_SERVICES` y los estados de los permisos.
 
 Sin probar todavía en el móvil.
+
+---
+
+## 10. Ciclo de vida: esperar al coche y reanudar al instante
+
+**Informe (coche real, versión 0.2).** «Tuve que cerrar y abrir para que funcionara; reconectar tarda mucho porque el
+sistema no se cierra aunque pone "Cerrando Auto…", hasta que abres la app y lo inicias otra vez.»
+
+**Diagnóstico (confirmado en el código).**
+- Con el coche fuera más de `car_gone_ms` (30 s), `LinkService.shutdownAll()` lo cerraba todo: dejaba de escuchar al
+  coche y apagaba el servidor de head unit de AA. Con el móvil bloqueado no puede manejar los ajustes de AA: aparcaba
+  la sesión (`AaGuardService`) y dejaba el apagado pendiente para el desbloqueo, tras la capa «Cerrando Auto…».
+- Al volver al coche nada escuchaba. Al desbloquear, primero se apagaba el servidor; luego había que abrir la app y
+  pulsar Conectar, que lo arrancaba de nuevo («Arrancando Auto…»): un ciclo apagar/arrancar con desbloqueo y dos
+  automatizaciones de los ajustes de AA.
+- Nada impedía que el apagado del desbloqueo y el arranque de Conectar corrieran **a la vez** sobre los mismos ajustes
+  (dos automatizaciones pulsando y yendo «atrás», la capa contada dos veces). Y si el apagado no se confirmaba (con
+  nuestra head unit aún conectada, el menú de AA puede no mostrar la opción del servidor), el servidor quedaba
+  encendido sin aviso. Eso es «se queda en "Cerrando Auto…" y no cierra».
+- Con la conexión automática por Bluetooth, al apagar el coche se iba el Bluetooth y `ACTION_BT_CAR_GONE` lo cerraba
+  todo en el acto (en ese momento ya no había sesión), sin esperar ni los 30 s.
+
+**Qué cambia.**
+
+| Situación | Antes | Ahora |
+|---|---|---|
+| Coche perdido, primeros 30 s | Vídeo y AA vivos | Igual (`car_gone_ms`) |
+| De 30 s a «Esperar al coche» (5 min) | Todo cerrado | El enlace sigue escuchando; vídeo parado; AA aparcado (`AaPark`: foco de vídeo nativo, ping cada 5 s, sin vista en el móvil). Notificación «Esperando al coche · Android Auto en pausa» |
+| El coche vuelve en ese tiempo | Conectar, desbloquear, apagar y arrancar el servidor | Con la sesión, AA sale de la pausa al instante: sin automatización, sin desbloquear |
+| Vence «Esperar al coche» | — | El cierre de siempre (`LinkLifecycle.shutdownPlan`): bloqueado, guardián y apagado al desbloquear |
+| El Bluetooth del coche se va | Cierre inmediato si no había sesión | Solo cierra si aún no hubo sesión; tras una sesión, sigue esperando |
+| El enlace arranca (Bluetooth, Conectar) con AA aparcado por el guardián | El guardián apagaba el servidor al desbloquear | El enlace adopta AA aparcado (`AaGuardService.handOver`), anula el apagado pendiente y lo reanuda con la sesión |
+| Hay que arrancar el servidor con el móvil bloqueado | «No arranca: desbloquea el móvil»; luego Desconectar y Conectar | Notificación de prioridad alta «Desbloquea el móvil para iniciar Android Auto»; al desbloquear arranca solo (y relanza el Self-Mode si había fallado), sin abrir la app |
+| Llegada por Bluetooth con el servidor apagado | Se arrancaba tarde, al pedir vídeo | Se arranca ya (desbloqueado) o al desbloquear (con el aviso) |
+| Capa «Cerrando/Arrancando Auto…» | Podía quedarse | Se quita sola a los 15 s del último uso; si tapaba un apagado, aviso «El servidor de Android Auto sigue encendido · Tocar para apagarlo» (reintenta el apagado) |
+| Automatizaciones de los ajustes de AA | Podían cruzarse | Una cada vez (`RUN_LOCK`). Un apagado en cola se anula si se pide el servidor (`stopEpoch`). Un apagado que falla con AA conectado suelta AA y se reintenta una vez; si sigue sin confirmarse, el aviso |
+
+**Código.**
+- `[hql]LinkLifecycle.java`, nuevo y puro. Fases BUSCANDO → CONECTADO → VÍDEO VIVO → AA EN PAUSA → CERRADO. Eventos
+  (arranque con su disparador, coche anunciado, sesión, coche perdido, temporizador, Bluetooth fuera) → acciones
+  (`ADOPT_PARK`, `CANCEL_PENDING_STOP`, `RESUME_AA`, `PARK_AA`, `STOP_VIDEO`, `START_SERVER`, `START_SERVER_ON_UNLOCK`,
+  `SHUTDOWN`) con sus motivos para el log, y `shutdownPlan`. Prueba: `LinkLifecycleTest`.
+- `[hql]AaPark.java`, nuevo: aparcar, reanudar y soltar AA (antes dentro de `AaGuardService`): foco, ping, `headless`
+  y el foco pendiente de devolver (`takeFocusOwed`).
+- `LinkService`: un solo temporizador (`lifeTimer`) en lugar de `carGone`/`noCar`; ejecuta las decisiones; `closeAa`
+  es el cierre de siempre; nueva acción `AA_SERVER_OFF` (la del aviso).
+- `AaGuardService`: usa `AaPark`; `handOver` (por una orden, no con `stopService`, que antes de `startForeground`
+  cerraría la app); `active`.
+- `AaServerStarter`: `RUN_LOCK`, `stopEpoch`, estado conocido del servidor (`aa_server_state`; un arranque de hace
+  menos de 20 s no se repite), arranque al desbloquear, los dos avisos y el reintento.
+- `TouchService`: vigilante de la capa (15 s); al desbloquear, `AaServerStarter.onUnlock` (arranque pedido o apagado
+  pendiente; el apagado no se hace si el enlace está en marcha).
+- `AaPassthroughSource`: al pararse con AA aparcado, la fila «Auto» dice «En pausa hasta que vuelva el coche»; al crear
+  el vídeo tras la pausa, foco de vuelta si el ciclo de IDR no pudo empezar.
+- `HomeActivity`: «Esperar al coche» (Ajustes de imagen › Avanzado); Conectar con AA aún conectado no arranca el
+  servidor. `Config`: `car_wait_min` (1, 5 o 15; por defecto 5; también como extra).
+- Textos en los cuatro idiomas; manuales (ES, PT, EN) con la espera, los avisos y dos filas nuevas en «Solución de
+  problemas».
+
+**Por qué no se quita `headless` al reanudar.** Con AA conectado y `VideoTap.headless = false`, Open Headunit abre su
+proyección en el móvil (al encender la pantalla o al dar el foco). Se deja puesto, y el foco de vídeo vuelve con el
+vídeo nuevo: el ciclo de IDR al arrancar la fuente o, si no puede empezar, un foco directo. Darlo antes de que haya
+superficie haría que AA mandara imagen a un decodificador sin superficie, y esos reinicios cuentan para darlo por roto.
+
+**Seguridad.** Sin coche, el servidor de AA sigue encendido como mucho «Esperar al coche» (15 min como máximo), con
+nuestra head unit ocupándolo (AA atiende una sola conexión). Después, el cierre de siempre. Si AA se cae durante la
+espera, el servidor queda libre hasta que vence, como antes durante los 30 s.
+
+**Qué buscar en el log.** Todas las decisiones van con «ciclo:» (`I/HQL: ciclo: …` en el log unificado):
+
+| Línea | Significado |
+|---|---|
+| `ciclo: coche perdido: vídeo vivo 30 s; después Android Auto en pausa y sigo esperando al coche hasta 5 min en total` | Empieza la espera |
+| `ciclo: 30 s sin coche: paro el vídeo y dejo Android Auto en pausa; sigo escuchando al coche 4 min más` | AA en pausa (y `Android Auto aparcado (esperando al coche)…`) |
+| `ciclo: sesión con el coche tras 2 min sin coche: Android Auto sale de la pausa al instante (…)` | Reanudación sin servidor ni desbloqueo |
+| `ciclo: … anulo el apagado pendiente del servidor de Android Auto` / `ciclo: AA server: apagado (…) anulado …` | Apagado pendiente o en cola anulado |
+| `ciclo: espera del coche vencida (5 min sin coche): cierro todo` | Vence la espera; sigue la línea `ciclo: cierre …` con el plan |
+| `ciclo: AA guardián: paso Android Auto aparcado al enlace (…)` | Relevo del guardián al enlace |
+| `ciclo: AA server: … aviso «Desbloquea el móvil para iniciar Android Auto» …` / `ciclo: desbloqueado: arranco el servidor …` | Arranque al desbloquear |
+| `W/HQL: ciclo: la capa «Cerrando Auto…» llevaba 15 s: la quito …` / `ciclo: aviso: el servidor de Android Auto puede seguir encendido` | Capa vencida y aviso |
+
+**Cómo comprobarlo en el coche.**
+1. Parada corta (menos de 5 min) con el móvil bloqueado: apagar el coche 2 min y volver. La notificación pasa a
+   «Esperando al coche · Android Auto en pausa»; al volver, imagen sin tocar el móvil. En el log, «sale de la pausa al
+   instante» y ninguna capa; en el resumen del viaje no suben los «arranques de AA».
+2. Parada larga (más de 5 min) con el móvil bloqueado y la conexión automática por Bluetooth: al volver, AA sin
+   desbloquear (relevo del guardián).
+3. Lo mismo sin la conexión automática: al desbloquear, «Cerrando Auto…» unos segundos (nunca más de 15) y luego
+   Conectar.
+4. Con la conexión automática, el servidor apagado y el móvil bloqueado al llegar: «Desbloquea el móvil para iniciar
+   Android Auto»; al desbloquear arranca solo.
+
+**Resultados en el PC.** `:app:testGithubDebugUnitTest :qdcore:test :app:assembleGithubDebug`: **BUILD SUCCESSFUL**.
+- Todo el app: 2787 pruebas, 0 fallos y 1 saltada (la de `sh`). `:qdcore`: 103/103.
+- `LinkLifecycleTest`, nueva: 20/20. Cubre el coche que vuelve dentro y fuera de cada espera, la pausa antes de parar el
+  vídeo, el cierre al vencer (y el reintento con un intento en marcha), móvil bloqueado o no, el apagado pendiente, la
+  llegada por Bluetooth con AA aparcado por el guardián o con el servidor apagado, el Bluetooth que se va, el plan de
+  cierre y las opciones de «Esperar al coche».
+
+Sin probar todavía en el móvil ni en el coche.

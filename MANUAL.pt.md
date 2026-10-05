@@ -17,6 +17,8 @@ Os nomes de botões e menus aparecem «entre aspas», tal como a aplicação os 
 > | «Exportar registo» | «Exportar log» |
 > | «Info. da aplicação» · «Forçar paragem» | «Info do app» · «Forçar parada» |
 > | «Modo de programador» | «Modo de desenvolvedor» |
+> | «A iniciar o Auto…» / «A fechar o Auto…» | «Iniciando o Auto…» / «Fechando o Auto…» |
+> | «Esperar pelo carro» | «Esperar o carro» |
 > | Transferências | Downloads |
 
 > [!WARNING]
@@ -217,7 +219,8 @@ mesmo assim» e completar mais tarde.
 
 > [!NOTE]
 > Ao concluir o assistente, e sempre que abre o HeadQLink já configurado, **a aplicação começa a ligar sozinha** (é como
-> tocar em «Ligar») e aguarda o carro até 5 minutos. Com o Android Auto 17.4 ou superior verá por um momento a camada
+> tocar em «Ligar») e aguarda o carro até 5 minutos (ou «Esperar pelo carro», se for mais). Com o Android Auto 17.4 ou
+> superior verá por um momento a camada
 > «A iniciar o Auto…»: não toque em nada. Se não estiver no carro, toque em «Desligar».
 
 ---
@@ -285,15 +288,27 @@ depois o HeadQLink. A linha «Rede» passa de «Wi-Fi Direct: a procurar o carro
 - Se a ligação ao carro cair por um momento, a linha «Carro» diz «A voltar a ligar… (Android Auto em espera)» e a
   imagem volta sozinha, normalmente em menos de um segundo, **sem reiniciar o Android Auto** (com o motor QDAuto, o
   predefinido).
-- Se o carro **desaparecer mais de 30 segundos** (por exemplo, porque o desligou), o HeadQLink fecha tudo: o Android
-  Auto e a ligação. Para voltar a usá-lo, toque em «Ligar», ou deixe isso à ligação automática por Bluetooth.
-- Se tocar em «Ligar» e em **5 minutos** não aparecer nenhum carro, o HeadQLink para sozinho.
+- Se o carro **desaparecer durante mais tempo** (por exemplo, porque o desliga numa paragem curta), ao fim de 30
+  segundos o HeadQLink deixa de enviar imagem e põe o **Android Auto em pausa**, mas **continua à escuta do carro**
+  durante «Esperar pelo carro» (**5 minutos** por predefinição; muda-se em «Definições de imagem» › «Avançado»). A
+  notificação diz «A aguardar o carro · Android Auto em pausa». Se o carro voltar nesse tempo, a imagem regressa **de
+  imediato**, sem desbloquear o telemóvel nem tocar em nada.
+- Passado «Esperar pelo carro», o HeadQLink fecha tudo: o Android Auto, o servidor dele e a ligação. Para voltar a
+  usá-lo, toque em «Ligar», ou deixe isso à ligação automática por Bluetooth.
+- Se tocar em «Ligar» e em **5 minutos** (ou «Esperar pelo carro», se for mais) não aparecer nenhum carro, o HeadQLink
+  para sozinho.
 
 ### No fim da viagem
 
-- Desligue o carro (o HeadQLink fecha-se sozinho ao fim de 30 s) ou toque em «Desligar».
-- Se o telemóvel estava bloqueado, verá a notificação «Auto em espera até desbloquear o telemóvel (depois fecha-se
-  sozinho)». **Desbloqueie o telemóvel uma vez** para que feche de vez (secção 9).
+- Desligue o carro (o HeadQLink fecha-se sozinho quando termina «Esperar pelo carro», 5 minutos por predefinição) ou
+  toque em «Desligar» para o fechar já.
+- Se o telemóvel estava bloqueado quando se fechou, verá a notificação «Auto em espera até desbloquear o telemóvel
+  (depois fecha-se sozinho)». **Desbloqueie o telemóvel uma vez** para que feche de vez: verá durante uns segundos «A
+  fechar o Auto…» (secção 9). Se voltar ao carro antes de o desbloquear e usar a ligação automática por Bluetooth, o
+  Android Auto regressa de imediato, sem passar por «A fechar o Auto…».
+- «A fechar o Auto…» e «A iniciar o Auto…» duram uns segundos. Se algo os prender, desaparecem sozinhos ao fim de
+  15 s; se o servidor do Android Auto puder ter ficado ligado, verá «O servidor do Android Auto continua ligado · Toque
+  para o desligar»: toque nela com o telemóvel desbloqueado.
 - Desligue o hotspot se não precisar dele.
 
 ### Ligação automática: «Ligar ao detetar o Bluetooth do carro»
@@ -309,11 +324,15 @@ a aplicação.
 
 Depois:
 
-- Se o Bluetooth se desligar sem ter chegado a ligar ao carro, o HeadQLink para.
+- Se o Bluetooth se desligar sem ter chegado a ligar ao carro, o HeadQLink para. Se se desligar depois de uma sessão
+  (desliga o carro), continua a aguardar o carro até terminar «Esperar pelo carro».
+- Se o Android Auto ainda estava em pausa (volta antes de terminar «Esperar pelo carro», ou ficou em espera com o
+  telemóvel bloqueado), a imagem regressa de imediato, **sem desbloquear o telemóvel**.
 - Se o Android não o deixar arrancar em segundo plano, verá a notificação «Carro detetado · Toque para ligar o
   HeadQLink». Toque nela.
-- Se o telemóvel estiver bloqueado quando for preciso iniciar o Android Auto, a linha «Auto» pode dizer «Não arranca:
-  desbloqueie o telemóvel». Desbloqueie-o (com o carro parado) e, se não arrancar, toque em «Desligar» e «Ligar».
+- Se for preciso iniciar o Android Auto e o telemóvel estiver bloqueado, verá a notificação **«Desbloqueie o telemóvel
+  para iniciar o Android Auto»**. Desbloqueie-o (com o carro parado): o HeadQLink inicia-o sozinho, sem abrir a
+  aplicação (verá por um momento «A iniciar o Auto…»).
 
 ---
 
@@ -355,6 +374,10 @@ Se estiver ligado, ao guardar outro perfil o carro e o Android Auto voltam a lig
   - «headqlink original»: o motor do HeadQLink original, como **plano B** se o QDAuto lhe der problemas.
 
   A mudança «Aplica-se na próxima ligação»: toque em «Desligar» e depois em «Ligar».
+- «Avançado ▾» › «Esperar pelo carro»: «1 min», «5 min (recomendado)» ou «15 min». É o tempo que o HeadQLink continua
+  à escuta do carro, com o Android Auto em pausa, depois de o perder (secção 4). Mais tempo = regressa de imediato
+  depois de paragens mais longas; menos = o servidor do Android Auto desliga-se mais cedo. Vale já para a próxima
+  paragem.
 - O resto de «Avançado» (fps, kbps, largura, altura, perfil H.264, otimizações de latência, limitador) é para testes.
   Deixe-o vazio ou como está.
 
@@ -428,13 +451,15 @@ Comece sempre pelo menu ⚙ › «Verificação»: cada linha a vermelho tem o s
 |---|---|---|
 | O carro não aparece («A procurar…» o tempo todo) | O carro não está no hotspot do telemóvel, o hotspot desligou-se sozinho, ou a aplicação de espelhamento não está aberta no carro. Com Wi-Fi Direct: o hotspot ativo ou o Wi-Fi desligado. | Veja a linha «Rede»: deve dizer «Hotspot ativo (…)». Ligue o carro ao hotspot (Definições › Wi-Fi do carro) e abra a aplicação de espelhamento. Desative o desligar automático do hotspot. Ao fim de 5 minutos sem carro o HeadQLink para: toque em «Ligar» outra vez. |
 | «A porta 18463 está ocupada (o QDLink está aberto?)», ou «Porta 18463 · Ocupada» na «Verificação» | O QDLink (ou outra aplicação) está aberto no telemóvel e ocupa a porta. | «Forçar paragem» do QDLink. O HeadQLink tenta de novo a cada 5 s e o aviso desaparece sozinho. |
-| Ecrã preto no carro, ou a linha «Auto» com um erro | O Android Auto não arrancou: o telemóvel estava bloqueado («Não arranca: desbloqueie o telemóvel»), falta o modo de programador ou a acessibilidade. | Desbloqueie o telemóvel, veja a «Verificação» e toque em «Desligar» e «Ligar». Para saber o que falha, ative Diagnóstico › «Teste sem Android Auto (padrão)»: se vir a imagem de teste, a ligação está bem e o problema é o Android Auto (desative-o depois). Se nada resultar, experimente o motor «headqlink original». |
+| Ecrã preto no carro, ou a linha «Auto» com um erro | O Android Auto não arrancou: o telemóvel estava bloqueado («Não arranca: desbloqueie o telemóvel»), falta o modo de programador ou a acessibilidade. | Desbloqueie o telemóvel (com o aviso «Desbloqueie o telemóvel para iniciar o Android Auto», arranca sozinho ao desbloquear). Se continuar, veja a «Verificação» e toque em «Desligar» e «Ligar». Para saber o que falha, ative Diagnóstico › «Teste sem Android Auto (padrão)»: se vir a imagem de teste, a ligação está bem e o problema é o Android Auto (desative-o depois). Se nada resultar, experimente o motor «headqlink original». |
 | A imagem vai aos solavancos ou com atraso | Hotspot em 2,4 GHz, telemóvel quente, perfil demasiado alto ou ecrã do telemóvel ligado (com ele, o Android procura redes Wi-Fi muitas vezes). | Hotspot em 5 GHz, perfil «Automático» ou «Carro», bloqueie o telemóvel e arrefeça-o. Se continuar, experimente «Médio». |
 | Desliga-se muitas vezes | Desligar automático do hotspot, poupança de bateria, QDLink aberto ou a aplicação de espelhamento do carro fechada. | Os cortes curtos voltam a ligar sozinhos («A voltar a ligar…»). Se forem longos ou frequentes: «Sem restrições de bateria», «Samsung: aplicações nunca suspensas», desative o desligar automático e feche o QDLink. Se continuar, exporte o registo (secção 8). |
 | A acessibilidade desativa-se sozinha | O Android desativa-a ao atualizar a aplicação, ou se a aplicação fechou de repente. Alguns fabricantes também. | «Verificação» › «Ativar». Se disser «Ativada mas sem funcionar», desative-a e volte a ativá-la. Se disser «Definição restrita», «Permitir definições restritas» (secção 3). Retire as restrições de bateria. |
 | O Android Auto pede no carro que olhe para o telemóvel | É a primeira vez que o Android Auto vê este «ecrã de carro», ou precisa de lhe pedir uma autorização ou confirmação. | Estacione, desbloqueie o telemóvel e aceite o que o Android Auto pedir. Normalmente só acontece uma vez. |
 | O telemóvel aquece muito | Perfil «Muito alto» ou «Alto», sol direto, ecrã ligado, carregamento sem fios. | Secção 6. |
 | Notificação «Servidor do Android Auto aberto · Desbloqueie o telemóvel para o fechar» | A sessão terminou com o telemóvel bloqueado e o servidor do Android Auto continua aberto. | Desbloqueie o telemóvel: o HeadQLink fecha-o. |
+| Depois de uma paragem demora muito a voltar, ou é preciso fechar e abrir a aplicação | A paragem durou mais do que «Esperar pelo carro» e o HeadQLink fechou tudo; ao desbloquear, primeiro fecha o Android Auto («A fechar o Auto…») e depois é preciso iniciá-lo outra vez. | Suba «Esperar pelo carro» para «15 min» (Definições de imagem › Avançado) e ative a ligação automática por Bluetooth: ao voltar, o Android Auto regressa de imediato sem desbloquear. Se vir «Desbloqueie o telemóvel para iniciar o Android Auto», desbloqueie-o e aguarde: inicia sozinho, sem abrir a aplicação. |
+| «A fechar o Auto…» ou «A iniciar o Auto…» não desaparece, ou a notificação «O servidor do Android Auto continua ligado · Toque para o desligar» | A automatização das definições do Android Auto não terminou (por exemplo, o telemóvel bloqueou-se a meio). | A camada desaparece sozinha ao fim de 15 s. Toque na notificação com o telemóvel desbloqueado para desligar o servidor. Se se repetir, exporte o registo (secção 8): as linhas «ciclo:» contam cada passo. |
 | A ligação automática não arranca | O nome Bluetooth não coincide, ou o Android não a deixa arrancar em segundo plano. | Reveja o texto do aviso «Ligação automática», retire as restrições de bateria ou toque na notificação «Toque para ligar o HeadQLink». |
 | Não instala ou não atualiza | Play Protect, Bloqueador automático da Samsung ou uma versão com outra assinatura. | Secção 2. |
 
@@ -499,9 +524,10 @@ Pode pedir ajuda na página do projeto no GitHub: [CharlysEV/headqlink](https://
 > [!IMPORTANT]
 > **O servidor do Android Auto.** Com o Android Auto 17.4 ou superior, o HeadQLink liga o «servidor de unidade
 > principal» do modo de programador do Android Auto. Enquanto está ligado, escuta em todas as redes do telemóvel, por
-> isso **o HeadQLink desliga-o no fim de cada sessão**. Com o telemóvel bloqueado não o consegue desligar, e deixa-o em
-> espera até o desbloquear («Auto em espera até desbloquear o telemóvel…»). **Desbloqueie o telemóvel depois de cada
-> viagem.**
+> isso **o HeadQLink desliga-o quando termina**: ao tocar em «Desligar» ou quando acaba «Esperar pelo carro» (no
+> máximo 15 minutos sem carro, com o Android Auto em pausa e a ocupar o servidor). Com o telemóvel bloqueado não o
+> consegue desligar, e deixa-o em espera até o desbloquear («Auto em espera até desbloquear o telemóvel…»).
+> **Desbloqueie o telemóvel depois de cada viagem.**
 
 **Quando não o usar:**
 

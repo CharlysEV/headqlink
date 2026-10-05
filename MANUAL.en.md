@@ -202,8 +202,9 @@ Tap **"Finish"**. If something required is missing, the "Still missing" prompt t
 
 > [!NOTE]
 > When you finish the wizard, and every time you open HeadQLink once it's set up, **the app starts connecting by
-> itself** (just like tapping "Connect") and waits for the car for up to 5 minutes. With Android Auto 17.4 or later
-> you'll briefly see a "Starting Auto…" overlay: don't touch anything. If you're not in the car, tap "Disconnect".
+> itself** (just like tapping "Connect") and waits for the car for up to 5 minutes (or "Wait for the car", if longer).
+> With Android Auto 17.4 or later you'll briefly see a "Starting Auto…" overlay: don't touch anything. If you're not in
+> the car, tap "Disconnect".
 
 ---
 
@@ -269,16 +270,27 @@ Tap **"Finish"**. If something required is missing, the "Still missing" prompt t
 - If the link to the car drops for a moment, the "Car" row says "Reconnecting… (Android Auto on hold)" and the picture
   comes back by itself, usually in under a second, **without restarting Android Auto** (with the QDAuto engine, the
   default).
-- If the car is **gone for more than 30 seconds** (for example because you switched it off), HeadQLink closes
-  everything: Android Auto and the connection. To use it again, tap "Connect", or let the Bluetooth automatic connection
-  handle it.
-- If you tap "Connect" and no car shows up within **5 minutes**, HeadQLink stops by itself.
+- If the car is **gone for longer** (for example because you switch it off for a short stop), after 30 seconds
+  HeadQLink stops sending the picture and **pauses Android Auto**, but **keeps listening for the car** for "Wait for the
+  car" (**5 minutes** by default; change it in "Picture settings" › "Advanced"). The notification says "Waiting for the
+  car · Android Auto paused". If the car comes back within that time, the picture returns **instantly**, without
+  unlocking the phone or tapping anything.
+- Once "Wait for the car" runs out, HeadQLink closes everything: Android Auto, its server and the connection. To use it
+  again, tap "Connect", or let the Bluetooth automatic connection handle it.
+- If you tap "Connect" and no car shows up within **5 minutes** (or "Wait for the car", if longer), HeadQLink stops by
+  itself.
 
 ### At the end of the trip
 
-- Switch the car off (HeadQLink closes by itself after 30 s) or tap "Disconnect".
-- If the phone was locked, you'll see the "Auto on hold until you unlock the phone (then it closes by itself)"
-  notification. **Unlock the phone once** so it closes completely (section 9).
+- Switch the car off (HeadQLink closes by itself when "Wait for the car" runs out, 5 minutes by default) or tap
+  "Disconnect" to close it now.
+- If the phone was locked when it closed, you'll see the "Auto on hold until you unlock the phone (then it closes by
+  itself)" notification. **Unlock the phone once** so it closes completely: you'll see "Closing Auto…" for a few
+  seconds (section 9). If you get back in the car before unlocking it and use the Bluetooth automatic connection,
+  Android Auto comes back instantly, without going through "Closing Auto…".
+- "Closing Auto…" and "Starting Auto…" last a few seconds. If something gets them stuck, they go away by themselves
+  after 15 s; if the Android Auto server may have been left on, you'll see "The Android Auto server is still on · Tap to
+  turn it off": tap it with the phone unlocked.
 - Turn the hotspot off if you don't need it.
 
 ### Automatic connection: "Connect when the car's Bluetooth is detected"
@@ -294,11 +306,15 @@ you opening the app.
 
 After that:
 
-- If Bluetooth goes away before it manages to connect to the car, HeadQLink stops.
+- If Bluetooth goes away before it manages to connect to the car, HeadQLink stops. If it goes away after a session
+  (you switch the car off), it keeps waiting for the car until "Wait for the car" runs out.
+- If Android Auto was still paused (you're back before "Wait for the car" runs out, or it was left on hold with the
+  phone locked), the picture comes back instantly, **without unlocking the phone**.
 - If Android won't let it start in the background, you'll see the "Car detected · Tap to connect HeadQLink"
   notification. Tap it.
-- If the phone is locked when Android Auto has to start, the "Auto" row may say "Doesn't start: unlock the phone".
-  Unlock it (with the car stopped) and, if it still doesn't start, tap "Disconnect" and "Connect".
+- If Android Auto has to start and the phone is locked, you'll see the **"Unlock the phone to start Android Auto"**
+  notification. Unlock it (with the car stopped): HeadQLink starts it by itself, without opening the app (you'll briefly
+  see "Starting Auto…").
 
 ---
 
@@ -339,6 +355,9 @@ If you're connected, saving another profile makes the car and Android Auto recon
   - "Original headqlink": the original HeadQLink engine, as a **fallback** if QDAuto gives you trouble.
 
   The change "Applies on next connection": tap "Disconnect" and then "Connect".
+- "Advanced ▾" › "Wait for the car": "1 min", "5 min (recommended)" or "15 min". How long HeadQLink keeps listening for
+  the car, with Android Auto paused, after losing it (section 4). Longer = it comes back instantly after longer stops;
+  shorter = the Android Auto server is switched off sooner. It applies from the next stop.
 - The rest of "Advanced" (fps, kbps, width, height, H.264 profile, latency optimizations, throttle) is for testing.
   Leave it empty or as it is.
 
@@ -412,13 +431,15 @@ Always start with the ⚙ menu › "Requirements check": every red row has its o
 |---|---|---|
 | The car isn't found ("Searching…" all the time) | The car isn't on the phone's hotspot, the hotspot switched itself off, or the mirroring app isn't open in the car. With Wi-Fi Direct: the hotspot is on or Wi-Fi is off. | Check the "Network" row: it should say "Hotspot on (…)". Join the car to the hotspot (car Settings › Wi-Fi) and open the mirroring app. Turn off the hotspot's auto-off. After 5 minutes without a car HeadQLink stops: tap "Connect" again. |
 | "Port 18463 is busy (is QDLink open?)", or "Port 18463 · Busy" in the "Requirements check" | The QDLink app (or another one) is open on the phone and holds the port. | "Force stop" QDLink. HeadQLink retries every 5 s and the warning clears by itself. |
-| Black screen in the car, or an error in the "Auto" row | Android Auto didn't start: the phone was locked ("Doesn't start: unlock the phone"), or developer mode or accessibility is missing. | Unlock the phone, check the "Requirements check" and tap "Disconnect" and "Connect". To find out what's failing, turn on Diagnostics › "Test without Android Auto (pattern)": if you see the test image, the connection is fine and the problem is Android Auto (turn it off afterwards). If nothing works, try the "Original headqlink" engine. |
+| Black screen in the car, or an error in the "Auto" row | Android Auto didn't start: the phone was locked ("Doesn't start: unlock the phone"), or developer mode or accessibility is missing. | Unlock the phone (with the "Unlock the phone to start Android Auto" notification, it starts by itself when you unlock). If it still fails, check the "Requirements check" and tap "Disconnect" and "Connect". To find out what's failing, turn on Diagnostics › "Test without Android Auto (pattern)": if you see the test image, the connection is fine and the problem is Android Auto (turn it off afterwards). If nothing works, try the "Original headqlink" engine. |
 | Choppy or delayed picture | Hotspot on 2.4 GHz, hot phone, profile too high, or phone screen on (with the screen on, Android scans for Wi-Fi networks often). | Hotspot on 5 GHz, "Automatic" or "Car" profile, lock the phone and cool it down. If it continues, try "Medium". |
 | It disconnects often | Hotspot auto-off, battery saving, QDLink open, or the car's mirroring app closed. | Short dropouts reconnect by themselves ("Reconnecting…"). If they're long or frequent: "No battery restrictions", "Samsung: never sleeping apps", turn off the hotspot's auto-off and close QDLink. If it continues, export the log (section 8). |
 | Accessibility turns itself off | Android turns it off when the app is updated, or if the app crashed. Some manufacturers do too. | "Requirements check" › "Turn on". If it says "On but not running", turn it off and on. If it says "Restricted setting", use "Allow restricted settings" (section 3). Remove the battery restrictions. |
 | Android Auto asks you to check the phone | It's the first time Android Auto sees this "car screen", or it needs you to grant a permission or confirm something. | Park, unlock the phone and accept what Android Auto asks. It usually happens only once. |
 | The phone gets very hot | "Very high" or "High" profile, direct sun, screen on, wireless charging. | Section 6. |
 | "Android Auto server open · Unlock the phone to close it" notification | The session ended with the phone locked and the Android Auto server is still open. | Unlock the phone: HeadQLink closes it. |
+| After a stop it takes a long time to come back, or you have to close and reopen the app | The stop lasted longer than "Wait for the car" and HeadQLink closed everything; when you unlock, it first closes Android Auto ("Closing Auto…") and then it has to be started again. | Raise "Wait for the car" to "15 min" (Picture settings › Advanced) and turn on the Bluetooth automatic connection: when you're back, Android Auto returns instantly without unlocking. If you see "Unlock the phone to start Android Auto", unlock it and wait: it starts by itself, without opening the app. |
+| "Closing Auto…" or "Starting Auto…" doesn't go away, or the "The Android Auto server is still on · Tap to turn it off" notification | The automation of the Android Auto settings didn't finish (for example, the phone locked halfway). | The overlay goes away by itself after 15 s. Tap the notification with the phone unlocked to switch the server off. If it keeps happening, export the log (section 8): the "ciclo:" lines record every step. |
 | The automatic connection doesn't start | The Bluetooth name doesn't match, or Android won't let it start in the background. | Check the text in the "Automatic connection" prompt, remove the battery restrictions, or tap the "Tap to connect HeadQLink" notification. |
 | It won't install or update | Play Protect, Samsung Auto Blocker, or a version with a different signature. | Section 2. |
 
@@ -481,9 +502,10 @@ You can ask for help on the project's GitHub page: [CharlysEV/headqlink](https:/
 
 > [!IMPORTANT]
 > **The Android Auto server.** With Android Auto 17.4 or later, HeadQLink switches on the "head unit server" in Android
-> Auto's developer mode. While it's on, it listens on all of the phone's networks, so **HeadQLink switches it off at the
-> end of every session**. With the phone locked it can't switch it off, and keeps it on hold until you unlock ("Auto on
-> hold until you unlock the phone…"). **Unlock the phone after every trip.**
+> Auto's developer mode. While it's on, it listens on all of the phone's networks, so **HeadQLink switches it off when
+> it finishes**: when you tap "Disconnect" or when "Wait for the car" runs out (at most 15 minutes without the car, with
+> Android Auto paused and holding the server). With the phone locked it can't switch it off, and keeps it on hold until
+> you unlock ("Auto on hold until you unlock the phone…"). **Unlock the phone after every trip.**
 
 **When you're not using it:**
 
