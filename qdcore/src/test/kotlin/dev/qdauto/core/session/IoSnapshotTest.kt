@@ -21,7 +21,7 @@ class IoSnapshotTest {
         val server = MirrorServer(0).also { closeables += it }
         val car = ControlledCar(server.port).also { closeables += it }
         val listener = RecordingListener()
-        val s = PhoneSession(server.accept(5_000), SessionConfig(heartbeatInitialDelayMs = 60_000, sendBufferBytes = 4096), listener)
+        val s = PhoneSession(server.accept(5_000), SessionConfig(heartbeatInitialDelayMs = 60_000, sendBufferBytes = 4096, maxVideoMessageBytes = 0), listener)
             .also { closeables += it }.start()
         car.handshake()
         assertTrue(listener.streaming.await(5, TimeUnit.SECONDS))

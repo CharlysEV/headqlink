@@ -199,4 +199,24 @@ data class SessionConfig(
     val onThreadStart: ((ThreadRole) -> Unit)? = null,
     /** Si no es `null`, sustituye a [phoneInfoOverrides]: se evalúa con cada `CAR_INFO` (y en `resendPhoneInfo`). */
     val phoneInfoOverridesFor: ((dev.qdauto.core.wire.CarInfo?) -> PhoneInfoOverrides)? = null,
-)
+
+    // ---- hql: tope de tamaño de los mensajes de vídeo ----
+    /**
+     * Tamaño máximo de un mensaje de vídeo (48 B de cabeceras + Annex-B). El receptor del C10 se cuelga con mensajes de
+     * más de ~512 KiB: deja de leer el TCP (sigue mandando heartbeats) y el `write()` queda bloqueado hasta
+     * [writeStallTimeoutMs]. Un frame mayor se descarta, no se mandan los P-frames que dependen de él (se espera al
+     * siguiente IDR, con SPS/PPS delante) y se pide otro IDR ([KeyframeReason.OVERSIZED]). `0` = sin tope.
+     */
+    val maxVideoMessageBytes: Int = DEFAULT_MAX_VIDEO_MESSAGE_BYTES,
+) {
+    companion object {
+        /**
+         * Límite medido en el C10 (2026-10-05): mensajes de 525 208, 538 390 y 592 913 B lo colgaron; de 493 568 B y
+         * menos pasaron. Cuadra con un búfer de recepción de 512 KiB por mensaje.
+         */
+        const val CAR_RECEIVER_LIMIT_BYTES = 512 * 1024
+
+        /** Tope por defecto de [maxVideoMessageBytes], con margen bajo [CAR_RECEIVER_LIMIT_BYTES]. */
+        const val DEFAULT_MAX_VIDEO_MESSAGE_BYTES = 480 * 1024
+    }
+}

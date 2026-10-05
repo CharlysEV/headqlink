@@ -180,6 +180,7 @@ internal class SocketWriter(
             return
         }
         counters.videoBytesSent.addAndGet(size.toLong())
+        counters.videoMessageWritten(size)
         when (item.kind) {
             OutKind.VIDEO_CONFIG -> counters.codecConfigsSent.incrementAndGet()
             OutKind.VIDEO_KEY -> counters.keyframesSent.incrementAndGet()

@@ -21,6 +21,27 @@ internal class SessionCounters {
     val garbageBytes = AtomicLong()
     val videoRate = RateWindow()
 
+    /** hql: mensaje de vídeo más grande escrito (solo lo actualiza el hilo escritor). */
+    @Volatile
+    var maxVideoMessageBytes = 0L
+        private set
+
+    /** hql: el mayor frame descartado por tamaño (mensaje entero). */
+    private val maxOversized = AtomicLong()
+
+    /** hql: un mensaje de vídeo escrito (solo desde el hilo escritor). */
+    fun videoMessageWritten(bytes: Int) {
+        if (bytes > maxVideoMessageBytes) maxVideoMessageBytes = bytes.toLong()
+    }
+
+    /** hql: un frame descartado por tamaño (cualquier productor). */
+    fun oversized(messageBytes: Int) {
+        while (true) {
+            val cur = maxOversized.get()
+            if (messageBytes <= cur || maxOversized.compareAndSet(cur, messageBytes.toLong())) return
+        }
+    }
+
     @Volatile
     private var lastCarMessageNanos = 0L
 
@@ -79,6 +100,9 @@ internal class SessionCounters {
             lastCarHeartbeatIntervalMs = lastCarHeartbeatIntervalMs,
             touchEvents = touchEvents.get(),
             garbageBytes = garbageBytes.get(),
+            maxVideoMessageBytes = maxVideoMessageBytes,
+            videoFramesOversized = queue.oversizedFrames,
+            maxOversizedBytes = maxOversized.get(),
         )
     }
 }

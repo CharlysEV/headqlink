@@ -67,7 +67,15 @@ internal class Outgoing(
     }
 }
 
-internal enum class FrameOffer { ACCEPTED, DROPPED_WAITING_IDR, DROPPED_BACKLOG, CLOSED }
+internal enum class FrameOffer {
+    ACCEPTED,
+    DROPPED_WAITING_IDR,
+    DROPPED_BACKLOG,
+
+    /** hql: más grande que el tope de mensaje de vídeo; se espera un IDR (que tiene que salir más pequeño). */
+    DROPPED_OVERSIZED,
+    CLOSED,
+}
 
 /** hql (C2): lo que ve el escritor al mirar la cola ([SendQueue.poll]). */
 internal sealed class Polled {
@@ -92,6 +100,8 @@ internal sealed class Polled {
  *   descartan los P-frames encolados; si el que llega es un P-frame también se descarta y no se acepta ninguno más
  *   hasta el siguiente IDR (hay que pedirlo al encoder); si es un IDR, se encola (deja obsoletos los P anteriores);
  * - `MAX_LAG`: al sacar, una cabeza P con más de [maxLagNanos] en cola vacía todo el vídeo y se espera un IDR;
+ * - hql: con cualquier política, un frame (IDR o P) de más de [maxMessageBytes] (mensaje entero) no entra nunca: se
+ *   descarta y se espera al siguiente IDR, porque los P que vengan detrás dependen de él ([rejectOversized]);
  * - antes del primer frame aceptado tras [requestConfigResend] o [startStream] se reenvía SPS/PPS.
  *
  * hql (C2): los elementos que se quitan (descartes, cierre) se devuelven a quien llama, que avisa a su
@@ -105,6 +115,8 @@ internal class SendQueue(
     private val controlCapacity: Int = 1_000,
     private val dropPolicy: VideoDropPolicy = VideoDropPolicy.BACKLOG,
     private val maxLagNanos: Long = 150_000_000L,
+    /** hql: tope de un mensaje de vídeo (cabeceras incluidas); `0` = sin tope. */
+    private val maxMessageBytes: Int = 0,
 ) {
     private val lock = ReentrantLock()
     private val notEmpty = lock.newCondition()
@@ -142,6 +154,14 @@ internal class SendQueue(
     var flushes = 0L
         private set
 
+    /** hql: frames descartados por pasar de [maxMessageBytes] (también cuentan en [droppedFrames]). */
+    @Volatile
+    var oversizedFrames = 0L
+        private set
+
+    /** hql: ¿un mensaje de [messageBytes] pasa del tope? */
+    fun isOversized(messageBytes: Int): Boolean = maxMessageBytes in 1 until messageBytes
+
     /** `false` si está cerrada o llena (solo pasa si el escritor lleva mucho bloqueado). */
     fun offerControl(item: Outgoing): Boolean = lock.withLock {
         if (closed || control.size >= controlCapacity) return false
@@ -176,6 +196,7 @@ internal class SendQueue(
             droppedFrames++
             return FrameOffer.DROPPED_WAITING_IDR
         }
+        if (isOversized(item.bytes.size)) return oversizedLocked()
         // Atasco: solo con BACKLOG, salvo que la cola siga por encima de la válvula de memoria (lo que con BACKLOG y los
         // valores por defecto no pasa nunca): entonces se aplica a cualquier política.
         val overHardLimit = videoBytes > hardLimitBytes
@@ -202,6 +223,29 @@ internal class SendQueue(
         updateViews()
         notEmpty.signal()
         FrameOffer.ACCEPTED
+    }
+
+    /**
+     * hql: un frame que pasa del tope, sin construir su mensaje (lo comprueba quien llama con [isOversized]). Igual que
+     * en [offerFrame]: un P esperando un IDR sale como `DROPPED_WAITING_IDR`; si no, `DROPPED_OVERSIZED` y a esperar
+     * el siguiente IDR (con SPS/PPS delante si [resendConfigAfterDrop]).
+     */
+    fun rejectOversized(isKeyframe: Boolean): FrameOffer = lock.withLock {
+        if (closed) return FrameOffer.CLOSED
+        if (waitingForIdr && !isKeyframe) {
+            droppedFrames++
+            return FrameOffer.DROPPED_WAITING_IDR
+        }
+        oversizedLocked()
+    }
+
+    /** Con el candado: descarta por tamaño. Los P ya encolados se quedan: van antes y no dependen de este frame. */
+    private fun oversizedLocked(): FrameOffer {
+        droppedFrames++
+        oversizedFrames++
+        setWaiting(true)
+        if (resendConfigAfterDrop) pendingConfig = true
+        return FrameOffer.DROPPED_OVERSIZED
     }
 
     /** `KEY_FRAME_REQ`: SPS/PPS delante del siguiente frame aceptado. */

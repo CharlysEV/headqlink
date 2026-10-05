@@ -8,8 +8,16 @@ import android.view.Surface;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
-/** Encoder H.264 con entrada Surface. Entrega SPS/PPS y frames Annex-B a un Sink. */
+/**
+ * Encoder H.264 con entrada Surface. Entrega SPS/PPS y frames Annex-B a un Sink.
+ *
+ * Tamaño de los IDR (IdrSizeController): con Params.qpIMin y Android 12+, QP mínimo de los I-frames al configurar y en
+ * marcha (setQpIMin); con Android 13+, el QP medio de cada IDR si el encoder lo informa (lastIdrQp); y, para un IDR
+ * pedido, bajada temporal del bitrate (requestKeyFrame(dip)) que se repone en cuanto sale el IDR.
+ */
 final class VideoEncoder {
     interface Sink {
         void onCodecConfig(byte[] spsPps);
@@ -38,13 +46,18 @@ final class VideoEncoder {
         boolean noRepeat;
         /** Velocidad de operación al máximo (relojes del codificador altos siempre). */
         boolean maxClocks;
+        /** > 0 (Android 12+): QP mínimo de los I-frames al configurar (KEY_VIDEO_QP_I_MIN); 0 = el del encoder. */
+        int qpIMin;
+        /** QP máximo de los I-frames (con qpIMin). */
+        int qpIMax = 51;
 
         @Override
         public String toString() {
             return width + "x" + height + "@" + fps + " " + (bitrate / 1000) + "kbps " + profile
                     + (cbr ? " CBR" : " VBR") + " gop=" + iFrameIntervalSec + "s"
                     + (intraRefreshFrames > 0 ? " intra-refresh=" + intraRefreshFrames : "") + " prepend=" + prependSpsPps
-                    + (noRepeat ? " sin-repetir" : "") + (maxClocks ? " relojes-max" : "");
+                    + (noRepeat ? " sin-repetir" : "") + (maxClocks ? " relojes-max" : "")
+                    + (qpIMin > 0 ? " qp-i=" + qpIMin + "-" + qpIMax : "");
         }
     }
 
@@ -57,6 +70,19 @@ final class VideoEncoder {
     /** El códec dejó de funcionar sin que lo paráramos (error o reclamado por el sistema): ya no dará frames. */
     private volatile boolean failed;
     private byte[] outBuf = new byte[512 * 1024];
+    /** Bitrate pedido (ABR, térmico); el que lleva el códec puede ser menor durante una bajada por IDR. */
+    private volatile int bitrate;
+    /** Bajada en curso para un IDR pedido (factor), o 0. */
+    private volatile double dipFactor;
+    private volatile long dipSinceNs;
+    /** Se configuró con las claves de QP de los I-frames / con las estadísticas de codificación (QP medio). */
+    private volatile boolean qpKeys;
+    private volatile boolean qpStats;
+    /** Del último IDR (hilo enc-drain, antes de Sink.onFrame): QP medio informado (-1 = no) y bajada con que salió. */
+    private volatile int lastIdrQp = -1;
+    private volatile double lastIdrDip;
+    /** Una bajada sin IDR (el encoder no lo dio) se repone igualmente pasado esto. */
+    private static final long DIP_TIMEOUT_NS = 1_000_000_000L;
 
     VideoEncoder(Params p, Sink sink) {
         this.p = p;
@@ -83,27 +109,43 @@ final class VideoEncoder {
         f.setInteger(MediaFormat.KEY_PROFILE, profileConst(p.profile));
         f.setInteger(MediaFormat.KEY_LEVEL, levelFor(p.width, p.height, p.fps));
 
+        bitrate = p.bitrate;
+
         String name = pickHardwareEncoder(p.width, p.height, p.fps);
         codec = name != null ? MediaCodec.createByCodecName(name) : MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
         L.i("encoder " + codec.getName() + " " + p + (p.lowLatency ? " · baja latencia" : ""));
+        // Intentos, de más a menos: baja latencia (si se pide) y control del tamaño de los IDR; se quita lo que el
+        // códec rechace (un encoder que no admite las claves de baja latencia acaba con la configuración normal).
+        MediaFormat sized = withIdrSizeControl(f);
+        List<MediaFormat> tries = new ArrayList<>();
         if (p.lowLatency) {
-            MediaFormat fast = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, p.width, p.height);
-            for (String k : f.getKeys()) copyKey(f, fast, k);
-            // Claves de baja latencia conocidas por fabricante (un códec ignora las que no son suyas);
-            // en Android 12+ además se activan las que el propio encoder declare (enableVendorLowLatency).
-            for (String k : LOW_LATENCY_KEYS) fast.setInteger(k, 1);
-            if (android.os.Build.VERSION.SDK_INT >= 30) fast.setInteger(MediaFormat.KEY_LOW_LATENCY, 1);
-            if (!p.maxClocks) fast.setInteger(MediaFormat.KEY_OPERATING_RATE, p.fps * 2);
+            if (sized != null) tries.add(lowLatency(sized));
+            tries.add(lowLatency(f));
+        }
+        if (sized != null) tries.add(sized);
+        tries.add(f);
+        MediaFormat used = null;
+        RuntimeException last = null;
+        for (MediaFormat t : tries) {
             try {
-                codec.configure(fast, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+                codec.configure(t, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+                used = t;
+                break;
             } catch (RuntimeException e) {
-                // Un encoder que no admite las claves de baja latencia: configuración normal.
-                L.w("encoder sin modo de baja latencia: " + e.getMessage());
+                last = e;
+                L.w("encoder: configuración rechazada (" + (t.containsKey(LOW_LATENCY_KEYS[0]) ? "baja latencia" : "normal")
+                        + (t.containsKey(QP_I_MIN) ? " + QP-I" : "") + "): " + e.getMessage());
                 codec.reset();
-                codec.configure(f, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             }
-        } else {
-            codec.configure(f, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+        }
+        if (used == null) throw last;
+        if (p.lowLatency && !used.containsKey(LOW_LATENCY_KEYS[0])) L.w("encoder sin modo de baja latencia");
+        qpKeys = android.os.Build.VERSION.SDK_INT >= 31 && used.containsKey(QP_I_MIN);
+        qpStats = android.os.Build.VERSION.SDK_INT >= 33 && used.containsKey(STATS_LEVEL);
+        if (p.qpIMin > 0) {
+            L.i(qpKeys ? "encoder: QP-I " + p.qpIMin + "-" + p.qpIMax + " al configurar"
+                    + (qpStats ? "; pide el QP medio de cada IDR" : "")
+                    : "encoder: sin claves de QP (Android " + android.os.Build.VERSION.SDK_INT + " < 12 o rechazadas)");
         }
         logVendorParams();
         if (p.lowLatency) enableVendorLowLatency();
@@ -121,8 +163,21 @@ final class VideoEncoder {
     }
 
     void requestKeyFrame() {
+        requestKeyFrame(0);
+    }
+
+    /**
+     * Pide un IDR. dip (0 < dip < 1): baja antes el bitrate a ese factor para que el IDR salga pequeño; se repone al
+     * salir el IDR (o pasado DIP_TIMEOUT_NS).
+     */
+    void requestKeyFrame(double dip) {
         MediaCodec c = codec;
         if (c == null) return;
+        if (dip > 0 && dip < 1) {
+            dipSinceNs = System.nanoTime();
+            dipFactor = dip;
+            applyBitrate((int) (bitrate * dip));
+        }
         Bundle b = new Bundle();
         b.putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0);
         try {
@@ -131,7 +186,14 @@ final class VideoEncoder {
         }
     }
 
+    /** Bitrate nuevo (ABR, térmico). Durante una bajada por IDR se aplica con la bajada y queda para reponerlo. */
     void setBitrate(int bps) {
+        bitrate = bps;
+        double d = dipFactor;
+        applyBitrate(d > 0 ? (int) (bps * d) : bps);
+    }
+
+    private void applyBitrate(int bps) {
         MediaCodec c = codec;
         if (c == null) return;
         Bundle b = new Bundle();
@@ -140,6 +202,87 @@ final class VideoEncoder {
             c.setParameters(b);
         } catch (IllegalStateException ignored) {
         }
+    }
+
+    /** Fin de la bajada por IDR: el bitrate pedido vuelve al códec. */
+    private void endDip() {
+        dipFactor = 0;
+        applyBitrate(bitrate);
+    }
+
+    /** Se configuró con las claves de QP de los I-frames (Android 12+): setQpIMin puede servir. */
+    boolean qpControl() {
+        return qpKeys;
+    }
+
+    /**
+     * QP mínimo de los I-frames en marcha (Android 12+). false si no se pudo pasar al códec (sin claves o lo rechaza);
+     * que lo respete o no se ve en el tamaño (o el QP medio) de los IDR siguientes.
+     */
+    boolean setQpIMin(int min) {
+        MediaCodec c = codec;
+        if (c == null || !qpKeys || android.os.Build.VERSION.SDK_INT < 31) return false;
+        Bundle b = new Bundle();
+        b.putInt(QP_I_MIN, min);
+        b.putInt(QP_I_MAX, Math.max(min, p.qpIMax));
+        try {
+            c.setParameters(b);
+            return true;
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /** QP medio del último IDR, si el encoder lo informa (Android 13+), o -1. Hilo enc-drain, dentro de Sink.onFrame. */
+    int lastIdrQp() {
+        return lastIdrQp;
+    }
+
+    /** Factor de bitrate con que salió el último IDR (0 = sin bajada). Hilo enc-drain, dentro de Sink.onFrame. */
+    double lastIdrDip() {
+        return lastIdrDip;
+    }
+
+    // MediaFormat.KEY_VIDEO_QP_I_MIN/MAX (Android 12), KEY_VIDEO_ENCODING_STATISTICS_LEVEL y KEY_VIDEO_QP_AVERAGE
+    // (Android 13). Con su valor literal, que es fijo: así se pueden usar con minSdk 16 sin avisos de API.
+    private static final String QP_I_MIN = "video-qp-i-min";
+    private static final String QP_I_MAX = "video-qp-i-max";
+    private static final String STATS_LEVEL = "video-encoding-statistics-level";
+    private static final String QP_AVERAGE = "video-qp-average";
+
+    /** Copia de f con el control del tamaño de los IDR (QP-I y, en Android 13+, el QP medio), o null si no aplica. */
+    private MediaFormat withIdrSizeControl(MediaFormat f) {
+        if (p.qpIMin <= 0 || android.os.Build.VERSION.SDK_INT < 31) return null;
+        MediaFormat out = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, p.width, p.height);
+        for (String k : f.getKeys()) copyKey(f, out, k);
+        out.setInteger(QP_I_MIN, p.qpIMin);
+        out.setInteger(QP_I_MAX, Math.max(p.qpIMin, p.qpIMax));
+        // VIDEO_ENCODING_STATISTICS_LEVEL_1: el encoder informa del QP medio de cada frame en su formato de salida.
+        if (android.os.Build.VERSION.SDK_INT >= 33) out.setInteger(STATS_LEVEL, 1);
+        return out;
+    }
+
+    /** Copia de f con las claves de baja latencia. */
+    private MediaFormat lowLatency(MediaFormat f) {
+        MediaFormat fast = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, p.width, p.height);
+        for (String k : f.getKeys()) copyKey(f, fast, k);
+        // Claves de baja latencia conocidas por fabricante (un códec ignora las que no son suyas);
+        // en Android 12+ además se activan las que el propio encoder declare (enableVendorLowLatency).
+        for (String k : LOW_LATENCY_KEYS) fast.setInteger(k, 1);
+        if (android.os.Build.VERSION.SDK_INT >= 30) fast.setInteger(MediaFormat.KEY_LOW_LATENCY, 1);
+        if (!p.maxClocks) fast.setInteger(MediaFormat.KEY_OPERATING_RATE, p.fps * 2);
+        return fast;
+    }
+
+    /** QP medio del frame en el búfer idx (Android 13+ con estadísticas), o -1. Antes de liberar el búfer. */
+    private int readQp(int idx) {
+        if (!qpStats) return -1;
+        try {
+            MediaFormat of = codec.getOutputFormat(idx);
+            if (of != null && of.containsKey(QP_AVERAGE)) return of.getInteger(QP_AVERAGE);
+        } catch (RuntimeException ignored) {
+        }
+        return -1;
     }
 
     /**
@@ -284,6 +427,14 @@ final class VideoEncoder {
                     bb.position(info.offset);
                     bb.get(outBuf, 0, info.size);
                     boolean key = (info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0;
+                    if (key) {
+                        lastIdrQp = readQp(idx);
+                        double d = dipFactor;
+                        lastIdrDip = d;
+                        if (d > 0) endDip();
+                    } else if (dipFactor > 0 && System.nanoTime() - dipSinceNs > DIP_TIMEOUT_NS) {
+                        endDip();
+                    }
                     // Tiempo de codificación: la marca de presentación es la hora de dibujo (nanoTime).
                     long encMs = (System.nanoTime() / 1000 - info.presentationTimeUs) / 1000;
                     if (encMs >= 0 && encMs < 1000) PerfTrace.event("enc_ms", encMs);

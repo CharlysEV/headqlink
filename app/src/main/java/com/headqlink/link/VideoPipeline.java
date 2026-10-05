@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import dev.qdauto.core.h264.AnnexB;
 import dev.qdauto.core.session.KeyframeReason;
+import dev.qdauto.core.wire.VideoMessage;
 
 /**
  * La mitad de vídeo de SspSession, sin socket, para el motor QDAuto (qdauto §4.7): la fuente (Android Auto, patrón o
@@ -26,6 +27,11 @@ import dev.qdauto.core.session.KeyframeReason;
  * Hilos: crear, enganchar, desenganchar, pedir IDR, ABR y parar, en hql-video (VideoHub). El camino caliente (sink de
  * AA, sink del encoder, puerta GL) solo lee la referencia volatile active: sin sesión, el frame se tira y se cuenta, y
  * el ack de AA sale en el acto. Los tamaños y parámetros son exactamente los de SspSession.startVideo.
+ *
+ * Tamaño de los IDR (el C10 se cuelga con mensajes de más de ~512 KiB; el núcleo descarta los que pasan de
+ * SessionConfigs.MAX_VIDEO_MESSAGE_BYTES): con encoder propio, IdrSizeController (QP-I adaptable y, si no basta, bitrate
+ * bajado para el IDR pedido) e IdrRequestGate (antirrebote de las peticiones). En el reenvío directo no se controla el
+ * encoder de AA: un IDR grande se descarta y se pide otro (KeyframePolicy); si se repite, aviso y peticiones espaciadas.
  */
 final class VideoPipeline {
     /** "Último frame": se codifica uno nuevo solo con la cola del kernel por debajo de esto (SspSession.GATE_OUTQ). */
@@ -33,6 +39,15 @@ final class VideoPipeline {
     private static final int GATE_MAX_PENDING = 3;
     private static final long GATE_PENDING_TIMEOUT_NS = 200_000_000L;
     static final long ENCODER_HEALTH_NS = 2_000_000_000L;
+    /** Payload máximo de un frame que deja pasar el núcleo (su tope menos las cabeceras de 48 B). */
+    static final int PAYLOAD_CAP = SessionConfigs.MAX_VIDEO_MESSAGE_BYTES - VideoMessage.HEADER_SIZE;
+    /** Reenvío directo: IDR de AA descartados seguidos antes de avisar y espaciar las peticiones. */
+    static final int AA_OVERSIZE_WARN_AFTER = 3;
+    /** Reenvío directo, tras AA_OVERSIZE_WARN_AFTER descartes seguidos: como mucho un ciclo de foco cada tanto. */
+    static final long AA_OVERSIZE_BACKOFF_MS = 5_000;
+    private static final long AA_OVERSIZE_WARN_EVERY_MS = 60_000;
+    /** IDR sin pedir y sin nada que contar (los periódicos del patrón y de la app): como mucho una línea cada tanto. */
+    private static final long QUIET_IDR_LOG_MS = 10_000;
 
     final VideoPlan plan;
     private final Context ctx;
@@ -94,6 +109,25 @@ final class VideoPipeline {
     private volatile long firstIdrAfterAttachMs = -1;
     private final AtomicLong droppedNoSession = new AtomicLong();
     private boolean stopped;
+
+    // Tamaño de los IDR con encoder propio.
+    private volatile IdrSizeController idrCtl;
+    private final IdrRequestGate idrGate = new IdrRequestGate();
+    /** Se pidió un IDR que aún no ha salido (para el log: pedido o periódico). */
+    private volatile boolean idrRequested;
+    private volatile String idrRequestWhy = "";
+    /** IDR periódicos sin nada que contar desde la última línea, y cuándo fue (hilo enc-drain). */
+    private int quietIdrs;
+    private long lastQuietIdrLogMs;
+    private final Runnable deferredIdr = () -> {
+        if (!stopped && idrGate.onDue(SystemClock.elapsedRealtime())) fireEncoderIdr("aplazada por el antirrebote");
+    };
+
+    // Reenvío directo: IDR de AA descartados por grandes.
+    private final AtomicInteger aaOversizeStreak = new AtomicInteger();
+    private int aaOversizeTotal;
+    private long lastAaCycleMs = Long.MIN_VALUE / 4;
+    private long lastAaOversizeWarnMs = Long.MIN_VALUE / 4;
 
     private VideoPipeline(Context ctx, Config cfg, VideoPlan plan, Handler h) {
         this.ctx = ctx.getApplicationContext();
@@ -169,6 +203,8 @@ final class VideoPipeline {
         if (key) {
             KeyframePolicy pol = policy;
             if (pol != null) pol.onIdrSeen(SystemClock.elapsedRealtime());
+            // Uno que cabe corta la racha de IDR grandes (los que no caben los descarta el núcleo: onOversized).
+            if (len <= PAYLOAD_CAP) aaOversizeStreak.set(0);
         }
         // El tamaño lo decide la negociación con AA, que llega después de arrancar.
         int[] sz = source.passthroughSize();
@@ -204,6 +240,9 @@ final class VideoPipeline {
         vp.lowLatency = LowLatency.enabled;
         vp.noRepeat = cfg.getBool("enc_no_repeat");
         vp.maxClocks = cfg.encMaxClocks();
+        // Tamaño de los IDR: QP mínimo de los I-frames de partida (Android 12+); lo ajusta IdrSizeController.
+        vp.qpIMin = IdrSizeController.QP_START;
+        vp.qpIMax = IdrSizeController.QP_MAX;
         boolean latestFrame = source instanceof AaPassthroughSource;
         if (latestFrame) {
             // Como SspSession: sin IDR periódicos (el coche pide uno cuando lo necesita), VBR con tope, intra-refresh.
@@ -258,7 +297,11 @@ final class VideoPipeline {
             }
         });
         L.i("fuente de vídeo: " + cfg.mode() + " -> " + source.getClass().getSimpleName());
-        source.start(encoder.start(), plan.videoW, plan.videoH, vp.fps, vp.toString());
+        android.view.Surface in = encoder.start();
+        IdrSizeController ctl = new IdrSizeController(encoder.qpControl(), PAYLOAD_CAP);
+        idrCtl = ctl;
+        L.i("VIDEO " + ctl.describe());
+        source.start(in, plan.videoW, plan.videoH, vp.fps, vp.toString());
         if (abrMax > 0) {
             L.i(String.format(Locale.US, "bitrate adaptable %.1f-%.1f Mbps, empieza en %.1f", abrMin / 1e6, abrMax / 1e6, abrBps / 1e6));
             h.postDelayed(abrTick, 1000);
@@ -280,6 +323,7 @@ final class VideoPipeline {
             warnedKeyMismatch = true;
             L.w("encoder: la marca de keyframe (" + flagKey + ") no coincide con el contenido (IDR " + key + "); manda el contenido");
         }
+        if (key) onEncoderIdr(len);
         SessionPort p = active;
         if (p == null) {
             droppedNoSession.incrementAndGet();
@@ -287,6 +331,37 @@ final class VideoPipeline {
         }
         if (key) noteIdr();
         p.sendFrame(buf, 0, len, key, ptsUs, null);
+    }
+
+    /**
+     * Hilo enc-drain, antes de mandar el IDR: tamaño al controlador, QP-I nuevo al encoder (antes de que nadie pida el
+     * siguiente IDR) y una línea de log por IDR («IDR 312 KB · QP-I mín 30»). Si pasa del tope, el núcleo lo descartará
+     * y pedirá otro (OVERSIZED); el controlador ya lo ha tenido en cuenta.
+     */
+    private void onEncoderIdr(int len) {
+        idrGate.onIdr();
+        boolean requested = idrRequested;
+        idrRequested = false;
+        String why = idrRequestWhy;
+        IdrSizeController ctl = idrCtl;
+        VideoEncoder enc = encoder;
+        if (ctl == null || enc == null) return;
+        IdrSizeController.Step st = ctl.onIdr(len, enc.lastIdrQp(), enc.lastIdrDip());
+        boolean applied = !st.qpChanged() || enc.setQpIMin(st.qpAfter);
+        PerfTrace.event("idr_kb", IdrSizeController.kb(len));
+        if (st.qpChanged()) PerfTrace.event("idr_qp_min", st.qpAfter);
+        long now = SystemClock.elapsedRealtime();
+        if (!requested && !st.notable() && applied && now - lastQuietIdrLogMs < QUIET_IDR_LOG_MS) {
+            quietIdrs++;
+            return;
+        }
+        String line = "VIDEO " + st.line() + (requested ? " · pedido (" + why + ")" : " · periódico")
+                + (applied ? "" : " · el encoder no aceptó el QP-I nuevo")
+                + (quietIdrs > 0 ? " · +" + quietIdrs + " IDR periódicos sin cambios desde la línea anterior" : "");
+        quietIdrs = 0;
+        if (!requested) lastQuietIdrLogMs = now;
+        if (st.overCap || !applied) L.w(line);
+        else L.i(line);
     }
 
     /**
@@ -451,18 +526,34 @@ final class VideoPipeline {
         return active;
     }
 
-    /** Hilo hql-video: IDR pedido por la sesión activa. */
+    /**
+     * Hilo hql-video: IDR pedido por la sesión activa. Con encoder, IdrRequestGate: el primero de la sesión
+     * (STREAM_START) y el que sustituye a uno descartado por grande (OVERSIZED), al momento; los demás (KEY_FRAME_REQ del
+     * coche, atasco), como mucho uno cada IdrRequestGate.DEBOUNCE_MS. Sin encoder, KeyframePolicy.
+     */
     void requestKeyFrame(KeyframeReason reason) {
         VideoEncoder enc = encoder;
+        long now = SystemClock.elapsedRealtime();
         if (enc != null) {
-            // Con encoder: al momento, sin antirrebote (como askKeyFrame); redraw para tener un frame que codificar.
-            enc.requestKeyFrame();
-            source.redraw();
+            boolean urgent = reason == KeyframeReason.STREAM_START || reason == KeyframeReason.OVERSIZED;
+            long v = idrGate.onRequest(now, urgent);
+            if (v == IdrRequestGate.NOW) {
+                fireEncoderIdr(String.valueOf(reason));
+            } else if (v > 0) {
+                h.removeCallbacks(deferredIdr);
+                h.postDelayed(deferredIdr, v);
+                PerfTrace.event("idr_defer", v);
+            } else {
+                PerfTrace.event("idr_skip", 0);
+            }
             return;
         }
         KeyframePolicy pol = policy;
         if (pol == null) return;
-        long now = SystemClock.elapsedRealtime();
+        if (aaOversizeBackoff(now)) {
+            PerfTrace.event("idr_skip", 0);
+            return;
+        }
         if (pol.onRequest(now)) {
             fireCycle(String.valueOf(reason));
         } else {
@@ -470,9 +561,48 @@ final class VideoPipeline {
         }
     }
 
+    /** Hilo hql-video: pide el IDR al encoder (con el bitrate bajado si el controlador lo dice) y dibuja un frame. */
+    private void fireEncoderIdr(String why) {
+        VideoEncoder enc = encoder;
+        if (enc == null || stopped) return;
+        IdrSizeController ctl = idrCtl;
+        double dip = ctl != null ? ctl.takeDip() : 0;
+        idrRequestWhy = dip > 0 ? why + ", bitrate al " + IdrSizeController.pct(dip) + " %" : why;
+        idrRequested = true;
+        enc.requestKeyFrame(dip);
+        if (dip > 0) PerfTrace.event("idr_dip_pct", IdrSizeController.pct(dip));
+        // Redraw para tener un frame que codificar (la imagen puede no haber cambiado).
+        source.redraw();
+    }
+
+    /**
+     * Hilo hql-video: el núcleo descartó un frame por pasar de su tope (después de onEncoderIdr, si es nuestro). En el
+     * reenvío directo no se controla el encoder de AA: se cuenta y, si se repite, se avisa y se espacian los ciclos.
+     */
+    void onOversized(int messageBytes, boolean key) {
+        if (stopped || encoder != null) return;
+        int n = aaOversizeStreak.incrementAndGet();
+        aaOversizeTotal++;
+        long now = SystemClock.elapsedRealtime();
+        if (n >= AA_OVERSIZE_WARN_AFTER && now - lastAaOversizeWarnMs >= AA_OVERSIZE_WARN_EVERY_MS) {
+            lastAaOversizeWarnMs = now;
+            L.w("Android Auto manda " + (key ? "IDR" : "frames") + " de " + IdrSizeController.kb(messageBytes)
+                    + " KB, más de lo que admite el coche (" + IdrSizeController.kb(SessionConfigs.MAX_VIDEO_MESSAGE_BYTES)
+                    + " KB): " + n + " seguidos descartados (" + aaOversizeTotal + " en total). La imagen puede quedarse"
+                    + " parada; pido otro IDR como mucho cada " + AA_OVERSIZE_BACKOFF_MS / 1000 + " s. Mejor un perfil que"
+                    + " recodifique en el móvil («Coche», el recomendado) en Ajustes de imagen.");
+        }
+    }
+
+    /** Reenvío directo con IDR de AA grandes seguidos: no más de un ciclo de foco cada AA_OVERSIZE_BACKOFF_MS. */
+    private boolean aaOversizeBackoff(long now) {
+        return aaOversizeStreak.get() >= AA_OVERSIZE_WARN_AFTER && now - lastAaCycleMs < AA_OVERSIZE_BACKOFF_MS;
+    }
+
     /** Pide un ciclo de foco a AA; si la palanca está ocupada, un único reintento a +150 ms. */
     private void fireCycle(String why) {
         if (stopped) return;
+        lastAaCycleMs = SystemClock.elapsedRealtime();
         L.i("AA: ciclo de foco para IDR (" + why + ")");
         source.requestKeyFrame(started -> h.post(() -> {
             if (started || stopped) return;
@@ -492,7 +622,9 @@ final class VideoPipeline {
         KeyframePolicy pol = policy;
         SessionPort p = active;
         if (pol == null || p == null || stopped) return;
-        if (pol.watchdog(SystemClock.elapsedRealtime(), p.waitingForIdr())) fireCycle("vigilante: sin IDR en 1,5 s");
+        long now = SystemClock.elapsedRealtime();
+        if (aaOversizeBackoff(now)) return;
+        if (pol.watchdog(now, p.waitingForIdr())) fireCycle("vigilante: sin IDR en 1,5 s");
     }
 
     void setCarDark(boolean dark) {
@@ -570,6 +702,8 @@ final class VideoPipeline {
         }
         if (jit.length() > 0) out.add(jit.toString());
         if (abrMax > 0) out.add(String.format(Locale.US, "bitrate %.1f Mbps (%.1f-%.1f)", abrBps / 1e6, abrMin / 1e6, abrMax / 1e6));
+        String gate = idrGate.takeWindowLine();
+        if (gate != null) out.add(gate);
         return out;
     }
 
@@ -599,6 +733,10 @@ final class VideoPipeline {
         stopped = true;
         active = null;
         h.removeCallbacks(abrTick);
+        h.removeCallbacks(deferredIdr);
+        IdrSizeController ctl = idrCtl;
+        if (ctl != null) L.i("VIDEO " + ctl.summary() + " · " + idrGate.summary());
+        if (aaOversizeTotal > 0) L.i("AA: " + aaOversizeTotal + " IDR descartados por pasar del tope del coche");
         if (brake != null) {
             VideoTap.setAckGate(null);
             brake.stop();

@@ -65,6 +65,11 @@ internal object SessionSummary {
         /** fps máximos del vídeo al cerrar y el mínimo de la sesión (los de la sesión, o el tope térmico; 0 = sin vídeo). */
         val fpsCapEnd: Int = 0,
         val fpsCapMin: Int = 0,
+        /** Mensaje de vídeo más grande enviado (cabeceras incluidas; el C10 se cuelga con más de 512 KiB). */
+        val maxMessageBytes: Long = 0,
+        /** Frames descartados por pasar del tope de tamaño, y el mayor de ellos (bytes). */
+        val oversizedDrops: Long = 0,
+        val oversizedMaxBytes: Long = 0,
     ) {
         val durationS: Double get() = (endWallMs - startWallMs) / 1000.0
         val fps: Double get() = if (videoSeconds > 0) frames / videoSeconds else 0.0
@@ -85,6 +90,9 @@ internal object SessionSummary {
     private fun t(ms: Long) = TIME.get()!!.format(Date(ms))
     private fun d(ms: Long) = DATE.get()!!.format(Date(ms))
     private fun rel(ms: Long) = if (ms < 0) "—" else "+$ms ms"
+
+    /** KiB redondeados hacia arriba (un mensaje de 491 521 B ya no cabe en 480). */
+    internal fun kb(bytes: Long): Long = (bytes + 1023) / 1024
     private fun f1(v: Double) = String.format(Locale.getDefault(), "%.1f", v)
 
     /** Bloque de varias líneas para el log (formato de qdauto §7.4). */
@@ -103,6 +111,11 @@ internal object SessionSummary {
             .append(String.format(Locale.getDefault(), "%.1f", r.kbps / 1000)).append(" Mbit/s · ").append(r.idr).append(" IDR · descartados ")
             .append(r.dropped).append(" · vaciados ").append(r.flushes).append(" · máx. write ").append(r.maxWriteMs)
             .append(" ms · máx. cola ").append(r.maxLagMs).append(" ms")
+        if (r.maxMessageBytes > 0) append(" · mensaje máx. ").append(kb(r.maxMessageBytes)).append(" KB")
+        if (r.oversizedDrops > 0) {
+            append(" · descartados por tamaño ").append(r.oversizedDrops).append(" (máx. ").append(kb(r.oversizedMaxBytes))
+                .append(" KB)")
+        }
         if (r.aaCycles > 0) append(" · ciclos de foco de AA ").append(r.aaCycles)
         if (r.thermalMax >= 0) {
             append(" · térmico ").append(r.thermalEnd).append(" (máx. ").append(r.thermalMax).append(')')
@@ -125,6 +138,7 @@ internal object SessionSummary {
         "frames", "fps", "kbps", "idr", "keyframe_req_coche", "descartados", "vaciados", "max_write_ms", "max_cola_ms",
         "heartbeats_coche", "toques", "max_hueco_coche_ms", "cortes", "max_corte_ms", "retrans", "reconexion_ms",
         "video_reutilizado", "ciclos_foco_aa", "termico_fin", "termico_max", "tope_fps_fin", "tope_fps_min",
+        "frame_max_kb", "descartados_grandes",
     ).joinToString(",")
 
     fun csvRow(r: Record): String = listOf(
@@ -136,6 +150,7 @@ internal object SessionSummary {
         r.carHeartbeats.toString(), r.touches.toString(), r.maxCarGapMs.toString(), r.stalls.toString(), r.maxStallMs.toString(),
         r.retrans.toString(), r.reconnectMs.toString(), if (r.videoVerdict == "REUTILIZADO") "1" else "0", r.aaCycles.toString(),
         r.thermalEnd.toString(), r.thermalMax.toString(), r.fpsCapEnd.toString(), r.fpsCapMin.toString(),
+        kb(r.maxMessageBytes).toString(), r.oversizedDrops.toString(),
     ).joinToString(",") { csv(it) }
 
     private val NUMBER = Regex("-?[0-9]+(\\.[0-9]+)?")
@@ -228,6 +243,11 @@ internal object SessionSummary {
         append("cierres: ").append(trip.groupingBy { it.closeKind }.eachCount().entries.joinToString(" · ") { "${it.key} ${it.value}" }.ifEmpty { "—" })
             .append('\n')
         append("cortes: ").append(trip.sumOf { it.stalls }).append(" (máx. ").append(trip.maxOfOrNull { it.maxStallMs } ?: 0).append(" ms)\n")
+        val maxMsg = trip.maxOfOrNull { it.maxMessageBytes } ?: 0L
+        if (maxMsg > 0) {
+            append("mensajes de vídeo: máx. ").append(kb(maxMsg)).append(" KB · descartados por tamaño ")
+                .append(trip.sumOf { it.oversizedDrops }).append('\n')
+        }
         val thermalMax = trip.maxOfOrNull { it.thermalMax } ?: -1
         if (thermalMax >= 0) {
             append("térmico: máx. ").append(thermalMax)

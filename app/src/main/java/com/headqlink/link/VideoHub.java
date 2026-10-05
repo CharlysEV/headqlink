@@ -78,6 +78,14 @@ final class VideoHub {
         });
     }
 
+    /** El núcleo descartó un frame de port por pasar de su tope de tamaño (llega antes que su petición de IDR). */
+    void onOversized(SessionPort port, int messageBytes, boolean key) {
+        h.post(() -> {
+            VideoPipeline p = pipeline;
+            if (p != null && p.active() == port) p.onOversized(messageBytes, key);
+        });
+    }
+
     /** Táctil del coche: directo a la fuente (también antes de enganchar, como el fork). */
     void touch(int action, Proto.Finger[] fingers) {
         VideoPipeline p = live;

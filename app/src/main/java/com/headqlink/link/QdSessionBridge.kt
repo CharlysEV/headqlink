@@ -5,6 +5,7 @@ import android.os.SystemClock
 import dev.qdauto.core.discovery.CarAnnouncement
 import dev.qdauto.core.session.CloseReason
 import dev.qdauto.core.session.KeyframeReason
+import dev.qdauto.core.session.OversizedFrame
 import dev.qdauto.core.session.PhoneSession
 import dev.qdauto.core.session.SessionListener
 import dev.qdauto.core.wire.AppMessage
@@ -217,6 +218,15 @@ internal class QdSessionBridge(
             PerfTrace.event("idr_req", 0)
         }
         hub.requestKeyFrame(port, reason)
+    }
+
+    /**
+     * El núcleo descartó un frame por pasar del tope que aguanta el coche (su aviso ya está en el log). Llega antes que la
+     * petición de IDR (OVERSIZED) que lo acompaña: el vídeo lo cuenta (reenvío directo) antes de pedir otro.
+     */
+    override fun onVideoFrameOversized(frame: OversizedFrame) {
+        PerfTrace.event("idr_oversized", ((frame.messageBytes + 1023) / 1024).toLong())
+        hub.onOversized(port, frame.messageBytes, frame.isKeyframe)
     }
 
     override fun onTouch(event: TouchEvent) {
@@ -505,6 +515,9 @@ internal class QdSessionBridge(
                 thermalMax = thermalMax,
                 fpsCapEnd = if (s.frames > 0) hub.fpsCap() else 0,
                 fpsCapMin = if (s.frames > 0) fpsCapMin else 0,
+                maxMessageBytes = st.maxVideoMessageBytes,
+                oversizedDrops = st.videoFramesOversized,
+                oversizedMaxBytes = st.maxOversizedBytes,
             )
             val block = SessionSummary.block(record)
             QdTrace.block("HQL/Resumen", block)
@@ -554,6 +567,8 @@ internal class QdSessionBridge(
             "HQL/Puente S$sid",
             "núcleo: cola ${st.videoQueueFrames} frames/${st.videoQueueBytes} B · control ${st.controlQueueDepth} · " +
                 "heartbeats del coche ${st.carHeartbeats} · hueco máx. del coche ${st.maxCarGapMs} ms · IDR pedidos ${st.keyframeRequests}" +
+                " · mensaje de vídeo máx. ${(st.maxVideoMessageBytes + 1023) / 1024} KB" +
+                (if (st.videoFramesOversized > 0) " · descartados por tamaño ${st.videoFramesOversized}" else "") +
                 (net?.let { " · outq ${it[0]} B rtt ${it[1] / 1000} ms retrans ${it[4]} cwnd ${it[5]}" } ?: ""),
         )
     }

@@ -128,6 +128,7 @@ class PhoneSession(
         controlCapacity = config.controlQueueCapacity,
         dropPolicy = config.videoDropPolicy,
         maxLagNanos = SendQueue.lagNanos(config.videoMaxLagMs),
+        maxMessageBytes = config.maxVideoMessageBytes,
     )
     private val events = EventDispatcher("qd-s$id-events", log, tag) { threadStarted(ThreadRole.EVENTS) }
     // hql (C1): sin removeOnCancelPolicy (API 21): la sesión no cancela tareas sueltas y el temporizador se cierra
@@ -247,6 +248,7 @@ class PhoneSession(
      */
     fun sendFrame(annexB: ByteArray, offset: Int, length: Int, isKeyframe: Boolean, ptsUs: Long, completion: FrameCompletion?): Boolean {
         if (!acceptFrame(isKeyframe, length, ptsUs, completion)) return false
+        if (rejectedForSize(isKeyframe, length, ptsUs, completion)) return false
         val params = videoParams
         return offerFrame(VideoMessage.build(params, annexB, offset, length), isKeyframe, ptsUs, params, completion, length)
     }
@@ -258,6 +260,7 @@ class PhoneSession(
     fun sendFrame(annexB: ByteBuffer, isKeyframe: Boolean, ptsUs: Long, completion: FrameCompletion?): Boolean {
         val length = annexB.remaining()
         if (!acceptFrame(isKeyframe, length, ptsUs, completion)) return false
+        if (rejectedForSize(isKeyframe, length, ptsUs, completion)) return false
         val params = videoParams
         return offerFrame(VideoMessage.build(params, annexB), isKeyframe, ptsUs, params, completion, length)
     }
@@ -603,12 +606,56 @@ class PhoneSession(
                 requestKeyframe(KeyframeReason.BACKLOG, force = false)
                 false
             }
+            FrameOffer.DROPPED_OVERSIZED -> {
+                finish(item, FrameOutcome.DROPPED)
+                oversizedDropped(message.size, isKeyframe)
+                false
+            }
             FrameOffer.CLOSED -> {
                 finish(item, FrameOutcome.CLOSED)
                 false
             }
         }
     }
+
+    /**
+     * hql: tope de tamaño ([SessionConfig.maxVideoMessageBytes]) antes de construir el mensaje (un IDR enorme no llega
+     * a copiarse). `true` = el frame no entra (su finalización ya está avisada).
+     */
+    private fun rejectedForSize(isKeyframe: Boolean, length: Int, ptsUs: Long, completion: FrameCompletion?): Boolean {
+        val total = VideoMessage.HEADER_SIZE + length
+        if (!queue.isOversized(total)) return false
+        when (queue.rejectOversized(isKeyframe)) {
+            FrameOffer.CLOSED -> completeEarly(completion, FrameOutcome.CLOSED, isKeyframe, length, ptsUs)
+            FrameOffer.DROPPED_WAITING_IDR -> {
+                completeEarly(completion, FrameOutcome.DROPPED, isKeyframe, length, ptsUs)
+                requestKeyframe(KeyframeReason.BACKLOG, force = false)
+            }
+            else -> {
+                completeEarly(completion, FrameOutcome.DROPPED, isKeyframe, length, ptsUs)
+                oversizedDropped(total, isKeyframe)
+            }
+        }
+        return true
+    }
+
+    /** hql: un frame descartado por tamaño: registro, aviso a la app y un IDR (más pequeño) cuanto antes. */
+    private fun oversizedDropped(messageBytes: Int, isKeyframe: Boolean) {
+        counters.oversized(messageBytes)
+        val limit = config.maxVideoMessageBytes
+        val n = queue.oversizedFrames
+        log.w(
+            tag,
+            "vídeo: ${if (isKeyframe) "IDR" else "P-frame"} de $messageBytes B (${kb(messageBytes)} KB) > tope $limit B " +
+                "(${kb(limit)} KB; el coche se cuelga con más de ${kb(SessionConfig.CAR_RECEIVER_LIMIT_BYTES)} KB): descartado, " +
+                "sin P-frames hasta el siguiente IDR; se pide otro más pequeño ($n en esta sesión)",
+        )
+        val frame = OversizedFrame(messageBytes, isKeyframe, limit, n)
+        post { listener.onVideoFrameOversized(frame) }
+        requestKeyframe(KeyframeReason.OVERSIZED, force = true)
+    }
+
+    private fun kb(bytes: Int): Int = (bytes + 1023) / 1024
 
     private fun computeVideoParams(): VideoParams {
         val ov = overrides

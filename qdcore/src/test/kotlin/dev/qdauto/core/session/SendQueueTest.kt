@@ -99,6 +99,66 @@ class SendQueueTest {
         assertEquals(listOf("C9", "I1", "C10", "P2"), q.drain())
     }
 
+    /** hql: tope de mensaje de vídeo; el escenario del C10 (IDR de 538 KB) con todas las políticas. */
+    @Test
+    fun oversizedIdrIsDroppedAndItsDeltasWaitForTheNextIdr() {
+        for (policy in VideoDropPolicy.values()) {
+            val q = SendQueue(
+                backlogFrames = 100, backlogBytes = 10_000_000, hardLimitBytes = 100_000_000, resendConfigAfterDrop = true,
+                dropPolicy = policy, maxMessageBytes = 480 * 1024,
+            )
+            assertEquals(FrameOffer.ACCEPTED, q.offerFrame(key(1, 300_000)) { cfg(1) }, "$policy")
+            assertEquals(FrameOffer.ACCEPTED, q.offerFrame(delta(1)) { cfg(1) })
+            // El IDR de 538 390 B (mensaje entero) no entra; los P que dependen de él tampoco.
+            assertEquals(FrameOffer.DROPPED_OVERSIZED, q.offerFrame(key(2, 538_390)) { cfg(2) }, "$policy")
+            assertTrue(q.isWaitingForIdr)
+            assertEquals(FrameOffer.DROPPED_WAITING_IDR, q.offerFrame(delta(2)) { cfg(2) })
+            assertEquals(FrameOffer.DROPPED_WAITING_IDR, q.offerFrame(delta(3)) { cfg(2) })
+            // El IDR siguiente (más pequeño) entra con SPS/PPS delante, y con él vuelven los P.
+            assertEquals(FrameOffer.ACCEPTED, q.offerFrame(key(3, 300_000)) { cfg(3) })
+            assertEquals(FrameOffer.ACCEPTED, q.offerFrame(delta(4)) { cfg(4) })
+            // El P encolado antes del IDR grande sale: no depende de él.
+            assertEquals(listOf("I1", "P1", "C3", "I3", "P4"), q.drain(), "$policy")
+            assertEquals(1, q.oversizedFrames)
+            assertEquals(3, q.droppedFrames)
+        }
+    }
+
+    @Test
+    fun oversizedLimitIsInclusiveAndZeroMeansNoLimit() {
+        val q = SendQueue(100, 10_000_000, 100_000_000, false, maxMessageBytes = 1_000)
+        assertEquals(FrameOffer.ACCEPTED, q.offerFrame(key(1, 1_000)) { null })
+        assertEquals(FrameOffer.DROPPED_OVERSIZED, q.offerFrame(key(2, 1_001)) { null })
+        // Un P demasiado grande también corta la cadena hasta el siguiente IDR.
+        assertEquals(FrameOffer.ACCEPTED, q.offerFrame(key(3, 10)) { null })
+        assertEquals(FrameOffer.DROPPED_OVERSIZED, q.offerFrame(delta(1, 5_000)) { null })
+        assertEquals(FrameOffer.DROPPED_WAITING_IDR, q.offerFrame(delta(2)) { null })
+        assertEquals(listOf("I1", "I3"), q.drain())
+        assertEquals(2, q.oversizedFrames)
+
+        val free = SendQueue(100, 10_000_000, 100_000_000, false, maxMessageBytes = 0)
+        assertEquals(false, free.isOversized(5_000_000))
+        assertEquals(FrameOffer.ACCEPTED, free.offerFrame(key(1, 2_000_000)) { null })
+        assertEquals(0, free.oversizedFrames)
+    }
+
+    @Test
+    fun rejectOversizedWithoutBuildingTheMessage() {
+        val q = SendQueue(100, 10_000_000, 100_000_000, true, maxMessageBytes = 480 * 1024)
+        assertTrue(q.isOversized(525_208))
+        assertEquals(false, q.isOversized(480 * 1024))
+        assertEquals(FrameOffer.ACCEPTED, q.offerFrame(key(1)) { cfg(1) })
+        assertEquals(FrameOffer.DROPPED_OVERSIZED, q.rejectOversized(isKeyframe = true))
+        // Ya esperando un IDR, un P grande es un descarte normal (no cuenta como «por tamaño»).
+        assertEquals(FrameOffer.DROPPED_WAITING_IDR, q.rejectOversized(isKeyframe = false))
+        assertEquals(1, q.oversizedFrames)
+        assertEquals(2, q.droppedFrames)
+        assertEquals(FrameOffer.ACCEPTED, q.offerFrame(key(2)) { cfg(2) })
+        assertEquals(listOf("I1", "C2", "I2"), q.drain())
+        q.close()
+        assertEquals(FrameOffer.CLOSED, q.rejectOversized(isKeyframe = true))
+    }
+
     @Test
     fun controlQueueIsBounded() {
         val q = SendQueue(10, 1_000, 10_000, true, controlCapacity = 3)

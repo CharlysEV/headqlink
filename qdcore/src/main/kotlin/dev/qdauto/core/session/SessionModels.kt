@@ -50,7 +50,24 @@ enum class KeyframeReason {
 
     /** Se descartaron frames por atasco: no se mandan P-frames hasta el siguiente IDR. */
     BACKLOG,
+
+    /**
+     * hql: se descartó un frame más grande que [SessionConfig.maxVideoMessageBytes] (el coche se colgaría con él): no se
+     * mandan P-frames hasta el siguiente IDR, que tiene que salir **más pequeño**.
+     */
+    OVERSIZED,
 }
+
+/** hql: un frame descartado por pasar de [SessionConfig.maxVideoMessageBytes] ([SessionListener.onVideoFrameOversized]). */
+data class OversizedFrame(
+    /** Tamaño del mensaje que habría salido: 48 B de cabeceras + Annex-B. */
+    val messageBytes: Int,
+    val isKeyframe: Boolean,
+    /** El tope ([SessionConfig.maxVideoMessageBytes]). */
+    val limitBytes: Int,
+    /** Frames descartados por tamaño en esta sesión, este incluido. */
+    val count: Long,
+)
 
 data class CloseReason(val kind: Kind, val message: String, val error: Throwable? = null) {
     enum class Kind {
@@ -122,6 +139,12 @@ data class SessionStats(
     val lastCarHeartbeatIntervalMs: Long?,
     val touchEvents: Long,
     val garbageBytes: Long,
+    /** hql: mensaje de vídeo más grande escrito en el socket (48 B de cabeceras + Annex-B). */
+    val maxVideoMessageBytes: Long = 0,
+    /** hql: frames descartados por pasar de [SessionConfig.maxVideoMessageBytes] (incluidos en [videoFramesDropped]). */
+    val videoFramesOversized: Long = 0,
+    /** hql: el más grande de esos descartes (mensaje entero), o 0. */
+    val maxOversizedBytes: Long = 0,
 )
 
 /**
@@ -148,6 +171,12 @@ interface SessionListener {
 
     /** Hay que pedir un IDR al encoder (`MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME`). */
     fun onKeyframeRequested(reason: KeyframeReason) {}
+
+    /**
+     * hql: se descartó un frame por pasar de [SessionConfig.maxVideoMessageBytes]. Llega antes que el
+     * [onKeyframeRequested] con [KeyframeReason.OVERSIZED] que lo acompaña.
+     */
+    fun onVideoFrameOversized(frame: OversizedFrame) {}
 
     /** Táctil (msgType 2) con todos los dedos y valores crudos. */
     fun onTouch(event: TouchEvent) {}

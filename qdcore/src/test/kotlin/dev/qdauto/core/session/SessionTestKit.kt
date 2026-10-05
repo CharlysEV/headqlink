@@ -136,6 +136,13 @@ class RecordingListener : SessionListener {
         events += "keyframe:$reason"
     }
 
+    val oversized: MutableList<OversizedFrame> = Collections.synchronizedList(ArrayList())
+
+    override fun onVideoFrameOversized(frame: OversizedFrame) {
+        oversized += frame
+        events += "oversized:${frame.messageBytes}"
+    }
+
     override fun onTouch(event: TouchEvent) {
         touches += event
     }

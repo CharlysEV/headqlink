@@ -106,7 +106,7 @@ class FrameCompletionTest {
         val listener = RecordingListener()
         val s = session(
             server.accept(5_000),
-            SessionConfig(heartbeatInitialDelayMs = 60_000, sendBufferBytes = 4096, videoBacklogFrames = 3),
+            SessionConfig(heartbeatInitialDelayMs = 60_000, sendBufferBytes = 4096, videoBacklogFrames = 3, maxVideoMessageBytes = 0),
             listener,
         )
         val rec = Recorder { s.queue }
@@ -137,7 +137,7 @@ class FrameCompletionTest {
         val server = MirrorServer(0).also { closeables += it }
         val car = ControlledCar(server.port).also { closeables += it }
         val listener = RecordingListener()
-        val s = session(server.accept(5_000), SessionConfig(heartbeatInitialDelayMs = 60_000, sendBufferBytes = 4096, videoBacklogFrames = 100), listener)
+        val s = session(server.accept(5_000), SessionConfig(heartbeatInitialDelayMs = 60_000, sendBufferBytes = 4096, videoBacklogFrames = 100, maxVideoMessageBytes = 0), listener)
         val rec = Recorder { s.queue }
         car.handshake()
         assertTrue(listener.streaming.await(5, TimeUnit.SECONDS))

@@ -35,7 +35,7 @@ class VideoDropPolicyTest {
         val listener = RecordingListener()
         val s = PhoneSession(
             server.accept(5_000),
-            SessionConfig(heartbeatInitialDelayMs = 60_000, sendBufferBytes = 4096, videoDropPolicy = VideoDropPolicy.NONE),
+            SessionConfig(heartbeatInitialDelayMs = 60_000, sendBufferBytes = 4096, videoDropPolicy = VideoDropPolicy.NONE, maxVideoMessageBytes = 0),
             listener,
         ).also { closeables += it }.start()
         val outcomes = ConcurrentHashMap<Int, FrameOutcome>()
@@ -67,6 +67,8 @@ class VideoDropPolicyTest {
                 videoDropPolicy = VideoDropPolicy.MAX_LAG,
                 videoMaxLagMs = 150,
                 minKeyframeRequestIntervalMs = 0,
+                // Un IDR de 1 MB que bloquea el write() (el coche no lee): sin tope de tamaño.
+                maxVideoMessageBytes = 0,
             ),
             listener,
         ).also { closeables += it }.start()

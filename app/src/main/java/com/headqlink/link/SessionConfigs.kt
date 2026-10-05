@@ -35,6 +35,12 @@ internal object SessionConfigs {
     /** Reenvío directo: el coche o el núcleo piden IDR, pero cada ciclo de foco congela la imagen; 1,5 s entre peticiones. */
     const val PASSTHROUGH_MIN_KEYFRAME_MS = 1_500L
 
+    /**
+     * Tope de un mensaje de vídeo (48 B de cabeceras + Annex-B): el receptor del C10 se cuelga con más de ~512 KiB
+     * (`SessionConfig.CAR_RECEIVER_LIMIT_BYTES`). Un frame mayor lo descarta el núcleo y se pide otro IDR más pequeño.
+     */
+    const val MAX_VIDEO_MESSAGE_BYTES = SessionConfig.DEFAULT_MAX_VIDEO_MESSAGE_BYTES
+
     fun forCurrentSettings(cfg: Config, phone: PhoneIdentity, portFor: (Int) -> SessionPort?): SessionConfig {
         val mode = cfg.mode()
         val passthrough = Config.MODE_AA == mode && !cfg.aaReencode()
@@ -71,6 +77,7 @@ internal object SessionConfigs {
             videoWriteGate = if (passthrough && brake) brakeGate(portFor) else null,
             videoWriteGateMaxWaitMs = 250,
             videoWriteGatePollMs = 2,
+            maxVideoMessageBytes = MAX_VIDEO_MESSAGE_BYTES,
         )
     }
 
