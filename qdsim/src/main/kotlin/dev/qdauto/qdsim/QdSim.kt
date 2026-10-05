@@ -6,6 +6,7 @@ import dev.qdauto.core.sim.CarSim
 import dev.qdauto.core.sim.CarSimConfig
 import dev.qdauto.core.sim.CarSimListener
 import dev.qdauto.core.sim.CarSimState
+import dev.qdauto.core.sim.ReceiverHang
 import dev.qdauto.core.sim.VideoArgsValues
 import dev.qdauto.core.sim.VideoFrameInfo
 import dev.qdauto.core.sim.VideoKind
@@ -71,19 +72,47 @@ class Options(
     val help: Boolean,
     /** Arrancar también un móvil de prueba en este proceso (127.0.0.1) para probar qdsim sin el teléfono. */
     val localPhone: Boolean = false,
+    /** Manía 1 del C10: límite del receptor en bytes (0 = no colgarse). */
+    val limitBytes: Int = CarSimConfig.C10_RECEIVER_LIMIT_BYTES,
+    /** Cuánto deja de leer el coche simulado antes de cerrar. */
+    val hangMs: Long = 10_000,
+    /** Manía 2 del C10: evaluar `sps_repetido`. */
+    val spsCheck: Boolean = true,
+    /** Pasar el vídeo de cada sesión por ffmpeg al acabar. */
+    val decode: Boolean = false,
+    val ffmpeg: File? = null,
 ) {
+    /** `estricto`: los WARN cuentan como FAIL y las manías no se pueden desactivar. */
+    val strict: Boolean get() = scenario == "estricto"
+
     companion object {
-        val SCENARIOS = listOf("normal", "reconnect", "stall", "silent", "disconnect", "rack")
+        val SCENARIOS = listOf("normal", "estricto", "reconnect", "stall", "silent", "disconnect", "rack")
 
         val USAGE = """
             Uso: qdsim --scenario <escenario> [opciones]
               escenarios: ${SCENARIOS.joinToString(", ")}
                 normal      1 sesión con guion táctil (toque, arrastre, pellizco, KEY_FRAME_REQ)
+                estricto    como normal, con todas las manías del C10: límite de 512 KiB, SPS/PPS repetidos y ffmpeg
+                            (--decode) si está; los WARN cuentan como FAIL y --no-* no se admite
                 reconnect   N sesiones; el coche cierra (FIN) y se reanuncia a los --gap-ms (S1 pide modo noche)
                 stall       vídeo, silencio y sin leer --stall-s, cierre y nuevo anuncio
                 silent      silencio y sin leer, sin cerrar; a los 2 s otro arranque del coche se anuncia (relevo)
                 disconnect  DISCONNECT_REQ: espera DISCONNECT_RSP{CanDisconnect:1}, el cierre y la reconexión
                 rack        el coche ignora el primer ACK: el segundo debe llegar ≥ 400 ms después
+              En todos los escenarios se comprueban las manías del C10 vistas el 2026-10-05 (activas por defecto):
+                tamano_mensaje  el receptor del coche se cuelga con un mensaje de vídeo (48 B + payload) de más de
+                                512 KiB: el coche simulado deja de leer --hang s (manda heartbeats) y cierra → FAIL;
+                                WARN si alguno pasa de 480 KiB (el teléfono tiene que recortar a 480 KiB)
+                sps_repetido    el coche reinicia el decodificador con cada SPS/PPS: solo valen el primero y los que
+                                preceden a un IDR pedido con KEY_FRAME_REQ (WARN si el IDR no se pidió, FAIL si no
+                                hay IDR detrás); se informa del número y los intervalos
+                decodifica      con --decode: ffmpeg (-f h264 -i - -f null -) decodifica el vídeo sin errores
+              --limit KIB          límite del receptor del coche (512); 0 o --no-limit = no colgarse
+              --hang S             segundos sin leer antes de cerrar al colgarse (10)
+              --no-sps-check       no evaluar sps_repetido
+              --no-quirks          --no-limit y --no-sps-check
+              --decode             pasar el vídeo de cada sesión por ffmpeg (SKIP si no se encuentra ffmpeg)
+              --ffmpeg RUTA        ejecutable de ffmpeg (implica --decode); por defecto tools\ffmpeg\...\ffmpeg.exe o el PATH
               --target IP          destino del broadcast (por defecto 255.255.255.255; o la IP del móvil)
               --sessions N         sesiones del escenario reconnect (10)
               --duration S         segundos de vídeo por sesión (20; normal: 30)
@@ -104,12 +133,22 @@ class Options(
             var help = false
             var verbose = false
             var local = false
+            var noLimit = false
+            var noSps = false
+            var decode = false
             var i = 0
             while (i < args.size) {
                 when (val a = args[i]) {
                     "--help", "-h" -> help = true
                     "--verbose", "-v" -> verbose = true
                     "--local-phone" -> local = true
+                    "--no-limit" -> noLimit = true
+                    "--no-sps-check" -> noSps = true
+                    "--no-quirks" -> {
+                        noLimit = true
+                        noSps = true
+                    }
+                    "--decode" -> decode = true
                     else -> {
                         require(a.startsWith("--")) { "argumento inesperado: $a" }
                         require(i + 1 < args.size) { "falta el valor de $a" }
@@ -122,6 +161,11 @@ class Options(
             val scenario = m["scenario"] ?: if (help) "normal" else throw IllegalArgumentException("falta --scenario")
             require(scenario in SCENARIOS) { "escenario desconocido: $scenario" }
             fun int(k: String, d: Int) = m[k]?.toIntOrNull() ?: d
+            val strict = scenario == "estricto"
+            require(!strict || (!noLimit && !noSps && (m["limit"]?.toIntOrNull() ?: 1) > 0)) { "el escenario estricto no admite --no-limit, --no-sps-check, --no-quirks ni --limit 0" }
+            val limitKiB = m["limit"]?.let { it.toIntOrNull()?.takeIf { n -> n >= 0 } ?: throw IllegalArgumentException("--limit espera KiB: $it") }
+            val hangS = m["hang"]?.let { it.replace(',', '.').toDoubleOrNull()?.takeIf { s -> s > 0 } ?: throw IllegalArgumentException("--hang espera segundos: $it") }
+            val ffmpeg = m["ffmpeg"]?.let { File(it) }
             return Options(
                 scenario = scenario,
                 target = InetAddress.getByName(m["target"] ?: if (local) "127.0.0.1" else "255.255.255.255"),
@@ -143,6 +187,11 @@ class Options(
                 verbose = verbose,
                 help = help,
                 localPhone = local,
+                limitBytes = if (noLimit) 0 else (limitKiB?.let { it * 1024 } ?: CarSimConfig.C10_RECEIVER_LIMIT_BYTES),
+                hangMs = hangS?.let { (it * 1000).toLong() } ?: 10_000L,
+                spsCheck = !noSps,
+                decode = decode || ffmpeg != null || strict,
+                ffmpeg = ffmpeg,
             )
         }
     }
@@ -159,8 +208,13 @@ private class Probe(private val t0: Long) : CarSimListener {
     @Volatile var disconnectRsp: ControlMessage? = null
     @Volatile var configBeforeIdr = false
     @Volatile var ackFrom: InetSocketAddress? = null
+    @Volatile var hangMs = -1L
 
     private fun now() = (System.nanoTime() - t0) / 1_000_000
+
+    override fun onReceiverHang(hang: ReceiverHang) {
+        if (hangMs < 0) hangMs = now()
+    }
 
     override fun onAck(ack: BroadcastAck, from: InetSocketAddress) {
         ackMs = now()
@@ -206,6 +260,26 @@ class QdSim(private val o: Options) {
         say(line)
     }
 
+    /** Las manías del C10: WARN no cuenta como fallo salvo en `estricto`; SKIP nunca. */
+    private fun check(v: Verdict, label: String) {
+        val level = if (v.level == Level.WARN && o.strict) Level.FAIL else v.level
+        val line = "${level.name.padEnd(4)} $label: ${v.text}"
+        if (level == Level.FAIL) failures++
+        results += line
+        say(line)
+    }
+
+    /** Grabación de la sesión en curso (la de `--out`, o una temporal si hay que decodificar). */
+    private var recording: File? = null
+    private var recordingIsTemp = false
+
+    private fun recordingFor(session: Int): File? {
+        val f = o.out?.let { File("$it-s$session.h264") } ?: if (o.decode) File.createTempFile("qdsim-s$session-", ".h264") else null
+        recordingIsTemp = o.out == null && f != null
+        recording = f
+        return f
+    }
+
     private fun config(ignoreAcks: Int = 0) = CarSimConfig(
         broadcastAddress = o.target,
         broadcastIntervalMs = o.broadcastMs,
@@ -222,8 +296,10 @@ class QdSim(private val o: Options) {
         // El tamaño depende del perfil de imagen del móvil (completo o 720p): se informa, no se valida.
         expectedWidth = 0,
         expectedHeight = 0,
-        recordVideoTo = o.out?.let { File("$it-s${sessionNo + 1}.h264") },
+        recordVideoTo = recordingFor(sessionNo + 1),
         ignoreAcks = ignoreAcks,
+        receiverLimitBytes = o.limitBytes,
+        receiverHangMs = o.hangMs,
     )
 
     /** Arranca un coche y espera a que el móvil le mande vídeo. */
@@ -279,21 +355,64 @@ class QdSim(private val o: Options) {
         while (System.currentTimeMillis() < end && sim.currentState != CarSimState.CLOSED) Thread.sleep(100)
     }
 
-    private fun finish(sim: CarSim, label: String) {
+    private fun finish(sim: CarSim, p: Probe, label: String) {
         val r = sim.report()
         say("$label: ${r.videoMessages} mensajes de vídeo (IDR ${r.idrFrames}, P ${r.pFrames}, config ${r.codecConfigMessages}) · " +
             "errores ${r.videoErrorCount} · heartbeats del móvil ${r.phoneHeartbeats}")
         if (r.videoErrorCount > 0) check(false, "$label: vídeo con errores ${r.videoErrors.take(3)}")
+        quirks(sim, p, label)
         sim.close()
         sim.awaitTermination(5_000)
+        decode(label)
+    }
+
+    /** Manías del C10 (2026-10-05) sobre lo que ha visto esta sesión. */
+    private fun quirks(sim: CarSim, p: Probe, label: String) {
+        val r = sim.report()
+        say("$label: mensaje de vídeo más grande ${r.videoMaxMessageBytes} B (${r.videoLargeMessages} de más de 480 KiB) · SPS/PPS: ${r.codecConfigSummary.describe()}")
+        check(Quirks.messageSize(r.videoMessages, r.videoMaxMessageBytes, r.videoLargeMessages, r.receiverHang, p.hangMs.takeIf { it >= 0 }, o.limitBytes), label)
+        if (o.spsCheck) {
+            check(Quirks.spsRepeat(r.videoMessages, r.codecConfigSummary), label)
+        } else {
+            check(Verdict(Level.SKIP, "sps_repetido: desactivada con --no-sps-check"), label)
+        }
+    }
+
+    /** `--decode`: la grabación de la sesión (ya cerrada) por ffmpeg. */
+    private fun decode(label: String) {
+        val file = recording
+        recording = null
+        try {
+            if (!o.decode) return
+            if (o.localPhone) {
+                check(Verdict(Level.SKIP, "decodifica: los frames del móvil local son falsos y no se pueden decodificar"), label)
+                return
+            }
+            val ffmpeg = Ffmpeg.locate(o.ffmpeg)
+            if (ffmpeg == null) {
+                check(Verdict(Level.SKIP, "decodifica: ffmpeg no encontrado" + (o.ffmpeg?.let { " en ${it.path}" } ?: " (ni en ${Ffmpeg.DEFAULT_PATH.path} ni en el PATH)")), label)
+                return
+            }
+            if (file == null || !file.isFile || file.length() == 0L) {
+                check(Verdict(Level.SKIP, "decodifica: sin vídeo grabado"), label)
+                return
+            }
+            say("$label: decodificando ${file.length()} B con ${ffmpeg.path}...")
+            check(Quirks.decode(Ffmpeg.decode(ffmpeg, file)), label)
+        } finally {
+            if (recordingIsTemp) file?.delete()
+        }
     }
 
     fun run(): Boolean {
         say("qdsim · escenario ${o.scenario}")
+        val limit = if (o.limitBytes > 0) "se cuelga con mensajes de vídeo de más de ${o.limitBytes / 1024} KiB (${o.hangMs} ms sin leer)" else "sin límite de mensaje"
+        say("manías del C10: $limit · ${if (o.spsCheck) "SPS/PPS repetidos" else "sin comprobar SPS/PPS repetidos"}" +
+            (if (o.decode) " · ffmpeg al final de cada sesión" else "") + if (o.strict) " · estricto: los WARN cuentan como FAIL" else "")
         val phone = if (o.localPhone) LocalPhone(log).start() else null
         try {
             when (o.scenario) {
-                "normal" -> normal()
+                "normal", "estricto" -> normal()
                 "reconnect" -> reconnect()
                 "stall" -> stall()
                 "silent" -> silent()
@@ -328,7 +447,7 @@ class QdSim(private val o: Options) {
         check(sim.report().idrFrames > idrBefore, "S1: KEY_FRAME_REQ servido con un IDR")
         sim.sendAppMessage("Global", "DarkModeOn", JsonObject.of("DarkModeOn" to 1))
         play(sim, o.durationS - 4)
-        finish(sim, "S1")
+        finish(sim, p, "S1")
     }
 
     private fun reconnect() {
@@ -342,7 +461,7 @@ class QdSim(private val o: Options) {
                 say("$label: modo noche del coche (DarkModeOn:1); en las sesiones siguientes Android Auto debe seguir en noche")
             }
             play(sim, o.durationS)
-            finish(sim, label)
+            finish(sim, p, label)
             Thread.sleep(o.gapMs)
         }
     }
@@ -351,12 +470,14 @@ class QdSim(private val o: Options) {
         val (sim, p) = startCar()
         expectVideo(sim, p, null, "S1")
         play(sim, 5)
+        quirks(sim, p, "S1")
         say("S1: corte de radio simulado de ${o.stallS} s (el coche ni habla ni lee)")
         sim.goSilent()
         sim.pauseReading(0)
         Thread.sleep(o.stallS * 1000L)
         sim.closeAbruptly()
         sim.awaitTermination(5_000)
+        decode("S1")
         val t = System.nanoTime()
         val (sim2, p2) = startCar()
         val ok = expectVideo(sim2, p2, 500, "S2")
@@ -364,23 +485,27 @@ class QdSim(private val o: Options) {
         check(ok && p2.ackMs in 0..1_000, "S2: reconexión tras el corte (ACK +${p2.ackMs} ms, ${reconnectMs} ms hasta ahora)")
         say("Revisa el log del móvil: «Corte S… INICIO/FIN» con horas coherentes y «reconexión X ms» < 1 s.")
         play(sim2, 5)
-        finish(sim2, "S2")
+        finish(sim2, p2, "S2")
     }
 
     private fun silent() {
         val (sim, p) = startCar()
         expectVideo(sim, p, null, "S1")
         play(sim, 3)
+        quirks(sim, p, "S1")
         say("S1: el coche se calla y deja de leer, sin cerrar")
         sim.goSilent()
         sim.pauseReading(0)
+        val s1Recording = recording
+        val s1Temp = recordingIsTemp
         Thread.sleep(2_000)
         val (sim2, p2) = startCar()
         val ok = expectVideo(sim2, p2, 500, "S2")
         check(ok && p2.ackMs in 0..o.broadcastMs + 200, "S2: relevo de S1 (ACK +${p2.ackMs} ms tras el primer broadcast; S1 debe cerrarse con SUPERSEDED)")
         play(sim2, 5)
         sim.close()
-        finish(sim2, "S2")
+        finish(sim2, p2, "S2")
+        if (s1Temp) s1Recording?.delete()
     }
 
     private fun disconnect() {
@@ -393,12 +518,14 @@ class QdSim(private val o: Options) {
         val can = p.disconnectRsp?.para?.int("CanDisconnect")
         check(can == 1, "S1: DISCONNECT_RSP{CanDisconnect:${can ?: "—"}}")
         check(p.closedMs >= 0 && p.closeReason.contains("EOF"), "S1: el móvil cierra tras responder (${p.closeReason})")
+        quirks(sim, p, "S1")
         sim.close()
         sim.awaitTermination(5_000)
+        decode("S1")
         val (sim2, p2) = startCar()
         if (expectVideo(sim2, p2, 500, "S2")) check(true, "S2: vuelve a conectar cuando el coche se reanuncia")
         play(sim2, 3)
-        finish(sim2, "S2")
+        finish(sim2, p2, "S2")
     }
 
     private fun rack() {
@@ -407,6 +534,6 @@ class QdSim(private val o: Options) {
         // El primer ACK llega con el primer broadcast (~0 ms) y se ignora; el bueno, con el re-ACK (≥ 400 ms).
         check(ok && p.ackMs >= 400, "S1: segundo ACK a los ${p.ackMs} ms del primer broadcast (≥ 400 ms) y conexión")
         play(sim, 3)
-        finish(sim, "S1")
+        finish(sim, p, "S1")
     }
 }

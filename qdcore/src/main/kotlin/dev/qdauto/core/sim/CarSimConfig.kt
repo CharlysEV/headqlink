@@ -100,4 +100,23 @@ data class CarSimConfig(
     val traceMaxJsonChars: Int = 4_096,
     /** hql (C4): descartar los N primeros `Broadcast_ACK` y seguir anunciándose (para probar el re-ACK del teléfono). */
     val ignoreAcks: Int = 0,
-)
+    /**
+     * Manía del C10 (2026-10-05): su receptor QDLink se cuelga con cualquier mensaje de vídeo (cabeceras de 48 B +
+     * payload) de más de [C10_RECEIVER_LIMIT_BYTES]: deja de leer el TCP (el `write()` del teléfono se bloquea) sin
+     * dejar de mandar heartbeats, hasta que el teléfono corta ~10 s después. El simulador hace lo mismo: deja de
+     * leer [receiverHangMs] y cierra. 0 = sin límite.
+     */
+    val receiverLimitBytes: Int = C10_RECEIVER_LIMIT_BYTES,
+    /** Cuánto deja de leer el simulador tras el mensaje de más antes de cerrar. */
+    val receiverHangMs: Long = 10_000,
+    /** Umbral de aviso: la app tiene que recortar sus mensajes de vídeo a [RECOMMENDED_MAX_MESSAGE_BYTES]. */
+    val largeMessageBytes: Int = RECOMMENDED_MAX_MESSAGE_BYTES,
+) {
+    companion object {
+        /** Tamaño de mensaje de vídeo a partir del cual el receptor del C10 se cuelga (medido en el coche). */
+        const val C10_RECEIVER_LIMIT_BYTES = 512 * 1024
+
+        /** Tope que se espera que aplique el teléfono, con margen por debajo del límite del coche. */
+        const val RECOMMENDED_MAX_MESSAGE_BYTES = 480 * 1024
+    }
+}

@@ -15,6 +15,20 @@ enum class CarSimState { IDLE, DISCOVERING, CONNECTING, HANDSHAKE, STREAMING, CL
 /** Un mensaje táctil enviado por el simulador. */
 data class SentTouch(val action: Int, val pointers: List<TouchPointer>)
 
+/**
+ * El simulador se ha "colgado" como el receptor del C10 ante un mensaje de vídeo de más de
+ * [CarSimConfig.receiverLimitBytes]: deja de leer durante [hangMs] (sin dejar de mandar heartbeats) y cierra.
+ */
+data class ReceiverHang(
+    /** Índice del mensaje de vídeo que lo provocó. */
+    val messageIndex: Int,
+    val messageBytes: Int,
+    val limitBytes: Int,
+    val hangMs: Long,
+) {
+    fun describe(): String = "mensaje de vídeo #$messageIndex de $messageBytes B, más del límite del coche ($limitBytes B)"
+}
+
 /** Eventos del simulador. Se llaman desde sus hilos internos: no bloquearlos. */
 interface CarSimListener {
     fun onStateChanged(state: CarSimState) {}
@@ -23,6 +37,9 @@ interface CarSimListener {
     fun onPhoneControl(message: ControlMessage) {}
     fun onPhoneApp(message: AppMessage) {}
     fun onVideoFrame(info: VideoFrameInfo) {}
+
+    /** El simulador deja de leer (como el C10 con un mensaje de más de 512 KiB); cerrará a los `hang.hangMs`. */
+    fun onReceiverHang(hang: ReceiverHang) {}
     fun onTrace(event: TraceEvent) {}
     fun onClosed(reason: String) {}
 }
@@ -56,6 +73,14 @@ data class CarSimReport(
     val lastVideoHeader: VideoExtHeader?,
     val videoErrorCount: Int,
     val videoErrors: List<String>,
+    /** Mensaje de vídeo más grande (cabeceras de 48 B incluidas). */
+    val videoMaxMessageBytes: Int,
+    /** Mensajes de vídeo de más de [CarSimConfig.largeMessageBytes]. */
+    val videoLargeMessages: Int,
+    /** Cada SPS/PPS recibido con su contexto (manía del C10: reinicia el decodificador con cada uno). */
+    val codecConfigs: List<CodecConfigEvent>,
+    /** El simulador se colgó como el C10 por un mensaje de vídeo demasiado grande. */
+    val receiverHang: ReceiverHang?,
     /** Mensajes del teléfono que el simulador no esperaba. */
     val unexpected: List<String>,
     val touchesSent: Int,
@@ -66,6 +91,8 @@ data class CarSimReport(
     /** Hubo vídeo, el primero fue SPS/PPS, hubo IDR y ningún error de validación. */
     val videoValid: Boolean
         get() = videoMessages > 0 && firstVideoKind == VideoKind.CONFIG && idrFrames > 0 && videoErrorCount == 0
+
+    val codecConfigSummary: CodecConfigSummary get() = CodecConfigSummary(codecConfigs)
 
     fun summary(): String = buildString {
         appendLine("estado=$state broadcasts=$broadcastsSent ack=$ackFrom MirrorPort=$mirrorPort conectado=$connectedTo")
@@ -78,6 +105,8 @@ data class CarSimReport(
                 "primero=$firstVideoKind válido=$videoValid errores=$videoErrorCount",
         )
         lastVideoHeader?.let { appendLine("última cabecera: $it") }
+        if (videoMessages > 0) appendLine("mensaje de vídeo más grande: $videoMaxMessageBytes B ($videoLargeMessages grandes); SPS/PPS: ${codecConfigSummary.describe()}")
+        receiverHang?.let { appendLine("  ! receptor colgado: ${it.describe()}") }
         videoErrors.take(10).forEach { appendLine("  ! $it") }
         if (unexpected.isNotEmpty()) appendLine("inesperados=$unexpected")
         if (handshakeErrors.isNotEmpty()) appendLine("handshake=$handshakeErrors")

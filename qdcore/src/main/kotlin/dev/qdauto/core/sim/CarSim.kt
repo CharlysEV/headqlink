@@ -11,6 +11,8 @@ import dev.qdauto.core.wire.CarMessages
 import dev.qdauto.core.wire.Cmd
 import dev.qdauto.core.wire.Direction
 import dev.qdauto.core.wire.FrameReader
+import dev.qdauto.core.wire.Header
+import dev.qdauto.core.wire.MsgType
 import dev.qdauto.core.wire.TouchCodec
 import dev.qdauto.core.wire.TouchPointer
 import dev.qdauto.core.wire.Traces
@@ -161,7 +163,7 @@ class CarSim(
     /** Cambia lo que se valida en las cabeceras de vídeo (p. ej. tras mandar otro `VIDEO_ARGS` a mano). */
     fun updateVideoExpectations(expectations: VideoExpectations) = seen.updateExpectations(expectations)
 
-    fun requestKeyframe(): Boolean = send(CarMessages.keyFrameReq())
+    fun requestKeyframe(): Boolean = send(CarMessages.keyFrameReq()).also { if (it) seen.noteKeyframeRequest() }
     fun sendLandModeReq(orientation: Int): Boolean = send(CarMessages.landModeReq(orientation))
     fun sendBtAddr(address: String, status: Int, needAutoConnect: Int): Boolean = send(CarMessages.btAddr(address, status, needAutoConnect))
     fun sendGoInLinkApp(): Boolean = send(CarMessages.goInLinkApp())
@@ -385,10 +387,36 @@ class CarSim(
                 } catch (e: Exception) {
                     log.e(TAG, "error procesando un mensaje del teléfono", e)
                 }
+                if (m is WireMessage.Frame && exceedsReceiverLimit(m.header)) {
+                    hangLikeTheCar(m.header.totalSize)
+                    return
+                }
             }
         } catch (e: IOException) {
             if (!closed.get()) finish("error de lectura: $e")
         }
+    }
+
+    private fun exceedsReceiverLimit(h: Header): Boolean =
+        config.receiverLimitBytes > 0 && h.msgType == MsgType.VIDEO && h.totalSize > config.receiverLimitBytes
+
+    /**
+     * Manía del C10 (2026-10-05): con un mensaje de vídeo de más de [CarSimConfig.receiverLimitBytes] el receptor
+     * deja de leer el TCP (el teléfono se queda bloqueado en `write()`) mientras sigue mandando heartbeats, y la
+     * sesión acaba cayendo ~10 s después. Aquí: se deja de leer [CarSimConfig.receiverHangMs] y se cierra.
+     */
+    private fun hangLikeTheCar(messageBytes: Int) {
+        val hang = ReceiverHang(seen.count("VIDEO") - 1, messageBytes, config.receiverLimitBytes, config.receiverHangMs)
+        seen.noteReceiverHang(hang)
+        log.w(TAG, "receptor colgado como el C10: ${hang.describe()}; sin leer ${hang.hangMs} ms")
+        listener.onReceiverHang(hang)
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(hang.hangMs)
+        while (!closed.get()) {
+            val leftMs = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime())
+            if (leftMs <= 0) break
+            sleep(minOf(leftMs, 100L))
+        }
+        finish("receptor colgado como el C10: ${hang.describe()}; cerrado tras ${hang.hangMs} ms sin leer")
     }
 
     /** hql (C4): espera mientras la lectura esté en pausa ([pauseReading]). */
@@ -421,7 +449,10 @@ class CarSim(
                 o.write(bytes)
                 o.flush()
             } catch (e: IOException) {
-                if (!closed.get()) finish("error de escritura: $e")
+                if (!closed.get()) {
+                    val hung = if (seen.hasReceiverHang) "receptor colgado como el C10 y el teléfono cortó antes; " else ""
+                    finish("${hung}error de escritura: $e")
+                }
                 return false
             }
         }

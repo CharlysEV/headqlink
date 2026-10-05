@@ -57,7 +57,9 @@ internal class PhoneObserver(
     private val handshakeErrors = ArrayList<String>()
     private var closeReason: String? = null
     private val record: OutputStream? = config.recordVideoTo?.let { BufferedOutputStream(FileOutputStream(it)) }
-    private val validator = VideoValidator(defaultExpectations(config), record)
+    private val validator = VideoValidator(defaultExpectations(config), record, config.largeMessageBytes)
+    private val codecConfigs = CodecConfigTracker()
+    private var receiverHang: ReceiverHang? = null
 
     val state: CarSimState get() = lock.withLock { simState }
     val hasAck: Boolean get() = lock.withLock { ack != null }
@@ -111,6 +113,12 @@ internal class PhoneObserver(
 
     fun noteKey() = lock.withLock { keysSent++ }
 
+    fun noteKeyframeRequest() = lock.withLock { codecConfigs.noteKeyframeRequest() }
+
+    fun noteReceiverHang(hang: ReceiverHang) = lock.withLock { if (receiverHang == null) receiverHang = hang }
+
+    val hasReceiverHang: Boolean get() = lock.withLock { receiverHang != null }
+
     fun noteHandshakeError(text: String) = lock.withLock { handshakeErrors += text }
 
     fun noteUnexpected(text: String) {
@@ -163,7 +171,13 @@ internal class PhoneObserver(
                 listener.onPhoneApp(a)
             }
             MsgType.VIDEO -> {
-                val info = lock.withLock { validator.onMessage(h, m.body).also { countLocked("VIDEO", ordered = false) } }
+                val info = lock.withLock {
+                    validator.onMessage(h, m.body).also {
+                        val configBytes = if (it.kind == VideoKind.CONFIG) m.body.copyOfRange(m.body.size - it.payloadSize, m.body.size) else null
+                        codecConfigs.onVideo(it, configBytes)
+                        countLocked("VIDEO", ordered = false)
+                    }
+                }
                 if (info.errors.isNotEmpty()) log.w(TAG, "vídeo #${info.index}: ${info.errors}")
                 listener.onTrace(Traces.ofVideo(Direction.IN, "VIDEO_${info.kind}", h.totalSize, "${info.payloadSize} B ${info.header?.params}"))
                 listener.onVideoFrame(info)
@@ -250,6 +264,10 @@ internal class PhoneObserver(
             lastVideoHeader = validator.lastHeader,
             videoErrorCount = validator.errorCount,
             videoErrors = validator.errors,
+            videoMaxMessageBytes = validator.maxMessageBytes,
+            videoLargeMessages = validator.largeMessages,
+            codecConfigs = codecConfigs.events(),
+            receiverHang = receiverHang,
             unexpected = unexpected.toList(),
             touchesSent = touchesSent,
             keysSent = keysSent,

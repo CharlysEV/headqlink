@@ -21,6 +21,8 @@ data class VideoFrameInfo(
     val payloadSize: Int,
     val nalTypes: List<Int>,
     val errors: List<String>,
+    /** Tamaño del mensaje completo tal y como viajó (cabeceras de 16 + 32 B y payload). */
+    val messageBytes: Int = 0,
 )
 
 /** Valores esperados en la cabecera extendida; `null` = no comprobar. */
@@ -41,8 +43,18 @@ data class VideoExpectations(
 class VideoValidator(
     @Volatile var expectations: VideoExpectations = VideoExpectations(),
     private val record: OutputStream? = null,
+    /** Mensajes de más de este tamaño se cuentan en [largeMessages] (0 = no contar). */
+    private val largeMessageBytes: Int = 0,
 ) {
     var messages = 0
+        private set
+
+    /** Mensaje de vídeo más grande recibido (cabeceras incluidas). */
+    var maxMessageBytes = 0
+        private set
+
+    /** Mensajes de más de [largeMessageBytes]. */
+    var largeMessages = 0
         private set
     var configMessages = 0
         private set
@@ -69,6 +81,9 @@ class VideoValidator(
     fun onMessage(header: Header, body: ByteArray): VideoFrameInfo {
         val index = messages++
         val errs = ArrayList<String>()
+        val messageBytes = Header.SIZE + body.size
+        if (messageBytes > maxMessageBytes) maxMessageBytes = messageBytes
+        if (largeMessageBytes > 0 && messageBytes > largeMessageBytes) largeMessages++
         if (header.msgType != MsgType.VIDEO) errs += "msgType ${header.msgType} != 1"
         if (header.extLen != VideoMessage.EXT_SIZE) errs += "extLen ${header.extLen} != 32"
         if (header.payloadFormat != PayloadFormat.VIDEO) errs += "payLoadFormat ${header.payloadFormat} != 2"
@@ -77,7 +92,7 @@ class VideoValidator(
         }
         if (body.size < VideoMessage.EXT_SIZE) {
             errs += "cuerpo de ${body.size} B, menor que la cabecera extendida"
-            return finish(VideoFrameInfo(index, VideoKind.OTHER, null, 0, emptyList(), errs))
+            return finish(VideoFrameInfo(index, VideoKind.OTHER, null, 0, emptyList(), errs, messageBytes))
         }
         val ext = VideoExtHeader.decode(body, 0)
         lastHeader = ext
@@ -122,7 +137,7 @@ class VideoValidator(
                 errs += "mensaje sin SPS/PPS ni slices: ${types.map { NalType.name(it) }}"
             }
         }
-        return finish(VideoFrameInfo(index, kind, ext, payloadLen, types, errs))
+        return finish(VideoFrameInfo(index, kind, ext, payloadLen, types, errs, messageBytes))
     }
 
     private fun checkExt(ext: VideoExtHeader, errs: MutableList<String>) {
