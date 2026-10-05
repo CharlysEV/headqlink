@@ -30,9 +30,13 @@ final class LinkRateController {
     /** Esperas por el enlace en una muestra de 100 ms que cuentan como cola alta (el relay GL reintenta cada 4 ms). */
     static final int LINK_WAITS_HIGH = 15;
     static final int RETRANS_RISE = 2;
+    /** Las retransmisiones solo cuentan con cola del kernel ≥ esto o con el rtt disparado (síntomas de retardo). */
+    static final int RETRANS_OUTQ_BYTES = OUTQ_HIGH_BYTES;
     static final long RETRANS_WINDOW_MS = 1_000;
-    static final double RTT_FACTOR = 2.0;
-    static final int RTT_MIN_MS = 50;
+    static final double RTT_FACTOR = 3.0;
+    static final int RTT_MIN_MS = 80;
+    /** El rtt alto tiene que durar esto (en el coche eran 100-300 ms sostenidos; en casa salen picos sueltos de 60 ms). */
+    static final long RTT_HIGH_MS = 500;
     static final long STEP_HOLD_MS = 500;
     static final long RECOVER_MS = 5_000;
     static final int LOW_FPS = 24;
@@ -112,6 +116,7 @@ final class LinkRateController {
     /** Instantes (ms); -1 = ninguno. */
     private long outqHighSinceMs = -1;
     private long cleanSinceMs = -1;
+    private long rttHighSinceMs = -1;
     private long lastStepMs = -1;
     private int baselineRttMs = -1;
     private long lastFlushes;
@@ -147,6 +152,7 @@ final class LinkRateController {
         baselineRttMs = -1;
         lastFlushes = -1;
         retransCount = 0;
+        rttHighSinceMs = -1;
         floorNoted = false;
     }
 
@@ -190,14 +196,22 @@ final class LinkRateController {
             retransRing[retransCount % RETRANS_SAMPLES] = s.retrans;
             retransCount++;
             int rise = s.retrans - oldest;
-            if (rise >= RETRANS_RISE) add(why, "retrans +" + rise);
+            // Unas pocas retransmisiones por segundo son normales en Wi-Fi (en casa, con outq 0 y rtt 5 ms, salían
+            // +2..+5 y el controlador se iba al suelo). Solo cuentan si además hay cola, datos sin confirmar o rtt alto.
+            // (Los segmentos sin confirmar no valen: con 5 Mbit/s hay 10-12 en vuelo con rtt de 10 ms.)
+            boolean corroborated = s.outq >= RETRANS_OUTQ_BYTES;
+            if (rise >= RETRANS_RISE && corroborated) add(why, "retrans +" + rise);
         }
 
         // rtt frente al mínimo de la sesión.
         if (s.rttMs > 0) {
             if (baselineRttMs < 0 || s.rttMs < baselineRttMs) baselineRttMs = s.rttMs;
-            if (s.rttMs >= RTT_MIN_MS && s.rttMs > RTT_FACTOR * baselineRttMs) {
-                add(why, "rtt " + s.rttMs + " ms (mín. " + baselineRttMs + ")");
+            boolean rttHigh = s.rttMs >= RTT_MIN_MS && s.rttMs > RTT_FACTOR * baselineRttMs;
+            if (rttHigh) {
+                if (rttHighSinceMs < 0) rttHighSinceMs = now;
+                if (now - rttHighSinceMs >= RTT_HIGH_MS) add(why, "rtt " + s.rttMs + " ms (mín. " + baselineRttMs + ") " + (now - rttHighSinceMs) + " ms");
+            } else {
+                rttHighSinceMs = -1;
             }
         }
 

@@ -16,6 +16,8 @@ class LinkRateControllerTest {
     private val kb = 1024
 
     private fun clean(now: Long, retrans: Int = 10, rtt: Int = 12) = LinkRateController.Sample(now, 4 * kb, 2, retrans, rtt, 0, 0)
+    /** Retransmisiones corroboradas: algo de cola y segmentos sin confirmar, pero por debajo del umbral de cola alta. */
+    private fun losing(now: Long, retrans: Int) = LinkRateController.Sample(now, 50 * kb, 40, retrans, 12, 0, 0)
     private fun queued(now: Long, outq: Int = 96 * kb, retrans: Int = 10, rtt: Int = 12, waits: Int = 0) =
         LinkRateController.Sample(now, outq, 40, retrans, rtt, waits, 0)
 
@@ -40,6 +42,32 @@ class LinkRateControllerTest {
         assertEquals(0, c.congestionEvents())
         assertFalse(c.active())
         assertTrue(c.describe(), c.describe().startsWith("bitrate adaptable al enlace 1.5 Mbit/s-5.1 Mbit/s"))
+    }
+
+    @Test
+    fun retransmissionsAloneOnACleanLinkDoNotCount() {
+        // En casa: outq 0-6 KB, rtt 5-30 ms y +2..+5 retransmisiones por segundo (normales en Wi-Fi).
+        val c = LinkRateController(car, 30)
+        var retrans = 10
+        var t = 0L
+        while (t <= 10_000) {
+            if (t % 1000 == 0L) retrans += 3
+            assertNull("muestra en $t", c.onSample(LinkRateController.Sample(t, 3 * kb, 12, retrans, 12, 0, 0)))
+            t += 100
+        }
+        assertEquals(car, c.bitrate())
+        assertEquals(0, c.congestionEvents())
+    }
+
+    @Test
+    fun retransmissionsWithQueuedDataDoCount() {
+        val c = LinkRateController(car, 30)
+        // Sin confirmar 40 segmentos y la cola por encima del umbral de corroboración.
+        assertNull(c.onSample(LinkRateController.Sample(0, 50 * kb, 40, 10, 12, 0, 0)))
+        var step: LinkRateController.Step? = null
+        for (t in 100L..1500L step 100) step = step ?: c.onSample(LinkRateController.Sample(t, 50 * kb, 40, 10 + (t / 200).toInt(), 12, 0, 0))
+        assertNotNull(step)
+        assertTrue(step!!.text, step.congestion)
     }
 
     @Test
@@ -92,9 +120,9 @@ class LinkRateControllerTest {
     @Test
     fun retransmissionsRisingStepDownAtOnce() {
         val c = LinkRateController(car, 30)
-        assertNull(c.onSample(clean(0, retrans = 300)))
-        assertNull(c.onSample(clean(100, retrans = 301)))
-        val st = c.onSample(clean(200, retrans = 303))
+        assertNull(c.onSample(losing(0, retrans = 300)))
+        assertNull(c.onSample(losing(100, retrans = 301)))
+        val st = c.onSample(losing(200, retrans = 303))
         assertNotNull(st)
         assertTrue(st!!.text, st.text.contains("retrans +3"))
         assertEquals(Math.round(car * 0.7).toInt(), st.bitrateAfter)
@@ -118,16 +146,21 @@ class LinkRateControllerTest {
     fun rttTwiceTheBaselineStepsDownButSmallRttsNever() {
         val c = LinkRateController(car, 30)
         assertNull(c.onSample(clean(0, rtt = 12)))
-        // 30 ms es más del doble de 12 pero está por debajo de los 50 ms mínimos: ruido.
+        // 30 ms está por debajo de los 80 ms mínimos: ruido.
         assertNull(c.onSample(clean(100, rtt = 30)))
-        val st = c.onSample(clean(200, rtt = 110))
+        // Un pico suelto de rtt no cuenta: tiene que durar RTT_HIGH_MS.
+        assertNull(c.onSample(clean(200, rtt = 110)))
+        assertNull(c.onSample(clean(300, rtt = 12)))
+        for (t in 400L..800L step 100) assertNull(c.onSample(clean(t, rtt = 110)))
+        val st = c.onSample(clean(900, rtt = 110))
         assertNotNull(st)
         assertTrue(st!!.text, st.text.contains("rtt 110 ms (mín. 12)"))
-        // Un enlace lento desde el principio (mínimo 60 ms): 100 ms no es el doble.
+        // Un enlace lento desde el principio (mínimo 60 ms): 100 ms no es el triple.
         val slow = LinkRateController(car, 30)
         assertNull(slow.onSample(clean(0, rtt = 60)))
-        assertNull(slow.onSample(clean(100, rtt = 100)))
-        assertNotNull(slow.onSample(clean(200, rtt = 130)))
+        for (t in 100L..1000L step 100) assertNull(slow.onSample(clean(t, rtt = 100)))
+        for (t in 1100L..1500L step 100) assertNull(slow.onSample(clean(t, rtt = 200)))
+        assertNotNull(slow.onSample(clean(1600, rtt = 200)))
     }
 
     @Test
@@ -223,7 +256,7 @@ class LinkRateControllerTest {
         assertNotNull(c.onSample(queued(300)))
         assertTrue(c.cleanUntil(400, 4_000).isEmpty())
         // Retransmisiones a los 4,1 s: no sube; bajaría otra vez (han pasado más de 500 ms del paso anterior).
-        val st = c.onSample(clean(4_100, retrans = 20))
+        val st = c.onSample(losing(4_100, retrans = 20))
         assertNotNull(st)
         assertTrue(st!!.congestion)
         assertTrue(c.cleanUntil(4_200, 9_100).isEmpty())
