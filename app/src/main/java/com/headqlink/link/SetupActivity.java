@@ -191,7 +191,7 @@ public class SetupActivity extends Activity {
         renderLinkOptions();
     }
 
-    /** Conexión con el coche: Wi-Fi Direct (como hasta ahora) o la zona Wi-Fi del móvil (qdauto §5.2). */
+    /** Conexión con el coche: Wi-Fi Direct o la zona Wi-Fi del móvil (qdauto §5.2), la recomendada (validada en el C10). */
     private void renderLinkOptions() {
         LinearLayout list = container.findViewById(R.id.hql_link_options);
         if (list == null) return;
@@ -200,6 +200,11 @@ public class SetupActivity extends Activity {
             View opt = LayoutInflater.from(this).inflate(R.layout.hql_mode_option, list, false);
             ((TextView) opt.findViewById(R.id.hql_opt_title)).setText(Ui.linkTitle(lm));
             ((TextView) opt.findViewById(R.id.hql_opt_detail)).setText(Ui.linkDetail(lm));
+            if (Config.DEFAULT_LINK.equals(lm)) {
+                TextView tag = opt.findViewById(R.id.hql_opt_tag);
+                tag.setText(Str.get(R.string.hql_recommended));
+                tag.setVisibility(View.VISIBLE);
+            }
             opt.setSelected(lm.equals(linkMode));
             opt.setOnClickListener(v -> {
                 linkMode = lm;

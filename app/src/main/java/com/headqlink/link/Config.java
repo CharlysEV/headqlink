@@ -52,6 +52,8 @@ final class Config {
     static final String LINK_MODE = "link_mode";
     static final String LINK_P2P = "p2p";
     static final String LINK_HOTSPOT = "hotspot";
+    /** Conexión de una instalación nueva: la zona Wi-Fi del móvil, la validada en el C10 (se marca «Recomendado»). */
+    static final String DEFAULT_LINK = LINK_HOTSPOT;
 
     /**
      * Motor de protocolo (qdauto §4.3): QDAuto (núcleo validado en el C10) u original (SspSession). Se lee al arrancar el
@@ -402,10 +404,18 @@ final class Config {
         sp.edit().putString(MODE, m).apply();
     }
 
-    /** Conexión con el coche: LINK_P2P (por defecto, como hasta ahora) o LINK_HOTSPOT. */
+    /** Conexión con el coche: LINK_HOTSPOT (por defecto en una instalación nueva) o LINK_P2P. */
     String linkMode() {
-        String m = sp.getString(LINK_MODE, LINK_P2P);
-        return LINK_HOTSPOT.equals(m) ? LINK_HOTSPOT : LINK_P2P;
+        return resolveLinkMode(sp.getString(LINK_MODE, null), setupDone());
+    }
+
+    /**
+     * La conexión guardada si la hay. Sin guardar: DEFAULT_LINK en una instalación nueva; con la configuración inicial ya
+     * hecha (una versión sin esta elección, que solo usaba Wi-Fi Direct), Wi-Fi Direct, para no cambiarle la conexión.
+     */
+    static String resolveLinkMode(String stored, boolean setupDone) {
+        if (stored == null) return setupDone ? LINK_P2P : DEFAULT_LINK;
+        return LINK_HOTSPOT.equals(stored) ? LINK_HOTSPOT : LINK_P2P;
     }
 
     void setLinkMode(String m) {
