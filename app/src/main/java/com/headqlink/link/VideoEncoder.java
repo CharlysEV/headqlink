@@ -78,6 +78,8 @@ final class VideoEncoder {
     /** Se configuró con las claves de QP de los I-frames / con las estadísticas de codificación (QP medio). */
     private volatile boolean qpKeys;
     private volatile boolean qpStats;
+    /** Último SPS/PPS entregado (hilo enc-drain). */
+    private byte[] lastCsd;
     /** Del último IDR (hilo enc-drain, antes de Sink.onFrame): QP medio informado (-1 = no) y bajada con que salió. */
     private volatile int lastIdrQp = -1;
     private volatile double lastIdrDip;
@@ -257,8 +259,9 @@ final class VideoEncoder {
         for (String k : f.getKeys()) copyKey(f, out, k);
         out.setInteger(QP_I_MIN, p.qpIMin);
         out.setInteger(QP_I_MAX, Math.max(p.qpIMin, p.qpIMax));
-        // VIDEO_ENCODING_STATISTICS_LEVEL_1: el encoder informa del QP medio de cada frame en su formato de salida.
-        if (android.os.Build.VERSION.SDK_INT >= 33) out.setInteger(STATS_LEVEL, 1);
+        // Sin VIDEO_ENCODING_STATISTICS_LEVEL: en el c2.qti.avc.encoder (S25) hace que el formato de salida cambie
+        // en cada frame (picture-type, QP medio), y cada cambio acababa en un SPS/PPS reenviado al coche, que
+        // reinicia su decodificador con cada uno y pinta artefactos (coche, 2026-10-05).
         return out;
     }
 
@@ -417,9 +420,13 @@ final class VideoEncoder {
             }
             if (idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 MediaFormat of = codec.getOutputFormat();
-                L.i("encoder output format: " + of);
-                byte[] csd = concat(of.getByteBuffer("csd-0"), of.getByteBuffer("csd-1"));
-                if (csd.length > 0) sink.onCodecConfig(csd);
+                byte[] csd = spsPps(of.getByteBuffer("csd-0"), of.getByteBuffer("csd-1"));
+                // El coche reinicia su decodificador con cada SPS/PPS: solo se manda si cambia de verdad.
+                if (csd.length > 0 && !java.util.Arrays.equals(csd, lastCsd)) {
+                    L.i("encoder output format: " + of);
+                    lastCsd = csd;
+                    sink.onCodecConfig(csd);
+                }
             } else if (idx >= 0) {
                 ByteBuffer bb = codec.getOutputBuffer(idx);
                 if (bb != null && info.size > 0 && (info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
@@ -462,6 +469,23 @@ final class VideoEncoder {
             codec = null;
         }
         if (input != null) input.release();
+    }
+
+    /** SPS‖PPS de csd-0 y csd-1; si csd-0 ya trae el PPS de csd-1 (pasa en algunos encoders), no lo repite. */
+    static byte[] spsPps(ByteBuffer a, ByteBuffer b) {
+        byte[] sps = concat(a, null);
+        byte[] pps = concat(b, null);
+        if (pps.length > 0 && indexOf(sps, pps) >= 0) return sps;
+        return concat(a, b);
+    }
+
+    private static int indexOf(byte[] hay, byte[] needle) {
+        outer:
+        for (int i = 0; i + needle.length <= hay.length; i++) {
+            for (int j = 0; j < needle.length; j++) if (hay[i + j] != needle[j]) continue outer;
+            return i;
+        }
+        return -1;
     }
 
     private static byte[] concat(ByteBuffer a, ByteBuffer b) {
