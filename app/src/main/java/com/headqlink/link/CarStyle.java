@@ -11,6 +11,8 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.andrerinas.openheadunit.R;
+
 /**
  * Estilo de la interfaz propia en la pantalla del coche. Las medidas son píxeles de esa pantalla
  * (1920x882, ~150 ppp): se diseña directamente para ella.
@@ -81,9 +83,9 @@ final class CarStyle {
         return d;
     }
 
-    /** "‹ Volver" arriba a la izquierda dentro de un FrameLayout. */
+    /** "‹ Volver" (en el idioma de la app) arriba a la izquierda dentro de un FrameLayout. */
     static View back(Context c, Runnable onBack) {
-        TextView b = pill(c, "‹  Volver");
+        TextView b = pill(c, "‹  " + Str.get(R.string.hql_back));
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START);
         lp.setMargins(16, 16, 0, 0);

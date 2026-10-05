@@ -449,7 +449,7 @@ final class RoutePlanner {
             Charger c = new Charger();
             c.lat = e.getDouble("lat");
             c.lon = e.getDouble("lon");
-            c.name = firstNonEmpty(tags.optString("name"), tags.optString("operator"), tags.optString("brand"), "Punto de carga");
+            c.name = firstNonEmpty(tags.optString("name"), tags.optString("operator"), tags.optString("brand"), Str.get(R.string.hql_charge_point));
             StringBuilder sockets = new StringBuilder();
             java.util.Iterator<String> it = tags.keys();
             while (it.hasNext()) {

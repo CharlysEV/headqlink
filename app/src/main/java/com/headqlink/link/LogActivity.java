@@ -62,7 +62,7 @@ public class LogActivity extends Activity {
                 startActivity(new android.content.Intent(this, LatencyActivity.class)));
         findViewById(R.id.hql_log_copy).setOnClickListener(v -> {
             getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("HeadQLink", String.join("\n", lines)));
-            ToastUtils.showToast(this, "Log copiado", Toast.LENGTH_SHORT, true);
+            ToastUtils.showToast(this, Str.get(R.string.hql_log_copied), Toast.LENGTH_SHORT, true);
         });
     }
 

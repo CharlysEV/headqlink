@@ -270,7 +270,7 @@ final class IptvScreen implements CarScreen {
                 if (line.startsWith("#EXTINF")) {
                     pending = new Channel();
                     int comma = line.lastIndexOf(',');
-                    pending.name = comma >= 0 ? line.substring(comma + 1).trim() : "Canal";
+                    pending.name = comma >= 0 ? line.substring(comma + 1).trim() : Str.get(R.string.hql_channel);
                     Matcher m = ATTR.matcher(comma >= 0 ? line.substring(0, comma) : line);
                     while (m.find()) {
                         if ("tvg-logo".equals(m.group(1))) pending.logo = m.group(2);

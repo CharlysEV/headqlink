@@ -10,6 +10,8 @@ import android.os.Looper;
 import android.view.Display;
 import android.view.Surface;
 
+import com.andrerinas.openheadunit.R;
+
 /**
  * Modo "app específica": crea un VirtualDisplay propio que pinta directamente en la Surface del encoder
  * y lanza en él la app elegida. Los toques del coche se inyectan con TouchService (accesibilidad).
@@ -72,10 +74,10 @@ final class AppSource implements VideoSource {
         try {
             ctx.startActivity(i, o.toBundle());
             L.i("lanzada " + pkg + " en display " + displayId);
-            LinkState.setSource(LinkState.Level.OK, "Abierta en el coche");
+            LinkState.setSource(LinkState.Level.OK, Str.get(R.string.hql_app_opened_in_car));
         } catch (SecurityException e) {
             L.e("Android no permite lanzar " + pkg + " en el display " + displayId, e);
-            LinkState.setSource(LinkState.Level.ERROR, "Android no permite abrirla en el coche");
+            LinkState.setSource(LinkState.Level.ERROR, Str.get(R.string.hql_app_open_blocked));
         }
     }
 

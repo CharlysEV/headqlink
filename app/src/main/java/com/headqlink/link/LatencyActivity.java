@@ -10,6 +10,8 @@ import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.andrerinas.openheadunit.R;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -41,8 +43,7 @@ public class LatencyActivity extends Activity implements Choreographer.FrameCall
         hint.setTextSize(14);
         hint.setGravity(Gravity.CENTER);
         hint.setPadding(48, 48, 48, 0);
-        hint.setText("Con HeadQLink en modo Diagnóstico, graba a la vez esta pantalla y la del coche. "
-                + "La diferencia entre los dos relojes es la latencia total.");
+        hint.setText(Str.get(R.string.hql_latency_hint));
         root.addView(clock);
         root.addView(hint);
         setContentView(root);

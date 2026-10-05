@@ -445,4 +445,12 @@
     <!-- Pantalla principal: título de la tarjeta de estado y del panel en directo (fps y Mbps). -->
     <string name="hql_status_title">Status</string>
     <string name="hql_live">Live</string>
+    <!-- Textos que estaban fijos en el código (avisos, botones, pantallas del coche). -->
+    <string name="hql_log_copied">Log copied</string>
+    <string name="hql_reconnecting_short">Reconnecting…</string>
+    <string name="hql_latency_hint">With HeadQLink in Diagnostics mode, record this screen and the car\'s at the same time. The difference between the two clocks is the total latency.</string>
+    <string name="hql_charge_point">Charging point</string>
+    <string name="hql_app_opened_in_car">Opened on the car</string>
+    <string name="hql_app_open_blocked">Android doesn\'t allow opening it on the car</string>
+    <string name="hql_list_url_hint">https://…/list.m3u</string>
 </resources>

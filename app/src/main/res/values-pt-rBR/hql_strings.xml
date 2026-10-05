@@ -188,6 +188,7 @@
     <string name="hql_profile_auto_named">Automático (%1$s)</string>
     <string name="hql_profile_basic">Básico</string>
     <string name="hql_profile_basic_detail">720p a 30 fps, sem recodificação (o mais leve para o celular)</string>
+    <string name="hql_keep_screen_on">Manter a tela do celular ligada (mais calor e bateria; caso contrário, ela desliga como sempre e a projeção continua)</string>
     <string name="hql_profile_car">Carro</string>
     <string name="hql_profile_car_detail">O que o carro pede (no C10, resolução completa a 30 fps e cerca de 5 Mbit/s), sem forçar o celular: o mínimo de calor e bateria</string>
     <string name="hql_profile_high">Alto</string>
@@ -445,4 +446,12 @@
     <!-- Pantalla principal: título de la tarjeta de estado y del panel en directo (fps y Mbps). -->
     <string name="hql_status_title">Status</string>
     <string name="hql_live">Ao vivo</string>
+    <!-- Textos que estaban fijos en el código (avisos, botones, pantallas del coche). -->
+    <string name="hql_log_copied">Log copiado</string>
+    <string name="hql_reconnecting_short">Reconectando…</string>
+    <string name="hql_latency_hint">Com o HeadQLink no modo Diagnóstico, grave ao mesmo tempo esta tela e a do carro. A diferença entre os dois relógios é a latência total.</string>
+    <string name="hql_charge_point">Ponto de recarga</string>
+    <string name="hql_app_opened_in_car">Aberto no carro</string>
+    <string name="hql_app_open_blocked">O Android não permite abri-lo no carro</string>
+    <string name="hql_list_url_hint">https://…/lista.m3u</string>
 </resources>

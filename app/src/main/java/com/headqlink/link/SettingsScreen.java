@@ -171,7 +171,7 @@ final class SettingsScreen implements CarScreen {
         cfg.setVideoProfile(pending);
         boolean renegotiate = !before.equals(cfg.videoProfile().id);
         L.i("ajustes desde el coche: perfil " + (pending.isEmpty() ? "automático" : pending) + (renegotiate ? " (reconecta AA)" : ""));
-        apply.setText("Reconectando…");
+        apply.setText(Str.get(R.string.hql_reconnecting_short));
         apply.setEnabled(false);
         // La sesión se cierra (y con ella esta pantalla); el coche vuelve a conectar solo.
         host.post(() -> c.startForegroundService(new Intent(c, LinkService.class).setAction(LinkService.ACTION_APPLY)

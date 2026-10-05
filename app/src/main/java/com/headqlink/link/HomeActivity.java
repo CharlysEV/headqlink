@@ -461,7 +461,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         int pad = Math.round(24 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad / 2, pad, 0);
         EditText url = new EditText(this);
-        url.setHint("https://…/lista.m3u");
+        url.setHint(Str.get(R.string.hql_list_url_hint));
         url.setSingleLine(true);
         String cur = radio ? cfg.radioSource() : cfg.iptvSource();
         if (cur.startsWith("http")) url.setText(cur);
