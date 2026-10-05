@@ -284,7 +284,7 @@ HeadQLink. La fila «Red» pasará de «Wi-Fi Direct: buscando el coche» a «Wi
 - Pasado «Esperar al coche», HeadQLink lo cierra todo: Android Auto, su servidor y la conexión. Para volver a usarla,
   pulsa «Conectar», o déjalo en manos de la conexión automática por Bluetooth.
 - Si pulsas «Conectar» y en **5 minutos** (o «Esperar al coche», si es más) no aparece ningún coche, HeadQLink se para
-  sola.
+  sola. Mientras el coche se siga anunciando, aunque no llegue a conectar, la espera vuelve a empezar.
 
 ### Al terminar el viaje
 
@@ -436,10 +436,11 @@ Empieza siempre por el menú ⚙ › «Comprobación»: cada fila en rojo tiene 
 
 | Síntoma | Causa probable | Qué hacer |
 |---|---|---|
-| El coche no aparece («Buscando…» todo el rato) | El coche no está en la zona Wi-Fi del móvil, la zona Wi-Fi se apagó sola, o la app de espejo no está abierta en el coche. Con Wi-Fi Direct: la zona Wi-Fi encendida o el Wi-Fi apagado. | Mira la fila «Red»: debe decir «Zona Wi-Fi activa (…)». Une el coche a la zona Wi-Fi (Ajustes › Wi-Fi del coche) y abre la app de espejo. Quita el apagado automático de la zona Wi-Fi. A los 5 minutos sin coche HeadQLink se para: pulsa «Conectar» otra vez. |
+| El coche no aparece («Buscando…» todo el rato) | El coche no está en la zona Wi-Fi del móvil, la zona Wi-Fi se apagó sola, o la app de espejo no está abierta en el coche. Con Wi-Fi Direct: la zona Wi-Fi encendida o el Wi-Fi apagado. | Mira la fila «Red»: debe decir «Zona Wi-Fi activa (…)». Une el coche a la zona Wi-Fi (Ajustes › Wi-Fi del coche) y abre la app de espejo. Quita el apagado automático de la zona Wi-Fi. A los 5 minutos sin anuncios del coche HeadQLink se para: pulsa «Conectar» otra vez. |
 | «El puerto 18463 está ocupado (¿QDLink abierto?)», o «Puerto 18463 · Ocupado» en la «Comprobación» | La app QDLink (u otra) está abierta en el móvil y ocupa el puerto. | «Forzar detención» de QDLink. HeadQLink lo reintenta cada 5 s y el aviso desaparece solo. |
 | Pantalla negra en el coche, o la fila «Auto» con un error | Android Auto no arrancó: el móvil estaba bloqueado («No arranca: desbloquea el móvil»), falta el modo desarrollador o la accesibilidad. | Desbloquea el móvil (con el aviso «Desbloquea el móvil para iniciar Android Auto», arranca solo al desbloquear). Si sigue, revisa la «Comprobación» y pulsa «Desconectar» y «Conectar». Para saber qué falla, activa Diagnóstico › «Prueba sin Android Auto (patrón)»: si ves la imagen de prueba, la conexión va bien y el problema es Android Auto (apágala después). Si nada funciona, prueba el motor «Original de headqlink». |
 | La imagen va a tirones o con retraso | Zona Wi-Fi en 2,4 GHz, móvil caliente, perfil demasiado alto o pantalla del móvil encendida (con ella Android busca redes Wi-Fi a menudo). | Zona Wi-Fi en 5 GHz, perfil «Automático» o «Coche», bloquea el móvil y enfríalo. Si sigue, prueba «Medio». |
+| La imagen se congela unos 10 s y luego se reconecta | En versiones anteriores, un fotograma completo de más de ~512 KB colgaba el receptor del coche, que dejaba de leer hasta que se cortaba la conexión. **Corregido**: HeadQLink ya no envía ninguno tan grande y los mantiene en unos 300 KB como mucho. | Actualiza HeadQLink. Si te pasa con el perfil «Básico» (ahí el tamaño lo decide Android Auto), usa «Automático» o «Coche». Si sigue, exporta el log (sección 8). |
 | Se desconecta a menudo | Apagado automático de la zona Wi-Fi, ahorro de batería, QDLink abierta o la app de espejo del coche cerrada. | Los cortes cortos se reconectan solos («Reconectando…»). Si son largos o frecuentes: «Batería sin restricciones», «Samsung: apps que nunca se suspenden», quita el apagado automático y cierra QDLink. Si sigue, exporta el log (sección 8). |
 | La accesibilidad se desactiva sola | Android la desactiva al actualizar la app, o si la app se cerró de golpe. Algunos fabricantes también. | «Comprobación» › «Activar». Si dice «Activada pero sin funcionar», apágala y enciéndela. Si dice «Ajuste restringido», «Permitir ajustes restringidos» (sección 3). Quita las restricciones de batería. |
 | Android Auto pide en el coche que mires el móvil | Es la primera vez que Android Auto ve esta «pantalla de coche», o tiene que pedirte un permiso o una confirmación. | Aparca, desbloquea el móvil y acepta lo que pida Android Auto. Normalmente solo pasa una vez. |

@@ -32,6 +32,8 @@ Rutas relativas a `hql\`. `[hql]` = `app/src/main/java/com/headqlink/link/`.
   También hay relevo de sesión (el coche se reanuncia con la sesión abierta) y re-ACK. Pasado `car_gone_ms`, el vídeo
   se para pero el enlace sigue escuchando con Android Auto en pausa hasta «Esperar al coche» (5 min): si el coche
   vuelve, AA sale de la pausa al instante (§10).
+- **Ningún mensaje de vídeo de más de 480 KiB.** El receptor del C10 se cuelga con más de ~512 KiB (cortes de 10 s). El
+  núcleo los descarta y pide otro IDR; el encoder propio apunta a 300 KB por IDR (§11).
 - **Registro de viajes.**
   - Log unificado rotativo `logs/qd-*.log`.
   - Detector de cortes de radio.
@@ -685,5 +687,93 @@ espera, el servidor queda libre hasta que vence, como antes durante los 30 s.
   vídeo, el cierre al vencer (y el reintento con un intento en marcha), móvil bloqueado o no, el apagado pendiente, la
   llegada por Bluetooth con AA aparcado por el guardián o con el servidor apagado, el Bluetooth que se va, el plan de
   cierre y las opciones de «Esperar al coche».
+
+Sin probar todavía en el móvil ni en el coche.
+
+---
+
+## 11. IDR grandes: el coche se cuelga con mensajes de más de 512 KiB (2026-10-05)
+
+**Informe (viaje 3, coche real).** Perfil «Coche»: 1920×882@30, 5,08 Mbit/s VBR, intra-refresh de 30 frames, GOP de
+30 s e IDR a cada `KEY_FRAME_REQ`. Hubo cortes de ~10 s y después reconexión. En una sesión el coche mandó 21
+`KEY_FRAME_REQ`.
+
+**Diagnóstico.** Todos los cortes graves empezaron mientras se escribía un IDR enorme. El coche dejaba de leer el TCP:
+el `write()` se quedaba bloqueado, aunque el coche seguía mandando heartbeats. A los 10 s, `WRITE_STALL` cerraba la
+sesión.
+
+| Mensaje de vídeo (48 B de cabeceras + Annex-B) | Resultado |
+|---|---|
+| 592 913 B, 538 390 B, 525 208 B | Corte: el coche deja de leer |
+| 493 568 B, 482 KB, 457 KB, 378 KB, 330 KB | Sin problema (en los viajes 1 y 2 el máximo fue 330 KB) |
+
+Conclusión: el receptor de QDLink del coche admite como mucho ~512 KiB (524 288 B) por mensaje. Con uno mayor se
+cuelga.
+
+**Qué cambia.**
+
+| Pieza | Qué hace | Dónde |
+|---|---|---|
+| Tope en el núcleo | Ningún mensaje de vídeo de más de **480 KiB** llega al socket, con cualquier política de descarte. Un frame mayor se descarta sin copiarlo. Los P-frames que dependen de él tampoco salen: se espera al siguiente IDR, con SPS/PPS delante. Se avisa a la app y se pide otro IDR al momento. | `SessionConfig.maxVideoMessageBytes` (constante de la app: `SessionConfigs.MAX_VIDEO_MESSAGE_BYTES`), `PhoneSession.sendFrame`, `SendQueue` |
+| IDR pequeños con encoder propio («último frame», patrón, app) | Objetivo: **300 KB por IDR**. Con Android 12+, QP mínimo de los I-frames adaptable (`KEY_VIDEO_QP_I_MIN/MAX`): empieza en 24, al configurar y en marcha con `setParameters`. Un IDR por encima del objetivo sube el mínimo (+6 de QP ≈ la mitad de bytes); uno por encima del tope, al menos +4. Tres seguidos muy por debajo (< 150 KB) lo bajan 1. Siempre entre 18 y 40. Con Android 13+ se pide el QP medio de cada IDR (`KEY_VIDEO_ENCODING_STATISTICS_LEVEL`) y se usa como base. | `IdrSizeController`, `VideoEncoder`, `VideoPipeline.onEncoderIdr` |
+| Plan B: bajar el bitrate | Justo antes de pedir un IDR se baja el bitrate al **40 %** y se repone en cuanto sale el IDR (o pasado 1 s). Se usa en cada IDR pedido si no hay claves de QP (Android < 12) o el encoder no les hace caso: su QP medio queda por debajo del mínimo, o 3 IDR seguidos por encima del objetivo no bajan de tamaño. Y una sola vez tras un IDR descartado, tras dos seguidos por encima del objetivo o con el mínimo ya en 40. La bajada se ajusta entre el 20 y el 40 % según salgan los IDR. | `VideoEncoder.requestKeyFrame(dip)`, `setBitrate` (respeta el ABR y el térmico) |
+| Antirrebote de `KEY_FRAME_REQ` | Con encoder propio, como mucho un IDR cada **600 ms**. Una petición con el IDR pedido aún sin salir se sirve con él. Si ya salió, se aplaza una sola al final de la ventana. El primero de la sesión (`STREAM_START`) y el que sustituye a uno descartado (`OVERSIZED`) salen siempre al momento. Antes no había antirrebote con encoder. El del reenvío directo (`KeyframePolicy`: 600 ms, 1,5 s con un ciclo en curso) no cambia. | `IdrRequestGate`, `VideoPipeline.requestKeyFrame` |
+| Reenvío directo (AA sin recodificar) | No se controla el encoder de AA. Un IDR grande se descarta como cualquier otro y se pide uno nuevo por `KeyframePolicy`. Con 3 seguidos, aviso en el log con la recomendación de un perfil que recodifique, y como mucho un ciclo de foco cada 5 s (también el vigilante), sin bucles. | `VideoPipeline.onOversized`, `aaOversizeBackoff` |
+| Estadísticas | Mensaje de vídeo más grande enviado y frames descartados por tamaño en las estadísticas del núcleo (cada 5 s), en el resumen de la sesión, en `sessions.csv` (columnas nuevas `frame_max_kb` y `descartados_grandes`) y en el resumen del viaje. | `SessionStats`, `SessionSummary`, `QdSessionBridge` |
+| «Esperar al coche» | Cada `Connect_Broadcast` sin sesión, aunque el TCP no llegue, **vuelve a contar** la búsqueda o la espera desde ese momento. Antes solo contaba la sesión: con el coche anunciándose sin conectar, todo se cerró 90 s después de verlo. Nunca acorta lo que quedaba. VÍDEO VIVO (30 s) no se alarga, solo el cierre de después. | `LinkLifecycle.carHeard`, `QdLinkHost` (un aviso cada 2 s como mucho), `LinkService` (también el motor original) |
+
+**Decisiones.**
+- **Tope de 480 KiB (491 520 B).** Queda por debajo incluso del IDR más grande que pasó (493 568 B). El objetivo de
+  300 KB deja más de 150 KB de margen, así que en uso normal el tope no debería actuar nunca.
+- **QP-I de partida 24.** A 1920×882 suele dar IDR de UI de unos 250-350 KB, con buena calidad: el intra-refresh y los
+  P-frames afinan la imagen enseguida.
+- **Por qué solo QP-I.** `KEY_VIDEO_QP_MIN/MAX` también tocaría los P-frames, que no son el problema.
+- **QP en marcha.** No está garantizado que un encoder acepte el QP con `setParameters`. Si no lo respeta, se nota en el
+  QP medio que informa o en el tamaño de los IDR, y entonces entra el plan B.
+- **CBR.** No se ha cambiado: sin el coche no se puede medir si ayuda. Sigue disponible `enc_cbr`. Conviene compararlo
+  en un viaje con el IDR máximo de `sessions.csv`.
+- **Patrón y app.** Llevan un IDR por segundo. Los periódicos sin nada que contar se resumen en una línea cada 10 s; los
+  pedidos y los que cambian algo salen siempre.
+
+**Qué buscar en el log** (`logs/qd-*.log` y el log de la app):
+
+| Línea | Significado |
+|---|---|
+| `VIDEO tamaño de los IDR: objetivo 300 KB, tope del núcleo 480 KB · QP-I mínimo adaptable 18-40 (empieza en 24)` | Al crear el encoder. Sin Android 12+: `sin claves de QP (Android < 12): cada IDR pedido baja el bitrate al 40 %` |
+| `encoder: QP-I 24-51 al configurar; pide el QP medio de cada IDR` | El encoder aceptó las claves (y, en Android 13+, las estadísticas) |
+| `VIDEO IDR 312 KB (QP 27) · QP-I mín 24 · pedido (CAR_REQUEST)` | Un IDR normal. `(QP n)` solo si el encoder lo informa |
+| `VIDEO IDR 350 KB > objetivo 300 KB · QP-I mín 24 → 26 · pedido (STREAM_START)` | Ajuste del QP-I |
+| `W … VIDEO IDR 526 KB > tope 480 KB: lo descarta el núcleo y se pide otro · QP-I mín 24 → 29 · próximo IDR pedido con el bitrate al 40 %` | IDR demasiado grande. Del núcleo: `vídeo: IDR de 538390 B (526 KB) > tope 491520 B (480 KB; el coche se cuelga con más de 512 KB): descartado, sin P-frames hasta el siguiente IDR; se pide otro más pequeño (1 en esta sesión)` |
+| `VIDEO IDR 260 KB con el bitrate al 40 % · QP-I mín 29 · pedido (OVERSIZED, bitrate al 40 %)` | El IDR que lo sustituye |
+| `IDR pedidos al encoder: 3 · aplazados 1 · servidos con otro 9 (antirrebote 600 ms)` | En las estadísticas de 5 s, solo si actuó el antirrebote |
+| `núcleo: … · mensaje de vídeo máx. 313 KB · descartados por tamaño 1` | Estadísticas de 5 s del núcleo |
+| `vídeo: … · mensaje máx. 313 KB · descartados por tamaño 1 (máx. 526 KB)` | Resumen de la sesión |
+| `VIDEO IDR 23 · máx. 312 KB · por encima del objetivo 2 · del tope 0 · QP-I mín 26 (subidas 2, bajadas 0) · con bitrate bajado 0 · IDR pedidos 21 · aplazados 3 · servidos con otro 11` | Al parar el vídeo |
+| `W Android Auto manda IDR de 540 KB, más de lo que admite el coche (480 KB): 3 seguidos descartados …` | Reenvío directo: mejor un perfil que recodifique |
+| `ciclo: coche anunciado sin sesión: vuelvo a contar la espera desde ahora; cierro todo si no se anuncia en 5 min` | «Esperar al coche» vuelve a contar (una línea por minuto como mucho) |
+| `ciclo: espera del coche vencida (7 min sin sesión, 5 min sin anuncios del coche): cierro todo` | Cierre tras los anuncios |
+
+**Cómo comprobarlo en el coche.**
+1. Viaje normal con el perfil «Coche». En `sessions.csv`, `frame_max_kb` ≤ 480 (lo esperado: unos 300) y
+   `descartados_grandes` a 0 o casi. Ningún cierre `WRITE_STALL` con un `VIDEO_IDR` en curso en el detector de cortes.
+2. Pantallas con mucho detalle (mapa a pantalla completa, galería): `VIDEO IDR …` debe quedarse cerca de 300 KB. Si
+   sale `> tope`, la línea siguiente tiene que ser el IDR que lo sustituye, más pequeño.
+3. Ver si el encoder del S25 acepta el QP en marcha: tras un `QP-I mín a → b`, los IDR siguientes deben salir más
+   pequeños (o con `(QP ≥ b)`). Si no, aparece `el encoder no respeta el QP-I mínimo` o `el QP-I no basta`, y desde
+   entonces cada IDR pedido sale `con el bitrate al 40 %`.
+4. Con el coche encendido y la app de espejo cerrada, o sin llegar a conectar: HeadQLink no se cierra mientras el coche
+   se anuncie (línea `ciclo: coche anunciado sin sesión…`).
+
+**Resultados en el PC.** `:qdcore:test :app:testGithubDebugUnitTest :app:assembleGithubDebug`: **BUILD SUCCESSFUL**.
+- `:qdcore`: 109/109. `OversizedFrameTest` es nuevo (3 tests): el IDR de 538 390 B no llega al coche, sus P esperan,
+  el siguiente IDR sale con SPS/PPS delante, el orden de los avisos, las estadísticas y el tope desactivable. Hay 3
+  casos nuevos en `SendQueueTest` (las tres políticas, límite inclusivo, `rejectOversized`). Los tests que bloquean el
+  `write()` con IDR de 0,5-2 MB llevan `maxVideoMessageBytes = 0`. El escaneo de API (minSdk 16) da lo mismo que antes.
+- Todo el app: 2806 pruebas, 0 fallos y 1 saltada (la de `sh`). Son nuevas `IdrSizeControllerTest` (9: paso de QP,
+  subida, tope, QP informado, techo, bajada lenta hasta el suelo, encoder que no hace caso, sin claves de QP con bajada
+  adaptable y convergencia del escenario del coche) e `IdrRequestGateTest` (5: ≥ 600 ms, primer IDR inmediato, ráfaga,
+  aplazamiento, urgente). Hay 4 casos nuevos en `LinkLifecycleTest` (anuncios sin sesión en búsqueda, en pausa y en
+  VÍDEO VIVO; nunca acortan; una línea por minuto) y 1 en `SessionSummaryTest` (columnas `frame_max_kb` y
+  `descartados_grandes`).
 
 Sin probar todavía en el móvil ni en el coche.

@@ -278,7 +278,7 @@ Tap **"Finish"**. If something required is missing, the "Still missing" prompt t
 - Once "Wait for the car" runs out, HeadQLink closes everything: Android Auto, its server and the connection. To use it
   again, tap "Connect", or let the Bluetooth automatic connection handle it.
 - If you tap "Connect" and no car shows up within **5 minutes** (or "Wait for the car", if longer), HeadQLink stops by
-  itself.
+  itself. As long as the car keeps announcing itself, even if it doesn't connect, the wait starts over.
 
 ### At the end of the trip
 
@@ -429,10 +429,11 @@ Always start with the ⚙ menu › "Requirements check": every red row has its o
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
-| The car isn't found ("Searching…" all the time) | The car isn't on the phone's hotspot, the hotspot switched itself off, or the mirroring app isn't open in the car. With Wi-Fi Direct: the hotspot is on or Wi-Fi is off. | Check the "Network" row: it should say "Hotspot on (…)". Join the car to the hotspot (car Settings › Wi-Fi) and open the mirroring app. Turn off the hotspot's auto-off. After 5 minutes without a car HeadQLink stops: tap "Connect" again. |
+| The car isn't found ("Searching…" all the time) | The car isn't on the phone's hotspot, the hotspot switched itself off, or the mirroring app isn't open in the car. With Wi-Fi Direct: the hotspot is on or Wi-Fi is off. | Check the "Network" row: it should say "Hotspot on (…)". Join the car to the hotspot (car Settings › Wi-Fi) and open the mirroring app. Turn off the hotspot's auto-off. After 5 minutes without the car announcing itself HeadQLink stops: tap "Connect" again. |
 | "Port 18463 is busy (is QDLink open?)", or "Port 18463 · Busy" in the "Requirements check" | The QDLink app (or another one) is open on the phone and holds the port. | "Force stop" QDLink. HeadQLink retries every 5 s and the warning clears by itself. |
 | Black screen in the car, or an error in the "Auto" row | Android Auto didn't start: the phone was locked ("Doesn't start: unlock the phone"), or developer mode or accessibility is missing. | Unlock the phone (with the "Unlock the phone to start Android Auto" notification, it starts by itself when you unlock). If it still fails, check the "Requirements check" and tap "Disconnect" and "Connect". To find out what's failing, turn on Diagnostics › "Test without Android Auto (pattern)": if you see the test image, the connection is fine and the problem is Android Auto (turn it off afterwards). If nothing works, try the "Original headqlink" engine. |
 | Choppy or delayed picture | Hotspot on 2.4 GHz, hot phone, profile too high, or phone screen on (with the screen on, Android scans for Wi-Fi networks often). | Hotspot on 5 GHz, "Automatic" or "Car" profile, lock the phone and cool it down. If it continues, try "Medium". |
+| The picture freezes for about 10 s and then reconnects | In earlier versions, a full frame larger than ~512 KB hung the car's receiver, which stopped reading until the connection dropped. **Fixed**: HeadQLink no longer sends any that large and keeps them at about 300 KB at most. | Update HeadQLink. If it happens with the "Basic" profile (there Android Auto decides the size), use "Automatic" or "Car". If it continues, export the log (section 8). |
 | It disconnects often | Hotspot auto-off, battery saving, QDLink open, or the car's mirroring app closed. | Short dropouts reconnect by themselves ("Reconnecting…"). If they're long or frequent: "No battery restrictions", "Samsung: never sleeping apps", turn off the hotspot's auto-off and close QDLink. If it continues, export the log (section 8). |
 | Accessibility turns itself off | Android turns it off when the app is updated, or if the app crashed. Some manufacturers do too. | "Requirements check" › "Turn on". If it says "On but not running", turn it off and on. If it says "Restricted setting", use "Allow restricted settings" (section 3). Remove the battery restrictions. |
 | Android Auto asks you to check the phone | It's the first time Android Auto sees this "car screen", or it needs you to grant a permission or confirm something. | Park, unlock the phone and accept what Android Auto asks. It usually happens only once. |
