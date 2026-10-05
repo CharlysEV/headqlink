@@ -517,8 +517,8 @@ final class CarUi {
     private void markNav() {
         for (LinearLayout b : navButtons) {
             boolean on = screenName.equals(b.getTag());
-            int fg = on ? 0xFF0B1D36 : 0xFFDADCE0;
-            b.setBackground(on ? CarStyle.round(CarStyle.ACCENT, 36) : null);
+            int fg = on ? CarStyle.ON_ACCENT : 0xFFDADCE0;
+            b.setBackground(on ? CarStyle.accent(36) : null);
             if (radioMini != null) radioMini.setBackground(CarStyle.round(CarStyle.lighter(panelColor, 14), 36));
             ((ImageView) b.getChildAt(0)).setImageTintList(ColorStateList.valueOf(fg));
             ((TextView) b.getChildAt(1)).setTextColor(fg);

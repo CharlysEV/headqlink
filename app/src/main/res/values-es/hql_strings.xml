@@ -443,4 +443,7 @@
     <string name="hql_req_battery_bt">Hace falta para que la conexión automática arranque en segundo plano</string>
     <string name="hql_req_samsung">Samsung: apps que nunca se suspenden</string>
     <string name="hql_req_samsung_why">No se puede leer desde aquí: Ajustes › Batería › Límites de uso en segundo plano › Aplicaciones que nunca se suspenden › añade HeadQLink. El botón abre su batería: elige «Sin restricciones».</string>
+    <!-- Pantalla principal: título de la tarjeta de estado y del panel en directo (fps y Mbps). -->
+    <string name="hql_status_title">Estado</string>
+    <string name="hql_live">En directo</string>
 </resources>

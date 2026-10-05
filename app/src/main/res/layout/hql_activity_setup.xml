@@ -9,9 +9,10 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:paddingStart="28dp"
-        android:paddingEnd="28dp">
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp">
 
+        <!-- Barras de los pasos (las añade SetupActivity; la hecha o actual, en degradado) -->
         <LinearLayout
             android:id="@+id/hql_steps"
             android:layout_width="match_parent"
@@ -21,7 +22,7 @@
 
         <TextView
             android:id="@+id/hql_step_label"
-            style="@style/HQL.Text.Label"
+            style="@style/HQL.Text.Label.Accent"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp" />
@@ -53,6 +54,8 @@
                 style="@style/HQL.Button.Quiet"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="-12dp"
+                android:minHeight="56dp"
                 android:text="@string/hql_back_short" />
 
             <View
@@ -64,7 +67,10 @@
                 android:id="@+id/hql_next"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:minWidth="160dp" />
+                android:elevation="8dp"
+                android:minWidth="170dp"
+                android:outlineAmbientShadowColor="@color/hql_accent"
+                android:outlineSpotShadowColor="@color/hql_accent" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

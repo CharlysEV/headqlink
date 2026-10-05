@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Botón principal: degradado cian → verde eléctrico. Activado (Desconectar): oscuro con filo rojo. Desactivado
+     (Preparando…): superficie apagada. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#40FFFFFF">
+    <item>
+        <selector>
+            <item android:state_enabled="false">
+                <shape>
+                    <corners android:radius="16dp" />
+                    <solid android:color="@color/hql_surface_top" />
+                    <stroke
+                        android:width="1dp"
+                        android:color="@color/hql_outline_strong" />
+                </shape>
+            </item>
+            <item android:state_activated="true">
+                <shape>
+                    <corners android:radius="16dp" />
+                    <solid android:color="#2A1820" />
+                    <stroke
+                        android:width="1.5dp"
+                        android:color="@color/hql_error" />
+                </shape>
+            </item>
+            <item>
+                <shape>
+                    <corners android:radius="16dp" />
+                    <gradient
+                        android:angle="0"
+                        android:endColor="@color/hql_accent_2"
+                        android:startColor="@color/hql_accent" />
+                </shape>
+            </item>
+        </selector>
+    </item>
+    <item android:id="@android:id/mask">
+        <shape>
+            <corners android:radius="16dp" />
+            <solid android:color="#FFFFFFFF" />
+        </shape>
+    </item>
+</ripple>

@@ -23,9 +23,10 @@
         style="@style/HQL.Text.RowTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:fontFamily="sans-serif-medium"
-        android:textSize="18sp"
+        android:layout_marginTop="18dp"
+        android:fontFamily="sans-serif"
+        android:textSize="20sp"
+        android:textStyle="bold"
         android:visibility="gone" />
 
     <TextView
@@ -40,10 +41,10 @@
         android:id="@+id/hql_check_list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="22dp"
+        android:layout_marginTop="20dp"
         android:background="@drawable/hql_panel"
         android:orientation="vertical"
-        android:paddingStart="18dp"
+        android:paddingStart="16dp"
         android:paddingEnd="12dp" />
 
     <TextView
@@ -51,6 +52,7 @@
         style="@style/HQL.Text.Label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
         android:layout_marginTop="26dp"
         android:visibility="gone" />
 

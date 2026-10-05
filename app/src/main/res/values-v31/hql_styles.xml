@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: pantalla de inicio de Android 12+ con la marca «Eléctrico» (el anillo de la Q se dibuja y salta el
+     rayo, hql_splash_icon) sobre el fondo casi negro. -->
+<resources>
+    <style name="Theme.HeadQLink" parent="Base.Theme.HeadQLink">
+        <item name="android:windowSplashScreenBackground">@color/hql_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/hql_splash_icon</item>
+        <item name="android:windowSplashScreenAnimationDuration">900</item>
+    </style>
+</resources>

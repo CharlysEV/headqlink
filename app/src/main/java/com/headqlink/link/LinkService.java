@@ -541,6 +541,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                 android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
         return new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.hql_ic_notif)
+                .setColor(getColor(R.color.hql_accent))
                 .setContentTitle(title)
                 .setContentText(connected ? null : text)
                 .setContentIntent(pi)

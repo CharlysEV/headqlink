@@ -37,6 +37,17 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     private View reqRow;
     /** Comprobando los requisitos antes de conectar (un toque más se ignora). */
     private boolean checking;
+    /** Panel «En directo»: fps y Mbps del vídeo al coche, con sus barras. */
+    private View live;
+    private View liveDot;
+    private TextView fpsValue;
+    private TextView mbpsValue;
+    private MeterView fpsMeter;
+    private MeterView mbpsMeter;
+    /** Máximos esperados de las barras (los del perfil de imagen); se calculan al primer dato de vídeo. */
+    private float fpsMax;
+    private float mbpsMax;
+    private android.animation.ObjectAnimator livePulse;
     /** Desde la configuración terminada «igualmente»: ya se avisó de lo que falta, se conecta sin volver a avisar. */
     static final String EXTRA_SKIP_CHECK = "skip_check";
     private static final int REQ_IPTV_FILE = 10;
@@ -64,15 +75,22 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         btAuto.setChecked(cfg.btAutoConnect());
         btAuto.setOnCheckedChangeListener((b2, on) -> setBtAuto(on));
 
+        live = findViewById(R.id.hql_home_live);
+        liveDot = findViewById(R.id.hql_home_live_dot);
+        fpsValue = findViewById(R.id.hql_meter_fps_value);
+        mbpsValue = findViewById(R.id.hql_meter_mbps_value);
+        fpsMeter = findViewById(R.id.hql_meter_fps);
+        mbpsMeter = findViewById(R.id.hql_meter_mbps);
+
         LinearLayout status = findViewById(R.id.hql_home_status);
-        carRow = statusRow(status, Str.get(R.string.hql_car));
-        networkRow = statusRow(status, Str.get(R.string.hql_network));
+        carRow = statusRow(status, Str.get(R.string.hql_car), R.drawable.hql_ln_car);
+        networkRow = statusRow(status, Str.get(R.string.hql_network), R.drawable.hql_ln_wifi);
         networkRow.setOnClickListener(v -> {
             if (hotspotNow() && networkLevel() != LinkState.Level.OK) HotspotWatcher.openSettings(this);
         });
-        videoRow = statusRow(status, Str.get(R.string.hql_image));
-        sourceRow = statusRow(status, "");
-        reqRow = statusRow(status, Str.get(R.string.hql_req_row));
+        videoRow = statusRow(status, Str.get(R.string.hql_image), R.drawable.hql_ln_screen);
+        sourceRow = statusRow(status, "", R.drawable.hql_ln_phone);
+        reqRow = statusRow(status, Str.get(R.string.hql_req_row), R.drawable.hql_ln_shield);
         reqRow.setOnClickListener(v -> startActivity(new Intent(this, ChecklistActivity.class)));
         setRow(reqRow, LinkState.Level.IDLE, Str.get(R.string.hql_checking));
 
@@ -97,6 +115,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         super.onResume();
         if (modeView == null) return;
         LinkState.addListener(this);
+        // El perfil de imagen pudo cambiar: los máximos de las barras se recalculan con el próximo dato.
+        fpsMax = 0;
+        mbpsMax = 0;
         render();
         if (hotspotNow()) {
             // Estado de la zona Wi-Fi también sin conectar (fuera del hilo principal: escanea interfaces).
@@ -121,6 +142,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     @Override
     protected void onPause() {
         LinkState.removeListener(this);
+        pulse(false);
         super.onPause();
     }
 
@@ -224,6 +246,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         setRow(networkRow, networkLevel(), net.isEmpty() ? "—" : net);
         String video = LinkState.video;
         setRow(videoRow, video.isEmpty() ? LinkState.Level.IDLE : LinkState.Level.OK, video.isEmpty() ? "—" : video);
+        renderMeters(video);
 
         boolean showSource = !Config.MODE_PATTERN.equals(mode);
         sourceRow.setVisibility(showSource ? View.VISIBLE : View.GONE);
@@ -235,6 +258,14 @@ public class HomeActivity extends Activity implements LinkState.Listener {
 
         toggle.setText(starting ? Str.get(R.string.hql_preparing) : running ? Str.get(R.string.hql_disconnect) : Str.get(R.string.hql_connect));
         toggle.setEnabled(!starting);
+        // CONECTAR en degradado con brillo cian; en marcha, DESCONECTAR oscuro con filo rojo (hql_btn_primary).
+        toggle.setActivated(running && !starting);
+        toggle.setElevation(starting ? 0 : 10 * getResources().getDisplayMetrics().density);
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            int glow = getColor(running ? R.color.hql_error : R.color.hql_accent);
+            toggle.setOutlineSpotShadowColor(glow);
+            toggle.setOutlineAmbientShadowColor(glow);
+        }
         if (!running) {
             hint.setText(Str.get(R.string.hql_hint_idle));
         } else if (LinkState.car != LinkState.Car.CONNECTED) {
@@ -244,7 +275,57 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         }
     }
 
-    private View statusRow(LinearLayout parent, String name) {
+    /**
+     * Panel «En directo»: las cifras de LinkState.video (fps y Mbps) en grande, con barras sobre lo que da el perfil de
+     * imagen (o el ajuste manual). Sin vídeo, «—» y las barras apagadas.
+     */
+    private void renderMeters(String video) {
+        float[] v = Meters.parse(video);
+        if (v == null) {
+            fpsValue.setText("—");
+            mbpsValue.setText("—");
+            fpsMeter.setLevel(0);
+            mbpsMeter.setLevel(0);
+            Ui.dot(liveDot, LinkState.Level.IDLE);
+            pulse(false);
+            live.setContentDescription(Str.get(R.string.hql_live) + ": —");
+            return;
+        }
+        if (fpsMax <= 0) {
+            VideoProfile p = cfg.videoProfile();
+            int manualFps = cfg.getInt(Config.FPS);
+            int manualKbps = cfg.getInt(Config.KBPS);
+            fpsMax = manualFps > 0 ? manualFps : p.fps;
+            mbpsMax = manualKbps > 0 ? manualKbps / 1000f : Math.max(p.maxBitrate, p.bitrate) / 1e6f;
+            if (mbpsMax <= 0) mbpsMax = 8;
+        }
+        java.util.Locale loc = java.util.Locale.getDefault();
+        fpsValue.setText(String.format(loc, "%.0f", v[0]));
+        mbpsValue.setText(String.format(loc, "%.1f", v[1]));
+        fpsMeter.setLevel(Meters.level(v[0], fpsMax));
+        mbpsMeter.setLevel(Meters.level(v[1], mbpsMax));
+        Ui.dot(liveDot, LinkState.Level.OK);
+        pulse(true);
+        live.setContentDescription(Str.get(R.string.hql_live) + ": " + video);
+    }
+
+    /** El punto de «En directo» late mientras llega vídeo. */
+    private void pulse(boolean on) {
+        if (on) {
+            if (livePulse == null) {
+                livePulse = android.animation.ObjectAnimator.ofFloat(liveDot, View.ALPHA, 1f, 0.25f);
+                livePulse.setDuration(900);
+                livePulse.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+                livePulse.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+            }
+            if (!livePulse.isStarted()) livePulse.start();
+        } else if (livePulse != null) {
+            livePulse.cancel();
+            liveDot.setAlpha(1f);
+        }
+    }
+
+    private View statusRow(LinearLayout parent, String name, int icon) {
         if (parent.getChildCount() > 0) {
             View div = new View(this);
             div.setBackgroundColor(getColor(R.color.hql_outline));
@@ -252,13 +333,13 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         }
         View r = LayoutInflater.from(this).inflate(R.layout.hql_status_row, parent, false);
         ((TextView) r.findViewById(R.id.hql_status_name)).setText(name);
+        ((android.widget.ImageView) r.findViewById(R.id.hql_status_icon)).setImageResource(icon);
         parent.addView(r);
         return r;
     }
 
     private void setRow(View row, LinkState.Level level, String value) {
-        Ui.dot(row.findViewById(R.id.hql_status_dot), level);
-        ((TextView) row.findViewById(R.id.hql_status_value)).setText(value);
+        Ui.chip(row.findViewById(R.id.hql_status_value), level, value);
     }
 
     /**
@@ -310,7 +391,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
 
     /**
      * Menú del engranaje: comprobación de requisitos, ajustes de imagen, listas de TV y radio (solo
-     * Auto extendido), idioma, tema y diagnóstico.
+     * Auto extendido), idioma y diagnóstico. (Sin «Tema»: la app va siempre en oscuro, estilo «Eléctrico».)
      */
     private void showMenu(View anchor) {
         android.widget.PopupMenu pm = new android.widget.PopupMenu(this, anchor);
@@ -323,7 +404,6 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             m.add(0, 3, 3, Str.get(R.string.hql_radio_list));
         }
         if (android.os.Build.VERSION.SDK_INT >= 33) m.add(0, 4, 4, Str.get(R.string.hql_language));
-        if (android.os.Build.VERSION.SDK_INT >= 31) m.add(0, 5, 5, Str.get(R.string.hql_theme));
         m.add(0, 6, 6, Str.get(R.string.hql_diagnostics));
         pm.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
@@ -339,9 +419,6 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 case 4:
                     showLanguage();
                     break;
-                case 5:
-                    showTheme();
-                    break;
                 case 7:
                     startActivity(new Intent(this, ChecklistActivity.class));
                     break;
@@ -351,26 +428,6 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             return true;
         });
         pm.show();
-    }
-
-    /** Tema de la app (Android 12+): el del sistema, claro u oscuro. Android lo recuerda. */
-    @android.annotation.TargetApi(31)
-    private void showTheme() {
-        android.app.UiModeManager um = getSystemService(android.app.UiModeManager.class);
-        int[] modes = {android.app.UiModeManager.MODE_NIGHT_AUTO, android.app.UiModeManager.MODE_NIGHT_NO,
-                android.app.UiModeManager.MODE_NIGHT_YES};
-        String[] names = {Str.get(R.string.hql_theme_system), Str.get(R.string.hql_theme_light), Str.get(R.string.hql_theme_dark)};
-        int cur = cfg.getInt(Config.THEME);
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(Str.get(R.string.hql_theme))
-                .setSingleChoiceItems(names, cur, (d, which) -> {
-                    d.dismiss();
-                    cfg.putInt(Config.THEME, which);
-                    um.setApplicationNightMode(modes[which]);
-                    recreate();
-                })
-                .setNegativeButton(Str.get(R.string.hql_cancel), null)
-                .show();
     }
 
     /**
@@ -498,7 +555,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             String detail = ids[i].isEmpty() ? Str.get(R.string.hql_profile_auto_detail) : VideoProfile.detail(ids[i]);
             android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder(title + tag + "\n" + detail);
             if (!tag.isEmpty()) {
-                sb.setSpan(new android.text.style.ForegroundColorSpan(0xFF1E8E3E), title.length(), title.length() + tag.length(), 0);
+                sb.setSpan(new android.text.style.ForegroundColorSpan(getColor(R.color.hql_ok)), title.length(), title.length() + tag.length(), 0);
             }
             sb.setSpan(new android.text.style.RelativeSizeSpan(0.82f), title.length() + tag.length() + 1, sb.length(), 0);
             rb.setText(sb);

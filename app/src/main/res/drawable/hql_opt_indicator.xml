@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Marca de la opción elegida (sigue al estado seleccionado de la tarjeta). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/hql_opt_on" android:state_selected="true" />
+    <item android:drawable="@drawable/hql_opt_off" />
+</selector>

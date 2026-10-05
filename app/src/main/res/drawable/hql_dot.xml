@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Punto de estado (lo tiñe el código). -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
     <solid android:color="@color/hql_idle" />
-    <size android:width="10dp" android:height="10dp" />
+    <size
+        android:width="10dp"
+        android:height="10dp" />
 </shape>

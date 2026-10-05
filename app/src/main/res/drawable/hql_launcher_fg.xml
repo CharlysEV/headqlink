@@ -1,39 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Icono de HeadQLink: la pantalla panorámica del coche con el panel propio (modo extendido).
-     Dibujado sobre 108 y reducido a la zona visible de un icono adaptable (72 centrales). -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
+<!-- Icono de HeadQLink («Eléctrico»): una Q formada por un anillo cian→verde cuya cola es un rayo.
+     Mismo trazo en hql_launcher_mono, hql_logo, hql_splash_vec y hql_ic_notif (generados juntos). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group
-        android:scaleX="0.6667"
-        android:scaleY="0.6667"
-        android:translateX="18"
-        android:translateY="18">
-        <path
-            android:pathData="M29,38h50a7,7 0,0 1,7 7v18a7,7 0,0 1,-7 7h-50a7,7 0,0 1,-7 -7v-18a7,7 0,0 1,7 -7z"
-            android:strokeWidth="3.5"
-            android:strokeColor="#FFF8FAFC" />
-        <path android:pathData="M30,43h6a3,3 0,0 1,3 3v16a3,3 0,0 1,-3 3h-6a3,3 0,0 1,-3 -3v-16a3,3 0,0 1,3 -3z">
-            <aapt:attr name="android:fillColor">
-                <gradient
-                    android:endX="33"
-                    android:endY="65"
-                    android:startX="33"
-                    android:startY="43"
-                    android:type="linear">
-                    <item android:color="#FF2DD4BF" android:offset="0" />
-                    <item android:color="#FF3B82F6" android:offset="1" />
-                </gradient>
-            </aapt:attr>
-        </path>
-        <path
-            android:fillColor="#FF94A3B8"
-            android:pathData="M44.75,47h32.5a1.75,1.75 0,0 1,0 3.5h-32.5a1.75,1.75 0,0 1,0 -3.5z" />
-        <path
-            android:fillColor="#FF475569"
-            android:pathData="M44.75,54h22.5a1.75,1.75 0,0 1,0 3.5h-22.5a1.75,1.75 0,0 1,0 -3.5z" />
-    </group>
+    <path
+        android:pathData="M52.78,67.53 A19.1,19.1 0 1 1 67.48,52.83"
+        android:strokeWidth="8.02"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear" android:startX="29.71" android:startY="29.76" android:endX="67.9" android:endY="67.95">
+                <item android:color="#FF00E5C7" android:offset="0" />
+                <item android:color="#FF4CFF9F" android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M75.69,52.39 L58.83,68.83 L66.64,70.49 L61.65,83.52 L78.8,65.65 L70.99,64 Z"
+        android:strokeWidth="0.92"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="58.83" android:startY="52.38" android:endX="78.8" android:endY="83.53">
+                <item android:color="#FFFFFFFF" android:offset="0" />
+                <item android:color="#FFB8FFDF" android:offset="1" />
+            </gradient>
+        </aapt:attr>
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear" android:startX="58.83" android:startY="52.38" android:endX="78.8" android:endY="83.53">
+                <item android:color="#FFFFFFFF" android:offset="0" />
+                <item android:color="#FFB8FFDF" android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
 </vector>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fondo de las pantallas: casi negro con un halo cian muy suave arriba (también tras la barra de estado). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <color android:color="@color/hql_bg" />
+    </item>
+    <item
+        android:height="420dp"
+        android:gravity="top|fill_horizontal">
+        <shape>
+            <gradient
+                android:angle="270"
+                android:centerColor="#0700E5C7"
+                android:endColor="#0000E5C7"
+                android:startColor="#1700E5C7" />
+        </shape>
+    </item>
+</layer-list>

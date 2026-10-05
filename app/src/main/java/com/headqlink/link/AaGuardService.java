@@ -112,7 +112,8 @@ public class AaGuardService extends Service {
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, Str.get(R.string.hql_guard_channel), NotificationManager.IMPORTANCE_LOW));
         Notification n = new Notification.Builder(this, CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .setSmallIcon(R.drawable.hql_ic_notif)
+                .setColor(getColor(R.color.hql_accent))
                 .setContentTitle("HeadQLink")
                 .setContentText(Str.get(R.string.hql_guard_parked))
                 .setOngoing(true)
@@ -174,6 +175,7 @@ public class AaGuardService extends Service {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE);
         nm.notify(ALERT_ID, new Notification.Builder(this, CHANNEL_ALERT)
                 .setSmallIcon(android.R.drawable.stat_sys_warning)
+                .setColor(getColor(R.color.hql_warn))
                 .setContentTitle(Str.get(R.string.hql_guard_alert_title))
                 .setContentText(Str.get(R.string.hql_guard_alert_text))
                 .setContentIntent(pi)

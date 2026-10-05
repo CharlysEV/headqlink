@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Panel del log en Diagnóstico: más hundido que las tarjetas, como una terminal. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="16dp" />
+    <solid android:color="@color/hql_terminal" />
+    <stroke
+        android:width="1dp"
+        android:color="@color/hql_outline" />
+</shape>

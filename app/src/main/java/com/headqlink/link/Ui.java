@@ -39,22 +39,59 @@ final class Ui {
     private Ui() {
     }
 
-    static void dot(View dot, LinkState.Level level) {
-        int color;
+    /** Color de un estado: verde correcto, ámbar en curso, rojo fallo, gris parado. */
+    static int levelColor(Context ctx, LinkState.Level level) {
         switch (level) {
             case OK:
-                color = R.color.hql_ok;
+                return ctx.getColor(R.color.hql_ok);
+            case BUSY:
+                return ctx.getColor(R.color.hql_warn);
+            case ERROR:
+                return ctx.getColor(R.color.hql_error);
+            default:
+                return ctx.getColor(R.color.hql_text_dim);
+        }
+    }
+
+    /** Fondo translúcido (16 %) de un color de estado, para chips e insignias. */
+    static int levelTint(int color) {
+        return (color & 0x00FFFFFF) | 0x29000000;
+    }
+
+    /** Chip de estado: texto e icono del color del estado sobre su fondo translúcido (parado: gris sobre superficie). */
+    static void chip(TextView chip, LinkState.Level level, String text) {
+        Context c = chip.getContext();
+        int color = levelColor(c, level);
+        int icon;
+        switch (level) {
+            case OK:
+                icon = R.drawable.hql_st_ok;
                 break;
             case BUSY:
-                color = R.color.hql_warn;
+                icon = R.drawable.hql_st_busy;
                 break;
             case ERROR:
-                color = R.color.hql_error;
+                icon = R.drawable.hql_st_error;
                 break;
             default:
-                color = R.color.hql_idle;
+                icon = R.drawable.hql_st_idle;
         }
-        dot.setBackgroundTintList(ColorStateList.valueOf(dot.getContext().getColor(color)));
+        chip.setText(text);
+        chip.setTextColor(color);
+        chip.setBackgroundTintList(ColorStateList.valueOf(level == LinkState.Level.IDLE
+                ? c.getColor(R.color.hql_surface_top) : levelTint(color)));
+        Drawable d = c.getDrawable(icon);
+        if (d != null) {
+            d = d.mutate();
+            d.setTint(color);
+        }
+        chip.setCompoundDrawablesRelativeWithIntrinsicBounds(d, null, null, null);
+    }
+
+    /** Punto de estado (p. ej. «En directo»). */
+    static void dot(View dot, LinkState.Level level) {
+        dot.setBackgroundTintList(ColorStateList.valueOf(level == LinkState.Level.IDLE
+                ? dot.getContext().getColor(R.color.hql_idle) : levelColor(dot.getContext(), level)));
     }
 
     /** Modo ampliado: fotos y vídeos, y ubicación para los paneles Instrumentos y Eficiencia. */

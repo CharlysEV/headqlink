@@ -91,7 +91,8 @@ public final class CarBtReceiver extends BroadcastReceiver {
         PendingIntent pi = PendingIntent.getActivity(ctx, 0, new Intent(ctx, HomeActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification n = new Notification.Builder(ctx, CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_menu_compass)
+                .setSmallIcon(R.drawable.hql_ic_notif)
+                .setColor(ctx.getColor(R.color.hql_accent))
                 .setContentTitle(Str.get(R.string.hql_car_detected))
                 .setContentText(Str.get(R.string.hql_tap_to_connect))
                 .setContentIntent(pi)

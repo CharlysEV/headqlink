@@ -676,8 +676,10 @@ final class Checklist {
                 bg = 0;
         }
         v.setText(glyph);
-        v.setBackgroundTintList(ColorStateList.valueOf(act.getColor(bg != 0 ? bg : R.color.hql_outline)));
-        v.setTextColor(act.getColor(bg != 0 ? R.color.hql_surface : R.color.hql_text_dim));
+        // Insignia «Eléctrico»: el símbolo en el color del estado sobre ese color translúcido (sin estado: gris).
+        int fg = act.getColor(bg != 0 ? bg : R.color.hql_text_dim);
+        v.setBackgroundTintList(ColorStateList.valueOf(bg != 0 ? Ui.levelTint(fg) : act.getColor(R.color.hql_surface_top)));
+        v.setTextColor(fg);
     }
 
     private static void button(MaterialButton b, String label, Runnable r) {

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tarjeta de estado: filo cian → verde desde la esquina superior izquierda; con la sombra de color de la vista
+     (Android 9+) da un brillo suave. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape>
+            <corners android:radius="22dp" />
+            <gradient
+                android:angle="315"
+                android:centerColor="#664CFF9F"
+                android:endColor="@color/hql_outline"
+                android:startColor="#CC00E5C7" />
+        </shape>
+    </item>
+    <item
+        android:bottom="1.5dp"
+        android:left="1.5dp"
+        android:right="1.5dp"
+        android:top="1.5dp">
+        <shape>
+            <corners android:radius="20.5dp" />
+            <gradient
+                android:angle="270"
+                android:endColor="@color/hql_surface"
+                android:startColor="#122029" />
+        </shape>
+    </item>
+</layer-list>

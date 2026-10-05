@@ -65,8 +65,8 @@ final class SettingsScreen implements CarScreen {
         detail.setPadding(6, 6, 0, 0);
         img.addView(detail);
         apply = CarStyle.pill(c, Str.get(R.string.hql_apply_reconnect));
-        apply.setBackground(CarStyle.round(CarStyle.ACCENT, 28));
-        apply.setTextColor(0xFF0B1D36);
+        apply.setBackground(CarStyle.accent(28));
+        apply.setTextColor(CarStyle.ON_ACCENT);
         LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         alp.topMargin = 16;
         img.addView(apply, alp);
@@ -135,8 +135,8 @@ final class SettingsScreen implements CarScreen {
         boolean[] on = {initial};
         Runnable style = () -> {
             sw.setText(on[0] ? Str.get(R.string.hql_on_yes) : Str.get(R.string.hql_on_no));
-            sw.setBackground(CarStyle.round(on[0] ? CarStyle.ACCENT : CarStyle.PILL_BG, 28));
-            sw.setTextColor(on[0] ? 0xFF0B1D36 : CarStyle.TEXT);
+            sw.setBackground(on[0] ? CarStyle.accent(28) : CarStyle.round(CarStyle.PILL_BG, 28));
+            sw.setTextColor(on[0] ? CarStyle.ON_ACCENT : CarStyle.TEXT);
         };
         style.run();
         sw.setMinWidth(110);

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Texto del botón principal: oscuro sobre el degradado, rojo al desconectar, gris si está desactivado. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/hql_text_dim" android:state_enabled="false" />
+    <item android:color="@color/hql_error" android:state_activated="true" />
+    <item android:color="@color/hql_on_accent" />
+</selector>

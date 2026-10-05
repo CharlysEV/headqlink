@@ -1,17 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_selected="true">
-        <shape>
-            <solid android:color="@color/hql_surface_hi" />
-            <stroke android:width="1.5dp" android:color="@color/hql_accent" />
-            <corners android:radius="12dp" />
-        </shape>
-    </item>
+<!-- Opción elegible (modo, conexión): la elegida lleva un filo de acento en degradado sobre un fondo teñido. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/hql_ripple">
     <item>
+        <selector>
+            <item android:state_selected="true">
+                <layer-list>
+                    <item>
+                        <shape>
+                            <corners android:radius="18dp" />
+                            <gradient
+                                android:angle="0"
+                                android:endColor="@color/hql_accent_2"
+                                android:startColor="@color/hql_accent" />
+                        </shape>
+                    </item>
+                    <item
+                        android:bottom="2dp"
+                        android:left="2dp"
+                        android:right="2dp"
+                        android:top="2dp">
+                        <shape>
+                            <corners android:radius="16dp" />
+                            <gradient
+                                android:angle="0"
+                                android:endColor="#0F1F22"
+                                android:startColor="#0F2C2D" />
+                        </shape>
+                    </item>
+                </layer-list>
+            </item>
+            <item>
+                <shape>
+                    <corners android:radius="18dp" />
+                    <solid android:color="@color/hql_surface" />
+                    <stroke
+                        android:width="1dp"
+                        android:color="@color/hql_outline_strong" />
+                </shape>
+            </item>
+        </selector>
+    </item>
+    <item android:id="@android:id/mask">
         <shape>
-            <solid android:color="@color/hql_surface" />
-            <stroke android:width="1dp" android:color="@color/hql_outline" />
-            <corners android:radius="12dp" />
+            <corners android:radius="18dp" />
+            <solid android:color="#FFFFFFFF" />
         </shape>
     </item>
-</selector>
+</ripple>

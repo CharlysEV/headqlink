@@ -43,12 +43,13 @@
 
     <TextView
         android:id="@+id/hql_v_adv_toggle"
-        style="@style/HQL.Text.Label"
+        style="@style/HQL.Text.Label.Accent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
+        android:layout_marginTop="12dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:minHeight="48dp"
         android:text="@string/hql_advanced_closed" />
 
     <LinearLayout

@@ -56,8 +56,8 @@ final class RouteTab implements CarScreen {
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(0, 0, 0, 12);
         TextView search = CarStyle.pill(ctx, Str.get(R.string.hql_route_search_dest));
-        search.setBackground(CarStyle.round(CarStyle.ACCENT, 28));
-        search.setTextColor(0xFF0B1D36);
+        search.setBackground(CarStyle.accent(28));
+        search.setTextColor(CarStyle.ON_ACCENT);
         goMaps = CarStyle.pill(ctx, Str.get(R.string.hql_route_guide_maps));
         clear = CarStyle.pill(ctx, Str.get(R.string.hql_remove));
         actions.addView(search);

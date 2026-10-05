@@ -129,6 +129,7 @@
         android:name=".App"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/hql_launcher"
+        android:roundIcon="@mipmap/hql_launcher_round"
         android:label="HeadQLink"
         android:localeConfig="@xml/hql_locales_config"
         android:largeHeap="true"

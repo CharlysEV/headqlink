@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Insignia de estado de la comprobación (blanca: la tiñe Checklist). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="9dp" />
+    <solid android:color="#FFFFFFFF" />
+</shape>

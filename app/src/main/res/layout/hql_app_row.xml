@@ -24,10 +24,9 @@
 
     <TextView
         android:id="@+id/hql_app_tag"
-        style="@style/HQL.Text.Label"
+        style="@style/HQL.Text.Tag"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/hql_compatible"
-        android:textColor="@color/hql_accent"
         android:visibility="gone" />
 </LinearLayout>

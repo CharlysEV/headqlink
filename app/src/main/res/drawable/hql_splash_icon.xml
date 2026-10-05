@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icono animado de la pantalla de inicio (Android 12+): el anillo de la Q se traza y el rayo aparece con un
+     pequeño rebote. En reposo (sin animaciones) se ve el icono completo. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/hql_splash_vec">
+    <target
+        android:name="ring"
+        android:animation="@animator/hql_splash_ring" />
+    <target
+        android:name="bolt"
+        android:animation="@animator/hql_splash_bolt" />
+    <target
+        android:name="boltGroup"
+        android:animation="@animator/hql_splash_bolt_pop" />
+</animated-vector>

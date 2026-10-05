@@ -58,8 +58,8 @@ public class SetupActivity extends Activity {
         });
         for (int i = 0; i < STEPS; i++) {
             View bar = new View(this);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(4), 1);
-            if (i > 0) lp.setMarginStart(dp(6));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(6), 1);
+            if (i > 0) lp.setMarginStart(dp(8));
             steps.addView(bar, lp);
         }
         show(b != null ? b.getInt(EXTRA_STEP) : getIntent().getIntExtra(EXTRA_STEP, 0));

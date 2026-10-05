@@ -442,4 +442,7 @@
     <string name="hql_req_battery_bt">Needed so the automatic connection can start in the background</string>
     <string name="hql_req_samsung">Samsung: never sleeping apps</string>
     <string name="hql_req_samsung_why">Can\'t be read from here: Settings › Battery › Background usage limits › Never sleeping apps › add HeadQLink. The button opens its battery page: choose Unrestricted.</string>
+    <!-- Pantalla principal: título de la tarjeta de estado y del panel en directo (fps y Mbps). -->
+    <string name="hql_status_title">Status</string>
+    <string name="hql_live">Live</string>
 </resources>

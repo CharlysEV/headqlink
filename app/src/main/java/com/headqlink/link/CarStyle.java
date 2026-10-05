@@ -19,8 +19,12 @@ final class CarStyle {
     static final int BG = 0xFF0E1013;
     static final int TEXT = 0xFFE8EAED;
     static final int TEXT_DIM = 0xFF9AA0A6;
-    static final int ACCENT = 0xFF8AB4F8;
-    static final int ACCENT_BG = 0xFF2B3A55;
+    /** Acento «Eléctrico» (el mismo que en el móvil): cian que pasa a verde eléctrico en los degradados. */
+    static final int ACCENT = 0xFF00E5C7;
+    static final int ACCENT_2 = 0xFF4CFF9F;
+    /** Texto e iconos sobre el acento. */
+    static final int ON_ACCENT = 0xFF00211C;
+    static final int ACCENT_BG = 0xFF0F3B38;
     static final int ITEM_BG = 0xFF23272E;
     /** Tarjetas al estilo de AA (superficie elevada sobre el fondo). */
     static final int CARD = 0xFF28292C;
@@ -70,6 +74,13 @@ final class CarStyle {
         return d;
     }
 
+    /** Píldora de acento (lo elegido, la acción principal): degradado cian → verde. */
+    static GradientDrawable accent(int radius) {
+        GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{ACCENT, ACCENT_2});
+        d.setCornerRadius(radius);
+        return d;
+    }
+
     /** "‹ Volver" arriba a la izquierda dentro de un FrameLayout. */
     static View back(Context c, Runnable onBack) {
         TextView b = pill(c, "‹  Volver");
@@ -112,7 +123,7 @@ final class CarStyle {
         return t;
     }
 
-    /** Fila de pestañas en píldora (la elegida, rellena de azul como en AA). */
+    /** Fila de pestañas en píldora (la elegida, rellena del acento). */
     static LinearLayout tabs(Context c, String[] names, int selected, java.util.function.IntConsumer onSelect) {
         LinearLayout row = new LinearLayout(c);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -138,8 +149,8 @@ final class CarStyle {
     }
 
     private static void styleTab(TextView t, boolean on) {
-        t.setBackground(round(on ? ACCENT : PILL_BG, 30));
-        t.setTextColor(on ? 0xFF0B1D36 : TEXT);
+        t.setBackground(on ? accent(30) : round(PILL_BG, 30));
+        t.setTextColor(on ? ON_ACCENT : TEXT);
     }
 
     static FrameLayout.LayoutParams match() {
