@@ -21,9 +21,12 @@ final class SettingsScreen implements CarScreen {
     private Host host;
     private Config cfg;
     private String pending;
+    /** Fluidez pendiente de aplicar (VideoProfile.FLUID_30 o FLUID_60). */
+    private int pendingFluid;
     private TextView apply;
     private TextView detail;
     private final java.util.List<TextView> profilePills = new java.util.ArrayList<>();
+    private final java.util.List<TextView> fluidPills = new java.util.ArrayList<>();
 
     @Override
     public View create(Host h) {
@@ -32,6 +35,7 @@ final class SettingsScreen implements CarScreen {
         cfg = new Config(c);
         String rec = VideoProfile.recommended(c);
         pending = cfg.videoProfileChoice();
+        pendingFluid = cfg.fluidity();
 
         LinearLayout col = new LinearLayout(c);
         col.setOrientation(LinearLayout.VERTICAL);
@@ -64,6 +68,31 @@ final class SettingsScreen implements CarScreen {
         detail = CarStyle.text(c, "", 22, CarStyle.TEXT_DIM);
         detail.setPadding(6, 6, 0, 0);
         img.addView(detail);
+        // Fluidez: 30 fps (lo que pide el coche, menos calor) o 60; solo cuenta con Coche (y Automático si es Coche).
+        LinearLayout fluidRow = new LinearLayout(c);
+        fluidRow.setOrientation(LinearLayout.HORIZONTAL);
+        fluidRow.setGravity(Gravity.CENTER_VERTICAL);
+        fluidRow.setPadding(0, 14, 0, 4);
+        TextView fluidLabel = CarStyle.text(c, Str.get(R.string.hql_fluidity), 24, CarStyle.TEXT);
+        fluidLabel.setPadding(6, 0, 20, 0);
+        fluidRow.addView(fluidLabel);
+        for (int f : new int[]{VideoProfile.FLUID_30, VideoProfile.FLUID_60}) {
+            TextView p = CarStyle.pill(c, Str.get(f == VideoProfile.FLUID_60 ? R.string.hql_fluidity_60 : R.string.hql_fluidity_30));
+            p.setTag(f);
+            p.setPadding(34, 18, 34, 18);
+            p.setOnClickListener(v -> {
+                pendingFluid = f;
+                refresh();
+            });
+            LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            plp.rightMargin = 12;
+            fluidPills.add(p);
+            fluidRow.addView(p, plp);
+        }
+        android.widget.HorizontalScrollView fluidScroll = new android.widget.HorizontalScrollView(c);
+        fluidScroll.setHorizontalScrollBarEnabled(false);
+        fluidScroll.addView(fluidRow);
+        img.addView(fluidScroll);
         apply = CarStyle.pill(c, Str.get(R.string.hql_apply_reconnect));
         apply.setBackground(CarStyle.accent(28));
         apply.setTextColor(CarStyle.ON_ACCENT);
@@ -162,15 +191,30 @@ final class SettingsScreen implements CarScreen {
         String eff = pending.isEmpty() ? VideoProfile.recommended(host.context()) : pending;
         detail.setText((pending.isEmpty() ? Str.get(R.string.hql_follows_recommended, VideoProfile.title(eff)) + " · " : "")
                 + VideoProfile.detail(eff));
-        apply.setVisibility(pending.equals(cfg.videoProfileChoice()) ? View.GONE : View.VISIBLE);
+        // La fluidez solo cuenta en Coche: con otro perfil, las píldoras se atenúan.
+        boolean fluidCounts = VideoProfile.of(eff).followsCar;
+        for (TextView p : fluidPills) {
+            boolean sel = pendingFluid == (int) p.getTag();
+            p.setBackground(CarStyle.round(sel ? CarStyle.ACCENT_BG : CarStyle.PILL_BG, 28));
+            p.setAlpha(fluidCounts ? 1f : 0.5f);
+        }
+        boolean changed = !pending.equals(cfg.videoProfileChoice()) || pendingFluid != cfg.fluidity();
+        apply.setVisibility(changed ? View.VISIBLE : View.GONE);
     }
 
     private void applyProfile() {
         Context c = host.context();
-        String before = cfg.videoProfile().id;
+        VideoProfile before = cfg.videoProfile();
         cfg.setVideoProfile(pending);
-        boolean renegotiate = !before.equals(cfg.videoProfile().id);
-        L.i("ajustes desde el coche: perfil " + (pending.isEmpty() ? "automático" : pending) + (renegotiate ? " (reconecta AA)" : ""));
+        if (pendingFluid != cfg.fluidity()) {
+            cfg.setFluidity(pendingFluid);
+            L.i("fluidez: " + pendingFluid + " fps (desde el coche; reconecta ahora)");
+        }
+        VideoProfile after = cfg.videoProfile();
+        // Otro perfil, u otros fps (fluidez con Coche): AA vuelve a negociar resolución y fps.
+        boolean renegotiate = !before.id.equals(after.id) || before.fps != after.fps;
+        L.i("ajustes desde el coche: perfil " + (pending.isEmpty() ? "automático" : pending) + " · fluidez " + pendingFluid
+                + (renegotiate ? " (reconecta AA)" : ""));
         apply.setText(Str.get(R.string.hql_reconnecting_short));
         apply.setEnabled(false);
         // La sesión se cierra (y con ella esta pantalla); el coche vuelve a conectar solo.

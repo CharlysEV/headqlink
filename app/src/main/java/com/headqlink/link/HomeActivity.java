@@ -572,6 +572,10 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             if (ids[i].equals(chosen)) rb.setChecked(true);
         }
         ((TextView) v.findViewById(R.id.hql_v_reason)).setText(Str.get(R.string.hql_this_phone, VideoProfile.reason()));
+        // Fluidez: 30 fps (lo que pide el coche, menos calor) o 60 fps; cuenta con Coche y con Automático si es Coche.
+        RadioGroup fluidity = v.findViewById(R.id.hql_v_fluidity);
+        int fluidBefore = cfg.fluidity();
+        fluidity.check(fluidBefore == VideoProfile.FLUID_60 ? R.id.hql_v_fluid_60 : R.id.hql_v_fluid_30);
 
         boolean lowLatBefore = cfg.lowLatency();
         lowLat.setChecked(lowLatBefore);
@@ -608,12 +612,18 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 .setTitle(Str.get(R.string.hql_image_settings))
                 .setView(scroll)
                 .setPositiveButton(Str.get(R.string.hql_save), (d, which) -> {
-                    String before = cfg.videoProfile().id;
+                    VideoProfile before = cfg.videoProfile();
                     View sel = profiles.findViewById(profiles.getCheckedRadioButtonId());
                     String pick = sel != null ? (String) sel.getTag() : chosen;
                     boolean profileChanged = !pick.equals(chosen);
                     // Elegir perfil quita los ajustes manuales viejos (fps, tamaño, recodificar).
                     if (profileChanged) cfg.setVideoProfile(pick);
+                    int fluidAfter = fluidity.getCheckedRadioButtonId() == R.id.hql_v_fluid_60 ? VideoProfile.FLUID_60 : VideoProfile.FLUID_30;
+                    if (fluidAfter != fluidBefore) {
+                        cfg.setFluidity(fluidAfter);
+                        L.i("fluidez: " + fluidAfter + " fps (perfil " + cfg.videoProfile().id + "; "
+                                + (LinkState.running ? "reconecta ahora" : "se aplica en la próxima sesión") + ")");
+                    }
                     save(fps, Config.FPS);
                     save(kbps, Config.KBPS);
                     save(w, Config.WIDTH);
@@ -646,10 +656,16 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                             android.widget.Toast.makeText(this, Str.get(R.string.hql_applies_on_reconnect), android.widget.Toast.LENGTH_LONG).show();
                         }
                     }
+                    // Las barras de «En directo» se recalculan con el perfil (y la fluidez) nuevos.
+                    fpsMax = 0;
+                    mbpsMax = 0;
                     if (LinkState.running) {
-                        // Sesión nueva con los ajustes; con otro perfil, también AA (resolución y fps se negocian al conectar).
+                        // Sesión nueva con los ajustes; con otro perfil o fluidez, también AA (resolución y fps se
+                        // negocian al conectar).
+                        VideoProfile after = cfg.videoProfile();
+                        boolean renegotiate = !before.id.equals(after.id) || before.fps != after.fps;
                         startForegroundService(new Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY)
-                                .putExtra(LinkService.EXTRA_AA_RENEGOTIATE, !before.equals(cfg.videoProfile().id)));
+                                .putExtra(LinkService.EXTRA_AA_RENEGOTIATE, renegotiate));
                     }
                 })
                 .setNegativeButton(Str.get(R.string.hql_cancel), null)

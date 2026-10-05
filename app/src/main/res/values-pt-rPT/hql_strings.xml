@@ -84,6 +84,10 @@
     <string name="hql_fly_over">%1$d postes · toque para outra</string>
     <string name="hql_fly_posts">%1$d postes</string>
     <string name="hql_fly_start">Toque para descolar</string>
+    <string name="hql_fluidity">Fluidez</string>
+    <string name="hql_fluidity_30">30 fps · menos calor (recomendado)</string>
+    <string name="hql_fluidity_60">60 fps · fluidez máxima</string>
+    <string name="hql_fluidity_help">Só com os perfis «Carro» e «Automático». A 60 fps o carro recebe 8-12 Mbit/s como com o HeadQLink original e o telemóvel aquece mais: se chegar ao estado térmico moderado, desce sozinho para 30 fps.</string>
     <string name="hql_follows_recommended">Segue o recomendado: %1$s</string>
     <string name="hql_found_connecting">Encontrado, a ligar…</string>
     <string name="hql_from_wind">do vento</string>

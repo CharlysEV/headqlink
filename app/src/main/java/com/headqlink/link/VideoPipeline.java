@@ -252,7 +252,7 @@ final class VideoPipeline {
             vp.repeatAfterUs = 100_000;
             VideoProfile prof = cfg.videoProfile();
             if (cfg.getInt(Config.KBPS) <= 0) {
-                // El del perfil; en Coche, el que pide el coche (VIDEO_ARGS BitRate).
+                // El del perfil; en Coche, el que pide el coche (VIDEO_ARGS BitRate; con Fluidez 60, 8-12 Mbit/s).
                 vp.bitrate = prof.startBitrate(carBitrate, plan.videoW);
                 if (prof.adaptiveBitrate()) {
                     abrBps = vp.bitrate;
@@ -260,6 +260,10 @@ final class VideoPipeline {
                     abrMin = prof.minBitrate;
                     abrMax = prof.maxBitrate;
                 }
+            }
+            if (prof.followsCar) {
+                L.i(String.format(Locale.US, "VIDEO fluidez %d fps (perfil %s): %d fps · %.1f Mbit/s; el coche pide %d fps · %.1f Mbit/s",
+                        prof.fluidity, prof.id, vp.fps, vp.bitrate / 1e6, carFps, carBitrate / 1e6));
             }
             gated = true;
             source.setLinkGate(new GlFrameRelay.Gate() {

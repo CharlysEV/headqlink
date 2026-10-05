@@ -708,16 +708,29 @@ final class Checklist {
         }
     }
 
-    /** La página de la accesibilidad de HeadQLink (Android 13+) o la lista de servicios. */
+    /** Ajuste: la página de detalles de la accesibilidad falló en este móvil (no se vuelve a intentar). */
+    private static final String A11Y_DETAILS_FAILS = "a11y_details_fails";
+
+    /**
+     * La página de la accesibilidad de HeadQLink (Android 13+) o la lista de servicios. En algunos móviles la página de
+     * detalles exige el permiso OPEN_ACCESSIBILITY_DETAILS_SETTINGS (SecurityException al abrirla): se anota y se abre la
+     * lista de servicios (ACTION_ACCESSIBILITY_SETTINGS), ahora y en las veces siguientes sin volver a intentarlo.
+     */
     private void openAccessibility() {
-        if (Build.VERSION.SDK_INT >= 33) {
+        Config cfg = new Config(act);
+        if (Build.VERSION.SDK_INT >= 33 && !cfg.getBool(A11Y_DETAILS_FAILS)) {
             try {
                 act.startActivity(new Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
                         .putExtra(Intent.EXTRA_COMPONENT_NAME, new ComponentName(act, TouchService.class).flattenToString()));
                 return;
             } catch (RuntimeException e) {
-                L.w("requisitos: sin la página de la accesibilidad de HeadQLink (" + e.getMessage() + ")");
+                // SecurityException (falta OPEN_ACCESSIBILITY_DETAILS_SETTINGS) o ActivityNotFoundException.
+                L.w("requisitos: sin la página de la accesibilidad de HeadQLink (" + e.getClass().getSimpleName() + ": "
+                        + e.getMessage() + "); abro la lista de servicios de accesibilidad");
+                cfg.putBool(A11Y_DETAILS_FAILS, true);
             }
+        } else {
+            L.i("requisitos: abro la lista de servicios de accesibilidad");
         }
         start(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
     }

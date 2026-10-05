@@ -84,6 +84,10 @@
     <string name="hql_fly_over">%1$d posts · tap for another</string>
     <string name="hql_fly_posts">%1$d posts</string>
     <string name="hql_fly_start">Tap to take off</string>
+    <string name="hql_fluidity">Smoothness</string>
+    <string name="hql_fluidity_30">30 fps · less heat (recommended)</string>
+    <string name="hql_fluidity_60">60 fps · maximum smoothness</string>
+    <string name="hql_fluidity_help">Only with the "Car" and "Automatic" profiles. At 60 fps the car gets 8–12 Mbit/s like the original HeadQLink, and the phone runs hotter: if it reaches the moderate thermal state, it drops to 30 fps on its own.</string>
     <string name="hql_follows_recommended">Follows the recommended one: %1$s</string>
     <string name="hql_found_connecting">Found, connecting…</string>
     <string name="hql_from_wind">from wind</string>

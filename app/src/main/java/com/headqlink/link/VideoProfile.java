@@ -15,7 +15,9 @@ import java.util.Locale;
  * Perfiles de imagen:
  * - Coche (el recomendado): lo que pide el coche en VIDEO_ARGS, con "último frame": sus fps (30 en el C10, y Android
  *   Auto también a 30) y su bitrate (5,08 Mbps en el C10), a la resolución de su pantalla, sin optimizaciones de
- *   latencia ni relojes al máximo. Es lo que el coche muestra, con el mínimo de calor y batería.
+ *   latencia ni relojes al máximo. Es lo que el coche muestra, con el mínimo de calor y batería. Con «Fluidez» a 60
+ *   (Ajustes de imagen), 60 fps (AA a 60) y bitrate max(el del coche, 8 Mbit/s) con tope de 12 Mbit/s: el C10 real
+ *   acepta 60 fps hasta ~16 Mbit/s (como el HeadQLink original), a cambio de más calor (ThermalPolicy lo baja a 30).
  * - Muy alto: "último frame" (recodificar en el móvil) a 60 fps y resolución completa, con las
  *   optimizaciones de latencia y los relojes del encoder al máximo; bitrate adaptable 5-16 Mbps.
  * - Alto: lo mismo sin optimizaciones de latencia ni relojes al máximo (menos batería y calor; el
@@ -36,6 +38,12 @@ final class VideoProfile {
     /** Coche: fps y bitrate si el coche no manda VIDEO_ARGS (como el C10). */
     static final int CAR_DEFAULT_FPS = 30;
     static final int CAR_DEFAULT_BPS = 5_000_000;
+    /** «Fluidez» (Config.FLUIDITY): 30 = lo que pide el coche (menos calor, recomendado); 60 = máxima fluidez. */
+    static final int FLUID_30 = 30;
+    static final int FLUID_60 = 60;
+    /** Fluidez 60: bitrate max(el del coche, FLUID_60_MIN_BPS) con tope FLUID_60_MAX_BPS. */
+    static final int FLUID_60_MIN_BPS = 8_000_000;
+    static final int FLUID_60_MAX_BPS = 12_000_000;
 
     final String id;
     final boolean reencode;
@@ -53,14 +61,16 @@ final class VideoProfile {
     final int maxBitrate;
     /** Coche: fps y bitrate, los que pida el coche en VIDEO_ARGS (los de arriba, si no los manda). */
     final boolean followsCar;
+    /** Coche: «Fluidez» elegida (FLUID_30 o FLUID_60); en los demás perfiles, FLUID_30 sin efecto. */
+    final int fluidity;
 
     private VideoProfile(String id, boolean reencode, int fps, boolean hd720, boolean fixedRate, boolean boost,
                          int bitrate, int minBitrate, int maxBitrate) {
-        this(id, reencode, fps, hd720, fixedRate, boost, bitrate, minBitrate, maxBitrate, false);
+        this(id, reencode, fps, hd720, fixedRate, boost, bitrate, minBitrate, maxBitrate, false, FLUID_30);
     }
 
     private VideoProfile(String id, boolean reencode, int fps, boolean hd720, boolean fixedRate, boolean boost,
-                         int bitrate, int minBitrate, int maxBitrate, boolean followsCar) {
+                         int bitrate, int minBitrate, int maxBitrate, boolean followsCar, int fluidity) {
         this.id = id;
         this.reencode = reencode;
         this.fps = fps;
@@ -71,24 +81,47 @@ final class VideoProfile {
         this.minBitrate = minBitrate;
         this.maxBitrate = maxBitrate;
         this.followsCar = followsCar;
+        this.fluidity = fluidity;
+    }
+
+    /**
+     * El perfil con la «Fluidez» elegida. Solo cambia en Coche (y en Automático cuando el recomendado es Coche): a 60,
+     * fps 60 y bitrate de partida 8 Mbit/s (para las barras de «En directo»); los demás perfiles vuelven tal cual.
+     */
+    VideoProfile withFluidity(int fluidity) {
+        int f = fluidity >= FLUID_60 ? FLUID_60 : FLUID_30;
+        if (!followsCar || f == this.fluidity) return this;
+        int fps = f == FLUID_60 ? FLUID_60 : CAR_DEFAULT_FPS;
+        int bps = f == FLUID_60 ? FLUID_60_MIN_BPS : CAR_DEFAULT_BPS;
+        return new VideoProfile(id, reencode, fps, hd720, fixedRate, boost, bps, bps, bps, true, f);
     }
 
     boolean adaptiveBitrate() {
         return maxBitrate > minBitrate;
     }
 
-    /** fps de la sesión: los del perfil o, en Coche, los que pide el coche (VIDEO_ARGS FrameRate, entre 10 y 60). */
+    /**
+     * fps de la sesión: los del perfil o, en Coche, los que pide el coche (VIDEO_ARGS FrameRate, entre 10 y 60); con
+     * Fluidez 60, 60 pida lo que pida el coche (la cabecera de vídeo sigue repitiendo su FrameRate).
+     */
     int fpsFor(int carFps) {
-        if (!followsCar || carFps <= 0) return fps;
+        if (!followsCar) return fps;
+        if (fluidity >= FLUID_60) return FLUID_60;
+        if (carFps <= 0) return fps;
         return Math.max(10, Math.min(60, carFps));
     }
 
     /**
-     * Bitrate inicial del "último frame": el del perfil o, en Coche, el que pide el coche (VIDEO_ARGS BitRate). Sin
-     * bitrate en el perfil (Básico recodificando por ajuste manual), 5 Mbps a 720p y 8 a resolución completa.
+     * Bitrate inicial del "último frame": el del perfil o, en Coche, el que pide el coche (VIDEO_ARGS BitRate; con
+     * Fluidez 60, max(el del coche, 8 Mbit/s) con tope de 12). Sin bitrate en el perfil (Básico recodificando por
+     * ajuste manual), 5 Mbps a 720p y 8 a resolución completa.
      */
     int startBitrate(int carBitrate, int videoW) {
-        if (followsCar) return carBitrate > 0 ? carBitrate : CAR_DEFAULT_BPS;
+        if (followsCar) {
+            int car = carBitrate > 0 ? carBitrate : CAR_DEFAULT_BPS;
+            if (fluidity >= FLUID_60) return Math.min(FLUID_60_MAX_BPS, Math.max(car, FLUID_60_MIN_BPS));
+            return car;
+        }
         if (bitrate > 0) return bitrate;
         return videoW <= 1280 ? 5_000_000 : 8_000_000;
     }
@@ -108,7 +141,7 @@ final class VideoProfile {
                 return new VideoProfile(LOW, true, 20, true, true, false, 2_500_000, 2_500_000, 2_500_000);
             default:
                 return new VideoProfile(CAR, true, CAR_DEFAULT_FPS, false, false, false,
-                        CAR_DEFAULT_BPS, CAR_DEFAULT_BPS, CAR_DEFAULT_BPS, true);
+                        CAR_DEFAULT_BPS, CAR_DEFAULT_BPS, CAR_DEFAULT_BPS, true, FLUID_30);
         }
     }
 

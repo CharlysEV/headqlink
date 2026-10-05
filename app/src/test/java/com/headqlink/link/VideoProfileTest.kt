@@ -46,6 +46,52 @@ class VideoProfileTest {
     }
 
     @Test
+    fun fluidity60GivesSixtyFpsAndEightToTwelveMbps() {
+        val car = VideoProfile.of(VideoProfile.CAR)
+        assertEquals(VideoProfile.FLUID_30, car.fluidity)
+        // 30: el mismo objeto (sin cambios).
+        assertTrue(car.withFluidity(VideoProfile.FLUID_30) === car)
+        val p = car.withFluidity(VideoProfile.FLUID_60)
+        assertEquals(VideoProfile.CAR, p.id)
+        assertEquals(VideoProfile.FLUID_60, p.fluidity)
+        assertTrue(p.followsCar)
+        assertTrue(p.reencode)
+        assertFalse(p.boost)
+        assertFalse(p.fixedRate)
+        assertFalse(p.adaptiveBitrate())
+        // 60 fps pida lo que pida el coche (la cabecera de vídeo sigue con su FrameRate).
+        assertEquals(60, p.fps)
+        assertEquals(60, p.fpsFor(30))
+        assertEquals(60, p.fpsFor(0))
+        // Bitrate: max(coche, 8 Mbit/s) con tope 12.
+        assertEquals(8_000_000, p.startBitrate(5_080_320, 1920))
+        assertEquals(8_000_000, p.startBitrate(0, 1920))
+        assertEquals(10_000_000, p.startBitrate(10_000_000, 1920))
+        assertEquals(12_000_000, p.startBitrate(16_000_000, 1920))
+        // Barras de «En directo»: 60 fps y 8 Mbit/s.
+        assertEquals(8_000_000, maxOf(p.maxBitrate, p.bitrate))
+        // Resolución completa, como en Coche.
+        assertArrayEquals(intArrayOf(1920, 882), p.videoSize(1920, 882))
+        // Vuelta a 30: otra vez lo del coche.
+        val back = p.withFluidity(VideoProfile.FLUID_30)
+        assertEquals(30, back.fpsFor(30))
+        assertEquals(5_080_320, back.startBitrate(5_080_320, 1920))
+        // Valores raros: cualquier cosa que no sea 60 es 30.
+        assertEquals(VideoProfile.FLUID_30, car.withFluidity(45).fluidity)
+        assertEquals(VideoProfile.FLUID_60, car.withFluidity(120).fluidity)
+    }
+
+    @Test
+    fun fluidityOnlyCountsForTheCarProfile() {
+        for (id in listOf(VideoProfile.MAX, VideoProfile.HIGH, VideoProfile.MEDIUM, VideoProfile.BASIC, VideoProfile.LOW)) {
+            val p = VideoProfile.of(id)
+            assertTrue(id, p.withFluidity(VideoProfile.FLUID_60) === p)
+        }
+        assertEquals(45, VideoProfile.of(VideoProfile.MEDIUM).withFluidity(VideoProfile.FLUID_60).fpsFor(30))
+        assertEquals(20, VideoProfile.of(VideoProfile.LOW).withFluidity(VideoProfile.FLUID_60).fpsFor(30))
+    }
+
+    @Test
     fun oldProfilesAreUnchangedAndStillSelectable() {
         assertEquals(VideoProfile.CAR, VideoProfile.ALL[0])
         assertTrue(VideoProfile.ALL.toList().containsAll(listOf("muy_alto", "alto", "medio", "basico", "muy_bajo")))

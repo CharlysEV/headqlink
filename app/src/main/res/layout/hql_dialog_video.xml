@@ -28,6 +28,41 @@
         android:alpha="0.7"
         android:textSize="12sp" />
 
+    <!-- Fluidez: 30 fps (lo que pide el coche, menos calor) o 60 fps; solo con los perfiles Coche y Automático -->
+    <TextView
+        style="@style/HQL.Text.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/hql_fluidity" />
+
+    <RadioGroup
+        android:id="@+id/hql_v_fluidity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/hql_v_fluid_30"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hql_fluidity_30" />
+
+        <RadioButton
+            android:id="@+id/hql_v_fluid_60"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hql_fluidity_60" />
+    </RadioGroup>
+
+    <TextView
+        style="@style/HQL.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:alpha="0.7"
+        android:text="@string/hql_fluidity_help"
+        android:textSize="12sp" />
+
     <CheckBox
         android:id="@+id/hql_v_autohide"
         android:layout_width="match_parent"

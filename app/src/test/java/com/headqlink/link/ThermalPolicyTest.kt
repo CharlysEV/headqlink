@@ -104,10 +104,28 @@ class ThermalPolicyTest {
         assertEquals(15, ThermalPolicy.fpsCap(ThermalPolicy.SEVERE, 15))
         assertEquals(1_750_000, ThermalPolicy.bitrateCap(ThermalPolicy.MODERATE, 2_500_000))
         assertEquals(1_750_000, ThermalPolicy.bitrateCap(ThermalPolicy.SEVERE, 2_500_000))
-        // Muy alto (60 fps, 10 Mbps al empezar).
-        assertEquals(24, ThermalPolicy.fpsCap(ThermalPolicy.MODERATE, 60))
+        // Muy alto (60 fps, 10 Mbps al empezar): a 60 el moderado es 30, no 24.
+        assertEquals(30, ThermalPolicy.fpsCap(ThermalPolicy.MODERATE, 60))
         assertEquals(7_000_000, ThermalPolicy.bitrateCap(ThermalPolicy.MODERATE, 10_000_000))
         assertEquals(3_000_000, ThermalPolicy.bitrateCap(ThermalPolicy.SEVERE, 10_000_000))
+    }
+
+    @Test
+    fun capsWithFluidity60() {
+        // Coche con Fluidez 60: 60 fps y 8 Mbps. Moderado → 30 fps (lo que pide el coche) y ×0,7; grave → 20 fps y 3 Mbit/s.
+        assertEquals(60, ThermalPolicy.fpsCap(ThermalPolicy.NORMAL, 60))
+        assertEquals(30, ThermalPolicy.fpsCap(ThermalPolicy.MODERATE, 60))
+        assertEquals(20, ThermalPolicy.fpsCap(ThermalPolicy.SEVERE, 60))
+        assertEquals(5_600_000, ThermalPolicy.bitrateCap(ThermalPolicy.MODERATE, 8_000_000))
+        assertEquals(3_000_000, ThermalPolicy.bitrateCap(ThermalPolicy.SEVERE, 8_000_000))
+        // El umbral es la sesión a 60: a 45 (Medio) sigue siendo 24.
+        assertEquals(30, ThermalPolicy.moderateFps(60))
+        assertEquals(24, ThermalPolicy.moderateFps(45))
+        assertEquals(24, ThermalPolicy.moderateFps(30))
+        assertTrue(ThermalPolicy.describe(ThermalPolicy.MODERATE, 60).startsWith("30 fps"))
+        assertTrue(ThermalPolicy.describe(ThermalPolicy.MODERATE, 30).startsWith("24 fps"))
+        assertTrue(ThermalPolicy.describe(ThermalPolicy.MODERATE).contains("24"))
+        assertTrue(ThermalPolicy.describe(ThermalPolicy.MODERATE).contains("30"))
     }
 
     @Test

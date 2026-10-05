@@ -5,7 +5,7 @@ import java.util.Locale;
 /**
  * Adaptación térmica del vídeo (pura, la prueban los tests). Del estado térmico de Android (PowerManager, API 29:
  * 0 nada, 1 ligero, 2 moderado, 3 grave, 4 crítico, 5 emergencia, 6 apagado) a un nivel:
- * - estado >= MODERADO (2): nivel MODERATE, 24 fps y el bitrate ×0,7;
+ * - estado >= MODERADO (2): nivel MODERATE, 24 fps (30 si la sesión va a 60: «Fluidez» 60) y el bitrate ×0,7;
  * - estado >= GRAVE (3): nivel SEVERE, 20 fps y el bitrate de MODERATE con un tope de 3 Mbit/s.
  * Sube en el acto. Baja solo tras HOLD_MS seguidos con el estado por debajo del nivel actual, al nivel más alto que
  * pidió el estado en ese rato: para volver a normal, el estado tiene que estar en LIGERO (1) o menos durante 60 s.
@@ -20,6 +20,8 @@ final class ThermalPolicy {
     static final int STATUS_SEVERE = 3;
     static final long HOLD_MS = 60_000;
     static final int MODERATE_FPS = 24;
+    /** MODERATE con la sesión a 60 fps (Fluidez 60): a 30, lo que pide el coche, en vez de 24. */
+    static final int MODERATE_FPS_FROM_60 = 30;
     static final int SEVERE_FPS = 20;
     static final double MODERATE_BITRATE_FACTOR = 0.7;
     static final int SEVERE_MAX_BPS = 3_000_000;
@@ -80,11 +82,16 @@ final class ThermalPolicy {
         return calmSinceMs < 0 ? -1 : Math.max(0, calmSinceMs + HOLD_MS - nowMs);
     }
 
-    /** Tope de fps de un nivel, sobre los de la sesión. */
+    /** Tope de fps de un nivel, sobre los de la sesión (baseFps): nunca por encima de ellos. */
     static int fpsCap(int level, int baseFps) {
         if (level >= SEVERE) return Math.min(baseFps, SEVERE_FPS);
-        if (level >= MODERATE) return Math.min(baseFps, MODERATE_FPS);
+        if (level >= MODERATE) return Math.min(baseFps, moderateFps(baseFps));
         return baseFps;
+    }
+
+    /** fps de MODERATE según los de la sesión: 30 con la sesión a 60 o más (Fluidez 60), 24 por debajo. */
+    static int moderateFps(int baseFps) {
+        return baseFps >= 60 ? MODERATE_FPS_FROM_60 : MODERATE_FPS;
     }
 
     /** Tope de bitrate de un nivel, sobre el inicial de la sesión (nunca más alto en SEVERE que en MODERATE). */
@@ -105,15 +112,21 @@ final class ThermalPolicy {
         }
     }
 
-    /** Qué hace un nivel, para el log. */
-    static String describe(int level) {
+    /** Qué hace un nivel, para el log; baseFps = los fps de la sesión (0 si no se saben: se citan los dos casos). */
+    static String describe(int level, int baseFps) {
         switch (level) {
             case SEVERE:
                 return String.format(Locale.US, "%d fps y como mucho %.1f Mbit/s", SEVERE_FPS, SEVERE_MAX_BPS / 1e6);
             case MODERATE:
-                return String.format(Locale.US, "%d fps y bitrate ×%.1f", MODERATE_FPS, MODERATE_BITRATE_FACTOR);
+                String fps = baseFps > 0 ? String.valueOf(moderateFps(baseFps))
+                        : MODERATE_FPS + " (" + MODERATE_FPS_FROM_60 + " con la sesión a 60)";
+                return String.format(Locale.US, "%s fps y bitrate ×%.1f", fps, MODERATE_BITRATE_FACTOR);
             default:
                 return "fps y bitrate de la sesión";
         }
+    }
+
+    static String describe(int level) {
+        return describe(level, 0);
     }
 }

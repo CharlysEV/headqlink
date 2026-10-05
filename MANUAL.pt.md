@@ -364,6 +364,15 @@ Se estiver ligado, ao guardar outro perfil o carro e o Android Auto voltam a lig
 > Se numa versão anterior escolheu «Muito alto» à mão, fica assim. Mude para «Automático» ou «Carro»: é o que evita que o
 > telemóvel aqueça (secção 6).
 
+**«Fluidez».** Só conta com os perfis «Carro» e «Automático»:
+
+- «30 fps · menos calor (recomendado)»: o que o carro pede (30 fps e cerca de 5 Mbit/s no C10). É o que menos aquece
+  o telemóvel.
+- «60 fps · fluidez máxima»: 60 fps e entre 8 e 12 Mbit/s, como o HeadQLink original (o C10 aceita-os). A imagem fica
+  mais fluida, mas o telemóvel aquece mais: se chegar ao estado térmico «moderado», o HeadQLink desce sozinho para
+  30 fps (secção 6). Se estiver ligado, ao guardar o carro e o Android Auto voltam a ligar-se sozinhos; se não, vale
+  para a próxima sessão.
+
 **Outras opções de «Definições de imagem»:**
 
 - «Ocultar o painel lateral após alguns segundos (Auto estendido)»: ativada por predefinição.
@@ -383,9 +392,9 @@ Se estiver ligado, ao guardar outro perfil o carro e o Android Auto voltam a lig
 
 ### Definições a partir do carro («Auto estendido»)
 
-O botão «Definições» do painel do carro permite mudar o perfil de imagem («Aplicar · volta a ligar em poucos
-segundos»), ocultar o painel sozinho e as otimizações de latência, e ver a ligação e o motor em uso. Use-o só com o
-carro parado.
+O botão «Definições» do painel do carro permite mudar o perfil de imagem e a «Fluidez» («Aplicar · volta a ligar em
+poucos segundos»), ocultar o painel sozinho e as otimizações de latência, e ver a ligação e o motor em uso. Use-o só
+com o carro parado.
 
 ### «Idioma»
 
@@ -423,7 +432,7 @@ versão traz três mudanças:
 | Estado térmico do Android | O que o HeadQLink faz |
 |---|---|
 | Normal ou ligeiro | Nada: os fps e a taxa de bits da sessão. |
-| Moderado | Desce para **24 fps** e 70 % da taxa de bits. |
+| Moderado | Desce para **24 fps** (para **30 fps** se a sessão vai a 60 por causa da «Fluidez») e 70 % da taxa de bits. |
 | Grave ou pior | Desce para **20 fps** e no máximo **3 Mbit/s**. |
 
 Sobe de nível de imediato. Volta ao normal quando o telemóvel está **60 segundos seguidos** mais fresco. Fá-lo sem
@@ -453,6 +462,7 @@ Comece sempre pelo menu ⚙ › «Verificação»: cada linha a vermelho tem o s
 | «A porta 18463 está ocupada (o QDLink está aberto?)», ou «Porta 18463 · Ocupada» na «Verificação» | O QDLink (ou outra aplicação) está aberto no telemóvel e ocupa a porta. | «Forçar paragem» do QDLink. O HeadQLink tenta de novo a cada 5 s e o aviso desaparece sozinho. |
 | Ecrã preto no carro, ou a linha «Auto» com um erro | O Android Auto não arrancou: o telemóvel estava bloqueado («Não arranca: desbloqueie o telemóvel»), falta o modo de programador ou a acessibilidade. | Desbloqueie o telemóvel (com o aviso «Desbloqueie o telemóvel para iniciar o Android Auto», arranca sozinho ao desbloquear). Se continuar, veja a «Verificação» e toque em «Desligar» e «Ligar». Para saber o que falha, ative Diagnóstico › «Teste sem Android Auto (padrão)»: se vir a imagem de teste, a ligação está bem e o problema é o Android Auto (desative-o depois). Se nada resultar, experimente o motor «headqlink original». |
 | A imagem vai aos solavancos ou com atraso | Hotspot em 2,4 GHz, telemóvel quente, perfil demasiado alto ou ecrã do telemóvel ligado (com ele, o Android procura redes Wi-Fi muitas vezes). | Hotspot em 5 GHz, perfil «Automático» ou «Carro», bloqueie o telemóvel e arrefeça-o. Se continuar, experimente «Médio». |
+| A imagem fica menos fluida do que com o HeadQLink original | O original enviava 60 fps; o HeadQLink envia 30 (o que o carro pede) para o telemóvel não aquecer. Ou o telemóvel já está quente e a adaptação térmica baixou os fps. | «Definições de imagem» › «Fluidez» › «60 fps · fluidez máxima» (com o perfil «Carro» ou «Automático»). Se continuar, veja o estado térmico: no registo, as linhas «HQL/Térmico» («estado térmico 2» ou mais baixa os fps); arrefeça o telemóvel (secção 6). |
 | A imagem congela uns 10 s e depois volta a ligar | Em versões anteriores, uma imagem completa de mais de ~512 KB bloqueava o recetor do carro, que deixava de ler até a ligação cair. **Corrigido**: o HeadQLink já não envia nenhuma tão grande e mantém-nas em cerca de 300 KB no máximo. | Atualize o HeadQLink. Se acontecer com o perfil «Básico» (aí o tamanho é decidido pelo Android Auto), use «Automático» ou «Carro». Se continuar, exporte o registo (secção 8). |
 | Desliga-se muitas vezes | Desligar automático do hotspot, poupança de bateria, QDLink aberto ou a aplicação de espelhamento do carro fechada. | Os cortes curtos voltam a ligar sozinhos («A voltar a ligar…»). Se forem longos ou frequentes: «Sem restrições de bateria», «Samsung: aplicações nunca suspensas», desative o desligar automático e feche o QDLink. Se continuar, exporte o registo (secção 8). |
 | A acessibilidade desativa-se sozinha | O Android desativa-a ao atualizar a aplicação, ou se a aplicação fechou de repente. Alguns fabricantes também. | «Verificação» › «Ativar». Se disser «Ativada mas sem funcionar», desative-a e volte a ativá-la. Se disser «Definição restrita», «Permitir definições restritas» (secção 3). Retire as restrições de bateria. |

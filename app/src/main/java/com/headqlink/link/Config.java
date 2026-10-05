@@ -113,15 +113,30 @@ final class Config {
     }
 
     /**
-     * Perfil en uso: el elegido o el recomendado para este móvil. En el modo ampliado no hay reenvío
-     * directo (el panel exige recodificar), así que Básico se comporta como Medio.
+     * Perfil en uso: el elegido o el recomendado para este móvil, con la «Fluidez» elegida (solo cuenta en Coche). En el
+     * modo ampliado no hay reenvío directo (el panel exige recodificar), así que Básico se comporta como Medio.
      */
     VideoProfile videoProfile() {
         String id = videoProfileChoice();
         if (id.isEmpty()) id = VideoProfile.recommended(app);
         VideoProfile p = VideoProfile.of(id);
         if (MODE_AA_EXT.equals(mode()) && !p.reencode) p = VideoProfile.of(VideoProfile.MEDIUM);
-        return p;
+        return p.withFluidity(fluidity());
+    }
+
+    /**
+     * «Fluidez» (Ajustes de imagen): VideoProfile.FLUID_30 (lo que pide el coche; menos calor, recomendado) o FLUID_60
+     * (60 fps y 8-12 Mbit/s, como el HeadQLink original). Solo actúa con los perfiles Coche y Automático (cuando el
+     * recomendado es Coche). Se aplica en la sesión siguiente (o al instante con «Guardar» estando conectado).
+     */
+    static final String FLUIDITY = "fluidez";
+
+    int fluidity() {
+        return sp.getInt(FLUIDITY, 0) >= VideoProfile.FLUID_60 ? VideoProfile.FLUID_60 : VideoProfile.FLUID_30;
+    }
+
+    void setFluidity(int fps) {
+        sp.edit().putInt(FLUIDITY, fps >= VideoProfile.FLUID_60 ? VideoProfile.FLUID_60 : VideoProfile.FLUID_30).apply();
     }
 
     /** Elige un perfil ("" = recomendado) y quita los ajustes manuales que lo contradirían. */
@@ -149,6 +164,7 @@ final class Config {
         if (i.hasExtra(SEND_WHITELIST)) e.putBoolean(SEND_WHITELIST, i.getBooleanExtra(SEND_WHITELIST, true));
         if (i.hasExtra(AA_REENCODE)) e.putBoolean(AA_REENCODE, i.getBooleanExtra(AA_REENCODE, true));
         if (i.hasExtra(VIDEO_PROFILE)) e.putString(VIDEO_PROFILE, i.getStringExtra(VIDEO_PROFILE));
+        if (i.hasExtra(FLUIDITY)) e.putInt(FLUIDITY, i.getIntExtra(FLUIDITY, 0) >= VideoProfile.FLUID_60 ? VideoProfile.FLUID_60 : VideoProfile.FLUID_30);
         if (i.hasExtra("clear_manual")) e.remove(FPS).remove(WIDTH).remove(HEIGHT).remove(AA_REENCODE);
         if (i.hasExtra(AA_BRAKE)) e.putBoolean(AA_BRAKE, i.getBooleanExtra(AA_BRAKE, true));
         if (i.hasExtra(AA_WINDOW)) e.putInt(AA_WINDOW, i.getIntExtra(AA_WINDOW, 0));
@@ -509,7 +525,7 @@ final class Config {
      * sirve para la sesión siguiente y se recrea.
      */
     String videoFingerprint() {
-        return "mode=" + mode() + " perfil=" + (isAa(mode()) ? videoProfile().id : "") + " reencode=" + aaReencode()
+        return "mode=" + mode() + " perfil=" + (isAa(mode()) ? videoProfile().id : "") + " fluidez=" + fluidity() + " reencode=" + aaReencode()
                 + " brake=" + aaBrake() + " window=" + aaWindow() + " fps=" + sp.getInt(FPS, 0) + " kbps=" + sp.getInt(KBPS, 0)
                 + " size=" + sp.getInt(WIDTH, 0) + "x" + sp.getInt(HEIGHT, 0) + " h264=" + profile() + " prepend=" + prependSpsPps()
                 + " lowlat=" + lowLatency() + " maxclk=" + encMaxClocks() + " norepeat=" + getBool("enc_no_repeat")
@@ -553,7 +569,7 @@ final class Config {
     String summary() {
         return "fps=" + sp.getInt(FPS, 0) + " kbps=" + sp.getInt(KBPS, 0) + " size=" + sp.getInt(WIDTH, 0) + "x"
                 + sp.getInt(HEIGHT, 0) + " profile=" + profile() + " prepend=" + prependSpsPps()
-                + " mode=" + mode() + (MODE_APP.equals(mode()) ? " pkg=" + targetPackage() + " dpi=" + dpi() : "")
+                + " fluidez=" + fluidity() + " mode=" + mode() + (MODE_APP.equals(mode()) ? " pkg=" + targetPackage() + " dpi=" + dpi() : "")
                 + " link=" + linkMode() + " engine=" + linkEngine() + " pantallaEncendida=" + keepScreenOn()
                 + " esperarCoche=" + carWaitMin() + "min"
                 + (isQdEngine() ? " keepVideo=" + qdKeepVideo() + " supersede=" + qdSupersede() + " phoneInfo=" + qdPhoneInfo()
