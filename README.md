@@ -4,6 +4,21 @@
 
 # HeadQLink
 
+> **Este fork (CharlysEV/headqlink) — rama `main`.** Sobre el HeadQLink original añade:
+>
+> - **Motor de protocolo QDAuto** ([CharlysEV/qdauto](https://github.com/CharlysEV/qdauto)): implementación propia de
+>   QDLink/SSPLink, probada en un C10 real. Es el motor por defecto; el original de headqlink sigue disponible.
+> - **Conexión por punto de acceso del móvil**, además de Wi-Fi Direct.
+> - **Reconexión sin reiniciar Android Auto**: si el coche corta, la imagen vuelve en décimas de segundo.
+> - **Menos calor**: perfil «Coche» (30 fps y el bitrate que pide el coche), pantalla del móvil apagable
+>   durante la proyección y adaptación térmica automática.
+> - **Comprobación de requisitos** con un botón a cada ajuste, **log exportable** y detector de cortes de radio.
+> - **Portugués** (Portugal y Brasil).
+> - **Seguridad**: servicios sin exportar, accesibilidad limitada a Android Auto, sin compartir el GPS por defecto.
+>
+> Detalles técnicos en [docs/qdauto-integration-status.md](docs/qdauto-integration-status.md).
+
+
 Android app that brings **Android Auto** and a custom side panel with extra features to the
 **Leapmotor C10** screen, using the car's built-in mirroring connection (SSPLink over WiFi Direct).
 The phone can stay locked with the screen off. No root required.
