@@ -409,12 +409,36 @@ After that:
   notification. Unlock it (with the car stopped): HeadQLink starts it by itself, without opening the app (you'll briefly
   see "Starting Auto…").
 
+### Widget and Quick Settings button
+
+To connect without opening the app:
+
+- **"HeadQLink" widget** (home screen): ⚙ menu › "Add widget to the home screen", or touch and hold an empty spot on the
+  home screen › Widgets › HeadQLink. It takes 4x2 and can be shrunk down to 2x2.
+  - The **big button** does the same as "Connect" / "Disconnect" in the app: if something required is missing, it opens
+    the "Requirements check". Its colour shows the state: grey off, amber looking for or waiting for the car, green with
+    the picture in the car (with the fps and Mbit/s, refreshed every 5 s) and red if there's a problem (for example,
+    QDLink open).
+  - At the bottom, the **connection**: "Hotspot", "Wi-Fi Direct" or "USB cable". Tap another one to change it; with
+    HeadQLink running it switches straight away, without restarting Android Auto. If the car's cable is plugged in and
+    in use, it keeps priority: the chosen connection is the one it goes back to when you unplug it.
+  - At the top, the **mode** ("Auto" / "Extended"). With HeadQLink running, changing it reconnects the video and Android
+    Auto, like saving another picture profile.
+  - At 2x2 you get the button, the state and the connection icon: tap the icon to move to the next connection.
+  - "HEADQLINK" opens the app without connecting. The widget only updates when something changes: no battery use in the
+    background.
+- **"HeadQLink" Quick Settings button** (Android 8+): on Android 13+, ⚙ menu › "Add button to Quick Settings"; otherwise
+  open Quick Settings, tap the pencil (edit) and drag it in. Tap it to connect or disconnect (to connect with the phone
+  locked, it asks you to unlock first); touch and hold it to open the app. Underneath it shows the state ("Looking for
+  the car…", "30 fps · 4.8 Mbit/s"…).
+
 ---
 
 ## 5. Useful settings
 
 Everything is in the ⚙ menu on the main screen: "Requirements check", "Picture settings", "TV list" and "Radio list"
-(only in "Auto extended"), "Language" and "Diagnostics".
+(only in "Auto extended"), "Language", "Add widget to the home screen", "Add button to Quick Settings" (Android 13+) and
+"Diagnostics".
 
 ### "Picture settings"
 

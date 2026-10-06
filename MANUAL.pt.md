@@ -429,12 +429,36 @@ Depois:
   para iniciar o Android Auto»**. Desbloqueie-o (com o carro parado): o HeadQLink inicia-o sozinho, sem abrir a
   aplicação (verá por um momento «A iniciar o Auto…»).
 
+### Widget e botão das definições rápidas
+
+Para ligar sem abrir a aplicação:
+
+- **Widget «HeadQLink»** (ecrã principal): menu ⚙ › «Adicionar widget ao ecrã principal», ou mantenha premido um espaço
+  livre do ecrã principal › Widgets › HeadQLink. Ocupa 4x2 e pode reduzi-lo até 2x2.
+  - O **botão grande** faz o mesmo que «Ligar» / «Desligar» na aplicação: se faltar algo obrigatório, abre a
+    «Verificação». A cor indica o estado: cinzento desligado, âmbar a procurar ou a aguardar o carro, verde com imagem no
+    carro (com os fps e os Mbit/s, atualizados a cada 5 s) e vermelho se houver um problema (por exemplo, o QDLink
+    aberto).
+  - Em baixo, a **ligação**: «Hotspot», «Wi-Fi Direct» ou «Cabo USB». Toque noutra para a mudar; com o HeadQLink em
+    funcionamento muda de imediato, sem reiniciar o Android Auto. Se o cabo do carro estiver ligado e em uso, continua a
+    ter prioridade: a ligação escolhida é aquela a que volta ao retirá-lo.
+  - Em cima, o **modo** («Auto» / «Estendido»). Com o HeadQLink em funcionamento, mudá-lo volta a ligar o vídeo e o
+    Android Auto, como ao guardar outro perfil de imagem.
+  - Em 2x2 ficam o botão, o estado e o ícone da ligação: toque nele para passar à seguinte.
+  - «HEADQLINK» abre a aplicação sem ligar. O widget só se atualiza quando algo muda: não gasta bateria em segundo
+    plano.
+- **Botão «HeadQLink» das definições rápidas** (Android 8+): com Android 13+, menu ⚙ › «Adicionar botão às definições
+  rápidas»; caso contrário, abra as definições rápidas, toque no lápis (editar) e arraste-o. Ao tocar nele liga ou
+  desliga (para ligar com o telemóvel bloqueado, pede primeiro para o desbloquear); mantendo-o premido abre a aplicação.
+  Por baixo indica o estado («A procurar o carro…», «30 fps · 4,8 Mbit/s»…).
+
 ---
 
 ## 5. Definições úteis
 
 Está tudo no menu ⚙ do ecrã principal: «Verificação», «Definições de imagem», «Lista de TV» e «Lista de rádio» (só no
-«Auto estendido»), «Idioma» e «Diagnóstico».
+«Auto estendido»), «Idioma», «Adicionar widget ao ecrã principal», «Adicionar botão às definições rápidas» (Android 13+)
+e «Diagnóstico».
 
 ### «Definições de imagem»
 

@@ -416,12 +416,35 @@ Después:
   Android Auto»**. Desbloquéalo (con el coche parado): HeadQLink lo arranca sola, sin abrir la app (verás un momento
   «Arrancando Auto…»).
 
+### Widget y botón de ajustes rápidos
+
+Para conectar sin abrir la app:
+
+- **Widget «HeadQLink»** (pantalla de inicio): menú ⚙ › «Añadir widget a la pantalla de inicio», o mantén pulsado un
+  hueco libre de la pantalla de inicio › Widgets › HeadQLink. Ocupa 4x2 y se puede reducir hasta 2x2.
+  - El **botón grande** hace lo mismo que «Conectar» / «Desconectar» en la app: si falta algo obligatorio, abre la
+    «Comprobación». Su color dice el estado: gris apagado, ámbar buscando o esperando al coche, verde con imagen en el
+    coche (con los fps y los Mbit/s, al día cada 5 s) y rojo si hay un problema (por ejemplo, QDLink abierto).
+  - Abajo, la **conexión**: «Zona Wi-Fi», «Wi-Fi Direct» o «Cable USB». Toca otra para cambiarla; con HeadQLink en
+    marcha se cambia en el acto, sin reiniciar Android Auto. Si el cable del coche está puesto y en uso, sigue teniendo
+    prioridad: la conexión elegida es a la que vuelve al quitarlo.
+  - Arriba, el **modo** («Auto» / «Extendido»). Con HeadQLink en marcha, cambiarlo reconecta el vídeo y Android Auto,
+    como al guardar otro perfil de imagen.
+  - En 2x2 quedan el botón, el estado y el icono de la conexión: tócalo para pasar a la siguiente.
+  - «HEADQLINK» abre la app sin conectar. El widget solo se actualiza cuando cambia algo: no gasta batería en segundo
+    plano.
+- **Botón «HeadQLink» de los ajustes rápidos** (Android 8+): con Android 13+, menú ⚙ › «Añadir botón a los ajustes
+  rápidos»; si no, abre los ajustes rápidos, toca el lápiz (editar) y arrástralo. Al tocarlo conecta o desconecta (para
+  conectar con el móvil bloqueado, primero pide desbloquearlo); manteniéndolo pulsado se abre la app. Debajo dice el
+  estado («Buscando el coche…», «30 fps · 4,8 Mbit/s»…).
+
 ---
 
 ## 5. Ajustes útiles
 
 Todo está en el menú ⚙ de la pantalla principal: «Comprobación», «Ajustes de imagen», «Lista de TV» y «Lista de radio»
-(solo en «Auto extendido»), «Idioma» y «Diagnóstico».
+(solo en «Auto extendido»), «Idioma», «Añadir widget a la pantalla de inicio», «Añadir botón a los ajustes rápidos»
+(Android 13+) y «Diagnóstico».
 
 ### «Ajustes de imagen»
 

@@ -1180,3 +1180,85 @@ principal») se han escrito sin verlos en el móvil.
 **Resultados en el PC.** `cmd /c ".\gradlew.bat :qdcore:test :app:testGithubDebugUnitTest :app:assembleGithubDebug
 --console=plain"`: **BUILD SUCCESSFUL** (con el commit anterior, el del cable USB, incluido). `:qdcore`: 156/156 (sin
 cambios). App: 2857 pruebas, 0 fallos y 1 saltada (la de `sh`); el paquete `com.headqlink.link`, 199/199.
+
+---
+
+## 16. Widget y botón de los ajustes rápidos (2026-10-06)
+
+**Qué hay** (desde Android 8, `@bool/hql_widget_enabled`):
+
+- **Widget «HeadQLink»**: 4x2 por defecto y redimensionable hasta 2x2. El botón grande (Conectar / Desconectar), el
+  estado, el selector de conexión («Zona Wi-Fi», «Wi-Fi Direct», «Cable USB») y, en el 4x2 con altura, el modo («Auto» /
+  «Extendido»). En 2x2, el botón, el estado y el icono de la conexión (al tocarlo, la siguiente). Colores: gris
+  apagado; ámbar en curso (preparando, buscando, coche encontrado, sesión sin imagen, esperando a que vuelva); verde con
+  imagen, con fps y Mbit/s; rojo con un problema (puerto 18463, red, Android Auto). La marca abre la app sin conectar.
+- **Botón «HeadQLink» de los ajustes rápidos**: tocarlo, Conectar / Desconectar; mantenerlo pulsado, la app
+  (`QS_TILE_PREFERENCES`, sin conectar sola). Activo con el enlace en marcha; el subtítulo dice el estado o las cifras.
+- **Menú ⚙**: «Añadir widget a la pantalla de inicio» (`requestPinAppWidget`; si el launcher no lo admite, cómo hacerlo
+  a mano) y, con Android 13+, «Añadir botón a los ajustes rápidos» (`requestAddTileService`).
+
+**Conectar desde fuera de la app (Android 12+).** El botón grande y el de los ajustes rápidos abren un puente invisible
+(`QuickToggleActivity`: transparente, en su propia tarea, fuera de recientes y no exportado) con un `PendingIntent` de
+actividad inmutable. Con él delante, Android deja arrancar el servicio en primer plano sin depender de ninguna exención,
+y se puede abrir la «Comprobación». Hace lo mismo que el botón de la app: esa lógica sale de `HomeActivity` a
+`LinkControl` (requisitos, «Conectar igualmente», servidor de Android Auto con «Preparando…», que ahora es
+`LinkState.preparing` y lo ve también el widget). Desconectar en marcha es un `startService` al servicio, que ya está en
+primer plano. En los ajustes rápidos, `startActivityAndCollapse` con `PendingIntent` en Android 14+ (con `Intent`
+antes); con el móvil bloqueado, Conectar pide desbloquearlo (`unlockAndRun`). Los toques del selector y del modo son
+difusiones a `LinkWidget`, que no está exportado: ninguna otra app puede cambiar la conexión.
+
+**Cambiar de conexión en marcha.** El widget guarda `link_mode` y manda `LinkService.ACTION_SET_LINK` → `switchLink`:
+el mismo camino que el cable USB (`startUsb`, o `stopWifi` + `startWifi`), sin reiniciar Android Auto. Con una sesión
+QDAuto, «coche perdido» con el vídeo vivo (`car_gone_ms`) hasta que el coche vuelve por la conexión nueva. Con el cable
+del coche puesto y en uso, el cable sigue teniendo prioridad: la conexión elegida es a la que se vuelve al quitarlo. El
+motor no cambia (el del arranque). El modo en marcha se aplica con `ACTION_APPLY` y renegociando Android Auto, como un
+cambio de perfil. Desde «Cambiar» en la app, la conexión se sigue aplicando al volver a conectar.
+
+**Actualizaciones** (`WidgetUpdater`). Escucha `LinkState` y los ajustes (modo y conexión). Agrupa los avisos de 250 ms,
+no repinta si no cambia lo que se ve (`LinkGlance.signature`) y las cifras del vídeo (llegan cada 5 s) como mucho cada
+4,5 s. Sin widgets no hace nada; sin sondeos (`updatePeriodMillis` 0) ni candados. Al arrancar el proceso corrige el
+widget si se quedó en otro estado (el proceso murió en marcha). Android 12+: cuatro versiones por tamaño en un solo
+`RemoteViews` (2x2 bajo o alto, 4x2 bajo o alto; umbrales 260 × 175 dp, los de `LinkGlance.sizeFor`); antes, la que
+cabe según `OPTION_APPWIDGET_*`. Esquinas del sistema, `previewLayout`, `targetCellWidth/Height` y `description`;
+`previewImage` (inglés y español) para Android 8-11.
+
+**Código.** `[hql]LinkGlance.java` (puro: del estado al color, botón, estado, detalle, tamaño y cuándo repintar),
+`LinkWidgetViews` (RemoteViews, textos y `PendingIntent`), `WidgetUpdater`, `LinkWidget`, `QuickToggleActivity`,
+`LinkControl`, `LinkTileService` y `WidgetShots` (capturas). Cambian `LinkService` (`ACTION_SET_LINK`), `HomeActivity`
+(`LinkControl`, el menú, sin conectar sola desde el widget o el botón de los ajustes rápidos), `LinkState.preparing`,
+`Config.listen`, `App` (arranca `WidgetUpdater` tras el primer desbloqueo) y `PreviewActivity` (`render=widget`).
+Recursos `hql_widget_*` y `hql_w_*`, textos en los cuatro idiomas y manuales («Widget y botón de ajustes rápidos»).
+
+**Vista previa.**
+
+- En el PC: `cmd /c ".\gradlew.bat :app:testGithubDebugUnitTest --tests *WidgetRender* -Ppreview"` deja
+  `app/build/preview/widget_<estado>_<tamaño>.png` (apagado, buscando, conectado_wifi, conectado_usb, esperando y
+  problema; 4x2 y 2x2), con las mismas `RemoteViews` que pinta el launcher.
+- En el móvil: `adb shell am start -n com.headqlink.app/com.headqlink.link.PreviewActivity --es render widget` y
+  `adb pull /sdcard/Android/data/com.headqlink.app/files/preview/`.
+
+**Cómo comprobarlo en el móvil.**
+
+1. ⚙ › «Añadir widget a la pantalla de inicio»: el launcher lo coloca; «Apagado» en gris. Redimensionarlo a 2x2.
+2. Botón grande con todo listo: «Preparando…» (si hay que arrancar el servidor de AA), ámbar «Buscando el coche…» con la
+   fila «Red» debajo y verde «Coche conectado» con las cifras cada 5 s. Con algo obligatorio pendiente, la «Comprobación».
+3. En marcha, tocar otra conexión: en el log, `widget: conexión … (enlace en marcha: se aplica ya)` y `conexión: … → …
+   (widget, con el enlace en marcha)`; la imagen vuelve por la nueva sin `AA: lanzando Self-Mode`.
+4. Ajustes rápidos › lápiz › «HeadQLink» (o ⚙ › «Añadir botón…»): activo en marcha, con las cifras; mantenerlo pulsado
+   abre la app sin conectar.
+5. Con QDLink abierto: rojo, «Cierra QDLink».
+
+**Pruebas en el PC.** `LinkGlanceTest` (13: apagado, preparando, buscando, coche encontrado por Wi-Fi o por cable, verde
+con fps y Mbit/s y su formato por idioma, sesión sin imagen, esperando, problemas, un aviso viejo de la red no tapa el
+verde, el selector con el cable por delante, el ciclo del 2x2, los tamaños y cuándo repintar). `LinkWidgetViewsTest` (5,
+Robolectric: las `RemoteViews` aplicadas como lo hace el launcher, en cada estado y tamaño: textos, colores,
+descripciones de accesibilidad y toques). `LinkWidgetActionsTest` (6: conexión y modo guardados y, en marcha, aplicados
+con `ACTION_SET_LINK` y `ACTION_APPLY`; el botón grande desconecta en marcha y, sin configurar, abre la app; el botón de
+los ajustes rápidos: activo, subtítulo y Desconectar).
+
+**Limitaciones.** Sin probar en el móvil. Pasar de Wi-Fi Direct a la zona Wi-Fi en marcha no sale del grupo P2P del
+coche (igual que al pasar al cable). En el 2x2 más pequeño (110 dp) el botón queda pequeño.
+
+**Resultados en el PC.** `cmd /c ".\gradlew.bat :app:testGithubDebugUnitTest :app:assembleGithubDebug --console=plain"`:
+**BUILD SUCCESSFUL**. App: 2904 pruebas, 0 fallos y 3 saltadas (la de `sh` y las dos de dibujo, que piden `-Ppreview`);
+el paquete `com.headqlink.link`, 246.
