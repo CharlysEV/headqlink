@@ -351,10 +351,11 @@ admite.
 
 - **«Auto»:** Android Auto em ecrã inteiro.
 - **«Auto estendido»:** um painel à esquerda, do lado do condutor, com «Auto», «Carro» (separadores Rota, Condução,
-  Viagens, Instrumentos e Eficiência), «Fotos», «Vídeos», «Web», «TV», «Rádio», «Jogos» e «Definições». Com o Android
+  Viagens, Instrumentos, Eficiência e Estado), «Fotos», «Vídeos», «Web», «TV», «Rádio», «Jogos» e «Definições». Com o Android
   Auto no ecrã, o painel esconde-se sozinho ao fim de alguns segundos; toque na margem esquerda para que volte. Fotos,
   vídeos, web, TV e jogos são **só para quando o carro está parado**.
-- **Secção «Carro»** (tudo estimado com os sensores do telemóvel e serviços abertos, sem dados do carro):
+- **Secção «Carro»** (estimado com os sensores do telemóvel e serviços abertos; com a conta Leapmotor, também com dados
+  reais do carro: ver [Dados reais do carro](#dados-reais-do-carro-conta-leapmotor)):
   - «Rota»: destino, chegada, energia e consumo previstos; o perfil de elevação colorido pela inclinação (a verde as
     descidas, onde se recupera energia), o vento por troços, os carregadores e a bateria prevista; a bateria à chegada
     num anel (indique a sua % com «−5»/«+5»), o tempo no destino e os carregadores ao longo da rota («Ir» abre a
@@ -367,6 +368,8 @@ admite.
     inclinação e uma nota de suavidade (0-100) pelos solavancos ao acelerar, travar e virar.
   - «Eficiência»: a potência dos últimos 2 minutos (a verde o que se recupera), o consumo agora, da viagem e médio, para
     onde vai a energia, o custo da viagem, o CO₂ que não saiu por um tubo de escape e uma dica.
+  - «Estado» (com a conta Leapmotor): a bateria, a autonomia, a carga, as pressões, as portas e o conta-quilómetros
+    reais do carro, com a idade do dado. Sem conta, explica como a configurar.
 - **Ecrã tátil:** funciona como no Android Auto, com **multitoque** até 3 dedos (por exemplo, juntar os dedos para fazer
   zoom no mapa).
 - **Botões do volante:** reproduzir/pausa, seguinte e anterior funcionam através do **Bluetooth do carro**, sem
@@ -565,6 +568,63 @@ Cole o URL de uma lista M3U ou toque em «Escolher ficheiro». Sem lista de rád
 - «Pré-visualização do modo estendido»: o painel do carro no telemóvel (na horizontal), com um trajeto de demonstração;
   toca-se como no carro. Nada é guardado e não está disponível com o carro ligado.
 
+### Dados reais do carro (conta Leapmotor)
+
+**O que é.** Opcional. Com a sua conta Leapmotor, o HeadQLink lê da nuvem da Leapmotor o estado do seu carro (bateria e
+autonomia, carga, pressões dos pneus, portas, mala e fecho, temperaturas e conta-quilómetros) e usa-o no «Auto
+estendido»:
+
+- **«Estado»** (o sexto separador de «Carro»): a bateria num anel com a autonomia e os kWh que restam; a carga
+  (corrente alternada ou carga rápida, com a potência e o tempo que falta) ou, sem cabo, a potência que sai ou entra; a
+  temperatura da bateria (com «Bateria fria: menos carga rápida e menos regeneração» abaixo de 10 °C); as quatro
+  pressões sobre o carro visto de cima, a âmbar o pneu baixo (abaixo de 2,1 bar, 0,3 bar ou mais abaixo dos outros, ou
+  com o aviso do próprio carro); as portas e a mala abertas, o fecho, o conta-quilómetros e de quando é o dado. A nuvem
+  não indica as janelas.
+- **«Rota»**: a % de agora é a real (desaparecem «−5»/«+5») e a bateria à chegada sai dela com a capacidade da sua
+  versão.
+- **«Eficiência»**: o consumo da viagem é o real (o que a bateria desceu vezes a sua capacidade, entre os km do
+  conta-quilómetros) assim que a bateria desce 2 %; antes diz «ainda pouco consumo para medir». Junto à potência
+  estimada aparece a real se o dado for recente. A repartição da energia continua estimada.
+- **«Viagens»**: cada viagem guarda a % e os km do carro no início e no fim; com eles, o seu consumo real (marcado
+  «REAL») e os totais reais em «Recordes».
+
+Cada valor diz de onde vem: «real · há 40 s» (a idade do dado: a nuvem não é em tempo real e, com o carro desligado,
+dá o último que soube) ou «estimado».
+
+**Como se configura** (⚙ › «Dados do carro (conta Leapmotor)», Android 6 ou superior):
+
+1. **Certificado de cliente.** É o mesmo que a app LMB10 pede; o HeadQLink não o inclui nem o fornece. Toque em
+   «Importar certificado…» e escolha no seletor de ficheiros **os dois de uma vez** (app.crt e app.key), um .pem com
+   os dois blocos ou um .p12/.pfx (se tiver palavra-passe, é pedida).
+2. **Conta.** O seu e-mail e palavra-passe da Leapmotor, e «Entrar». A palavra-passe não é guardada.
+3. **Carro.** Se a conta tiver um, fica escolhido; se tiver vários, escolha o seu.
+4. **Bateria.** A nuvem não indica a versão: «C10 Life · 69,9 kWh», «C10 ProMax · 81,9 kWh» ou «Outra» (os kWh à
+   mão). Serve para passar a % a kWh.
+5. **«Ler o estado agora»** para o confirmar: bateria, autonomia, carga, pressões e a idade do dado.
+
+Com o «Auto estendido» em funcionamento (ou a «Pré-visualização do modo estendido»), o HeadQLink lê o carro a cada 60 s
+(a cada 30 s com a secção «Carro» no ecrã) e, se falhar, aos 2, 5 e 10 minutos. Para ao desligar. «Usar os dados reais
+do carro» desativa-o sem apagar nada.
+
+**Privacidade e segurança.**
+
+- Só de leitura: o HeadQLink **nunca envia ordens ao carro** (nem trancar, nem climatização, nem carga, nada).
+- Os seus dados vão **só para os servidores da Leapmotor**. A posição do carro não é lida nem guardada.
+- O certificado e a sessão ficam **cifrados** com uma chave do Android Keystore, fora das cópias de segurança. A
+  palavra-passe não é guardada: se a sessão expirar, «Estado» avisa e volta a entrar no telemóvel.
+- O servidor da Leapmotor usa um certificado da sua própria autoridade. O HeadQLink verifica que a chave é a conhecida;
+  se um dia mudar, não se liga até que a aceite no telemóvel (só numa rede de confiança).
+- No registo: o e-mail mascarado (c\*\*\*@e\*\*\*.com) e uma linha por leitura (%, autonomia, carga, kW, km e latência),
+  sem tokens, VIN nem posição.
+- «Terminar sessão e apagar dados» apaga deste telemóvel o certificado, a sessão e as definições da conta.
+
+> [!WARNING]
+> Usa uma **API não oficial** da Leapmotor: pode deixar de funcionar a qualquer momento, e o HeadQLink não tem relação
+> com a Leapmotor. Com o **C10 REEV** (autonomia alargada) o consumo real não serve: o gerador carrega a bateria em
+> andamento.
+
+O protocolo vem do **[LMB10](https://github.com/txurtxil/LPB10)**, de **txurtxil** (GPL-3.0).
+
 ---
 
 ## 6. Calor e bateria
@@ -678,7 +738,7 @@ Pode pedir ajuda na página do projeto no GitHub: [CharlysEV/headqlink](https://
 | Sem restrições de bateria | Continuar a funcionar com o ecrã desligado. | Recomendado |
 | Apresentar sobre outras aplicações | Abrir o Android Auto com o telemóvel em segundo plano. | Opcional |
 | Fotos, vídeos e localização | Galeria e painéis de condução. | Opcional, «Auto estendido» |
-| Internet | Serviços do «Auto estendido» (OpenStreetMap, OSRM, Open-Meteo, radio-browser.info) e as suas listas de TV e rádio. | Só essas funções |
+| Internet | Serviços do «Auto estendido» (OpenStreetMap, OSRM, Open-Meteo, radio-browser.info), as suas listas de TV e rádio e, se a configurar, a nuvem da Leapmotor (dados reais do carro, só de leitura). | Só essas funções |
 
 - O HeadQLink **não envia telemetria** nem tem anúncios.
 - **Não partilha o GPS** com o Android Auto por predefinição.
@@ -728,3 +788,5 @@ Pode pedir ajuda na página do projeto no GitHub: [CharlysEV/headqlink](https://
   original de **Michael Reid** ([aviso de copyright](COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt)). O HeadQLink é um projeto
   independente, sem relação com o Open Headunit nem com os seus autores.
 - Motor de protocolo **QDAuto**: [CharlysEV/qdauto](https://github.com/CharlysEV/qdauto).
+- Dados reais do carro (conta Leapmotor): cliente só de leitura portado do **[LMB10](https://github.com/txurtxil/LPB10)**,
+  de **txurtxil** (GPL-3.0); ver [NOTICE](NOTICE).

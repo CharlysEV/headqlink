@@ -332,11 +332,12 @@ version). That tells us whether the C10 supports it.
 ### What you see and how to use it
 
 - **"Auto":** Android Auto in full screen.
-- **"Auto extended":** a panel on the left, on the driver's side, with "Auto", "Car" (Route, Driving, Trips, Gauges and
-  Efficiency tabs), "Photos", "Videos", "Web", "TV", "Radio", "Games" and "Settings". With Android Auto on screen, the
+- **"Auto extended":** a panel on the left, on the driver's side, with "Auto", "Car" (Route, Driving, Trips, Gauges,
+  Efficiency and Status tabs), "Photos", "Videos", "Web", "TV", "Radio", "Games" and "Settings". With Android Auto on screen, the
   panel hides by itself after a few seconds; tap the left edge to bring it back. Photos, videos, web, TV and games are
   **only for when the car is stopped**.
-- **"Car" section** (all estimated from the phone's sensors and open services, without car data):
+- **"Car" section** (estimated from the phone's sensors and open services; with the Leapmotor account, also with real
+  car data: see [Real car data](#real-car-data-leapmotor-account)):
   - "Route": destination, arrival, expected energy and consumption; the elevation profile coloured by slope (descents
     in green, where energy is recovered), the wind along the way, the chargers and the expected battery; the battery on
     arrival in a ring (set your % with "−5"/"+5"), the weather at the destination and the chargers along the route ("Go"
@@ -349,6 +350,8 @@ version). That tells us whether the C10 supports it.
     inclination and a smoothness score (0-100) from the jerks when accelerating, braking and turning.
   - "Efficiency": the power of the last 2 minutes (what is recovered in green), consumption now, for the trip and on
     average, where the energy goes, the trip cost, the CO₂ that did not come out of a tailpipe and a tip.
+  - "Status" (with the Leapmotor account): the car's real battery, range, charging, tyre pressures, doors and odometer,
+    with the age of the data. Without an account, it explains how to set one up.
 - **Touchscreen:** works as in Android Auto, with **multi-touch** up to 3 fingers (for example, pinch to zoom the map).
 - **Steering wheel buttons:** play/pause, next and previous work through the **car's Bluetooth**, with no extra pairing.
 - **Sound:** music and directions come out of the phone over the **car's Bluetooth**, so the phone must be connected to
@@ -543,6 +546,62 @@ Paste the URL of an M3U list or tap "Choose file". Without a radio list, the car
 - "Extended mode preview": the car panel on the phone (landscape) with a demo drive; tap it as in the car. Nothing is
   saved, and it is not available while connected to the car.
 
+### Real car data (Leapmotor account)
+
+**What it is.** Optional. With your Leapmotor account, HeadQLink reads your car's status from the Leapmotor cloud
+(battery and range, charging, tyre pressures, doors, boot and lock, temperatures and odometer) and uses it in "Auto
+extended":
+
+- **"Status"** (the sixth "Car" tab): the battery in a ring with the range and the kWh left; charging (AC or DC fast,
+  with the power and the time left) or, unplugged, the power leaving or entering the battery; the battery temperature
+  (with "Cold battery: slower fast charging and less regeneration" below 10 °C); the four pressures on the car seen
+  from above, the low tyre in amber (below 2.1 bar, 0.3 bar or more below the others, or with the car's own warning);
+  open doors and boot, the lock, the odometer and how old the data is. The cloud does not report the windows.
+- **"Route"**: the current % is the real one ("−5"/"+5" disappear) and the battery on arrival comes from it with your
+  variant's capacity.
+- **"Efficiency"**: the trip consumption is the real one (how much the battery dropped times its capacity, over the
+  odometer km) once the battery has dropped 2 %; before that it says "too little used to measure yet". Next to the
+  estimated power, the real one shows when the data is recent. The energy breakdown is still estimated.
+- **"Trips"**: each trip stores the car's % and km at the start and at the end; with them, its real consumption
+  (marked "REAL") and the real totals under "Records".
+
+Every figure says where it comes from: "real · 40 s ago" (the age of the data: the cloud is not real time and, with
+the car off, gives the last it knew) or "estimated".
+
+**How to set it up** (⚙ › "Car data (Leapmotor account)", Android 6 or later):
+
+1. **Client certificate.** The same one the LMB10 app asks for; HeadQLink neither includes nor provides it. Tap "Import
+   certificate…" and pick **both at once** in the file picker (app.crt and app.key), a .pem with both blocks or a
+   .p12/.pfx (it asks for the password if it has one).
+2. **Account.** Your Leapmotor email and password, then "Sign in". The password is not stored.
+3. **Car.** If the account has one, it is chosen; with several, pick yours.
+4. **Battery.** The cloud does not report the variant: "C10 Life · 69.9 kWh", "C10 ProMax · 81.9 kWh" or "Other" (kWh
+   by hand). It turns the % into kWh.
+5. **"Read status now"** to check it: battery, range, charging, pressures and the age of the data.
+
+With "Auto extended" running (or the "Extended mode preview"), HeadQLink reads the car every 60 s (every 30 s with the
+"Car" section on screen) and, after errors, at 2, 5 and 10 minutes. It stops when you disconnect. "Use the real car
+data" turns it off without deleting anything.
+
+**Privacy and security.**
+
+- Read-only: HeadQLink **never sends commands to the car** (no lock, climate, charging, nothing).
+- Your data only goes **to Leapmotor's servers**. The car's location is neither read nor stored.
+- The certificate and the session are stored **encrypted** with an Android Keystore key, outside backups. The password
+  is not stored: if the session expires, "Status" says so and you sign in again on the phone.
+- The Leapmotor server uses a certificate from its own authority. HeadQLink checks that its key is the known one; if it
+  ever changes, it does not connect until you accept it on the phone (only do so on a network you trust).
+- In the log: the masked email (c\*\*\*@e\*\*\*.com) and one line per read (%, range, charging, kW, km and latency),
+  with no tokens, VIN or location.
+- "Sign out and delete data" deletes the certificate, the session and the account settings from this phone.
+
+> [!WARNING]
+> It uses an **unofficial Leapmotor API**: it may stop working at any time, and HeadQLink is not affiliated with
+> Leapmotor. With the **C10 REEV** (range extender) the real consumption is meaningless: the generator charges the
+> battery while driving.
+
+The protocol comes from **[LMB10](https://github.com/txurtxil/LPB10)** by **txurtxil** (GPL-3.0).
+
 ---
 
 ## 6. Heat and battery
@@ -655,7 +714,7 @@ You can ask for help on the project's GitHub page: [CharlysEV/headqlink](https:/
 | No battery restrictions | Keeping it running with the screen off. | Recommended |
 | Display over other apps | Opening Android Auto with the phone in the background. | Optional |
 | Photos, videos and location | Gallery and driving panels. | Optional, "Auto extended" |
-| Internet | "Auto extended" services (OpenStreetMap, OSRM, Open-Meteo, radio-browser.info) and your TV and radio lists. | Only those features |
+| Internet | "Auto extended" services (OpenStreetMap, OSRM, Open-Meteo, radio-browser.info), your TV and radio lists and, if you set it up, the Leapmotor cloud (real car data, read-only). | Only those features |
 
 - HeadQLink **sends no telemetry** and has no ads.
 - It **doesn't share GPS** with Android Auto by default.
@@ -703,3 +762,5 @@ You can ask for help on the project's GitHub page: [CharlysEV/headqlink](https:/
   original work of **Michael Reid** ([copyright notice](COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt)). HeadQLink is an
   independent project with no relationship to Open Headunit or its authors.
 - **QDAuto** protocol engine: [CharlysEV/qdauto](https://github.com/CharlysEV/qdauto).
+- Real car data (Leapmotor account): read-only client ported from **[LMB10](https://github.com/txurtxil/LPB10)** by
+  **txurtxil** (GPL-3.0); see [NOTICE](NOTICE).

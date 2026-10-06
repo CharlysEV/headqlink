@@ -1403,3 +1403,106 @@ coche (igual que al pasar al cable). En el 2x2 más pequeño (110 dp) el botón 
 **Resultados en el PC.** `cmd /c ".\gradlew.bat :app:testGithubDebugUnitTest :app:assembleGithubDebug --console=plain"`:
 **BUILD SUCCESSFUL**. App: 2904 pruebas, 0 fallos y 3 saltadas (la de `sh` y las dos de dibujo, que piden `-Ppreview`);
 el paquete `com.headqlink.link`, 246.
+
+---
+
+## 17. Datos reales del coche: cuenta Leapmotor, solo lectura (2026-10-06)
+
+**Qué hay.** Opcional. Con la cuenta de Leapmotor del usuario, HeadQLink lee el estado del coche de la nube
+internacional de Leapmotor (`appgateway.leapmotor-international.de`) y lo enseña en el modo extendido. Todo va dentro de
+HeadQLink: no hace falta LMB10 ni se lee nada suyo. Su código (GPL-3.0) es la referencia del protocolo; lo portado
+lleva su cabecera y está en `NOTICE`.
+
+**Portado de LMB10 (`lib/leapmotor_engine.dart`).**
+
+| Qué | Dónde |
+|---|---|
+| Firma del login (SHA-256 de los campos en orden fijo); cabeceras HMAC-SHA256 con la clave HKDF de signIkm/signSalt/signInfo; nonce, timestamp y deviceId del token | `LeapCrypto` |
+| Contraseña del PKCS#12 de cuenta (MD5, SHA-256 y SM4 con las claves de ronda fijas del protocolo) | `LeapCrypto` |
+| `login`, `restoreSession`/`exportSession`, `tokenRefresh`, `withTokenRetry` (un refresco y un reintento si el error habla del token o hay 401), `_parseBody`, `getVehicleList`, `getVehicleStatus` y `statusPath` (B10/B11 → c10) | `LeapApi` |
+| `kSignalToNamed` (el subconjunto que se enseña), `mergeSignalToNamed`, `_asInt`/`_asDouble`/`_asBool`, `isPluggedIn`, `isCharging`, `batteryPowerKw`, avisos de presión (estado > 1) y la hora del dato (`collectTime`… y `signal.sts`) | `LeapStatus` |
+| Capacidades del C10 (Life 69,9 kWh, ProMax 81,9 kWh) y consumo creíble (8-70 % cada 100 km) de `vehicle_profile.dart` y `daily_stats.dart` | `CarCloudStore`, `CloudEnergy` |
+
+**No portado, a propósito:** ninguna orden al coche (cerrar o abrir, maletero, clima y precondicionado, asientos y
+volante, ventanillas, persiana, centinela, límites de carga y de velocidad, cargador, `cert/sync`), ni el cifrado del PIN,
+ni mensajes, historial de cargas, rutinas o la posición del coche. `LeapApi` solo tiene login, refresco, lista y
+estado, y el transporte rechaza cualquier ruta que no sea de esas cuatro (`LeapApi.allowed`, con su prueba).
+
+**TLS mutuo**, como la app oficial: el certificado de cliente del usuario para el login y el PKCS#12 de cuenta que llega
+en el login para lo demás. El servidor presenta un certificado de la CA privada de Leapmotor («AppSubCA», sin la
+cadena). LMB10 acepta cualquier certificado; aquí se fija la clave pública del servidor (`LeapTls.BUILT_IN_PINS`, SPKI
+SHA-256 del certificado vigente de 2026-07 a 2027-08), además de la comprobación de nombre de Android. Si la clave
+cambia, la conexión se para (`SERVER_KEY`) y el móvil enseña la huella para aceptarla o no (`acceptPin`); nunca sola.
+
+**Certificado de cliente** (`LeapTls.parse`): el par PEM `.crt` + `.key` (los dos a la vez en el selector), un PEM con
+los dos bloques (también con texto alrededor y con la cadena), claves PKCS#8, PKCS#1 (`RSA PRIVATE KEY`), SEC1
+(`EC PRIVATE KEY`) y PKCS#8 cifrada (si el Android conoce el algoritmo), certificados y claves en DER, y `.p12`/`.pfx`
+con contraseña (la pide si falta o es mala). Comprueba que la clave es la del certificado con una firma de prueba.
+
+**Almacén** (`CarCloudStore`): el certificado (clave PKCS#8 y cadena) y la sesión (tokens, material de firma, PKCS#12 de
+cuenta, VIN y correo), cifrados con AES-256-GCM y una clave del Android Keystore sin autenticación de usuario (el sondeo
+funciona con el móvil bloqueado), en `noBackupFilesDir/carcloud`. En claro (`hql_carcloud`): activado, perfil de batería,
+modelo, correo enmascarado y claves de servidor aceptadas. La contraseña nunca se guarda. Necesita Android 6 o superior.
+Si la clave del Keystore ya no abre lo guardado, cuenta como «sin configurar».
+
+**Sondeo** (`CarCloud`): arranca y para con `CarUi` (el modo extendido con el coche, también en el «coche perdido» con el
+vídeo vivo, y la vista previa); lee cada 60 s, cada 30 s con la sección Coche en pantalla y, tras errores, a los 2, 5 y
+10 min (`Policy`). Con la sesión caducada, una clave de servidor nueva o sin configurar, no vuelve a intentarlo hasta que
+cambie algo en el móvil. Todo el acceso a la API pasa por `CarCloudSession` (sincronizado: el sondeo y «Leer estado
+ahora» no refrescan a la vez el mismo token), que vuelve a guardar la sesión cuando se refresca el token. Las pantallas
+leen `CarCloud.snapshot()`, una foto inmutable con la hora del dato del coche y la de la lectura.
+
+**Pantallas.**
+
+- Móvil: ⚙ › «Datos del coche (cuenta Leapmotor)» (`CarCloudActivity`): explicación, activado, 1 certificado, 2 cuenta,
+  3 coche, 4 batería (la variante no se puede deducir del VIN ni del modelo: se pregunta tras entrar), «Leer estado
+  ahora» y «Cerrar sesión y borrar datos».
+- Coche: pestaña nueva «Estado» (`CarStatusTab`); «Ruta» con el % real (sin ±5) y la capacidad de la variante;
+  «Eficiencia» con el consumo real del viaje (desde un 2 % de bajada) y la potencia real si el dato tiene 2 min o menos;
+  «Viajes» con el consumo real de cada viaje (marcado «REAL») y los totales reales. Siempre «real · hace N» o
+  «estimado».
+- `TripLog` apunta la primera y la última lectura de la nube hechas después de empezar el viaje (% y km); si se ve
+  cargando o el % sube más de un punto, ese viaje no da consumo real (`cloud` en el JSON del viaje).
+
+**Qué buscar en el log.**
+
+| Línea | Significado |
+|---|---|
+| `nube Leapmotor: sondeo en marcha (cada 60 s; …)` y `sondeo parado` | Arranca y para con el modo extendido |
+| `nube Leapmotor: SoC 72.4 %, autonomía 301 km, sin enchufar, 7.9 kW, 12480 km · dato del coche de hace 40 s · 820 ms` | Una lectura |
+| `W nube Leapmotor: sin datos (…); fallo 1, reintento en 2 min` | Error: espera 2, 5 o 10 min |
+| `W nube Leapmotor: la sesión caducó (…); vuelve a entrar en el móvil (Datos del coche)` | Hay que volver a entrar |
+| `W nube Leapmotor: el servidor presenta otra clave (huella …)` | Clave del servidor nueva |
+| `nube Leapmotor: sesión iniciada (c***@e***.com), 1 coche(s), modelo C10` | Login (correo enmascarado) |
+| `nube Leapmotor: prueba desde el móvil: …` | «Leer estado ahora» |
+| `viaje: inicio con datos del coche (84.0 %)` y `viaje: datos del coche 84.0 → 79.5 %, 15 km de cuentakilómetros, 20.9 kWh/100 km reales` | Viaje con datos reales |
+
+**Cómo comprobarlo en el móvil.**
+
+1. ⚙ › «Datos del coche»: importar el par (los dos ficheros a la vez), entrar y elegir la variante.
+2. «Leer estado ahora»: el % y los km tienen que coincidir con los de la app de Leapmotor.
+3. Diagnóstico › «Vista previa del modo extendido» › Coche › Estado: los datos reales con «real · hace …» (sin cuenta,
+   los inventados).
+4. En el coche: una línea `nube Leapmotor: SoC …` por minuto (cada 30 s con la sección Coche en pantalla).
+
+**Vista previa.** `DemoMode.cloudSnapshot()` (inventada; pasa por `LeapStatus.parse` con las señales numéricas) y
+viajes con datos reales; estados `sin_nube` y `cargando`. Capturas nuevas: `coche_estado`, `coche_estado_cargando` y
+`coche_estado_sin_cuenta`. Con los datos de la nube:
+`gradlew :app:testGithubDebugUnitTest --tests *CarPanelRender* -Ppreview -PpreviewSuffix=_cloud -PpreviewOnly=coche_estado,coche_ruta,coche_eficiencia,coche_viajes`.
+
+**Pruebas en el PC** (las claves y certificados se generan al vuelo; ninguno real): `LeapCryptoTest` (9: SM4 con el
+vector oficial y con las claves fijas, contraseñas del PKCS#12, HKDF con el RFC 5869, firmas del login, la lista, el
+estado y el refresco con vectores de un port literal en Python del Dart, deviceId del token, codificación de Dart),
+`LeapStatusTest` (9), `LeapTlsTest` (10, con un handshake TLS mutuo real contra un servidor local), `LeapApiTest` (9, con
+un HTTP de mentira: login, certificado de cuenta, HMAC, refresco y reintento, refresco rechazado, errores y rutas de solo
+lectura), `CloudEnergyTest` (4), `TripCloudTest` (3) y `CarCloudTest` (7: sondeo y espera, edad del dato, almacén
+cifrado).
+
+**Limitaciones.** Sin probar contra la nube de verdad ni en el móvil (aquí no hay credenciales, a propósito). La API no
+es oficial. El cuentakilómetros va en km enteros y la nube no es en tiempo real (el TCU duerme ~13 min después de cerrar
+el coche). La nube no da las ventanillas. El C10 REEV no vale para el consumo real. Si Leapmotor cambia la clave de su
+servidor, hay que aceptarla una vez en el móvil.
+
+**Resultados en el PC.** `cmd /c ".\gradlew.bat :app:testGithubDebugUnitTest :app:assembleGithubDebug --console=plain"`:
+**BUILD SUCCESSFUL**. App: 2978 pruebas, 0 fallos y 4 saltadas (la de `sh` y las tres de dibujo, que piden
+`-Ppreview`); el paquete `com.headqlink.link`, 320 (60 nuevas).
