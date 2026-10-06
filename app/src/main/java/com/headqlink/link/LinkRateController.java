@@ -9,12 +9,18 @@ import java.util.Locale;
  * 50-60 segmentos sin confirmar, rtt de 100-300 ms, 1 388 retransmisiones en 6 min y P-frames de 276 KB; la imagen
  * iba a saltos y un write() acabó bloqueado más de 10 s).
  *
+ * Viaje 6 (2026-10-06): la primera versión bajaba por retransmisiones sueltas (normales en Wi-Fi, coincidiendo con un
+ * IDR en la cola) y subía despacio: la sesión «Coche» se quedó en 1,7-2,5 Mbit/s con la imagen pixelada, cuando en el
+ * mismo enlace el perfil Alto llevó 4,3-4,8 Mbit/s sin perder un frame. Ahora solo cuenta el retardo (cola sostenida,
+ * rtt sostenido, frames tirados por retraso), el suelo es la mitad del bitrate del coche y la subida es rápida.
+ *
  * Se alimenta cada ~100 ms con la muestra de NetStat (cola del kernel, sin confirmar, retransmisiones, rtt) y con la
  * puerta GL (esperas por el enlace en ese rato, vaciados de la cola por retraso). Reglas:
  * - **Congestión**: cola del kernel ≥ OUTQ_HIGH_BYTES (o la puerta GL cerrada por el enlace casi todo el rato) durante
- *   ≥ OUTQ_HIGH_MS seguidos; o las retransmisiones suben ≥ RETRANS_RISE en el último segundo; o el rtt pasa de
- *   RTT_FACTOR veces el mínimo de la sesión (y de RTT_MIN_MS); o el núcleo tiró frames por retraso (> 150 ms en cola).
- * - **Bajar**: con congestión, bitrate × STEP_DOWN (sin bajar de FLOOR_BPS), como mucho un paso cada STEP_HOLD_MS. Si
+ *   ≥ OUTQ_HIGH_MS seguidos; o el rtt pasa de RTT_FACTOR veces el mínimo de la sesión (y de RTT_MIN_MS) durante
+ *   ≥ RTT_HIGH_MS; o el núcleo tiró frames por retraso (> 150 ms en cola). Las retransmisiones solas no cuentan.
+ * - **Bajar**: con congestión, bitrate × STEP_DOWN (sin bajar del suelo: FLOOR_FRACTION del bitrate de partida, y nunca
+ *   menos de FLOOR_BPS), como mucho un paso cada STEP_HOLD_MS. Si
  *   ya está en el suelo y la congestión sigue, tope de LOW_FPS fps (si la sesión va por encima).
  * - **Subir**: tras RECOVER_MS seguidos sin congestión, primero vuelven los fps de la sesión; después, bitrate
  *   × STEP_UP cada RECOVER_MS limpios, hasta el techo.
@@ -22,26 +28,23 @@ import java.util.Locale;
  * Cada paso devuelve un {@link Step} con el texto para el log. Thread-safe (lo usan hql-video y el resumen).
  */
 final class LinkRateController {
-    static final double STEP_DOWN = 0.7;
-    static final double STEP_UP = 1.15;
+    static final double STEP_DOWN = 0.75;
+    static final double STEP_UP = 1.25;
     static final int FLOOR_BPS = 1_500_000;
+    /** Suelo relativo: por debajo de la mitad del bitrate del coche la imagen se pixela (1920x882 a 2 Mbit/s). */
+    static final double FLOOR_FRACTION = 0.5;
     static final int OUTQ_HIGH_BYTES = 48 * 1024;
-    static final long OUTQ_HIGH_MS = 300;
+    /** Un IDR de 100-150 KB tarda unos 250 ms en salir: la cola alta tiene que durar más que eso. */
+    static final long OUTQ_HIGH_MS = 500;
     /** Esperas por el enlace en una muestra de 100 ms que cuentan como cola alta (el relay GL reintenta cada 4 ms). */
     static final int LINK_WAITS_HIGH = 15;
-    static final int RETRANS_RISE = 2;
-    /** Las retransmisiones solo cuentan con cola del kernel ≥ esto o con el rtt disparado (síntomas de retardo). */
-    static final int RETRANS_OUTQ_BYTES = OUTQ_HIGH_BYTES;
-    static final long RETRANS_WINDOW_MS = 1_000;
     static final double RTT_FACTOR = 3.0;
     static final int RTT_MIN_MS = 80;
     /** El rtt alto tiene que durar esto (en el coche eran 100-300 ms sostenidos; en casa salen picos sueltos de 60 ms). */
     static final long RTT_HIGH_MS = 500;
     static final long STEP_HOLD_MS = 500;
-    static final long RECOVER_MS = 5_000;
+    static final long RECOVER_MS = 3_000;
     static final int LOW_FPS = 24;
-    /** Muestras de la ventana de retransmisiones (a 100 ms por muestra). */
-    private static final int RETRANS_SAMPLES = (int) (RETRANS_WINDOW_MS / 100);
 
     /** Una muestra (cada ~100 ms). Las cifras de NetStat a -1 si no se pueden leer; las demás, acumuladas. */
     static final class Sample {
@@ -120,8 +123,6 @@ final class LinkRateController {
     private long lastStepMs = -1;
     private int baselineRttMs = -1;
     private long lastFlushes;
-    private final int[] retransRing = new int[RETRANS_SAMPLES];
-    private int retransCount;
     private boolean floorNoted;
 
     // Estadísticas de la sesión (resumen).
@@ -151,7 +152,6 @@ final class LinkRateController {
         lastStepMs = -1;
         baselineRttMs = -1;
         lastFlushes = -1;
-        retransCount = 0;
         rttHighSinceMs = -1;
         floorNoted = false;
     }
@@ -171,7 +171,7 @@ final class LinkRateController {
     }
 
     private int floor() {
-        return Math.min(FLOOR_BPS, profileBps);
+        return Math.min(profileBps, Math.max(FLOOR_BPS, (int) Math.round(profileBps * FLOOR_FRACTION)));
     }
 
     /** Una muestra: el paso a aplicar (bitrate o fps nuevos), o null si no cambia nada. */
@@ -190,18 +190,8 @@ final class LinkRateController {
             add(why, s.outq >= 0 ? "outq " + kb(s.outq) + " " + (now - outqHighSinceMs) + " ms" : "enlace cerrado " + (now - outqHighSinceMs) + " ms");
         }
 
-        // Retransmisiones en el último segundo.
-        if (s.retrans >= 0) {
-            int oldest = retransCount >= RETRANS_SAMPLES ? retransRing[retransCount % RETRANS_SAMPLES] : (retransCount > 0 ? retransRing[0] : s.retrans);
-            retransRing[retransCount % RETRANS_SAMPLES] = s.retrans;
-            retransCount++;
-            int rise = s.retrans - oldest;
-            // Unas pocas retransmisiones por segundo son normales en Wi-Fi (en casa, con outq 0 y rtt 5 ms, salían
-            // +2..+5 y el controlador se iba al suelo). Solo cuentan si además hay cola, datos sin confirmar o rtt alto.
-            // (Los segmentos sin confirmar no valen: con 5 Mbit/s hay 10-12 en vuelo con rtt de 10 ms.)
-            boolean corroborated = s.outq >= RETRANS_OUTQ_BYTES;
-            if (rise >= RETRANS_RISE && corroborated) add(why, "retrans +" + rise);
-        }
+        // Las retransmisiones no se miran: unas pocas por segundo son normales en Wi-Fi y, si de verdad frenan el
+        // enlace, ya se ven como cola o rtt sostenidos.
 
         // rtt frente al mínimo de la sesión.
         if (s.rttMs > 0) {
@@ -319,7 +309,7 @@ final class LinkRateController {
 
     /** Para el log al arrancar. */
     String describe() {
-        return String.format(Locale.US, "bitrate adaptable al enlace %s-%s (baja ×%.1f con congestión, sube %d %% cada %d s limpio; %d fps si en el suelo sigue)",
+        return String.format(Locale.US, "bitrate adaptable al enlace %s-%s (baja ×%.2f con retardo sostenido, sube %d %% cada %d s limpio; %d fps si en el suelo sigue)",
                 mbit(floor()), mbit(profileBps), STEP_DOWN, Math.round((STEP_UP - 1) * 100), RECOVER_MS / 1000, LOW_FPS);
     }
 
