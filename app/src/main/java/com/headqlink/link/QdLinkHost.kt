@@ -7,15 +7,19 @@ import com.andrerinas.openheadunit.R
 import dev.qdauto.core.discovery.AckPolicy
 import dev.qdauto.core.discovery.CarAnnouncement
 import dev.qdauto.core.discovery.DiscoveryConfig
+import dev.qdauto.core.session.CarReturn
 import dev.qdauto.core.session.CloseReason
+import dev.qdauto.core.session.LinkState as CoreLinkState
 import dev.qdauto.core.session.MirrorServer
 import dev.qdauto.core.session.PhoneIdentity
 import dev.qdauto.core.session.PhoneLink
 import dev.qdauto.core.session.PhoneLinkConfig
 import dev.qdauto.core.session.PhoneLinkListener
 import dev.qdauto.core.session.PhoneSession
+import dev.qdauto.core.session.RecoveryConfig
 import java.io.IOException
 import java.net.BindException
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.util.concurrent.ConcurrentHashMap
 
@@ -24,6 +28,12 @@ import java.util.concurrent.ConcurrentHashMap
  * configuración (filtro de pares, espera entre intentos, *bind* a la interfaz del coche, re-ACK, relevo), crea un
  * [QdSessionBridge] por sesión y pasa a LinkService (hilo principal) los eventos de coche visto, conectado y perdido.
  * Si el UDP 18463 está ocupado (QDLink abierto) lo dice y reintenta cada 5 s.
+ *
+ * Vuelta del coche tras un corte de radio (RecoveryConfig del núcleo, ajustes Config.QD_*; todo activado por defecto):
+ * ACK reenviado cada 2 s hasta el TCP, puerto estable, re-acogida (el mismo puerto hasta «Esperar al coche» y ACK no
+ * pedidos), reapertura del UDP tras 20 s sin anuncios y diagnóstico cada 10 s con ping a la IP del coche. Tras perder la
+ * sesión, cada vez que el enlace vuelve a esperar al coche (o se reabre el UDP) se pide a LinkService que vuelva a coger
+ * el MulticastLock.
  */
 internal class QdLinkHost(
     private val ctx: Context,
@@ -47,6 +57,9 @@ internal class QdLinkHost(
 
         /** El UDP 18463 ya está abierto (tras un error): la fila «Red» vuelve a lo suyo. */
         fun onLinkReady()
+
+        /** Esperando al coche tras perder la sesión (o UDP reabierto): volver a coger el MulticastLock. */
+        fun onRefreshMulticast(why: String)
     }
 
     private val main = Handler(Looper.getMainLooper())
@@ -90,6 +103,10 @@ internal class QdLinkHost(
      * cruzan en los relevos y las reconexiones rápidas: los cambios de la actual y sus avisos a LinkService van juntos.
      */
     private val book = SessionBook { r -> main.post(r) }
+
+    /** Se perdió una sesión y el coche aún no ha vuelto (para el MulticastLock). */
+    @Volatile
+    private var lostPending = false
 
     /** Ya se avisó de "coche detectado" desde la última sesión (un aviso, no uno por broadcast). */
     @Volatile
@@ -185,11 +202,24 @@ internal class QdLinkHost(
 
     private fun buildLink(): PhoneLink {
         val qdlink = "qdlink" == cfg.qdPhoneInfo()
+        val waitMs = cfg.carWaitMs()
+        val ping: ((InetAddress) -> Boolean?)? = if (cfg.qdCarPing()) { ip -> CarPing.reachable(ip) } else null
+        val recovery = RecoveryConfig(
+            stableMirrorPort = cfg.qdStablePort(),
+            reclaim = cfg.qdReclaim(),
+            // La re-acogida y la vigilancia duran lo que se espera al coche (después LinkLifecycle lo cierra todo).
+            reclaimWindowMs = waitMs,
+            watchMs = waitMs,
+            udpRefreshSilenceMs = if (cfg.qdUdpRefresh()) 20_000 else 0,
+            carReachable = ping,
+        )
+        L.i("motor QDAuto: vuelta tras un corte: " + cfg.qdRecoverySummary() + " · espera " + waitMs / 1000 + " s")
         val config = PhoneLinkConfig(
             discovery = DiscoveryConfig(
                 deviceName = if (qdlink) "" else cfg.deviceName(),
                 deviceUuid = if (qdlink) "" else cfg.deviceUuid(),
-                ackPolicy = AckPolicy.QDLINK,
+                // Cada 2 s hasta el TCP (el C10 se anunció una vez tras un corte y nunca conectó con un ACK suelto).
+                ackPolicy = if (cfg.qdAckResend()) AckPolicy.UNTIL_CONNECTED else AckPolicy.QDLINK,
             ),
             mirrorPort = MirrorServer.RANDOM_PORT,
             acceptTimeoutMs = 20_000,
@@ -204,6 +234,7 @@ internal class QdLinkHost(
             reAckIntervalMs = 400,
             // El C10 solo se anuncia sin sesión: un broadcast con la sesión abierta y callada es que la dio por muerta.
             supersedeOnRebroadcast = cfg.qdSupersede(),
+            recovery = recovery,
         )
         return PhoneLink(config, LinkEvents(), object : dev.qdauto.core.session.SessionListener {}, QdTrace.qdLog) { s ->
             QdSessionBridge(ctx, s, this, hub, cfg, lastCar).also { bridges[s.id] = it }
@@ -244,9 +275,28 @@ internal class QdLinkHost(
             }
         }
 
-        override fun onAckSent(car: CarAnnouncement, mirrorPort: Int, attempt: Int) {
-            book.noteAck(System.nanoTime())
-            CarTrace.tx("UDP ${car.host}:18464", "Broadcast_ACK #$attempt MirrorPort=$mirrorPort")
+        override fun onAckSent(car: CarAnnouncement, mirrorPort: Int, attempt: Int, unsolicited: Boolean) {
+            // El hueco de reconexión cuenta el primer ACK que contesta a un anuncio (los no pedidos salen desde el corte).
+            if (!unsolicited) book.noteAck(System.nanoTime())
+            CarTrace.tx("UDP ${car.host}:18464", "Broadcast_ACK #$attempt MirrorPort=$mirrorPort" + if (unsolicited) " (no pedido)" else "")
+        }
+
+        override fun onLinkStateChanged(state: CoreLinkState) {
+            // Tras perder la sesión, cada vez que el enlace vuelve a esperar al coche: MulticastLock otra vez.
+            if (lostPending && !stopping && (state == CoreLinkState.SEARCHING || state == CoreLinkState.RECOVERING)) {
+                main.post { if (!stopping) callbacks.onRefreshMulticast("enlace $state tras perder la sesión") }
+            }
+        }
+
+        // El núcleo ya lo dice en el log unificado (QD/Link); aquí, al diario del coche.
+        override fun onReclaimStarted(car: CarAnnouncement, mirrorPort: Int, reason: CloseReason) =
+            CarTrace.note("REACOGIDA", "tras ${reason.kind} · puerto $mirrorPort · coche ${car.host}")
+
+        override fun onCarBack(car: CarAnnouncement, how: CarReturn, afterMs: Long) =
+            CarTrace.note("VUELTA", "tras $afterMs ms: ${how.label}")
+
+        override fun onDiscoveryReopened(quietMs: Long) {
+            if (!stopping) main.post { if (!stopping) callbacks.onRefreshMulticast("UDP reabierto") }
         }
 
         override fun onConnecting(car: CarAnnouncement, mirrorPort: Int) {
@@ -256,6 +306,7 @@ internal class QdLinkHost(
         }
 
         override fun onSessionStarted(session: PhoneSession) {
+            lostPending = false
             val b = bridges[session.id]
             val start = book.started(session.id, b?.endStamp) { session.isClosed }
             seenNotified = false
@@ -276,13 +327,14 @@ internal class QdLinkHost(
             QdTrace.i("HQL/Enlace", "S${session.id} terminada: $reason" + if (current) "" else " (no era la sesión actual)")
             if (!current) return
             seenNotified = false
+            lostPending = true
             backoff.onSessionEnded(b?.reachedStreaming == true)
         }
 
         override fun onAcceptTimeout(car: CarAnnouncement) {
             backoff.onAcceptTimeout()
             peer.noteAcceptTimeout()
-            L.w("el coche ${car.host} no conectó por TCP en 20 s tras el ACK")
+            L.w("el coche ${car.host} no conectó por TCP a tiempo tras el ACK (o no volvió en la re-acogida)")
         }
 
         override fun onConnectionRejected(from: InetSocketAddress?, car: CarAnnouncement) {

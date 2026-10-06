@@ -209,6 +209,7 @@ PASS` y código 0. `qdsim.bat --help` lista todas las opciones.
 | Presentarse como QDLink (`qd_phone_info`) | Ídem | No (identidad del fork) | Al volver a conectar |
 | Vídeo vivo sin coche (`car_gone_ms`) | Ídem | 30 s (de 5 a 600) | En la próxima pérdida del coche |
 | Esperar al coche (`car_wait_min`, §10) | Inicio › ⋮ › Ajustes de imagen › Avanzado | 5 min (1, 5 o 15) | En la próxima pérdida del coche |
+| Vuelta tras un corte de radio (§13): `qd_ack_resend`, `qd_stable_port`, `qd_reclaim`, `qd_udp_refresh`, `qd_car_ping` | Solo con extras (`--ez qd_reclaim false`) | Sí (todos) | Al volver a conectar |
 | Exportar log | Diagnóstico | — | — |
 
 «Volver a conectar» = «Desconectar» y «Conectar» en Inicio.
@@ -927,3 +928,56 @@ Cambios:
 - `LinkRateController`: fuera la regla de retransmisiones; cola alta sostenida 500 ms (antes 300); suelo =
   max(1,5 Mbit/s, 50 % del bitrate del coche) → 2,54 Mbit/s en el C10; bajada ×0,75; subida +25 % cada 3 s.
 - Perfil Coche otra vez en **VBR** (`enc_cbr` sigue forzando CBR para pruebas; `enc_vbr` ya no hace falta).
+
+## 13. Vuelta del coche tras un corte de radio (2026-10-06)
+
+Viajes 5 y 6 en el C10. Tras un cierre normal (LOCAL, READ_ERROR) el coche se reanuncia a los ~5,3 s y conecta al
+instante, siempre. Tras un **corte de radio** (WATCHDOG/WRITE_STALL con `cwnd 1` y «el coche lleva N ms callado»: el
+enlace muerto en los dos sentidos ≥ 10 s) el siguiente `Connect_Broadcast` llegó a los 61, 109, 172 o 175 s (alguna vez,
+nunca). Dos veces (09:03:06 y 09:20:36) llegó **un solo** broadcast, se mandó **un** ACK (puerto aleatorio nuevo), el
+coche dejó de anunciarse (luego recibió el ACK) y nunca abrió el TCP: «el coche no conectó en 20000 ms», a buscar y
+nada más hasta Desconectar/Conectar (broadcast a los 25 ms de abrir el UDP nuevo y conexión en 0,3 s). El 2026-10-05
+un reinicio de la zona Wi-Fi desatascó al coche a los 8 s. No se sabe si el coche vuelve al puerto de antes, si hace
+caso a un ACK que no pidió ni si sus broadcasts llegan al socket con la pantalla apagada: todo lo de abajo es defensivo,
+va al log y se puede apagar por partes (extras de §5.2).
+
+| Qué | Dónde | Por defecto |
+|---|---|---|
+| ACK cada 2 s hasta que llega el TCP o acaba el intento (`AckPolicy.UNTIL_CONNECTED`), y ACK en el acto con cada broadcast del mismo coche mientras se espera su TCP | `DiscoveryConfig.ackPolicy`, `PhoneLinkConfig.reAckOnBroadcast` (`qd_ack_resend`) | Sí |
+| **Puerto estable**: los intentos siguientes reutilizan el `MirrorPort` de la última sesión (`SO_REUSEADDR`); si no se puede, uno aleatorio con aviso | `RecoveryConfig.stableMirrorPort` (`qd_stable_port`) | Sí |
+| **Re-acogida** tras WATCHDOG, WRITE_STALL o READ_ERROR: estado `RECOVERING`, el mismo puerto escuchando hasta «Esperar al coche» (5 min) por si el coche vuelve directo a IP:puerto, y **ACK no pedidos** a IP_coche:18464 con ese puerto (cada 2 s el primer minuto, luego cada 5 s). Un broadcast suyo se contesta en el acto (y con los reenvíos de un intento normal) sin abrir otro servidor; si llega desde otra IP (zona Wi-Fi reiniciada) o es otro coche, intento nuevo | `RecoveryConfig.reclaim*`, `unsolicitedAck*` (`qd_reclaim`) | Sí |
+| **UDP 18463 reabierto** tras 20 s sin ningún datagrama esperando al coche (como mucho cada 20 s), y el MulticastLock otra vez cada vez que el enlace vuelve a esperar al coche tras perder la sesión (o se reabre el UDP) | `RecoveryConfig.udpRefresh*`, `LinkService.refreshMulticastLock` (`qd_udp_refresh`) | Sí |
+| **Diagnóstico** cada 10 s mientras se espera al coche, con ping a su IP (`/system/bin/ping -c 1 -W 1`, en el hilo de vigilancia) | `RecoveryConfig.diagIntervalMs`, `carReachable` = `CarPing` (`qd_car_ping`) | Sí |
+
+La re-acogida no cuenta como «intento en marcha» para el ciclo de vida (§10) salvo en los 20 s siguientes a un
+broadcast del coche: el vídeo vivo de 30 s, la pausa de AA y el cierre a los 5 min siguen igual. «Desconectar» lo para
+todo (ACK no pedidos, puerto, vigilancia y ping).
+
+### 13.1 Qué buscar en el log
+
+| Línea | Significado |
+|---|---|
+| `QD/Link: re-acogida tras WATCHDOG: escucho otra vez en el puerto P hasta 300 s y llamo a 10.x.x.x con ACK no pedidos (…)` | Empieza la re-acogida (`enlace → RECOVERING`). |
+| `QD/Discovery: ACK no pedido #n a /10.x.x.x:18464 (MirrorPort=P)` | Cada ACK no pedido (el #1 con el JSON completo). |
+| `QD/Link: re-acogida: 10.x.x.x se anuncia; ACK en el acto con el puerto P` | Broadcast durante la re-acogida. |
+| `QD/Link: esperando al coche tras WATCHDOG (30,0 s): 0 datagramas · ACK 0 pedidos / 16 no pedidos · 0 TCP · reaperturas UDP 1 · re-acogida en el puerto P · coche en la zona Wi-Fi: no (ping)` | Diagnóstico cada 10 s. «sí (ping)» y 0 datagramas = la radio del coche está, pero no se anuncia (o no nos llega). |
+| `QD/Discovery: descubrimiento: reabro el socket UDP (20 s sin anuncios)` | Reapertura del UDP 18463 (y `HQL: MulticastLock cogido otra vez (UDP reabierto)`). |
+| `QD/Link: vuelta del coche tras 7,3 s: por anuncio / por ACK no pedido / por puerto anterior (…; último anuncio hace … ms, último ACK no pedido hace … ms · …)` | Cómo volvió. «Por ACK no pedido» = TCP ≤ 500 ms tras uno, sin anuncio en los 20 s anteriores; un coche que vuelve solo justo tras un ACK no se distingue (por eso van los tiempos). |
+| `QD/Link: no se pudo reutilizar el puerto P (…); uso uno aleatorio` | El puerto estable estaba ocupado. |
+| `QD/Link: re-acogida: el coche no volvió al puerto P en 300 s` | Fin de la re-acogida sin coche (`enlace → SEARCHING`). |
+
+### 13.2 Pruebas
+
+- `:qdcore`: `PhoneLinkRecoveryTest` (11: ACK en cada broadcast y reenvíos hasta el TCP; puerto estable y aleatorio si
+  está ocupado; sin puerto estable; re-acogida que acepta en el puerto de antes sin broadcast; cadencia de los ACK no
+  pedidos y `close()` que lo para todo; coche que solo hace caso a un ACK no pedido; broadcast durante la re-acogida;
+  un solo broadcast con el ACK perdido; reapertura del UDP tras el silencio con diagnóstico y ping; finales normales y
+  re-acogida apagada; el coche desde otra IP), `RecoveryLogicTest` (4, reloj de mentira: vigilancia, clasificación,
+  valores por defecto) y `DiscoveryListenerTest` (+3: cadencia con tramo lento, reapertura en el mismo puerto con los
+  reenvíos por el socket nuevo, calendarios de las políticas). `CarSim`: `maxBroadcasts` y `directMirrorPort`.
+- `:qdsim --scenario caida --local-phone`: corte de radio de 12 s (el coche ni habla ni lee; el móvil corta a los 10 s)
+  y vuelta en tres variantes: **a** directo al puerto de antes, **b** un solo anuncio con el ACK perdido, **c** solo con un
+  ACK no pedido. Las tres reconectan en < 10 s (≈ 0 ms, 1-2 s y 2 s desde que vuelve el coche) y el móvil dice «por puerto anterior», «por anuncio»
+  y «por ACK no pedido». Contra el móvil: `--scenario caida --target <IP del móvil>`.
+
+Sin probar todavía en el coche.

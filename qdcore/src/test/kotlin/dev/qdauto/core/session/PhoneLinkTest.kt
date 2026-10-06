@@ -3,6 +3,7 @@ package dev.qdauto.core.session
 import dev.qdauto.core.TestSupport.freeUdpPort
 import dev.qdauto.core.TestSupport.liveThreads
 import dev.qdauto.core.TestSupport.waitUntil
+import dev.qdauto.core.discovery.AckPolicy
 import dev.qdauto.core.discovery.CarAnnouncement
 import dev.qdauto.core.discovery.DiscoveryConfig
 import dev.qdauto.core.sim.CarSim
@@ -121,9 +122,11 @@ class PhoneLinkTest {
         val rec = LinkRecorder()
         val link = PhoneLink(
             PhoneLinkConfig(
-                discovery = DiscoveryConfig(port = 0, ackPort = car.localPort),
+                // Un ACK por intento (como QDLink): aquí se prueba que cada intento nuevo manda el suyo.
+                discovery = DiscoveryConfig(port = 0, ackPort = car.localPort, ackPolicy = AckPolicy.QDLINK),
                 acceptTimeoutMs = 200,
                 retryDelayMs = 100,
+                reAckOnBroadcast = false,
             ),
             rec,
         ).start()

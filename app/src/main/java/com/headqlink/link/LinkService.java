@@ -490,6 +490,31 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             else if (p2p != null) p2p.republish();
             else LinkState.setNetwork(LinkState.Level.IDLE, "");
         }
+
+        @Override
+        public void onRefreshMulticast(String why) {
+            refreshMulticastLock(why);
+        }
+    }
+
+    /**
+     * Hilo principal: suelta y vuelve a coger el MulticastLock (esperando al coche tras perder la sesión, o con el UDP
+     * reabierto). Tras un corte de radio no se sabe si los broadcasts del coche siguen llegando al socket con la pantalla
+     * apagada; coger el candado otra vez no cuesta nada.
+     */
+    private void refreshMulticastLock(String why) {
+        if (stopping) return;
+        try {
+            if (mcLock == null) {
+                WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                mcLock = wm.createMulticastLock("headqlink:mc");
+            }
+            while (mcLock.isHeld()) mcLock.release();
+            mcLock.acquire();
+            L.i("MulticastLock cogido otra vez (" + why + ")");
+        } catch (RuntimeException e) {
+            L.w("no se pudo volver a coger el MulticastLock (" + why + "): " + e.getMessage());
+        }
     }
 
     /** Hilo principal: la zona Wi-Fi se enciende o se apaga (o no se sabe). */

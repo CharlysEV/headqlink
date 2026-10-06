@@ -20,11 +20,15 @@ import kotlin.random.Random
  * - [port] = [RANDOM_PORT]: puerto aleatorio en 10001-65535 como QDLink (WF/a.java:249-264); 0: lo elige el sistema.
  * - [accept] espera con límite (QDLink: 20 s, WF/d.java:65) y se puede llamar varias veces: el servidor sigue abierto
  *   tras aceptar, como en QDLink, así que se pueden registrar conexiones extra del coche.
+ * - hql: [reuseAddress] (`SO_REUSEADDR`, por defecto sí, como el `ServerSocket` de Java en Linux/Android): permite
+ *   volver a escuchar en el puerto de una sesión que acaba de morir aunque su conexión siga en el kernel (FIN_WAIT,
+ *   TIME_WAIT o con datos sin entregar tras un corte de radio). Un puerto con otro servidor escuchando sigue fallando.
  */
 class MirrorServer(
     port: Int = RANDOM_PORT,
     bindAddress: InetAddress? = null,
     private val log: QdLog = QdLog.NONE,
+    private val reuseAddress: Boolean = true,
 ) : Closeable {
     private val server: ServerSocket = open(port, bindAddress)
 
@@ -71,10 +75,11 @@ class MirrorServer(
         throw last ?: IOException("no hay puerto libre")
     }
 
-    /** Opciones por defecto de la plataforma, como el `new ServerSocket(P)` de QDLink (backlog 50). */
+    /** Como el `new ServerSocket(P)` de QDLink (backlog 50), con `SO_REUSEADDR` explícito (hql). */
     private fun bind(bindAddress: InetAddress?, port: Int): ServerSocket {
         val s = ServerSocket()
         try {
+            s.reuseAddress = reuseAddress
             s.bind(InetSocketAddress(bindAddress, port), 50)
         } catch (e: IOException) {
             s.close()

@@ -2,6 +2,7 @@ package dev.qdauto.core.session
 
 import dev.qdauto.core.TestSupport.freeUdpPort
 import dev.qdauto.core.TestSupport.waitUntil
+import dev.qdauto.core.discovery.AckPolicy
 import dev.qdauto.core.discovery.CarAnnouncement
 import dev.qdauto.core.discovery.DiscoveryConfig
 import dev.qdauto.core.sim.CarSim
@@ -101,7 +102,7 @@ class PhoneLinkReconnectTest {
     private fun link(p: Ports, events: Events, config: PhoneLinkConfig, factory: ((PhoneSession) -> SessionListener)? = null, log: QdLog = QdLog.NONE): PhoneLink =
         PhoneLink(
             config.copy(
-                discovery = DiscoveryConfig(port = p.discovery, ackPort = p.ack),
+                discovery = config.discovery.copy(port = p.discovery, ackPort = p.ack),
                 session = SessionConfig(heartbeatInitialDelayMs = 100, heartbeatPeriodMs = 500),
             ),
             events,
@@ -214,7 +215,8 @@ class PhoneLinkReconnectTest {
     fun withoutReAckOnlyOneAckPerAttempt() {
         val p = Ports()
         val events = Events()
-        link(p, events, PhoneLinkConfig(retryDelayMs = 0, acceptTimeoutMs = 1_500))
+        // Como QDLink: un solo ACK por intento (sin re-ACK con los broadcasts ni reenvíos).
+        link(p, events, PhoneLinkConfig(discovery = DiscoveryConfig(ackPolicy = AckPolicy.QDLINK), retryDelayMs = 0, acceptTimeoutMs = 1_500, reAckOnBroadcast = false))
         val sim = sim(simConfig(p, broadcastMs = 50, ignoreAcks = 1))
         Thread.sleep(1_000)
         assertEquals(listOf(1), events.acks.map { it.first })

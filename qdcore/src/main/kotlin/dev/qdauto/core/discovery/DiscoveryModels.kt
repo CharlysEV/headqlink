@@ -20,8 +20,12 @@ data class DiscoveryConfig(
     val reuseAddress: Boolean = true,
     /** QDLink no toca SO_BROADCAST; activarlo no cambia lo que se recibe y permite responder a broadcast si hiciera falta. */
     val broadcast: Boolean = true,
-    /** Reenvío del ACK. Por defecto un solo envío, como QDLink: no se sabe qué hace el coche con ACKs repetidos (§11.2). */
-    val ackPolicy: AckPolicy = AckPolicy.QDLINK,
+    /**
+     * Reenvío del ACK. QDLink lo manda una sola vez ([AckPolicy.QDLINK]). hql: por defecto cada 2 s hasta que llega el
+     * TCP o termina el intento ([AckPolicy.UNTIL_CONNECTED]): en el C10 (2026-10-06), tras un corte de radio, el coche
+     * se anunció una sola vez, recibió (se supone) el único ACK y nunca conectó.
+     */
+    val ackPolicy: AckPolicy = AckPolicy.UNTIL_CONNECTED,
     /** `DeviceName`/`DeviceUUID`/`PassistMobileNum` del ACK: QDLink los manda vacíos (IU/e.java:83-89). */
     val deviceName: String = "",
     val deviceUuid: String = "",
@@ -32,15 +36,58 @@ data class DiscoveryConfig(
  * Política de reenvío del `Broadcast_ACK`.
  * QDLink lo manda una sola vez (WF/d.java:78-83); la spec (§1.4) sugiere, como opción, repetir el mismo ACK
  * cada 2 s desde los 3 s hasta los 20 s si no ha llegado la conexión TCP. Cancelar con [AckHandle.cancel] al aceptar.
+ *
+ * hql: [retries] reenvíos tras el primero, el primero a los [firstRetryDelayMs] y luego cada [retryIntervalMs]; si
+ * [slowAfterMs] > 0, a partir de ese tiempo desde el primer envío van cada [slowIntervalMs] (ver [delayAfter]).
  */
 data class AckPolicy(
     val retries: Int = 0,
     val firstRetryDelayMs: Long = 3_000,
     val retryIntervalMs: Long = 2_000,
+    /** hql: desde el primer envío, a partir de cuándo los reenvíos pasan a ir cada [slowIntervalMs] (0 = nunca). */
+    val slowAfterMs: Long = 0,
+    val slowIntervalMs: Long = 0,
 ) {
+    /** hql: espera hasta el siguiente envío tras el número [sent] (1 = el primero), hecho a los [elapsedMs] del primero. */
+    fun delayAfter(sent: Int, elapsedMs: Long): Long = when {
+        sent <= 1 -> firstRetryDelayMs
+        slowAfterMs > 0 && slowIntervalMs > 0 && elapsedMs >= slowAfterMs -> slowIntervalMs
+        else -> retryIntervalMs
+    }
+
+    /** hql: instantes (ms desde el primero) de los [n] primeros envíos, para el log y los tests. */
+    fun schedule(n: Int): List<Long> {
+        val out = ArrayList<Long>()
+        var t = 0L
+        val count = minOf(n.toLong(), retries.toLong() + 1).toInt()
+        for (k in 1..count) {
+            out += t
+            t += delayAfter(k, t)
+        }
+        return out
+    }
+
     companion object {
         val QDLINK = AckPolicy()
         val RESEND_UNTIL_20S = AckPolicy(retries = 9, firstRetryDelayMs = 3_000, retryIntervalMs = 2_000)
+
+        /**
+         * hql: cada 2 s hasta que llegue el TCP o termine el intento, que cancela los reenvíos (tope: 5 min). Es la
+         * política por defecto de [DiscoveryConfig].
+         */
+        val UNTIL_CONNECTED = AckPolicy(retries = 150, firstRetryDelayMs = 2_000, retryIntervalMs = 2_000)
+
+        /**
+         * hql: ACK no pedidos de la re-acogida tras un corte: cada 2 s el primer minuto y después cada 5 s, hasta que el
+         * intento termine (que los cancela).
+         */
+        val UNSOLICITED = AckPolicy(
+            retries = Int.MAX_VALUE,
+            firstRetryDelayMs = 2_000,
+            retryIntervalMs = 2_000,
+            slowAfterMs = 60_000,
+            slowIntervalMs = 5_000,
+        )
     }
 }
 
@@ -51,6 +98,9 @@ interface AckHandle {
 
     /** Envíos hechos hasta ahora. */
     val attempts: Int
+
+    /** hql: `System.nanoTime()` justo antes del último envío (0 = ninguno). */
+    val lastSentAtNanos: Long get() = 0L
 
     /** Para los reintentos pendientes (idempotente). Cuando vuelve, no hay ningún envío en curso ni habrá más. */
     fun cancel()

@@ -101,6 +101,16 @@ data class CarSimConfig(
     /** hql (C4): descartar los N primeros `Broadcast_ACK` y seguir anunciándose (para probar el re-ACK del teléfono). */
     val ignoreAcks: Int = 0,
     /**
+     * hql: `Connect_Broadcast` como mucho (después solo se espera el ACK). 0 = no se anuncia nunca: un coche que solo
+     * reacciona a un ACK que no pidió (la re-acogida del teléfono tras un corte de radio).
+     */
+    val maxBroadcasts: Int = Int.MAX_VALUE,
+    /**
+     * hql: > 0 = sin descubrimiento: conecta directamente a [connectHost] (o [broadcastAddress]) en este puerto, como un
+     * coche que tras un corte de radio vuelve al `MirrorPort` de antes sin anunciarse.
+     */
+    val directMirrorPort: Int = 0,
+    /**
      * Manía del C10 (2026-10-05): su receptor QDLink se cuelga con cualquier mensaje de vídeo (cabeceras de 48 B +
      * payload) de más de [C10_RECEIVER_LIMIT_BYTES]: deja de leer el TCP (el `write()` del teléfono se bloquea) sin
      * dejar de mandar heartbeats, hasta que el teléfono corta ~10 s después. El simulador hace lo mismo: deja de

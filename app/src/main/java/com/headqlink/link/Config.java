@@ -86,6 +86,20 @@ final class Config {
     static final String PEER_STRICT = "peer_strict";
     /** Relevo de la sesión cuando el coche se vuelve a anunciar con ella abierta. */
     static final String QD_SUPERSEDE = "qd_supersede";
+    /*
+     * Vuelta del coche tras un corte de radio (qdcore RecoveryConfig; C10, 2026-10-06). Todo activado por defecto; se
+     * puede apagar por partes con los extras (p. ej. --ez qd_reclaim false) para comparar.
+     */
+    /** ACK reenviado cada 2 s hasta que llega el TCP (false = uno solo, como QDLink). */
+    static final String QD_ACK_RESEND = "qd_ack_resend";
+    /** Reutilizar el MirrorPort de la última sesión en los intentos siguientes. */
+    static final String QD_STABLE_PORT = "qd_stable_port";
+    /** Re-acogida tras un final anormal: el mismo puerto con una espera larga y ACK no pedidos al coche. */
+    static final String QD_RECLAIM = "qd_reclaim";
+    /** Reabrir el UDP 18463 tras 20 s sin anuncios esperando al coche (y volver a coger el MulticastLock). */
+    static final String QD_UDP_REFRESH = "qd_udp_refresh";
+    /** Ping a la IP del coche en el diagnóstico de la espera (cada 10 s). */
+    static final String QD_CAR_PING = "qd_car_ping";
     /** PHONE_INFO y ACK: "fork" (MODEL, UUID propio y tamaño del vídeo) o "qdlink" (vacíos y geometría de QDLink). */
     static final String QD_PHONE_INFO = "qd_phone_info";
     /** Modo guardado al activar la prueba con patrón desde Diagnóstico. */
@@ -179,7 +193,8 @@ final class Config {
             String en = i.getStringExtra(LINK_ENGINE);
             if (ENGINE_QDAUTO.equals(en) || ENGINE_ORIGINAL.equals(en)) e.putString(LINK_ENGINE, en);
         }
-        for (String k : new String[]{QD_KEEP_VIDEO, PEER_STRICT, QD_SUPERSEDE}) {
+        for (String k : new String[]{QD_KEEP_VIDEO, PEER_STRICT, QD_SUPERSEDE, QD_ACK_RESEND, QD_STABLE_PORT, QD_RECLAIM,
+                QD_UDP_REFRESH, QD_CAR_PING}) {
             if (i.hasExtra(k)) e.putBoolean(k, i.getBooleanExtra(k, false));
         }
         if (i.hasExtra(CAR_GONE_MS)) e.putInt(CAR_GONE_MS, i.getIntExtra(CAR_GONE_MS, 0));
@@ -528,6 +543,32 @@ final class Config {
         return sp.getBoolean(QD_SUPERSEDE, true);
     }
 
+    boolean qdAckResend() {
+        return sp.getBoolean(QD_ACK_RESEND, true);
+    }
+
+    boolean qdStablePort() {
+        return sp.getBoolean(QD_STABLE_PORT, true);
+    }
+
+    boolean qdReclaim() {
+        return sp.getBoolean(QD_RECLAIM, true);
+    }
+
+    boolean qdUdpRefresh() {
+        return sp.getBoolean(QD_UDP_REFRESH, true);
+    }
+
+    boolean qdCarPing() {
+        return sp.getBoolean(QD_CAR_PING, true);
+    }
+
+    /** Los ajustes de la vuelta del coche tras un corte, para el log. */
+    String qdRecoverySummary() {
+        return "reenvíoACK=" + qdAckResend() + " puertoEstable=" + qdStablePort() + " reacogida=" + qdReclaim()
+                + " refrescoUDP=" + qdUdpRefresh() + " ping=" + qdCarPing();
+    }
+
     /** "fork" (por defecto) o "qdlink". */
     String qdPhoneInfo() {
         return "qdlink".equals(sp.getString(QD_PHONE_INFO, "fork")) ? "qdlink" : "fork";
@@ -595,7 +636,8 @@ final class Config {
                 + " fluidez=" + fluidity() + " mode=" + mode() + (MODE_APP.equals(mode()) ? " pkg=" + targetPackage() + " dpi=" + dpi() : "")
                 + " link=" + linkMode() + " engine=" + linkEngine() + " pantallaEncendida=" + keepScreenOn() + " termica=" + thermalMode()
                 + " esperarCoche=" + carWaitMin() + "min"
-                + (isQdEngine() ? " keepVideo=" + qdKeepVideo() + " supersede=" + qdSupersede() + " phoneInfo=" + qdPhoneInfo()
+                + (isQdEngine() ? " keepVideo=" + qdKeepVideo() + " supersede=" + qdSupersede() + " " + qdRecoverySummary()
+                + " phoneInfo=" + qdPhoneInfo()
                 + " carGone=" + carGoneMs() / 1000 + "s" + (peerStrict() ? " strict" : "") : "")
                 + " (0 = lo que pida el coche)";
     }

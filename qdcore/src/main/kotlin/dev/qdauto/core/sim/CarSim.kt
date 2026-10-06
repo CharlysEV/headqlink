@@ -31,10 +31,12 @@ import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Simulador del coche (lado head unit) para tests y para `:carsim`:
- * 1. emite `Connect_Broadcast` cada [CarSimConfig.broadcastIntervalMs] hasta recibir el `Broadcast_ACK`;
+ * 1. emite `Connect_Broadcast` cada [CarSimConfig.broadcastIntervalMs] hasta recibir el `Broadcast_ACK` (hql: como
+ *    mucho [CarSimConfig.maxBroadcasts]; o ninguno y directo al puerto de antes con [CarSimConfig.directMirrorPort]);
  * 2. conecta por TCP a la IP origen del ACK y al `MirrorPort`;
  * 3. hace el handshake del coche: `CAR_INFO` → `VIDEO_SUP_REQ` → `VIDEO_ARGS` → `VIDEO_CTRL{PlayStatus:1}`,
  *    esperando cada respuesta del teléfono (si [CarSimConfig.waitForReplies]);
@@ -55,6 +57,9 @@ class CarSim(
 
     @Volatile
     private var silent = false
+
+    /** hql: broadcasts enviados (para [CarSimConfig.maxBroadcasts]). */
+    private val broadcasts = AtomicInteger()
 
     /** hql (C4): lectura en pausa hasta este `System.nanoTime()` (0 = leyendo; `Long.MAX_VALUE` = hasta [resumeReading]). */
     private val readGate = Object()
@@ -236,21 +241,31 @@ class CarSim(
     private fun runMain() {
         try {
             setState(CarSimState.DISCOVERING)
-            val found = discover()
-            if (found == null) {
-                if (!closed.get()) finish("no llegó ningún Broadcast_ACK en ${config.discoveryTimeoutMs} ms")
-                return
+            val host: String
+            val port: Int
+            if (config.directMirrorPort > 0) {
+                // hql: el coche vuelve al puerto de antes sin anunciarse ni esperar ACK.
+                host = config.connectHost ?: config.broadcastAddress.hostAddress
+                port = config.directMirrorPort
+                log.i(TAG, "sin anunciarme: conecto directamente a $host:$port")
+            } else {
+                val found = discover()
+                if (found == null) {
+                    if (!closed.get()) finish("no llegó ningún Broadcast_ACK en ${config.discoveryTimeoutMs} ms")
+                    return
+                }
+                val (ack, from) = found
+                host = config.connectHost ?: from.address.hostAddress
+                port = ack.mirrorPort
             }
-            val (ack, from) = found
             setState(CarSimState.CONNECTING)
-            val host = config.connectHost ?: from.address.hostAddress
             val s = Socket()
             s.tcpNoDelay = true
-            s.connect(InetSocketAddress(host, ack.mirrorPort), config.connectTimeoutMs)
+            s.connect(InetSocketAddress(host, port), config.connectTimeoutMs)
             socket = s
             out = s.getOutputStream()
-            seen.noteConnected("$host:${ack.mirrorPort}")
-            log.i(TAG, "conectado a $host:${ack.mirrorPort}")
+            seen.noteConnected("$host:$port")
+            log.i(TAG, "conectado a $host:$port")
             if (closed.get()) {
                 s.close()
                 return
@@ -332,6 +347,8 @@ class CarSim(
 
     private fun sendBroadcast(sock: DatagramSocket, payload: ByteArray, target: InetSocketAddress) {
         if (closed.get() || silent) return
+        if (broadcasts.get() >= config.maxBroadcasts) return
+        broadcasts.incrementAndGet()
         try {
             sock.send(DatagramPacket(payload, payload.size, target))
             seen.noteBroadcast()

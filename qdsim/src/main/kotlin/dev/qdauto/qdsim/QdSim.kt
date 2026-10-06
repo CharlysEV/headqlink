@@ -1,6 +1,7 @@
 package dev.qdauto.qdsim
 
 import dev.qdauto.core.json.JsonObject
+import dev.qdauto.core.session.CarReturn
 import dev.qdauto.core.sim.CarInfoValues
 import dev.qdauto.core.sim.CarSim
 import dev.qdauto.core.sim.CarSimConfig
@@ -81,12 +82,16 @@ class Options(
     /** Pasar el vídeo de cada sesión por ffmpeg al acabar. */
     val decode: Boolean = false,
     val ffmpeg: File? = null,
+    /** `caida`: variantes de la vuelta del coche (a, b, c) en este orden. */
+    val variants: String = "abc",
+    /** `caida`: duración del corte de radio (s). */
+    val radioS: Int = 12,
 ) {
     /** `estricto`: los WARN cuentan como FAIL y las manías no se pueden desactivar. */
     val strict: Boolean get() = scenario == "estricto"
 
     companion object {
-        val SCENARIOS = listOf("normal", "estricto", "reconnect", "stall", "silent", "disconnect", "rack")
+        val SCENARIOS = listOf("normal", "estricto", "reconnect", "stall", "silent", "disconnect", "rack", "caida")
 
         val USAGE = """
             Uso: qdsim --scenario <escenario> [opciones]
@@ -99,6 +104,11 @@ class Options(
                 silent      silencio y sin leer, sin cerrar; a los 2 s otro arranque del coche se anuncia (relevo)
                 disconnect  DISCONNECT_REQ: espera DISCONNECT_RSP{CanDisconnect:1}, el cierre y la reconexión
                 rack        el coche ignora el primer ACK: el segundo debe llegar ≥ 400 ms después
+                caida       corte de radio de --radio-s (12) s: el coche ni habla ni lee y el móvil cierra la sesión;
+                            después vuelve (cada variante de --variant, por defecto abc) y tiene que reconectar en < 10 s:
+                              a  directo al puerto de antes, sin anunciarse ni esperar ACK
+                              b  se anuncia una sola vez y pierde ese ACK: necesita un reenvío
+                              c  no se anuncia: solo hace caso a un ACK no pedido del móvil
               En todos los escenarios se comprueban las manías del C10 vistas el 2026-10-05 (activas por defecto):
                 tamano_mensaje  el receptor del coche se cuelga con un mensaje de vídeo (48 B + payload) de más de
                                 512 KiB: el coche simulado deja de leer --hang s (manda heartbeats) y cierra → FAIL;
@@ -118,6 +128,8 @@ class Options(
               --duration S         segundos de vídeo por sesión (20; normal: 30)
               --gap-ms MS          espera entre cierre y nuevo anuncio (200)
               --stall-s S          duración del corte simulado (5)
+              --radio-s S          caida: duración del corte de radio (12; el móvil corta a los ~10 s)
+              --variant LETRAS     caida: variantes a ejecutar, p. ej. a, bc o abc (abc)
               --width/--height     VIDEO_ARGS (1920x882)   --car-width/--car-height  CAR_INFO (1920x882)
               --fps/--bitrate/--gop  VIDEO_ARGS (30, 5080320, 3)
               --uuid/--name        DeviceUUID/DeviceName del broadcast (QDSIM-C10 / LeapMotor-QDSIM)
@@ -166,6 +178,8 @@ class Options(
             val limitKiB = m["limit"]?.let { it.toIntOrNull()?.takeIf { n -> n >= 0 } ?: throw IllegalArgumentException("--limit espera KiB: $it") }
             val hangS = m["hang"]?.let { it.replace(',', '.').toDoubleOrNull()?.takeIf { s -> s > 0 } ?: throw IllegalArgumentException("--hang espera segundos: $it") }
             val ffmpeg = m["ffmpeg"]?.let { File(it) }
+            val variants = (m["variant"] ?: "abc").lowercase(Locale.ROOT)
+            require(variants.isNotEmpty() && variants.all { it in "abc" }) { "--variant espera letras a, b o c: $variants" }
             return Options(
                 scenario = scenario,
                 target = InetAddress.getByName(m["target"] ?: if (local) "127.0.0.1" else "255.255.255.255"),
@@ -192,6 +206,8 @@ class Options(
                 spsCheck = !noSps,
                 decode = decode || ffmpeg != null || strict,
                 ffmpeg = ffmpeg,
+                variants = variants,
+                radioS = int("radio-s", 12).coerceAtLeast(1),
             )
         }
     }
@@ -208,6 +224,7 @@ private class Probe(private val t0: Long) : CarSimListener {
     @Volatile var disconnectRsp: ControlMessage? = null
     @Volatile var configBeforeIdr = false
     @Volatile var ackFrom: InetSocketAddress? = null
+    @Volatile var mirrorPort = -1
     @Volatile var hangMs = -1L
 
     private fun now() = (System.nanoTime() - t0) / 1_000_000
@@ -219,6 +236,7 @@ private class Probe(private val t0: Long) : CarSimListener {
     override fun onAck(ack: BroadcastAck, from: InetSocketAddress) {
         ackMs = now()
         ackFrom = from
+        mirrorPort = ack.mirrorPort
     }
 
     override fun onStateChanged(state: CarSimState) {
@@ -246,6 +264,7 @@ private class Probe(private val t0: Long) : CarSimListener {
 class QdSim(private val o: Options) {
     private val log = QdLog.stdout(if (o.verbose) LogLevel.DEBUG else LogLevel.WARN)
     private val results = ArrayList<String>()
+    private var localPhone: LocalPhone? = null
     private var failures = 0
     private var sessionNo = 0
 
@@ -280,7 +299,10 @@ class QdSim(private val o: Options) {
         return f
     }
 
-    private fun config(ignoreAcks: Int = 0) = CarSimConfig(
+    /** Cómo vuelve el coche ([caida]): broadcasts como mucho y, si > 0, directo a ese puerto de [directHost]. */
+    private class Comeback(val maxBroadcasts: Int = Int.MAX_VALUE, val directPort: Int = 0, val directHost: String? = null)
+
+    private fun config(ignoreAcks: Int = 0, comeback: Comeback = Comeback()) = CarSimConfig(
         broadcastAddress = o.target,
         broadcastIntervalMs = o.broadcastMs,
         discoveryTimeoutMs = 120_000,
@@ -300,15 +322,25 @@ class QdSim(private val o: Options) {
         ignoreAcks = ignoreAcks,
         receiverLimitBytes = o.limitBytes,
         receiverHangMs = o.hangMs,
+        maxBroadcasts = comeback.maxBroadcasts,
+        directMirrorPort = comeback.directPort,
+        connectHost = comeback.directHost,
     )
 
     /** Arranca un coche y espera a que el móvil le mande vídeo. */
-    private fun startCar(ignoreAcks: Int = 0): Pair<CarSim, Probe> {
+    private fun startCar(ignoreAcks: Int = 0, comeback: Comeback = Comeback()): Pair<CarSim, Probe> {
         val t0 = System.nanoTime()
         val probe = Probe(t0)
-        val sim = CarSim(config(ignoreAcks), probe, log).start()
+        val sim = CarSim(config(ignoreAcks, comeback), probe, log).start()
         sessionNo++
-        say("S$sessionNo: coche anunciándose a ${o.target.hostAddress}:18463 cada ${o.broadcastMs} ms")
+        when {
+            comeback.directPort > 0 ->
+                say("S$sessionNo: coche de vuelta, directo a ${comeback.directHost ?: o.target.hostAddress}:${comeback.directPort} sin anunciarse")
+            comeback.maxBroadcasts == 0 -> say("S$sessionNo: coche de vuelta, sin anunciarse: espera un ACK no pedido en UDP 18464")
+            comeback.maxBroadcasts < Int.MAX_VALUE ->
+                say("S$sessionNo: coche de vuelta, se anuncia ${comeback.maxBroadcasts} vez a ${o.target.hostAddress}:18463" + if (ignoreAcks > 0) " y pierde $ignoreAcks ACK" else "")
+            else -> say("S$sessionNo: coche anunciándose a ${o.target.hostAddress}:18463 cada ${o.broadcastMs} ms")
+        }
         return sim to probe
     }
 
@@ -410,6 +442,7 @@ class QdSim(private val o: Options) {
         say("manías del C10: $limit · ${if (o.spsCheck) "SPS/PPS repetidos" else "sin comprobar SPS/PPS repetidos"}" +
             (if (o.decode) " · ffmpeg al final de cada sesión" else "") + if (o.strict) " · estricto: los WARN cuentan como FAIL" else "")
         val phone = if (o.localPhone) LocalPhone(log).start() else null
+        localPhone = phone
         try {
             when (o.scenario) {
                 "normal", "estricto" -> normal()
@@ -418,6 +451,7 @@ class QdSim(private val o: Options) {
                 "silent" -> silent()
                 "disconnect" -> disconnect()
                 "rack" -> rack()
+                "caida" -> caida()
             }
         } catch (e: Exception) {
             check(false, "excepción: $e")
@@ -535,5 +569,67 @@ class QdSim(private val o: Options) {
         check(ok && p.ackMs >= 400, "S1: segundo ACK a los ${p.ackMs} ms del primer broadcast (≥ 400 ms) y conexión")
         play(sim, 3)
         finish(sim, p, "S1")
+    }
+
+    /**
+     * Corte de radio de verdad (C10, 2026-10-06): el coche ni habla ni lee [Options.radioS] s, el móvil cierra la
+     * sesión (WATCHDOG/WRITE_STALL a los ~10 s) y el coche vuelve de una de tres maneras (no se sabe cuál usa el C10):
+     * directo al puerto de antes (a), anunciándose una sola vez y perdiendo ese ACK (b) o solo con un ACK no pedido (c).
+     * Con la re-acogida del móvil, las tres tienen que reconectar en < 10 s.
+     */
+    private fun caida() {
+        for (v in o.variants) {
+            val (sim, p) = startCar()
+            val label = "S$sessionNo"
+            if (!expectVideo(sim, p, null, label)) return
+            play(sim, 3)
+            quirks(sim, p, label)
+            val port = p.mirrorPort
+            val phoneIp = p.ackFrom?.address?.hostAddress
+            say("$label: corte de radio de ${o.radioS} s (el coche ni habla ni lee); después vuelve con la variante $v")
+            sim.goSilent()
+            sim.pauseReading(0)
+            Thread.sleep(o.radioS * 1000L)
+            // a: 1 s más tarde, para no caer justo tras un ACK no pedido (cada 2 s desde el corte): el móvil no podría
+            // distinguir esa vuelta de una provocada por el ACK.
+            if (v == 'a') Thread.sleep(1_000)
+            // Vuelve la radio: la conexión vieja ya no existe en el coche.
+            sim.closeAbruptly()
+            sim.awaitTermination(5_000)
+            decode(label)
+            localPhone?.lastReturn = null
+            val (sim2, p2) = when (v) {
+                'a' -> startCar(comeback = Comeback(maxBroadcasts = 0, directPort = port, directHost = phoneIp))
+                'b' -> startCar(ignoreAcks = 1, comeback = Comeback(maxBroadcasts = 1))
+                else -> startCar(comeback = Comeback(maxBroadcasts = 0))
+            }
+            val label2 = "S$sessionNo"
+            val ok = expectVideo(sim2, p2, null, label2)
+            val r = sim2.report()
+            val deadline = System.currentTimeMillis() + 2_000
+            while (localPhone != null && localPhone?.lastReturn == null && System.currentTimeMillis() < deadline) Thread.sleep(20)
+            val back = localPhone?.lastReturn
+            val how = back?.let { (h, ms) -> " · móvil: ${h.label} (${ms} ms tras la pérdida)" } ?: ""
+            val what = when (v) {
+                'a' -> "directo al puerto $port"
+                'b' -> "1 anuncio y un ACK perdido"
+                else -> "solo ACK no pedido"
+            }
+            val maxBroadcasts = if (v == 'b') 1 else 0
+            check(
+                ok && p2.streamingMs in 0..9_999 && r.broadcastsSent <= maxBroadcasts,
+                "$label2: variante $v ($what): VIDEO_CTRL{1} a los ${p2.streamingMs} ms de volver (< 10 s), ${r.broadcastsSent} anuncios$how",
+            )
+            val expected = when (v) {
+                'b' -> CarReturn.BROADCAST
+                'c' -> CarReturn.UNSOLICITED_ACK
+                else -> CarReturn.OLD_PORT
+            }
+            val got = back?.first
+            if (expected != null && got != null) check(got == expected, "$label2: el móvil dice «${got.label}» (se espera «${expected.label}»)")
+            play(sim2, 2)
+            finish(sim2, p2, label2)
+        }
+        say("Revisa el log del móvil: «re-acogida tras …», «ACK no pedido #…», «esperando al coche tras …» y «vuelta del coche tras X s: …».")
     }
 }
