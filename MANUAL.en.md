@@ -320,6 +320,19 @@ version). That tells us whether the C10 supports it.
   Efficiency tabs), "Photos", "Videos", "Web", "TV", "Radio", "Games" and "Settings". With Android Auto on screen, the
   panel hides by itself after a few seconds; tap the left edge to bring it back. Photos, videos, web, TV and games are
   **only for when the car is stopped**.
+- **"Car" section** (all estimated from the phone's sensors and open services, without car data):
+  - "Route": destination, arrival, expected energy and consumption; the elevation profile coloured by slope (descents
+    in green, where energy is recovered), the wind along the way, the chargers and the expected battery; the battery on
+    arrival in a ring (set your % with "−5"/"+5"), the weather at the destination and the chargers along the route ("Go"
+    opens Google Maps navigation).
+  - "Driving": the next manoeuvre in large, with a bar that empties until the turn, the lanes and the manoeuvre after;
+    the speed with the speed-limit sign, heading, altitude, slope and the sun until sunset.
+  - "Trips": the current trip and the saved ones, with their route, consumption, climbing and cost; the km of the last
+    14 days and the records.
+  - "Gauges": speedometer with the limit and the maximum, G forces with the trail of the last seconds and the peaks,
+    inclination and a smoothness score (0-100) from the jerks when accelerating, braking and turning.
+  - "Efficiency": the power of the last 2 minutes (what is recovered in green), consumption now, for the trip and on
+    average, where the energy goes, the trip cost, the CO₂ that did not come out of a tailpipe and a tip.
 - **Touchscreen:** works as in Android Auto, with **multi-touch** up to 3 fingers (for example, pinch to zoom the map).
 - **Steering wheel buttons:** play/pause, next and previous work through the **car's Bluetooth**, with no extra pairing.
 - **Sound:** music and directions come out of the phone over the **car's Bluetooth**, so the phone must be connected to
@@ -464,8 +477,8 @@ If you're connected, saving another profile makes the car and Android Auto recon
 ### Settings from the car ("Auto extended")
 
 The "Settings" button on the car's panel lets you change the picture profile and "Smoothness" ("Apply · reconnects in
-a few seconds"), auto-hide the panel and latency optimizations, and see the connection and engine in use. Only use it
-with the car stopped.
+a few seconds"), auto-hide the panel and latency optimizations, the "Electricity price" (€/kWh, for the cost of trips;
+0.20 by default), and see the connection and engine in use. Only use it with the car stopped.
 
 ### "Language"
 
@@ -484,6 +497,8 @@ Paste the URL of an M3U list or tap "Choose file". Without a radio list, the car
   the problem is the connection or Android Auto. **Turn it off afterwards.**
 - "Test options (QDAuto)": for testing the engine. Normally leave them as they are. One of them is "Wait for the car to
   come back, in seconds (5-600; empty = 30)".
+- "Extended mode preview": the car panel on the phone (landscape) with a demo drive; tap it as in the car. Nothing is
+  saved, and it is not available while connected to the car.
 
 ---
 

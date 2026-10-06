@@ -325,6 +325,19 @@ admite.
   Conducción, Viajes, Instrumentos y Eficiencia), «Fotos», «Vídeos», «Web», «TV», «Radio», «Juegos» y «Ajustes». Con
   Android Auto en pantalla, el panel se oculta solo a los pocos segundos; toca el borde izquierdo para que vuelva.
   Fotos, vídeos, web, TV y juegos son **solo para cuando el coche está parado**.
+- **Sección «Coche»** (todo estimado con los sensores del móvil y servicios abiertos, sin datos del coche):
+  - «Ruta»: destino, llegada, energía y consumo previstos; el perfil de elevación coloreado por la pendiente (en verde
+    las bajadas, donde se recupera energía), el viento por tramos, los cargadores y la batería prevista; la batería al
+    llegar en un anillo (indica tu % con «−5»/«+5»), el tiempo en el destino y los cargadores junto a la ruta («Ir»
+    abre la navegación de Google Maps).
+  - «Conducción»: la próxima maniobra en grande, con una barra que se vacía hasta el giro, los carriles y la maniobra
+    de después; la velocidad con la señal del límite, el rumbo, la altitud, la pendiente y el sol hasta la puesta.
+  - «Viajes»: el viaje en curso y los guardados, con su recorrido, consumo, desnivel y coste; los km de los últimos 14
+    días y los récords.
+  - «Instrumentos»: velocímetro con el límite y la máxima, fuerzas G con la estela de los últimos segundos y los picos,
+    inclinación y una nota de suavidad (0-100) según los tirones al acelerar, frenar y girar.
+  - «Eficiencia»: la potencia de los últimos 2 minutos (en verde lo que se recupera), el consumo ahora, del viaje y
+    medio, en qué se va la energía, el coste del viaje, el CO₂ que no ha salido por un tubo de escape y un consejo.
 - **Pantalla táctil:** funciona como en Android Auto, con **multitáctil** de hasta 3 dedos (por ejemplo, pellizcar para
   hacer zoom en el mapa).
 - **Botones del volante:** reproducir/pausa, siguiente y anterior funcionan a través del **Bluetooth del coche**, sin
@@ -471,8 +484,8 @@ Si estás conectado, al guardar otro perfil el coche y Android Auto se reconecta
 ### Ajustes desde el coche («Auto extendido»)
 
 El botón «Ajustes» del panel del coche permite cambiar el perfil de imagen y la «Fluidez» («Aplicar · reconecta unos
-segundos»), ocultar el panel solo y las optimizaciones de latencia, y ver la conexión y el motor que se están usando.
-Úsalo solo con el coche parado.
+segundos»), ocultar el panel solo y las optimizaciones de latencia, el «Precio de la electricidad» (€/kWh, para el coste
+de los viajes; 0,20 de serie), y ver la conexión y el motor que se están usando. Úsalo solo con el coche parado.
 
 ### «Idioma»
 
@@ -492,6 +505,8 @@ populares.
   saber si falla la conexión o Android Auto. **Apágala al terminar.**
 - «Opciones de prueba (QDAuto)»: para probar el motor. Lo normal es dejarlas como vienen. Entre ellas está «Espera a
   que vuelva el coche, en segundos (5-600; vacío = 30)».
+- «Vista previa del modo extendido»: el panel del coche en el móvil (en horizontal), con un trayecto de demostración;
+  se toca como en el coche. No se guarda nada y no está disponible con el coche conectado.
 
 ---
 

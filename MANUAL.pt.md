@@ -338,6 +338,19 @@ admite.
   Viagens, Instrumentos e Eficiência), «Fotos», «Vídeos», «Web», «TV», «Rádio», «Jogos» e «Definições». Com o Android
   Auto no ecrã, o painel esconde-se sozinho ao fim de alguns segundos; toque na margem esquerda para que volte. Fotos,
   vídeos, web, TV e jogos são **só para quando o carro está parado**.
+- **Secção «Carro»** (tudo estimado com os sensores do telemóvel e serviços abertos, sem dados do carro):
+  - «Rota»: destino, chegada, energia e consumo previstos; o perfil de elevação colorido pela inclinação (a verde as
+    descidas, onde se recupera energia), o vento por troços, os carregadores e a bateria prevista; a bateria à chegada
+    num anel (indique a sua % com «−5»/«+5»), o tempo no destino e os carregadores ao longo da rota («Ir» abre a
+    navegação do Google Maps).
+  - «Condução»: a próxima manobra em grande, com uma barra que se esvazia até à viragem, as faixas e a manobra seguinte;
+    a velocidade com o sinal do limite, o rumo, a altitude, a inclinação e o sol até ao pôr do sol.
+  - «Viagens»: a viagem em curso e as guardadas, com o percurso, consumo, desnível e custo; os km dos últimos 14 dias e
+    os recordes.
+  - «Instrumentos»: velocímetro com o limite e a máxima, forças G com o rasto dos últimos segundos e os picos,
+    inclinação e uma nota de suavidade (0-100) pelos solavancos ao acelerar, travar e virar.
+  - «Eficiência»: a potência dos últimos 2 minutos (a verde o que se recupera), o consumo agora, da viagem e médio, para
+    onde vai a energia, o custo da viagem, o CO₂ que não saiu por um tubo de escape e uma dica.
 - **Ecrã tátil:** funciona como no Android Auto, com **multitoque** até 3 dedos (por exemplo, juntar os dedos para fazer
   zoom no mapa).
 - **Botões do volante:** reproduzir/pausa, seguinte e anterior funcionam através do **Bluetooth do carro**, sem
@@ -486,8 +499,8 @@ Se estiver ligado, ao guardar outro perfil o carro e o Android Auto voltam a lig
 ### Definições a partir do carro («Auto estendido»)
 
 O botão «Definições» do painel do carro permite mudar o perfil de imagem e a «Fluidez» («Aplicar · volta a ligar em
-poucos segundos»), ocultar o painel sozinho e as otimizações de latência, e ver a ligação e o motor em uso. Use-o só
-com o carro parado.
+poucos segundos»), ocultar o painel sozinho e as otimizações de latência, o «Preço da eletricidade» (€/kWh, para o custo
+das viagens; 0,20 por omissão), e ver a ligação e o motor em uso. Use-o só com o carro parado.
 
 ### «Idioma»
 
@@ -506,6 +519,8 @@ Cole o URL de uma lista M3U ou toque em «Escolher ficheiro». Sem lista de rád
   que falha é a ligação ou o Android Auto. **Desative-o no fim.**
 - «Opções de teste (QDAuto)»: para testar o motor. Normalmente, deixe-as como estão. Entre elas está «Esperar que o carro
   volte, em segundos (5-600; vazio = 30)».
+- «Pré-visualização do modo estendido»: o painel do carro no telemóvel (na horizontal), com um trajeto de demonstração;
+  toca-se como no carro. Nada é guardado e não está disponível com o carro ligado.
 
 ---
 
