@@ -121,6 +121,10 @@ public class CarCloudActivity extends Activity {
                 askCustomKwh();
             }
         });
+        // «Otra» ya elegida: tocarla otra vez deja cambiar los kWh (un RadioButton marcado no avisa de nada).
+        findViewById(R.id.hql_cloud_profile_custom).setOnClickListener(v -> {
+            if (CarCloudStore.PROFILE_CUSTOM.equals(store.profile())) askCustomKwh();
+        });
         test.setOnClickListener(v -> readNow());
         wipe.setOnClickListener(v -> confirmWipe());
         String saved = CarCloudSession.email(this);
@@ -146,6 +150,7 @@ public class CarCloudActivity extends Activity {
         if (hasCert) {
             try {
                 LeapTls.Identity id = store.identity();
+                if (id == null) throw new IOException("certificado borrado");
                 String cn = id.commonName();
                 String until = Str.get(R.string.hql_cloud_cert_until, id.notAfter());
                 certText = Str.get(R.string.hql_cloud_cert_ok, (cn.isEmpty() ? "" : "CN=" + cn + " · ") + until);

@@ -24,6 +24,8 @@ final class CarCloudSession {
 
     private static LeapApi api;
     private static CarCloudStore.Saved saved;
+    /** Pedido de olvidar el cliente (sin esperar al candado: lo pide la interfaz mientras el sondeo puede estar leyendo). */
+    private static volatile boolean stale;
     /** Transporte de las pruebas (null: el real). */
     private static LeapApi.Transport testTransport;
 
@@ -35,12 +37,15 @@ final class CarCloudSession {
         testTransport = t;
         api = null;
         saved = null;
+        stale = false;
     }
 
-    /** Se olvida el cliente (certificado nuevo, clave del servidor aceptada, sesión cerrada): se rehace al usarlo. */
-    static synchronized void invalidate() {
-        api = null;
-        saved = null;
+    /**
+     * Se olvida el cliente (certificado nuevo, clave del servidor aceptada, sesión cerrada): se rehace al usarlo. No
+     * espera al candado (se llama desde la interfaz): lo aplica el siguiente uso.
+     */
+    static void invalidate() {
+        stale = true;
     }
 
     private static LeapApi.Transport transport(CarCloudStore st) {
@@ -62,6 +67,11 @@ final class CarCloudSession {
 
     /** Cliente con la sesión guardada, o NotConfigured si falta algo. */
     private static void ensure(CarCloudStore st) throws IOException, GeneralSecurityException {
+        if (stale) {
+            stale = false;
+            api = null;
+            saved = null;
+        }
         if (api != null && api.loggedIn() && saved != null) return;
         CarCloudStore.Saved s;
         try {
@@ -157,10 +167,10 @@ final class CarCloudSession {
         CarCloud.settingsChanged();
     }
 
-    /** El VIN elegido termina en… (para enseñarlo: «…1234»), o "". */
-    static synchronized String vinTail(Context ctx) {
+    /** El VIN elegido termina en… (para enseñarlo: «…1234»), o "". Lee lo guardado: no espera al candado. */
+    static String vinTail(Context ctx) {
         try {
-            CarCloudStore.Saved s = saved != null ? saved : new CarCloudStore(ctx).session();
+            CarCloudStore.Saved s = new CarCloudStore(ctx).session();
             if (s == null || s.vin.length() < 4) return "";
             return "…" + s.vin.substring(s.vin.length() - 4);
         } catch (IOException | GeneralSecurityException e) {
@@ -168,10 +178,10 @@ final class CarCloudSession {
         }
     }
 
-    /** El correo de la sesión (para rellenar el campo al volver a entrar), o "". */
-    static synchronized String email(Context ctx) {
+    /** El correo de la sesión (para rellenar el campo al volver a entrar), o "". Lee lo guardado: no espera al candado. */
+    static String email(Context ctx) {
         try {
-            CarCloudStore.Saved s = saved != null ? saved : new CarCloudStore(ctx).session();
+            CarCloudStore.Saved s = new CarCloudStore(ctx).session();
             return s == null ? "" : s.email;
         } catch (IOException | GeneralSecurityException e) {
             return "";
