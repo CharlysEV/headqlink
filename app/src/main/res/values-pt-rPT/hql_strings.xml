@@ -492,4 +492,35 @@
     <string name="hql_usb_net_open_failed">Cabo USB: não foi possível abrir %1$s (está a ser usado por outra aplicação, como o QDLink?)</string>
     <string name="hql_usb_net_other">Cabo USB: o acessório não é o do carro (%1$s)</string>
     <string name="hql_qd_usb_over_tcp">Trama do cabo USB por Wi-Fi (teste com qdsim --usb-framing): blocos de 512 B sobre o TCP. O carro não a entende: deixe-a desligada no carro</string>
+
+    <!-- headqlink: arranque manual del servidor de Android Auto (sin accesibilidad) -->
+    <string name="hql_aa_server_start_title">Arranque do servidor do Android Auto</string>
+    <string name="hql_aa_server_start_auto">Automático (acessibilidade) · Recomendado</string>
+    <string name="hql_aa_server_start_manual">Manual (sem acessibilidade)</string>
+    <string name="hql_aa_server_start_help">Automático: o HeadQLink inicia e para sozinho o servidor do Android Auto, com o seu serviço de acessibilidade. Manual: não é preciso a acessibilidade, mas é o utilizador que o inicia (Android Auto › ⋮ › Iniciar servidor da unidade principal) após cada reinício do telemóvel ou atualização do Android Auto, e fica ligado até o parar (numa Wi-Fi pública, qualquer aparelho dessa rede poderia tentar ligar-se). Se estiver desligado ao ligar, o HeadQLink avisa. Aplica-se de imediato.</string>
+    <string name="hql_aa_server_wait">À espera de que inicie o servidor do Android Auto</string>
+    <string name="hql_aa_server_wait_hint">Inicie o servidor: Android Auto › ⋮ › Iniciar servidor da unidade principal. Toque aqui ou na linha «Auto» para abrir o Android Auto; o HeadQLink continua sozinho assim que responder.</string>
+    <string name="hql_aa_server_ready">Servidor do Android Auto pronto</string>
+    <string name="hql_aa_server_ask_title">Inicie o servidor do Android Auto</string>
+    <string name="hql_aa_server_ask_text">Android Auto › ⋮ › Iniciar servidor da unidade principal. Toque para abrir o Android Auto; o HeadQLink continua sozinho assim que estiver ligado.</string>
+    <string name="hql_aa_server_ask_channel">Arranque manual do Android Auto</string>
+    <string name="hql_aa_server_info_channel">Servidor do Android Auto</string>
+    <string name="hql_aa_server_still_on_text">Pode pará-lo em Android Auto › ⋮ › Parar servidor (recomendável se se ligar a uma Wi-Fi pública).</string>
+    <string name="hql_reason_manual">arranque manual: pare e volte a iniciar o servidor em Android Auto › ⋮</string>
+    <string name="hql_reason_start_server_manual">inicie o servidor em Android Auto › ⋮ › Iniciar servidor da unidade principal</string>
+    <string name="hql_req_info">Informação</string>
+    <string name="hql_req_aa_server">Servidor do Android Auto</string>
+    <string name="hql_req_aa_server_on">Ligado. No fim continua ligado: pare-o em Android Auto › ⋮ › Parar servidor se se for ligar a uma Wi-Fi pública.</string>
+    <string name="hql_req_aa_server_off">Desligado: inicie-o em Android Auto › ⋮ › Iniciar servidor da unidade principal. Se ao ligar continuar desligado, o HeadQLink avisa e espera.</string>
+    <string name="hql_req_aa_server_unknown">Não foi possível verificar</string>
+    <string name="hql_req_auto_use">Modo automático</string>
+    <string name="hql_req_manual_title">Sem acessibilidade?</string>
+    <string name="hql_req_manual_why">Pode ser o utilizador a iniciar o servidor do Android Auto (arranque manual) e não ativar a acessibilidade. O automático continua a ser o recomendado.</string>
+    <string name="hql_req_manual_use">Arranque manual</string>
+    <string name="hql_req_acc_manual">Só para o modo automático</string>
+    <string name="hql_req_dev_manual">Sem a acessibilidade não é possível verificar: se em Android Auto › ⋮ não vir «Iniciar servidor da unidade principal», ative-o (guia abaixo).</string>
+    <string name="hql_manual_confirm_title">Arranque manual do servidor do Android Auto</string>
+    <string name="hql_manual_confirm_msg">Sem a acessibilidade, o HeadQLink não inicia nem para o servidor do Android Auto:\n\n•  Inicie-o (Android Auto › ⋮ › Iniciar servidor da unidade principal) após cada reinício do telemóvel ou atualização do Android Auto. Se estiver desligado ao ligar, o HeadQLink avisa.\n•  Fica ligado até o parar. Numa Wi-Fi pública, qualquer aparelho dessa rede poderia tentar ligar-se: pare-o quando não estiver no carro (⋮ › Parar servidor).\n\nO arranque automático continua a ser o recomendado. Pode voltar a ele em Definições de imagem › Avançado.</string>
+    <string name="hql_setup_guide_manual_title">Como iniciar o servidor do Android Auto</string>
+    <string name="hql_setup_guide_manual">1.  Toque em «Abrir AA».\n2.  Toque em ⋮ (em cima à direita) › «Iniciar servidor da unidade principal».\n3.  Se essa opção não existir: desloque-se até ao fim, toque 10 vezes em «Versão», aceite o aviso e repita o passo 2.\n4.  Volte ao HeadQLink: a linha «Servidor do Android Auto» passa a «Ligado».\nFaça-o após cada reinício do telemóvel ou atualização do Android Auto. Para o parar: ⋮ › «Parar servidor da unidade principal».</string>
 </resources>

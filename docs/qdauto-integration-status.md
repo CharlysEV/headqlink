@@ -1081,3 +1081,102 @@ Líneas nuevas (etiqueta `HQL/USB`):
 Pruebas: `UsbReopenPolicyTest` (5: espera creciente con sesiones calladas, reinicio solo con CAR_INFO de ≥ 10 s, 20 min de
 coche callado, ENODEV/EIO hasta que vuelve, detección de ENODEV/EIO sin falsos positivos) y un caso nuevo en
 `StallDetectorTest` (textos «CABLE: el coche no lee» y resumen «cable»).
+
+---
+
+## 15. Sin accesibilidad: arranque manual del servidor de Android Auto (2026-10-06)
+
+**Por qué.** En los modos Android Auto la accesibilidad (`TouchService`) solo la usa `AaServerStarter`: abrir los
+ajustes de AA › ⋮ › «Iniciar servidor de la unidad principal» (127.0.0.1:5277) y luego «Parar servidor unidad
+principal», la capa «Cerrando Auto…» y los ganchos del desbloqueo. Los toques del coche van por el protocolo de AA
+(`TouchService.inject` solo lo usa `AppSource`, el modo App). Desde AA 17.4 no hay intent para arrancar el servidor, de
+ahí la automatización; pero en Android 13+ una app instalada desde un APK necesita antes «Permitir ajustes
+restringidos», y eso es lo que más cuesta a los usuarios.
+
+**Ajuste.** «Arranque del servidor de Android Auto» (`aa_server_start`): «Automático (accesibilidad) · Recomendado»
+(`auto`, por defecto: lo de siempre) o «Manual (sin accesibilidad)» (`manual`). Está en Ajustes de imagen › Avanzado
+(solo en los modos Auto) y en la Comprobación: con el automático y la accesibilidad sin activar, la fila «¿Sin
+accesibilidad?» ofrece «Arranque manual» (con un diálogo que explica lo que cambia); con el manual, la fila del servidor
+lleva «Modo automático». También como extra `aa_server_start`. Se lee en cada decisión: vale en el acto.
+
+**Qué hace el manual.** Nunca se pulsa nada (ni arrancar, ni parar, ni la capa, ni el botón de la notificación de AA):
+
+| Situación | Qué pasa |
+|---|---|
+| Conectar, Bluetooth del coche, cable USB, coche anunciado | `LinkLifecycle` pide `CHECK_SERVER` (en cada arranque, sea cual sea el disparador, y otra vez con el coche anunciado: el último estado conocido no vale). `AaServerManual` mira en su hilo si 127.0.0.1:5277 contesta (conexión con 400 ms de tiempo máximo; si nuestra head unit está conectada no conecta: está encendido) |
+| Encendido | Se sigue como siempre: el Self-Mode conecta solo, **también con el móvil bloqueado** (Bluetooth y cable no necesitan desbloquear) |
+| Apagado cuando hace falta (lo anterior, una sesión que necesita AA —Self-Mode sin 5277— o el coche que vuelve con AA en pausa pero caído) | Notificación de prioridad alta **«Arranca el servidor de Android Auto»** («Android Auto › ⋮ › Iniciar servidor de la unidad principal»; al tocarla, los ajustes de AA, el mismo intent que la automatización, o su Info. de la app si no existe). La fila «Auto» dice «Esperando a que arranques el servidor de Android Auto» y, al tocarla (o el texto de debajo), abre lo mismo. Se mira cada **2 s** |
+| El usuario lo arranca | Fuera la notificación, `AA server: listo (arrancado a mano)` y la fila «Servidor de Android Auto listo». Si una sesión esperaba a AA, se relanza el Self-Mode 1,5 s después (cuando el intento fallido ya ha terminado) |
+| Esperando al coche con el servidor encendido | Se vuelve a mirar cada **60 s** (cada comprobación es una conexión que AA acepta y ve cerrarse; con AA conectado no se conecta) |
+| Desconectar o fin del viaje | `ShutdownPlan.LEAVE_SERVER_ON`: se para nuestra head unit, el servidor no se toca y no hay guardián (no habría nada que apagar al desbloquear). 1,5 s después, si sigue contestando, **una** notificación «El servidor de Android Auto sigue encendido · Puedes pararlo en Android Auto › ⋮ › Parar servidor (recomendable si te conectas a una Wi-Fi pública)» (al tocarla, los ajustes de AA). Si ya estaba apagado, solo el log |
+| Red de seguridad | Todas las entradas de `AaServerStarter` que pulsan algo lo comprueban: `runAndWait` (por `cannotRunReason`), `restartAndWait`, `requestStop`, `stopIfUnlocked`, `runPendingStop`, `onUnlock`, `requestStartOnUnlock` y el botón de la notificación de AA. `ACTION_AA_SERVER_RESTART` se rechaza. `AaRecovery` (servidor «sordo») dice «Auto no responde: arranque manual: para y vuelve a iniciar su servidor en Android Auto › ⋮». Un guardián que tuviera AA aparcado de antes del cambio lo suelta al desbloquear sin apagar el servidor (y avisa si sigue encendido) |
+
+**Comprobación (`Requirements`).** Con el manual y AA 17.4+ en un modo Auto: «Accesibilidad» pasa a **Opcional**
+(«Solo para el modo automático»); «Modo desarrollador» pasa a consejo si no se sabe (sin accesibilidad no se puede abrir
+el menú para comprobarlo; si el servidor contesta, consta activo); fila nueva **«Servidor de Android Auto»** de
+importancia «Información» (Encendido / Apagado / Comprobando…) con «Abrir AA» y «Modo automático», y la guía «Cómo
+arrancar el servidor de Android Auto». Nada de esto cuenta en «Faltan N» ni bloquea «Conectar» (tampoco en la
+configuración inicial, ni en el arranque por Bluetooth o por cable, que no pasan por la comprobación). El modo App sigue
+pidiendo la accesibilidad como obligatoria (toques), elija lo que elija el usuario.
+
+**Decisión pura (`AaServerPolicy`).** `onNeed(motivo, estado)` con el modo, el servidor (UP, DOWN, UNKNOWN), AA
+conectado, móvil bloqueado y accesibilidad:
+
+| | Servidor encendido / AA conectado | Apagado | Sin dato |
+|---|---|---|---|
+| Manual (bloqueado o no, cualquier motivo) | `NONE` | `ASK_USER` | `PROBE` |
+| Automático, desbloqueado | `NONE` | `AUTOMATE` | `AUTOMATE` |
+| Automático, bloqueado | `NONE` | `AUTOMATE_ON_UNLOCK` | `AUTOMATE_ON_UNLOCK` |
+| Automático sin accesibilidad | `NONE` | `NO_ACCESSIBILITY` | `NO_ACCESSIBILITY` |
+
+La vigilancia (`WATCH`) es solo del manual. `onEnd`: automático → `STOP_SERVER` (el cierre de siempre); manual →
+`LEAVE_ON_NOTICE` (o nada si ya está apagado). La usan `LinkLifecycle` (sus decisiones del automático son las de antes,
+línea por línea), `HomeActivity` (Conectar) y `AaServerManual`.
+
+**Código.** `[hql]AaServerPolicy.java` (puro) y `[hql]AaServerManual.java` (nuevos); `Config` (`aa_server_start`,
+`servidorAA=` en el resumen del arranque); `AaServerStarter` (el desvío y la red de seguridad, `aaSettingsIntent`);
+`LinkLifecycle` (`Env.manualServer`, `CHECK_SERVER`, `LEAVE_SERVER_ON`); `LinkService`; `HomeActivity` (Conectar, fila
+«Auto», ajuste); `AaGuardService`; `Requirements` y `Checklist`; `hql_dialog_video.xml`; textos en los cuatro idiomas;
+manuales (sección «Sin accesibilidad», con el consejo de Obtainium).
+
+**Qué buscar en el log** (todo con «ciclo:»):
+
+| Línea | Significado |
+|---|---|
+| `servicio iniciado. … servidorAA=manual` | El ajuste |
+| `conectar: arranque manual del servidor de Android Auto (sin accesibilidad): lo comprueba el enlace` | Conectar sin automatización |
+| `arranque (Conectar): arranque manual del servidor de Android Auto (sin accesibilidad): compruebo si contesta y, si no, aviso para que lo arranques` | `CHECK_SERVER` (también «Bluetooth del coche», «cable USB del coche», «coche anunciado») |
+| `AA server: encendido (127.0.0.1:5277 contesta; Bluetooth del coche; arranque manual)` | Encendido: se sigue |
+| `W AA server: apagado (Conectar, móvil bloqueado): aviso «Arranca el servidor de Android Auto» y miro cada 2 s si 127.0.0.1:5277 contesta (arranque manual, sin accesibilidad)` | Se le pide al usuario |
+| `AA server: listo (arrancado a mano)` | Lo arrancó el usuario |
+| `relanzo Android Auto (Self-Mode) para el coche que espera (servidor arrancado a mano)` | Una sesión esperaba a AA |
+| `cierre (a mano): paro Android Auto; su servidor queda encendido (arranque manual: HeadQLink no lo para)` | Desconectar |
+| `W AA server: sigue encendido tras Desconectar (arranque manual: HeadQLink no lo para); aviso «El servidor de Android Auto sigue encendido» con cómo pararlo (Android Auto › ⋮ › Parar servidor)` / `AA server: apagado al cerrar (fin del viaje): nada que avisar` | El aviso del final |
+| `arranque del servidor de Android Auto: manual (sin accesibilidad) (Ajustes de imagen)` | Cambio del ajuste |
+| `AA server: no se puede automatizar: arranque manual: …` | La red de seguridad paró una automatización |
+
+**Cómo comprobarlo en el móvil.**
+1. Ajustes de imagen › Avanzado › «Manual (sin accesibilidad)» y desactivar la accesibilidad: la Comprobación no pide
+   nada obligatorio; «Servidor de Android Auto · Apagado».
+2. Conectar con el servidor apagado: notificación y fila «Auto»; tocarla, ⋮ › «Iniciar servidor de la unidad
+   principal», volver: en ~2 s «listo (arrancado a mano)» y la fila «Servidor de Android Auto listo».
+3. Con el servidor encendido y el móvil bloqueado, la llegada por Bluetooth o por cable conecta sin desbloquear.
+4. Desconectar: notificación «sigue encendido»; tocarla abre AA (⋮ › «Parar servidor unidad principal»).
+5. Que nunca aparezca «Arrancando Auto…» / «Cerrando Auto…».
+
+**Pruebas en el PC.** `AaServerPolicyTest` (7: el manual nunca automatiza, sea cual sea el motivo o el bloqueo; con AA
+conectado no hace falta nada; el automático de siempre; matriz completa modo × servidor × bloqueo × accesibilidad ×
+motivo; Bluetooth o cable con el móvil bloqueado y el servidor encendido; el final; cadencia de 2 s y 60 s).
+`LinkLifecycleTest` +5 (comprobación en cada disparador en vez de automatizar, otra vez con el coche anunciado, nada con
+AA conectado o aparcado, vuelta de la pausa con AA caído, el servidor se queda encendido y nunca se aparca hasta
+desbloquear). `RequirementsTest` +4 (accesibilidad opcional y fila del servidor, servidor apagado informativo y sin
+bloquear, el modo App y AA < 17.4 no cambian, la oferta del manual en el automático).
+
+**Limitaciones.** Sin probar en el móvil. Cada comprobación con el servidor encendido es una conexión TCP que AA acepta y
+ve cerrarse al instante (por eso 60 s esperando al coche y ninguna con AA conectado); no se ha visto aún si AA lo anota o
+muestra algo. Los nombres del menú de AA en inglés y portugués («Start head unit server», «Iniciar servidor da unidade
+principal») se han escrito sin verlos en el móvil.
+
+**Resultados en el PC.** `cmd /c ".\gradlew.bat :qdcore:test :app:testGithubDebugUnitTest :app:assembleGithubDebug
+--console=plain"`: **BUILD SUCCESSFUL** (con el commit anterior, el del cable USB, incluido). `:qdcore`: 156/156 (sin
+cambios). App: 2857 pruebas, 0 fallos y 1 saltada (la de `sh`); el paquete `com.headqlink.link`, 199/199.

@@ -156,6 +156,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         e.canAutomate = TouchService.instance != null;
         e.canStopWithoutUi = AaServerStarter.canStopWithoutUi();
         e.stopServerOnExit = cfg.stopAaServerOnExit();
+        e.manualServer = cfg.aaServerManual();
         return e;
     }
 
@@ -195,6 +196,10 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                 case START_SERVER_ON_UNLOCK:
                     AaServerStarter.requestStartOnUnlock(this, "el coche lo necesitará y el móvil está bloqueado");
                     break;
+                case CHECK_SERVER:
+                    // Arranque manual: se mira 127.0.0.1:5277 en otro hilo; si está apagado, aviso y espera (cada 2 s).
+                    AaServerManual.need(this, needFor(before), false);
+                    break;
                 case SHUTDOWN:
                     shutdownAll();
                     return;
@@ -205,6 +210,22 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             // Sin vídeo y escuchando al coche: «Reconectando… (Android Auto en espera)» si AA quedó en pausa.
             setStatus(Str.get(AaPark.parked ? R.string.hql_waiting_car_paused : R.string.hql_waiting_car));
             LinkState.setCar(AaPark.parked ? LinkState.Car.RECONNECTING : LinkState.Car.SEARCHING, "");
+        }
+    }
+
+    /** Por qué arrancó el enlace, para el log del arranque manual del servidor de AA. */
+    private AaServerPolicy.Need startNeed = AaServerPolicy.Need.CONNECT;
+
+    /** Para el log del arranque manual: la comprobación del arranque, del coche anunciado o de la vuelta del coche. */
+    private AaServerPolicy.Need needFor(LinkLifecycle.Phase before) {
+        switch (before) {
+            case CLOSED:
+                return startNeed;
+            case GRACE:
+            case PARKED:
+                return AaServerPolicy.Need.RESUME;
+            default:
+                return AaServerPolicy.Need.CAR_SEEN;
         }
     }
 
@@ -294,7 +315,10 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         }
         if (ACTION_BT_CAR.equals(intent.getAction())) {
             L.i("conexión automática: Bluetooth del coche detectado");
-            if (Config.isAa(cfg.mode()) && TouchService.instance == null) {
+            if (Config.isAa(cfg.mode()) && cfg.aaServerManual()) {
+                L.i("conexión automática: arranque manual del servidor de Android Auto (sin accesibilidad): si ya está"
+                        + " encendido, no hace falta desbloquear");
+            } else if (Config.isAa(cfg.mode()) && TouchService.instance == null) {
                 L.w("conexión automática: falta la accesibilidad (Android la desactiva al actualizar la app)");
             }
         }
@@ -302,6 +326,11 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         LowLatency.apply(cfg);
         if (intent != null && ACTION_AA_SERVER_RESTART.equals(intent.getAction())) {
             if (!goForeground(Str.get(R.string.hql_fg_restart_aa))) return START_NOT_STICKY;
+            if (cfg.aaServerManual()) {
+                L.w("AA server reinicio: no con el arranque manual (sin accesibilidad no se pulsa nada)");
+                if (!LinkState.running) stopSelf(startId);
+                return START_NOT_STICKY;
+            }
             new Thread(() -> L.i("AA server reinicio: " + (AaServerStarter.restartAndWait(this) ? "ok" : "fallo")), "aa-restart").start();
             return START_NOT_STICKY;
         }
@@ -446,6 +475,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             LinkLifecycle.Trigger trigger = ACTION_BT_CAR.equals(action) ? LinkLifecycle.Trigger.BLUETOOTH
                     : usbAttach ? LinkLifecycle.Trigger.USB
                     : ACTION_APPLY.equals(action) ? LinkLifecycle.Trigger.USER : LinkLifecycle.Trigger.OTHER;
+            startNeed = trigger == LinkLifecycle.Trigger.BLUETOOTH ? AaServerPolicy.Need.BLUETOOTH
+                    : trigger == LinkLifecycle.Trigger.USB ? AaServerPolicy.Need.USB : AaServerPolicy.Need.CONNECT;
             apply(life.start(now(), trigger, env(), cfg.carWaitMs()));
         } else {
             L.i("ajustes actualizados: " + cfg.summary() + " (se aplican en la próxima sesión)");
@@ -811,8 +842,24 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                     AaServerStarter.stopIfUnlocked(this);
                 }
                 return;
+            case LEAVE_SERVER_ON:
+                // Arranque manual: no se pulsa nada en los ajustes de AA. Se para nuestra head unit y, si el servidor
+                // sigue encendido, un aviso dice cómo pararlo (recomendable en una Wi-Fi pública).
+                L.life("cierre" + (userAction ? " (a mano)" : "") + ": paro Android Auto; su servidor queda encendido"
+                        + " (arranque manual: HeadQLink no lo para)");
+                AaPark.release("cierre del enlace");
+                try {
+                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
+                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_STOP_SERVICE));
+                } catch (RuntimeException e) {
+                    L.e("no se pudo parar Android Auto", e);
+                }
+                AaServerManual.onLinkClosed(this, userAction ? "Desconectar" : "fin del viaje");
+                return;
             default:
                 L.life("cierre" + (userAction ? " (a mano)" : "") + ": sin Android Auto que cerrar");
+                // Modo sin Android Auto con el arranque manual: la espera del servidor (si la había) ya no hace falta.
+                if (AaServerManual.isWaiting()) AaServerManual.stop(this, "el enlace se cierra");
         }
     }
 

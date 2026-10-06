@@ -171,6 +171,15 @@ public class AaGuardService extends Service {
         if (releasing || !active) return;
         releasing = true;
         releaseStart = System.currentTimeMillis();
+        if (AaServerStarter.manual(this)) {
+            // Se eligió el arranque manual con Android Auto aparcado: no se pulsa nada; se suelta AA y, si el servidor
+            // sigue encendido, el aviso de cómo pararlo.
+            L.life("AA guardián: desbloqueado con el arranque manual: suelto la sesión y no apago el servidor");
+            AaServerStarter.cancelPendingStop(this);
+            finish();
+            AaServerManual.tellIfStillOnLater(this, "soltar Android Auto aparcado");
+            return;
+        }
         L.life("AA guardián: desbloqueado, apago el servidor y suelto la sesión");
         AaPark.stopPing();
         AaServerStarter.runPendingStop(this);

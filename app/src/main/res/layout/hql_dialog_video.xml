@@ -307,6 +307,47 @@
         android:layout_height="wrap_content"
         android:paddingBottom="8dp"
         android:text="@string/hql_car_wait_help" />
+
+    <!-- Arranque del servidor de Android Auto: automático (accesibilidad) o manual (sin accesibilidad) -->
+    <LinearLayout
+        android:id="@+id/hql_v_aa_server_box"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/HQL.Text.Label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/hql_aa_server_start_title" />
+
+        <RadioGroup
+            android:id="@+id/hql_v_aa_server"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/hql_v_aa_server_auto"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/hql_aa_server_start_auto" />
+
+            <RadioButton
+                android:id="@+id/hql_v_aa_server_manual"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/hql_aa_server_start_manual" />
+        </RadioGroup>
+
+        <TextView
+            style="@style/HQL.Text.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp"
+            android:text="@string/hql_aa_server_start_help" />
+    </LinearLayout>
     </LinearLayout>
 
     <TextView

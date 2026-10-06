@@ -27,6 +27,11 @@ import java.util.List;
  *
  * Seguridad: sin coche, el servidor de head unit de AA sigue encendido como mucho lo que dure «Esperar al coche»; al
  * vencer, el cierre de siempre lo apaga (ya o, con el móvil bloqueado, al desbloquearlo, con AA aparcado mientras).
+ *
+ * Arranque manual del servidor (sin accesibilidad, {@link Env#manualServer}): cuándo hace falta el servidor lo decide
+ * {@link AaServerPolicy}; en vez de arrancarlo se pide comprobarlo ({@link Action#CHECK_SERVER}: si está apagado, aviso
+ * al usuario) en cada arranque, con el coche anunciado y si vuelve con AA en pausa pero desconectado; al cerrar, el
+ * servidor se queda encendido ({@link ShutdownPlan#LEAVE_SERVER_ON}).
  */
 final class LinkLifecycle {
     /** Sin coche desde el arranque, se busca al menos esto (o «Esperar al coche», si es más). */
@@ -65,6 +70,11 @@ final class LinkLifecycle {
         START_SERVER,
         /** Móvil bloqueado: aviso «Desbloquea el móvil para iniciar Android Auto» y arranque al desbloquear. */
         START_SERVER_ON_UNLOCK,
+        /**
+         * Arranque manual (sin accesibilidad): mirar si 127.0.0.1:5277 contesta (fuera del hilo principal) y, si está
+         * apagado, avisar al usuario («Arranca el servidor de Android Auto») y seguir mirando cada 2 s. Nunca pulsa nada.
+         */
+        CHECK_SERVER,
         /** Cerrarlo todo por el camino de siempre (ver {@link #shutdownPlan}). */
         SHUTDOWN,
     }
@@ -79,6 +89,8 @@ final class LinkLifecycle {
         STOP_SERVER,
         /** Se para AA; el servidor solo si se puede ahora sin que se note (ajuste stop_aa_server desactivado). */
         STOP_SERVER_IF_UNLOCKED,
+        /** Arranque manual: se para AA y el servidor se queda encendido (no se pulsa nada); un aviso dice cómo pararlo. */
+        LEAVE_SERVER_ON,
     }
 
     /** Lo que se ve del móvil en el momento del evento. */
@@ -104,6 +116,8 @@ final class LinkLifecycle {
         boolean canStopWithoutUi;
         /** Ajuste «apagar el servidor al terminar» (por defecto, sí). */
         boolean stopServerOnExit = true;
+        /** «Arranque del servidor de Android Auto»: manual (sin accesibilidad). */
+        boolean manualServer;
 
         Env aa(boolean v) {
             aaMode = v;
@@ -157,6 +171,11 @@ final class LinkLifecycle {
 
         Env stopOnExit(boolean v) {
             stopServerOnExit = v;
+            return this;
+        }
+
+        Env manual(boolean v) {
+            manualServer = v;
             return this;
         }
     }
@@ -230,6 +249,8 @@ final class LinkLifecycle {
     /** Cómo se cierra Android Auto (el camino de siempre, con el móvil bloqueado o no). */
     static ShutdownPlan shutdownPlan(Env e) {
         if (!e.aaMode) return ShutdownPlan.LINK_ONLY;
+        // Arranque manual: sin accesibilidad no se para el servidor (ni ahora ni al desbloquear); no hace falta aparcar.
+        if (AaServerPolicy.onEnd(true, policyState(e)) == AaServerPolicy.End.LEAVE_ON_NOTICE) return ShutdownPlan.LEAVE_SERVER_ON;
         // Con el botón «Detener» de la notificación del servidor se apaga ya, bloqueado o no; sin él, con el móvil
         // bloqueado no se pueden manejar los ajustes de AA: se aparca la sesión hasta desbloquear.
         if (e.stopServerOnExit && e.locked && e.aaConnected && e.canAutomate && !e.canStopWithoutUi) {
@@ -254,8 +275,10 @@ final class LinkLifecycle {
         lastWaitMs = Math.max(0, waitMs);
         d.why("arranque (" + triggerName(trigger) + "): busco al coche hasta " + dur(search));
         keepAaForTheCar(d, e, "arranque");
-        if (trigger == Trigger.BLUETOOTH) askServer(d, e, "Bluetooth del coche");
-        if (trigger == Trigger.USB) askServer(d, e, "cable USB del coche");
+        if (trigger == Trigger.BLUETOOTH) askServer(d, e, AaServerPolicy.Need.BLUETOOTH, "Bluetooth del coche");
+        else if (trigger == Trigger.USB) askServer(d, e, AaServerPolicy.Need.USB, "cable USB del coche");
+        // Con el automático, Conectar ya arrancó el servidor (HomeActivity); con el manual hay que mirarlo aquí.
+        else if (e.manualServer) askServer(d, e, AaServerPolicy.Need.CONNECT, "arranque (" + triggerName(trigger) + ")");
         return d;
     }
 
@@ -269,7 +292,7 @@ final class LinkLifecycle {
         Decision d = carHeard(now, waitMs);
         if (phase == Phase.CLOSED) return d;
         keepAaForTheCar(d, e, "coche anunciado");
-        askServer(d, e, "coche anunciado");
+        askServer(d, e, AaServerPolicy.Need.CAR_SEEN, "coche anunciado");
         return d;
     }
 
@@ -326,6 +349,11 @@ final class LinkLifecycle {
         if (e.aaParked || e.guardActive) {
             d.add(Action.RESUME_AA).why("sesión con el coche" + after
                     + ": Android Auto sale de la pausa al instante (sin arrancar el servidor ni desbloquear)");
+            // Arranque manual con AA caído durante la pausa: la sesión lo relanzará; antes, ¿sigue el servidor?
+            if (e.manualServer && AaServerPolicy.onNeed(AaServerPolicy.Need.RESUME, policyState(e)) != AaServerPolicy.Action.NONE) {
+                d.add(Action.CHECK_SERVER).why("sesión con el coche: Android Auto estaba en pausa pero ya no está conectado;"
+                        + " arranque manual: compruebo su servidor");
+            }
         } else if (was == Phase.GRACE) {
             d.why("sesión con el coche" + after + ": el vídeo seguía vivo");
         } else {
@@ -450,18 +478,46 @@ final class LinkLifecycle {
         d.add(Action.STOP_VIDEO);
     }
 
-    /** Si el servidor de AA hará falta y no consta encendido: arrancarlo ya, o al desbloquear. Una vez por búsqueda. */
-    private void askServer(Decision d, Env e, String why) {
-        if (serverAsked || !e.aaMode || e.aaConnected || e.aaParked || e.guardActive || e.serverOn) return;
-        serverAsked = true;
-        if (!e.canAutomate) {
-            d.why(why + ": el servidor de Android Auto puede estar apagado y falta la accesibilidad para arrancarlo");
-        } else if (e.locked) {
-            d.add(Action.START_SERVER_ON_UNLOCK).why(why + " con el móvil bloqueado: aviso «desbloquea el móvil» y arranco"
-                    + " el servidor de Android Auto al desbloquear");
-        } else {
-            d.add(Action.START_SERVER).why(why + ": arranco ya el servidor de Android Auto");
+    /**
+     * Si el servidor de AA hará falta (AaServerPolicy). Automático: si no consta encendido, arrancarlo ya o al
+     * desbloquear, una vez por búsqueda. Manual: comprobarlo en cada ocasión (el último estado conocido no vale: el
+     * usuario lo puede parar en cualquier momento) y, si está apagado, que lo arranque el usuario.
+     */
+    private void askServer(Decision d, Env e, AaServerPolicy.Need need, String why) {
+        if (!e.aaMode || e.aaParked || e.guardActive) return;
+        if (!e.manualServer && serverAsked) return;
+        switch (AaServerPolicy.onNeed(need, policyState(e))) {
+            case NONE:
+                return;
+            case PROBE:
+            case ASK_USER:
+                d.add(Action.CHECK_SERVER).why(why + ": arranque manual del servidor de Android Auto (sin accesibilidad):"
+                        + " compruebo si contesta y, si no, aviso para que lo arranques");
+                return;
+            case NO_ACCESSIBILITY:
+                serverAsked = true;
+                d.why(why + ": el servidor de Android Auto puede estar apagado y falta la accesibilidad para arrancarlo");
+                return;
+            case AUTOMATE_ON_UNLOCK:
+                serverAsked = true;
+                d.add(Action.START_SERVER_ON_UNLOCK).why(why + " con el móvil bloqueado: aviso «desbloquea el móvil» y arranco"
+                        + " el servidor de Android Auto al desbloquear");
+                return;
+            default:
+                serverAsked = true;
+                d.add(Action.START_SERVER).why(why + ": arranco ya el servidor de Android Auto");
         }
+    }
+
+    /**
+     * Lo que sabe el ciclo de vida del servidor, para AaServerPolicy: en el manual, nada fresco (lo mira AaServerManual
+     * fuera del hilo principal); en el automático, el último estado conocido, como siempre.
+     */
+    private static AaServerPolicy.State policyState(Env e) {
+        AaServerPolicy.Server server = e.manualServer ? AaServerPolicy.Server.UNKNOWN
+                : e.serverOn ? AaServerPolicy.Server.UP : AaServerPolicy.Server.UNKNOWN;
+        return new AaServerPolicy.State().manual(e.manualServer).server(server).connected(e.aaConnected)
+                .locked(e.locked).automate(e.canAutomate);
     }
 
     private String phaseName() {

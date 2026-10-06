@@ -160,8 +160,10 @@ menú ⚙ › «Comprobación».
 | Fila | Qué significa | Qué pulsar |
 |---|---|---|
 | «Android Auto» | Tiene que estar instalado y activado. Muestra su versión. | «Instalar» (Play Store) o «Info. de la app» si está desactivado. |
-| «Accesibilidad de HeadQLink» (Obligatorio con Android Auto 17.4 o superior) | HeadQLink la usa para arrancar Android Auto sin que lo veas y para recibir los toques del coche. En Ajustes de Android se llama **«HeadQLink táctil»**. | «Activar» y enciende «HeadQLink táctil». Ver el aviso de debajo. |
+| «Accesibilidad de HeadQLink» (Obligatorio con Android Auto 17.4 o superior; Opcional con el arranque manual) | HeadQLink la usa para arrancar Android Auto sin que lo veas y para recibir los toques del coche. En Ajustes de Android se llama **«HeadQLink táctil»**. | «Activar» y enciende «HeadQLink táctil». Ver el aviso de debajo. |
+| «¿Sin accesibilidad?» (Consejo, solo si falta la accesibilidad) | Puedes arrancar tú el servidor de Android Auto y no activarla. | «Arranque manual» (ver [Sin accesibilidad](#sin-accesibilidad-arranque-manual-del-servidor-de-android-auto)). |
 | «Modo desarrollador de Android Auto» (Obligatorio con 17.4 o superior) | Android Auto solo acepta una «pantalla de coche» dentro del móvil a través de su modo para desarrolladores. Se activa una vez. | «Abrir AA» y sigue la guía de debajo. «Comprobar» lo verifica (necesita la accesibilidad activada). |
+| «Servidor de Android Auto» (Información, solo con el arranque manual) | «Encendido» o «Apagado» (si contesta en el propio móvil). Apagado no impide conectar: HeadQLink te avisa. | «Abrir AA» (⋮ › «Iniciar servidor de la unidad principal») o «Modo automático». |
 | «Notificaciones» (Recomendado) | Para ver el estado de la conexión y los avisos. | «Permitir» (o «Abrir» si las bloqueaste). |
 | «Batería sin restricciones» (Recomendado) | Para que Android no cierre HeadQLink con la pantalla apagada ni bloquee la conexión automática. | «Permitir» y acepta el aviso de Android. |
 | «Samsung: apps que nunca se suspenden» (Consejo, solo Samsung) | Samsung cierra apps en segundo plano por su cuenta. No se puede comprobar desde la app. | «Abrir» y elige «Sin restricciones». Además: Ajustes › Batería › Límites de uso en segundo plano › Aplicaciones que nunca se suspenden › añade HeadQLink. |
@@ -188,6 +190,8 @@ menú ⚙ › «Comprobación».
 > 3. Vuelve, pulsa «Activar» y enciende «HeadQLink táctil».
 >
 > Si la fila dice «Activada pero sin funcionar (Android la paró)», apágala y vuelve a encenderla.
+>
+> ¿Prefieres no pasar por esto? Mira [Sin accesibilidad](#sin-accesibilidad-arranque-manual-del-servidor-de-android-auto).
 
 **Cómo activar el modo desarrollador de Android Auto** (la misma guía que muestra la app):
 
@@ -209,6 +213,35 @@ igualmente» y completarlo más tarde.
 > pulsar «Conectar») y espera al coche hasta 5 minutos (o lo que diga «Esperar al coche», si es más). Con Android Auto
 > 17.4 o superior verás un momento la capa
 > «Arrancando Auto…»: no toques nada. Si no estás en el coche, pulsa «Desconectar».
+
+### Sin accesibilidad (arranque manual del servidor de Android Auto)
+
+Si no quieres (o no puedes) activar la accesibilidad, elige **«Ajustes de imagen» › «Avanzado ▾» › «Arranque del
+servidor de Android Auto» › «Manual (sin accesibilidad)»**, o pulsa «Arranque manual» en la fila «¿Sin accesibilidad?»
+de la «Comprobación». Con «Auto» y «Auto extendido» HeadQLink ya no la usa para nada: la accesibilidad pasa a
+«Opcional» («Solo para el modo automático») y sale la fila «Servidor de Android Auto» («Encendido» o «Apagado»).
+
+1. Arranca tú el servidor: «Abrir AA» › ⋮ (arriba a la derecha) › **«Iniciar servidor de la unidad principal»**. Si no
+   ves esa opción, activa antes el modo desarrollador (10 toques en «Versión»).
+2. Pulsa «Conectar» (o deja que arranque solo por Bluetooth o por cable). Si el servidor está apagado, verás la
+   notificación **«Arranca el servidor de Android Auto»** y la fila «Auto» dirá «Esperando a que arranques el servidor
+   de Android Auto». Toca la notificación (o la fila) para abrir Android Auto, arráncalo y vuelve: HeadQLink lo nota en
+   unos 2 s y sigue solo.
+3. Con el servidor ya encendido, la conexión automática por Bluetooth o por cable funciona **con el móvil bloqueado**.
+4. Al terminar, HeadQLink no lo para: verás «El servidor de Android Auto sigue encendido». Páralo en Android Auto › ⋮ ›
+   «Parar servidor unidad principal».
+
+Lo que cambia, y por qué el automático sigue siendo el **recomendado**:
+
+- Hay que arrancarlo a mano **tras cada reinicio del móvil o actualización de Android Auto**.
+- **Se queda encendido** hasta que lo pares tú, y escucha en toda la red: en una **Wi-Fi pública**, cualquier aparato de
+  esa red podría intentar conectarse a él. Páralo cuando no estés en el coche.
+- El modo «App» (una app concreta en el coche) sigue necesitando la accesibilidad para los toques.
+
+> [!TIP]
+> **Instalar con Obtainium suele evitar el paso de «ajustes restringidos».** Obtainium instala con el instalador por
+> sesiones de Android y, en Android 13 y 14, así la accesibilidad se suele poder activar a la primera. En Android 15 o
+> superior no está garantizado.
 
 ---
 
@@ -426,6 +459,9 @@ Si estás conectado, al guardar otro perfil el coche y Android Auto se reconecta
 - «Avanzado ▾» › «Esperar al coche»: «1 min», «5 min (recomendado)» o «15 min». Es lo que HeadQLink sigue escuchando al
   coche, con Android Auto en pausa, después de perderlo (sección 4). Más tiempo = vuelve al instante tras paradas más
   largas; menos = el servidor de Android Auto se apaga antes. Vale ya para la próxima parada.
+- «Avanzado ▾» › «Arranque del servidor de Android Auto»: «Automático (accesibilidad) · Recomendado» o «Manual (sin
+  accesibilidad)» (sección 3, [Sin accesibilidad](#sin-accesibilidad-arranque-manual-del-servidor-de-android-auto)).
+  Vale en el acto.
 - El resto de «Avanzado» (fps, kbps, ancho, alto, perfil H.264, optimizaciones de latencia, freno) es para pruebas.
   Déjalo vacío o como viene.
 
@@ -507,6 +543,7 @@ Empieza siempre por el menú ⚙ › «Comprobación»: cada fila en rojo tiene 
 | La imagen va menos fluida que con el HeadQLink original | El original enviaba 60 fps; HeadQLink envía 30 (lo que pide el coche) para que el móvil no se caliente. O el móvil ya está caliente y la adaptación térmica ha bajado los fps, o el enlace va justo y se han bajado el bitrate o los fps. | «Ajustes de imagen» › «Fluidez» › «60 fps · máxima fluidez» (con el perfil «Coche» o «Automático»). Si el calor baja los fps, «Protección térmica» › «Suave» (sección 6). En el log, las líneas «HQL/Térmico» («estado térmico 2» o más) y «enlace:» dicen cuál de las dos cosas pasa. |
 | La imagen se congela unos 10 s y luego se reconecta | En versiones anteriores, un fotograma completo de más de ~512 KB colgaba el receptor del coche, que dejaba de leer hasta que se cortaba la conexión. **Corregido**: HeadQLink ya no envía ninguno tan grande y los mantiene en unos 300 KB como mucho. | Actualiza HeadQLink. Si te pasa con el perfil «Básico» (ahí el tamaño lo decide Android Auto), usa «Automático» o «Coche». Si sigue, exporta el log (sección 8). |
 | Se desconecta a menudo | Apagado automático de la zona Wi-Fi, ahorro de batería, QDLink abierta o la app de espejo del coche cerrada. | Los cortes cortos se reconectan solos («Reconectando…»). Si son largos o frecuentes: «Batería sin restricciones», «Samsung: apps que nunca se suspenden», quita el apagado automático y cierra QDLink. Si sigue, exporta el log (sección 8). |
+| Notificación «Arranca el servidor de Android Auto», o la fila «Auto» dice «Esperando a que arranques el servidor de Android Auto» | Arranque manual y el servidor de Android Auto está apagado (tras reiniciar el móvil o actualizar Android Auto). | Toca la notificación o la fila: Android Auto › ⋮ › «Iniciar servidor de la unidad principal». HeadQLink sigue solo en unos 2 s. |
 | La accesibilidad se desactiva sola | Android la desactiva al actualizar la app, o si la app se cerró de golpe. Algunos fabricantes también. | «Comprobación» › «Activar». Si dice «Activada pero sin funcionar», apágala y enciéndela. Si dice «Ajuste restringido», «Permitir ajustes restringidos» (sección 3). Quita las restricciones de batería. |
 | Android Auto pide en el coche que mires el móvil | Es la primera vez que Android Auto ve esta «pantalla de coche», o tiene que pedirte un permiso o una confirmación. | Aparca, desbloquea el móvil y acepta lo que pida Android Auto. Normalmente solo pasa una vez. |
 | El móvil se calienta mucho | Perfil «Muy alto» o «Alto», sol directo, pantalla encendida, carga inalámbrica. | Sección 6. |

@@ -306,4 +306,90 @@ class RequirementsTest {
         assertEquals(Status.WARN, item(qd, Id.QDLINK).status)
         assertEquals(0, Requirements.missingCount(qd))
     }
+
+    // ---------------------------------------------------------------- arranque manual del servidor de Android Auto
+
+    @Test
+    fun manualServerStartMakesAccessibilityOptionalAndAddsTheServerRow() {
+        val items = eval { manualServer = true; aaServer = Requirements.AaServer.ON; accessibilityRunning = false; accessibilityEnabled = false; restrictedSettings = true; devMode = -1 }
+        assertEquals(
+            listOf(
+                Id.ANDROID_AUTO, Id.AA_SERVER, Id.ACCESSIBILITY, Id.AA_DEVMODE, Id.NEARBY_WIFI, Id.WIFI_ON, Id.HOTSPOT_OFF,
+                Id.NOTIFICATIONS, Id.BATTERY, Id.OVERLAY, Id.MEDIA,
+            ),
+            ids(items),
+        )
+        val acc = item(items, Id.ACCESSIBILITY)
+        assertEquals(Importance.OPTIONAL, acc.importance)
+        assertEquals(Status.MISSING, acc.status)
+        assertEquals(Hint.MANUAL, acc.hint)
+        assertFalse(acc.counts())
+        assertFalse(acc.blocks())
+        val server = item(items, Id.AA_SERVER)
+        assertEquals(Importance.INFO, server.importance)
+        assertEquals(Status.OK, server.status)
+        // El servidor contesta: el modo desarrollador está activo aunque no se haya podido comprobar.
+        assertEquals(Status.OK, item(items, Id.AA_DEVMODE).status)
+        assertEquals(0, Requirements.missingCount(items))
+        assertTrue("Conectar no se bloquea", Requirements.blocking(items).isEmpty())
+        assertNull("sin oferta del manual: ya lo es", Requirements.find(items, Id.SERVER_MANUAL_OFFER))
+    }
+
+    @Test
+    fun manualServerOffIsInformativeAndNeverBlocks() {
+        for (state in Requirements.AaServer.values()) {
+            val items = eval { manualServer = true; aaServer = state; accessibilityRunning = false; devMode = -1 }
+            val server = item(items, Id.AA_SERVER)
+            val expected = when (state) {
+                Requirements.AaServer.ON -> Status.OK
+                Requirements.AaServer.OFF -> Status.WARN
+                Requirements.AaServer.CHECKING -> Status.CHECKING
+                Requirements.AaServer.UNKNOWN -> Status.UNKNOWN
+            }
+            assertEquals(state.toString(), expected, server.status)
+            assertFalse(server.counts())
+            assertFalse(server.blocks())
+            assertTrue(state.toString(), Requirements.blocking(items).isEmpty())
+            assertEquals(state.toString(), 0, Requirements.missingCount(items))
+        }
+        // Apagado y sin saber el modo desarrollador: consejo (no se puede comprobar sin la accesibilidad).
+        val dev = item(eval { manualServer = true; aaServer = Requirements.AaServer.OFF; devMode = -1 }, Id.AA_DEVMODE)
+        assertEquals(Status.TIP, dev.status)
+        assertEquals(Hint.MANUAL, dev.hint)
+        assertFalse(dev.counts())
+        // Ya comprobado antes (con el automático): activo.
+        assertEquals(Status.OK, item(eval { manualServer = true; aaServer = Requirements.AaServer.OFF; devMode = 1 }, Id.AA_DEVMODE).status)
+    }
+
+    @Test
+    fun manualServerStartDoesNotApplyToTheAppModeNorToOldAndroidAuto() {
+        // Modo App: los toques siguen necesitando la accesibilidad.
+        val app = eval { mode = Config.MODE_APP; manualServer = true; accessibilityRunning = false }
+        assertEquals(Importance.REQUIRED, item(app, Id.ACCESSIBILITY).importance)
+        assertTrue(item(app, Id.ACCESSIBILITY).blocks())
+        assertNull(Requirements.find(app, Id.AA_SERVER))
+        assertNull(Requirements.find(app, Id.SERVER_MANUAL_OFFER))
+        // AA anterior a 17.4: no hay servidor que arrancar.
+        val old = eval { aaVersion = "17.3.1"; manualServer = true }
+        assertNull(Requirements.find(old, Id.AA_SERVER))
+        assertNull(Requirements.find(old, Id.ACCESSIBILITY))
+        assertFalse(Requirements.needsAaServerProbe(Snapshot().apply { aaVersion = "17.3.1"; manualServer = true }))
+        assertFalse(Requirements.needsAaServerProbe(Snapshot().apply { mode = Config.MODE_APP; manualServer = true }))
+        assertFalse(Requirements.needsAaServerProbe(Snapshot()))
+        assertTrue(Requirements.needsAaServerProbe(Snapshot().apply { manualServer = true }))
+    }
+
+    @Test
+    fun automaticWithoutAccessibilityOffersTheManualStart() {
+        val items = eval { accessibilityRunning = false; accessibilityEnabled = false; restrictedSettings = true }
+        val got = ids(items)
+        assertEquals(got.indexOf(Id.ACCESSIBILITY) + 1, got.indexOf(Id.SERVER_MANUAL_OFFER))
+        val offer = item(items, Id.SERVER_MANUAL_OFFER)
+        assertEquals(Status.TIP, offer.status)
+        assertFalse(offer.counts())
+        // La accesibilidad sigue siendo obligatoria en el automático.
+        assertEquals(listOf(Id.ACCESSIBILITY), ids(Requirements.blocking(items)))
+        assertNull(Requirements.find(eval(), Id.SERVER_MANUAL_OFFER))
+        assertNull(Requirements.find(eval { mode = Config.MODE_APP; accessibilityRunning = false }, Id.SERVER_MANUAL_OFFER))
+    }
 }

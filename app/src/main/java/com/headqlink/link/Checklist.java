@@ -62,6 +62,8 @@ final class Checklist {
     private volatile Requirements.Hotspot hotspot = Requirements.Hotspot.CHECKING;
     private volatile HotspotWatcher.Probe hotspotProbe;
     private volatile Requirements.Port port = Requirements.Port.UNKNOWN;
+    /** Arranque manual: si el servidor de AA contesta en 127.0.0.1:5277 (también lo lento: una conexión). */
+    private volatile Requirements.AaServer aaServer = Requirements.AaServer.CHECKING;
     /** Último wifi_state del aviso de la zona Wi-Fi (-1 = ninguno). */
     private volatile int apState = -1;
     private boolean probing;
@@ -166,7 +168,7 @@ final class Checklist {
     /** Vuelve a evaluar con lo rápido ya y lanza lo lento (zona Wi-Fi y puerto) en un hilo. */
     void refresh() {
         if (act.isDestroyed()) return;
-        items = Requirements.evaluate(read(act, cfg, hotspot, port, checkingDevMode));
+        items = Requirements.evaluate(read(act, cfg, hotspot, port, aaServer, checkingDevMode));
         onChange.run();
         probeSlow();
     }
@@ -178,21 +180,24 @@ final class Checklist {
         }
         probing = true;
         int ap = apState;
+        boolean probeServer = cfg.aaServerManual() && Config.isAa(cfg.mode());
         new Thread(() -> {
             HotspotWatcher.Probe p = HotspotWatcher.probe(act, ap);
             Requirements.Port pt = currentPort(true);
+            Requirements.AaServer as = probeServer ? aaServerNow(act) : Requirements.AaServer.UNKNOWN;
             main.post(() -> {
                 probing = false;
                 hotspotProbe = p;
                 Requirements.Hotspot h = hotspotOf(p.getState());
-                boolean changed = h != hotspot || pt != port;
+                boolean changed = h != hotspot || pt != port || as != aaServer;
                 hotspot = h;
                 port = pt;
+                aaServer = as;
                 if (probeAgain) {
                     probeAgain = false;
                     refresh();
                 } else if (changed && !act.isDestroyed()) {
-                    items = Requirements.evaluate(read(act, cfg, hotspot, port, checkingDevMode));
+                    items = Requirements.evaluate(read(act, cfg, hotspot, port, aaServer, checkingDevMode));
                     onChange.run();
                 }
             });
@@ -212,7 +217,15 @@ final class Checklist {
     /** Comprobación completa ahora (también lo lento): no en el hilo principal. */
     static List<Requirements.Item> evaluateNow(Activity a) {
         HotspotWatcher.Probe p = HotspotWatcher.probe(a);
-        return Requirements.evaluate(read(a, new Config(a), hotspotOf(p.getState()), currentPort(true), false));
+        Requirements.Snapshot s = read(a, new Config(a), hotspotOf(p.getState()), currentPort(true),
+                Requirements.AaServer.UNKNOWN, false);
+        if (Requirements.needsAaServerProbe(s)) s.aaServer = aaServerNow(a);
+        return Requirements.evaluate(s);
+    }
+
+    /** Arranque manual: ¿contesta el servidor de head unit de AA? Bloquea (como mucho unos cientos de ms). */
+    private static Requirements.AaServer aaServerNow(Context ctx) {
+        return AaServerManual.probe(ctx) == AaServerPolicy.Server.UP ? Requirements.AaServer.ON : Requirements.AaServer.OFF;
     }
 
     private static Requirements.Hotspot hotspotOf(HotspotWatcher.State s) {
@@ -250,7 +263,7 @@ final class Checklist {
     }
 
     private static Requirements.Snapshot read(Activity a, Config cfg, Requirements.Hotspot hotspot, Requirements.Port port,
-                                              boolean checkingDev) {
+                                              Requirements.AaServer aaServer, boolean checkingDev) {
         Requirements.Snapshot s = new Requirements.Snapshot();
         int sdk = Build.VERSION.SDK_INT;
         s.sdk = sdk;
@@ -258,6 +271,8 @@ final class Checklist {
         s.linkMode = cfg.linkMode();
         s.btAuto = cfg.btAutoConnect();
         s.forceLegacyLaunch = cfg.getBool("force_legacy_launch");
+        s.manualServer = cfg.aaServerManual();
+        s.aaServer = aaServer;
 
         s.accessibilityRunning = TouchService.instance != null;
         s.accessibilityEnabled = accessibilityEnabled(a);
@@ -406,23 +421,36 @@ final class Checklist {
     String guideTitle() {
         if (Config.LINK_HOTSPOT.equals(cfg.linkMode())) return Str.get(R.string.hql_hotspot_guide_title);
         if (Config.LINK_USB.equals(cfg.linkMode())) return Str.get(R.string.hql_usb_guide_title);
-        return needsDevGuide() ? Str.get(R.string.hql_setup_guide_title) : null;
+        return needsDevGuide() ? devGuideTitle() : null;
     }
 
-    /** La guía: cómo unir el coche a la zona Wi-Fi y, si falta, cómo activar el modo desarrollador de AA. */
+    /**
+     * La guía: cómo unir el coche a la zona Wi-Fi y, si falta, cómo activar el modo desarrollador de AA (con el arranque
+     * manual, también cómo arrancar su servidor).
+     */
     String guideText() {
-        String dev = needsDevGuide() ? Str.get(R.string.hql_setup_guide) : null;
+        String dev = needsDevGuide() ? Str.get(manualGuide() ? R.string.hql_setup_guide_manual : R.string.hql_setup_guide) : null;
         if (Config.LINK_HOTSPOT.equals(cfg.linkMode()) || Config.LINK_USB.equals(cfg.linkMode())) {
             String text = Config.LINK_USB.equals(cfg.linkMode()) ? Str.get(R.string.hql_usb_guide)
                     : Str.get(R.string.hql_hotspot_guide) + "\n\n" + Str.get(R.string.hql_hotspot_tips);
-            return dev == null ? text : text + "\n\n" + Str.get(R.string.hql_setup_guide_title) + "\n" + dev;
+            return dev == null ? text : text + "\n\n" + devGuideTitle() + "\n" + dev;
         }
         return dev;
     }
 
+    private String devGuideTitle() {
+        return Str.get(manualGuide() ? R.string.hql_setup_guide_manual_title : R.string.hql_setup_guide_title);
+    }
+
+    /** Arranque manual: la guía dice cómo arrancar el servidor (y, si hace falta, el modo desarrollador). */
+    private boolean manualGuide() {
+        return Requirements.find(items, Requirements.Id.AA_SERVER) != null;
+    }
+
     private boolean needsDevGuide() {
         Requirements.Item d = Requirements.find(items, Requirements.Id.AA_DEVMODE);
-        return d != null && d.status != Requirements.Status.OK;
+        Requirements.Item srv = Requirements.find(items, Requirements.Id.AA_SERVER);
+        return d != null && d.status != Requirements.Status.OK || srv != null && srv.status != Requirements.Status.OK;
     }
 
     // ---------------------------------------------------------------- filas
@@ -468,7 +496,23 @@ final class Checklist {
                 }
                 return new Row("Android Auto", Str.get(R.string.hql_setup_version, String.valueOf(Ui.aaVersion(act))));
             }
+            case AA_SERVER: {
+                Row r = new Row(Str.get(R.string.hql_req_aa_server), aaServerText(it.status));
+                r.action(Str.get(R.string.hql_open_aa), this::openAaForServer);
+                r.action(Str.get(R.string.hql_req_auto_use), () -> setManual(false));
+                return r;
+            }
+            case SERVER_MANUAL_OFFER:
+                return new Row(Str.get(R.string.hql_req_manual_title), Str.get(R.string.hql_req_manual_why))
+                        .action(Str.get(R.string.hql_req_manual_use), this::confirmManual);
             case ACCESSIBILITY: {
+                if (it.hint == Requirements.Hint.MANUAL) {
+                    // Arranque manual: solo hace falta para el modo automático.
+                    Row r = new Row(Str.get(R.string.hql_setup_accessibility),
+                            (ok ? Str.get(R.string.hql_active) + " · " : "") + Str.get(R.string.hql_req_acc_manual));
+                    if (!ok) r.action(Str.get(R.string.hql_enable), this::openAccessibility);
+                    return r;
+                }
                 Row r = new Row(Str.get(R.string.hql_setup_accessibility), Str.get(R.string.hql_active));
                 if (ok) return r;
                 boolean app = Config.MODE_APP.equals(cfg.mode());
@@ -490,6 +534,10 @@ final class Checklist {
                     r.detail = Str.get(R.string.hql_checking);
                 } else if (ok) {
                     r.detail = Str.get(R.string.hql_active);
+                } else if (it.hint == Requirements.Hint.MANUAL) {
+                    // Arranque manual: sin accesibilidad no se puede comprobar (no se abre nada por debajo).
+                    r.detail = Str.get(R.string.hql_req_dev_manual);
+                    r.action(Str.get(R.string.hql_open_aa), this::openAaForDevMode);
                 } else if (it.hint == Requirements.Hint.NOT_CHECKED) {
                     r.detail = Str.get(R.string.hql_req_dev_unchecked);
                     r.action(Str.get(R.string.hql_check), this::checkDevMode).action(Str.get(R.string.hql_open_aa), this::openAaForDevMode);
@@ -594,6 +642,19 @@ final class Checklist {
         return r.action(Str.get(R.string.hql_allow), () -> request(key, perms));
     }
 
+    private String aaServerText(Requirements.Status st) {
+        switch (st) {
+            case OK:
+                return Str.get(R.string.hql_req_aa_server_on);
+            case WARN:
+                return Str.get(R.string.hql_req_aa_server_off);
+            case CHECKING:
+                return Str.get(R.string.hql_checking);
+            default:
+                return Str.get(R.string.hql_req_aa_server_unknown);
+        }
+    }
+
     private String hotspotText(Requirements.Status st, boolean wantOn) {
         switch (st) {
             case CHECKING:
@@ -642,6 +703,8 @@ final class Checklist {
                 return Str.get(R.string.hql_req_required);
             case RECOMMENDED:
                 return Str.get(R.string.hql_recommended);
+            case INFO:
+                return Str.get(R.string.hql_req_info);
             default:
                 return Str.get(R.string.hql_req_optional);
         }
@@ -769,8 +832,36 @@ final class Checklist {
         }
     }
 
+    /** Arranque manual: los ajustes de AA (⋮ › «Iniciar servidor de la unidad principal»); al volver se comprueba solo. */
+    private void openAaForServer() {
+        try {
+            AaServerStarter.openAaSettings(act);
+        } catch (RuntimeException e) {
+            L.w("requisitos: no se pudieron abrir los ajustes de AA: " + e.getMessage());
+            PowerHelper.openAppDetails(act, AaServerStarter.AA_PKG);
+        }
+    }
+
+    /** Antes de pasar al arranque manual, lo que cambia (y que el automático sigue siendo el recomendado). */
+    private void confirmManual() {
+        new MaterialAlertDialogBuilder(act)
+                .setTitle(Str.get(R.string.hql_manual_confirm_title))
+                .setMessage(Str.get(R.string.hql_manual_confirm_msg))
+                .setPositiveButton(Str.get(R.string.hql_req_manual_use), (d, w) -> setManual(true))
+                .setNegativeButton(Str.get(R.string.hql_cancel), null)
+                .show();
+    }
+
+    private void setManual(boolean manual) {
+        cfg.setAaServerManual(manual);
+        AaServerManual.onModeChanged(act, manual, "Comprobación");
+        aaServer = Requirements.AaServer.CHECKING;
+        refresh();
+    }
+
     /** Comprueba el modo desarrollador de AA (abre sus ajustes un momento, tapados por la capa). */
     void checkDevMode() {
+        if (cfg.aaServerManual()) return; // sin accesibilidad no se abre nada por debajo
         if (TouchService.instance == null) {
             new MaterialAlertDialogBuilder(act)
                     .setTitle(Str.get(R.string.hql_accessibility_first))

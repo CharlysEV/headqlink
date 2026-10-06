@@ -115,6 +115,14 @@ final class Config {
     static final String QD_USB_OVER_TCP = "qd_usb_over_tcp";
     /** Modo guardado al activar la prueba con patrón desde Diagnóstico. */
     static final String MODE_BEFORE_PATTERN = "mode_before_pattern";
+    /**
+     * «Arranque del servidor de Android Auto» (AA 17.4+): AA_SERVER_AUTO (por defecto y recomendado: la accesibilidad
+     * pulsa su menú de desarrollador para arrancarlo y pararlo) o AA_SERVER_MANUAL (sin accesibilidad: lo arranca el
+     * usuario; HeadQLink solo mira si 127.0.0.1:5277 contesta, avisa si no y nunca lo para). Se lee en cada decisión.
+     */
+    static final String AA_SERVER_START = "aa_server_start";
+    static final String AA_SERVER_AUTO = "auto";
+    static final String AA_SERVER_MANUAL = "manual";
 
     /** Modos que usan Android Auto (servidor de AA, accesibilidad, freno…). */
     static boolean isAa(String mode) {
@@ -213,6 +221,7 @@ final class Config {
         if (i.hasExtra(QD_PHONE_INFO)) e.putString(QD_PHONE_INFO, i.getStringExtra(QD_PHONE_INFO));
         if (i.hasExtra(PKG)) e.putString(PKG, i.getStringExtra(PKG));
         if (i.hasExtra("force_legacy_launch")) e.putBoolean("force_legacy_launch", i.getBooleanExtra("force_legacy_launch", false));
+        if (i.hasExtra(AA_SERVER_START)) e.putString(AA_SERVER_START, aaServerStartFor(i.getStringExtra(AA_SERVER_START)));
         e.apply();
     }
 
@@ -556,6 +565,20 @@ final class Config {
         return DEFAULT_CAR_WAIT_MIN;
     }
 
+    /** Arranque manual del servidor de Android Auto (sin accesibilidad); por defecto, no (automático). */
+    boolean aaServerManual() {
+        return AA_SERVER_MANUAL.equals(aaServerStartFor(sp.getString(AA_SERVER_START, AA_SERVER_AUTO)));
+    }
+
+    void setAaServerManual(boolean manual) {
+        sp.edit().putString(AA_SERVER_START, manual ? AA_SERVER_MANUAL : AA_SERVER_AUTO).apply();
+    }
+
+    /** Lo guardado si es una de las dos opciones; si no, el automático. */
+    static String aaServerStartFor(String stored) {
+        return AA_SERVER_MANUAL.equals(stored) ? AA_SERVER_MANUAL : AA_SERVER_AUTO;
+    }
+
     boolean peerStrict() {
         return sp.getBoolean(PEER_STRICT, false);
     }
@@ -657,6 +680,7 @@ final class Config {
                 + " fluidez=" + fluidity() + " mode=" + mode() + (MODE_APP.equals(mode()) ? " pkg=" + targetPackage() + " dpi=" + dpi() : "")
                 + " link=" + linkMode() + " engine=" + linkEngine() + " pantallaEncendida=" + keepScreenOn() + " termica=" + thermalMode()
                 + " esperarCoche=" + carWaitMin() + "min"
+                + (isAa(mode()) ? " servidorAA=" + (aaServerManual() ? "manual" : "automático") : "")
                 + (isQdEngine() ? " keepVideo=" + qdKeepVideo() + " supersede=" + qdSupersede() + " " + qdRecoverySummary()
                 + " phoneInfo=" + qdPhoneInfo() + (qdUsbOverTcp() ? " tramaUsbPorWifi" : "")
                 + " carGone=" + carGoneMs() / 1000 + "s" + (peerStrict() ? " strict" : "") : "")

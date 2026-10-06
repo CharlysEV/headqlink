@@ -352,4 +352,83 @@ class LinkLifecycleTest {
         val locked = LinkLifecycle().start(0, LinkLifecycle.Trigger.USB, LinkLifecycle.Env().aa(true).locked(true), 5 * 60_000L)
         assertTrue(locked.toString(), locked.has(LinkLifecycle.Action.START_SERVER_ON_UNLOCK))
     }
+
+    // ---------------------------------------------------------------- arranque manual del servidor (sin accesibilidad)
+
+    /** Arranque manual, sin accesibilidad, AA sin conectar. */
+    private fun manualEnv() = Env().aa(true).manual(true).automate(false)
+
+    @Test
+    fun manualServerIsCheckedOnEveryStartTriggerInsteadOfAutomated() {
+        for (trigger in Trigger.values()) for (locked in listOf(false, true)) {
+            val l = LinkLifecycle()
+            val d = l.start(0, trigger, manualEnv().locked(locked), wait)
+            assertTrue("$trigger bloqueado=$locked: $d", d.has(Action.CHECK_SERVER))
+            assertFalse(d.has(Action.START_SERVER))
+            assertFalse(d.has(Action.START_SERVER_ON_UNLOCK))
+            assertEquals(Phase.SEARCHING, l.phase())
+        }
+        // Con el automático, Conectar no pide nada (HomeActivity ya lo arrancó) y nunca sale CHECK_SERVER.
+        val auto = LinkLifecycle().start(0, Trigger.USER, Env().aa(true), wait)
+        assertTrue(auto.actions().isEmpty())
+        assertFalse(LinkLifecycle().start(0, Trigger.BLUETOOTH, Env().aa(true).locked(true), wait).has(Action.CHECK_SERVER))
+    }
+
+    @Test
+    fun manualServerIsCheckedAgainWhenTheCarAppearsEvenIfLastKnownOn() {
+        life.start(0, Trigger.BLUETOOTH, manualEnv().locked(true), wait)
+        // El último estado conocido no vale en el manual (el usuario lo puede parar cuando quiera).
+        val seen = life.carSeen(20 * sec, manualEnv().locked(true).serverOn(true), wait)
+        assertTrue(seen.toString(), seen.has(Action.CHECK_SERVER))
+        assertFalse(seen.has(Action.START_SERVER_ON_UNLOCK))
+    }
+
+    @Test
+    fun manualServerWithAndroidAutoConnectedOrParkedChecksNothing() {
+        assertFalse(LinkLifecycle().start(0, Trigger.USER, manualEnv().connected(true), wait).has(Action.CHECK_SERVER))
+        assertFalse(LinkLifecycle().start(0, Trigger.BLUETOOTH, manualEnv().parked(true).connected(true), wait).has(Action.CHECK_SERVER))
+        val guard = LinkLifecycle().start(0, Trigger.BLUETOOTH, manualEnv().guard(true).connected(true).locked(true), wait)
+        assertTrue(guard.has(Action.ADOPT_PARK))
+        assertFalse(guard.has(Action.CHECK_SERVER))
+        // Sin Android Auto (patrón, app): nada.
+        assertTrue(LinkLifecycle().start(0, Trigger.USER, Env().aa(false).manual(true), wait).actions().isEmpty())
+    }
+
+    @Test
+    fun manualServerResumeChecksTheServerOnlyIfAndroidAutoDroppedDuringThePause() {
+        val l = LinkLifecycle()
+        l.start(0, Trigger.USER, manualEnv().connected(true), wait)
+        l.carConnected(10 * sec, manualEnv().connected(true))
+        l.carLost(100 * sec, manualEnv().connected(true), grace, wait)
+        l.timer(130 * sec, manualEnv().connected(true))
+        assertEquals(Phase.PARKED, l.phase())
+        // AA se cayó en la pausa: se reanuda y, como lo relanzará la sesión, se mira el servidor.
+        val back = l.carConnected(200 * sec, manualEnv().parked(true))
+        assertTrue(back.has(Action.RESUME_AA))
+        assertTrue(back.toString(), back.has(Action.CHECK_SERVER))
+
+        val l2 = LinkLifecycle()
+        l2.start(0, Trigger.USER, manualEnv().connected(true), wait)
+        l2.carConnected(10 * sec, manualEnv().connected(true))
+        l2.carLost(100 * sec, manualEnv().connected(true), grace, wait)
+        l2.timer(130 * sec, manualEnv().connected(true))
+        val ok = l2.carConnected(200 * sec, manualEnv().parked(true).connected(true))
+        assertTrue(ok.has(Action.RESUME_AA))
+        assertFalse(ok.has(Action.CHECK_SERVER))
+    }
+
+    @Test
+    fun manualServerIsLeftOnAtTheEndNeverParkedUntilUnlock() {
+        for (locked in listOf(false, true)) for (connected in listOf(false, true)) for (stopOnExit in listOf(false, true)) {
+            assertEquals(
+                "bloqueado=$locked conectado=$connected",
+                ShutdownPlan.LEAVE_SERVER_ON,
+                LinkLifecycle.shutdownPlan(manualEnv().locked(locked).connected(connected).automate(true).stopOnExit(stopOnExit)),
+            )
+        }
+        assertEquals(ShutdownPlan.LINK_ONLY, LinkLifecycle.shutdownPlan(Env().aa(false).manual(true)))
+        // El automático, como siempre.
+        assertEquals(ShutdownPlan.PARK_UNTIL_UNLOCK, LinkLifecycle.shutdownPlan(Env().aa(true).locked(true).connected(true)))
+        assertEquals(ShutdownPlan.STOP_SERVER, LinkLifecycle.shutdownPlan(Env().aa(true)))
+    }
 }

@@ -14,6 +14,11 @@ import java.util.List;
  * - Android Auto (modos Auto): instalado y activado. Con AA 17.4 o más (salvo force_legacy_launch), además la
  *   accesibilidad de HeadQLink y el modo desarrollador de AA (arrancan su servidor de head unit). Con una versión más
  *   vieja AA se lanza sin ellos (SelfLauncherManager) y no salen.
+ * - Con el «Arranque del servidor de Android Auto» en manual (sin accesibilidad): la accesibilidad pasa a opcional
+ *   («Solo para el modo automático»), el modo desarrollador no se puede comprobar (consejo, salvo que el servidor
+ *   conteste) y sale una fila informativa «Servidor de Android Auto: encendido / apagado» con el atajo a sus ajustes.
+ *   Con el automático y la accesibilidad sin activar, un consejo ofrece el arranque manual. Nada de esto bloquea
+ *   «Conectar»: con el servidor apagado, el enlace avisa y espera a que lo arranque el usuario.
  * - Modo App: la app elegida, la accesibilidad (toques) y «Mostrar sobre otras apps» (abrirla en segundo plano).
  * - Wi-Fi Direct: «Dispositivos Wi-Fi cercanos» (ubicación antes de Android 13), el Wi-Fi activado y la zona Wi-Fi
  *   apagada (en Samsung no conviven). Zona Wi-Fi: que esté activa, y el consejo de la banda de 5 GHz (no se puede leer).
@@ -26,12 +31,13 @@ import java.util.List;
  */
 final class Requirements {
     enum Id {
-        ANDROID_AUTO, ACCESSIBILITY, AA_DEVMODE, TARGET_APP,
+        ANDROID_AUTO, AA_SERVER, ACCESSIBILITY, SERVER_MANUAL_OFFER, AA_DEVMODE, TARGET_APP,
         NEARBY_WIFI, WIFI_ON, HOTSPOT_OFF, HOTSPOT_ON, HOTSPOT_BAND, USB_CABLE,
         QDLINK, NOTIFICATIONS, BLUETOOTH, BATTERY, BATTERY_OEM, OVERLAY, MEDIA
     }
 
-    enum Importance { REQUIRED, RECOMMENDED, OPTIONAL }
+    /** INFO: solo informa (nunca cuenta en «Faltan N» ni bloquea). */
+    enum Importance { REQUIRED, RECOMMENDED, OPTIONAL, INFO }
 
     /**
      * OK: cumplido. MISSING: falta y el usuario lo puede arreglar. ERROR: falla ahora (p. ej. el puerto ocupado).
@@ -53,6 +59,8 @@ final class Requirements {
         DISABLED,
         /** Modo desarrollador de AA: aún no se ha comprobado. */
         NOT_CHECKED,
+        /** Arranque manual del servidor de AA: la accesibilidad solo es para el automático; el modo desarrollador no se comprueba. */
+        MANUAL,
         /** QDLink instalado (ciérralo antes de conectar). */
         INSTALLED,
         /** El UDP 18463 está ocupado. */
@@ -74,6 +82,9 @@ final class Requirements {
 
     enum Oem { NONE, SAMSUNG, OTHER }
 
+    /** Servidor de head unit de AA (127.0.0.1:5277), solo se mira con el arranque manual. */
+    enum AaServer { ON, OFF, UNKNOWN, CHECKING }
+
     /** Foto del estado del móvil. Por defecto, un móvil con todo en orden en Auto ampliado y Wi-Fi Direct. */
     static final class Snapshot {
         int sdk = 34;
@@ -81,6 +92,9 @@ final class Requirements {
         String linkMode = Config.LINK_P2P;
         boolean btAuto;
         boolean forceLegacyLaunch;
+        /** «Arranque del servidor de Android Auto»: manual (sin accesibilidad). */
+        boolean manualServer;
+        AaServer aaServer = AaServer.UNKNOWN;
 
         /** En Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES. */
         boolean accessibilityEnabled = true;
@@ -134,7 +148,7 @@ final class Requirements {
 
         /** Cuenta en «Faltan N cosas»: lo obligatorio y lo recomendado. */
         boolean counts() {
-            return missing() && importance != Importance.OPTIONAL;
+            return missing() && (importance == Importance.REQUIRED || importance == Importance.RECOMMENDED);
         }
 
         /** Sin esto no se conecta: se avisa al pulsar Conectar. */
@@ -159,12 +173,18 @@ final class Requirements {
         boolean hotspotLink = Config.LINK_HOTSPOT.equals(s.linkMode);
         boolean usbLink = Config.LINK_USB.equals(s.linkMode);
         boolean server = aa && s.aaVersion != null && !s.forceLegacyLaunch && usesHeadUnitServer(s.aaVersion);
+        // El arranque manual solo cuenta si AA usa su servidor de head unit (el modo App siempre necesita los toques).
+        boolean manual = server && s.manualServer;
 
         // Lo que pide el modo.
         if (aa) {
             Status st = s.aaVersion == null || !s.aaEnabled ? Status.MISSING : Status.OK;
             Hint h = s.aaVersion == null ? Hint.NOT_INSTALLED : !s.aaEnabled ? Hint.DISABLED : Hint.NONE;
             out.add(new Item(Id.ANDROID_AUTO, Importance.REQUIRED, st, h));
+        }
+        if (manual) {
+            // Informativa: apagado no bloquea (al conectar, el enlace avisa y espera a que lo arranques).
+            out.add(new Item(Id.AA_SERVER, Importance.INFO, aaServerStatus(s.aaServer), Hint.NONE));
         }
         if (server || app) {
             Status st;
@@ -176,12 +196,28 @@ final class Requirements {
                 if (s.accessibilityEnabled) h = Hint.NOT_RUNNING;
                 else if (s.restrictedSettings) h = Hint.RESTRICTED;
             }
-            out.add(new Item(Id.ACCESSIBILITY, Importance.REQUIRED, st, h));
+            if (manual) {
+                // Solo para el modo automático: opcional y sin matices (no hace falta activarla).
+                out.add(new Item(Id.ACCESSIBILITY, Importance.OPTIONAL, st, Hint.MANUAL));
+            } else {
+                out.add(new Item(Id.ACCESSIBILITY, Importance.REQUIRED, st, h));
+                // Sin la accesibilidad (lo que más cuesta, sobre todo con «ajustes restringidos»): se ofrece el manual.
+                if (server && st != Status.OK) {
+                    out.add(new Item(Id.SERVER_MANUAL_OFFER, Importance.OPTIONAL, Status.TIP, Hint.NONE));
+                }
+            }
         }
         if (server) {
-            Status st = s.devModeChecking ? Status.CHECKING : s.devMode == 1 ? Status.OK : Status.MISSING;
-            Hint h = st == Status.MISSING && s.devMode != 0 ? Hint.NOT_CHECKED : Hint.NONE;
-            out.add(new Item(Id.AA_DEVMODE, Importance.REQUIRED, st, h));
+            if (manual) {
+                // Sin accesibilidad no se puede abrir su menú para comprobarlo; si el servidor contesta, está activo.
+                boolean on = s.devMode == 1 || s.aaServer == AaServer.ON;
+                out.add(new Item(Id.AA_DEVMODE, Importance.RECOMMENDED, on ? Status.OK : Status.TIP,
+                        on ? Hint.NONE : Hint.MANUAL));
+            } else {
+                Status st = s.devModeChecking ? Status.CHECKING : s.devMode == 1 ? Status.OK : Status.MISSING;
+                Hint h = st == Status.MISSING && s.devMode != 0 ? Hint.NOT_CHECKED : Hint.NONE;
+                out.add(new Item(Id.AA_DEVMODE, Importance.REQUIRED, st, h));
+            }
         }
         if (app) {
             out.add(new Item(Id.TARGET_APP, Importance.REQUIRED, s.targetAppChosen ? Status.OK : Status.MISSING, Hint.NONE));
@@ -221,6 +257,26 @@ final class Requirements {
         }
         if (Config.MODE_AA_EXT.equals(s.mode)) out.add(perm(Id.MEDIA, Importance.OPTIONAL, s.media));
         return Collections.unmodifiableList(out);
+    }
+
+    /** Encendido: OK; apagado: aviso (no falta nada: lo arranca el usuario cuando haga falta). */
+    private static Status aaServerStatus(AaServer a) {
+        switch (a) {
+            case ON:
+                return Status.OK;
+            case OFF:
+                return Status.WARN;
+            case CHECKING:
+                return Status.CHECKING;
+            default:
+                return Status.UNKNOWN;
+        }
+    }
+
+    /** Si la comprobación tiene que mirar el servidor de AA (arranque manual con AA 17.4+ en un modo Auto). */
+    static boolean needsAaServerProbe(Snapshot s) {
+        boolean aa = Config.MODE_AA.equals(s.mode) || Config.MODE_AA_EXT.equals(s.mode);
+        return aa && s.manualServer && s.aaVersion != null && !s.forceLegacyLaunch && usesHeadUnitServer(s.aaVersion);
     }
 
     private static Status hotspotStatus(Hotspot h, boolean wantOn) {

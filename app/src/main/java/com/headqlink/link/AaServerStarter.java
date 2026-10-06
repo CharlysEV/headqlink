@@ -34,6 +34,10 @@ import java.util.concurrent.locks.ReentrantLock;
  * si después se pide el servidor (arrancarlo, o el coche que vuelve). Con el móvil bloqueado: el apagado queda pendiente
  * hasta desbloquear y el arranque, con el enlace en marcha, se avisa («Desbloquea el móvil para iniciar Android Auto») y se
  * hace solo al desbloquear. Si un apagado no se confirma, una notificación lo dice y permite reintentarlo.
+ *
+ * Con el «Arranque del servidor de Android Auto» en manual ({@link #manual}) no se automatiza nada: ni arrancar, ni
+ * parar, ni la capa, ni el botón de su notificación. Cada entrada lo comprueba y lo pasa a {@link AaServerManual}, que
+ * solo mira si 127.0.0.1:5277 contesta y se lo pide al usuario.
  */
 public final class AaServerStarter {
     static final String AA_PKG = "com.google.android.projection.gearhead";
@@ -94,8 +98,34 @@ public final class AaServerStarter {
         this.closeAfter = closeAfter;
     }
 
+    /**
+     * «Arranque del servidor de Android Auto» en manual (sin accesibilidad): nada de automatizar sus ajustes (ni arrancar,
+     * ni parar, ni la capa, ni el botón de su notificación). Lo lleva {@link AaServerManual}.
+     */
+    static boolean manual(Context ctx) {
+        return new Config(ctx).aaServerManual();
+    }
+
+    /** El servidor contestó (arranque manual): el modo desarrollador de AA está activo (solo desde él se arranca). */
+    static void noteDevModeOn(Context ctx) {
+        android.content.SharedPreferences sp = prefs(ctx);
+        if (sp.getInt(DEV_MODE, -1) != 1) sp.edit().putInt(DEV_MODE, 1).apply();
+    }
+
     /** El servidor de AA no está en marcha y no hemos podido arrancarlo: se muestra en la pantalla principal. */
     public static void reportCannotStart(Context ctx) {
+        if (manual(ctx)) {
+            // Arranque manual: si se está esperando al usuario, la fila «Auto» ya lo dice (y vuelve sola al encenderse).
+            if (AaServerManual.isWaiting()) {
+                L.i("AA: esperando a que arranques el servidor de Android Auto (arranque manual)");
+                LinkState.setSource(LinkState.Level.BUSY, Str.get(R.string.hql_aa_server_wait));
+            } else if (!LinkState.running) {
+                String msg = Str.get(R.string.hql_aa_no_start_why, Str.get(R.string.hql_reason_start_server_manual));
+                L.w("AA: " + msg);
+                LinkState.setSource(LinkState.Level.ERROR, msg);
+            }
+            return;
+        }
         String why = cannotRunReason(ctx);
         String msg = why != null ? Str.get(R.string.hql_aa_no_start_why, why)
                 : devModeState(ctx) == 0 ? Str.get(R.string.hql_aa_no_start_why, Str.get(R.string.hql_aa_devmode_missing))
@@ -104,8 +134,9 @@ public final class AaServerStarter {
         LinkState.setSource(LinkState.Level.ERROR, msg);
     }
 
-    /** Motivo por el que no se puede automatizar ahora, o null si se puede. */
+    /** Motivo por el que no se puede automatizar ahora, o null si se puede. En el arranque manual, nunca se puede. */
     public static String cannotRunReason(Context ctx) {
+        if (manual(ctx)) return Str.get(R.string.hql_reason_manual);
         if (TouchService.instance == null) return Str.get(R.string.hql_reason_accessibility);
         KeyguardManager km = ctx.getSystemService(KeyguardManager.class);
         if (km != null && km.isKeyguardLocked()) return Str.get(R.string.hql_reason_unlock);
@@ -125,6 +156,8 @@ public final class AaServerStarter {
     public static boolean startAndWait(Context ctx) {
         prefs(ctx).edit().putBoolean(PENDING_STOP, false).apply();
         stopEpoch.incrementAndGet();
+        // Arranque manual: no se pulsa nada; si no contesta, aviso al usuario y relanzamiento al encenderse.
+        if (manual(ctx)) return AaServerManual.awaitForSession(ctx);
         if (TouchService.instance != null && isLocked(ctx) && LinkState.running) {
             relaunchAfterUnlock = true;
             requestStartOnUnlock(ctx, "Android Auto necesita su servidor y el móvil está bloqueado");
@@ -193,7 +226,7 @@ public final class AaServerStarter {
     /** Apaga el servidor pulsando el botón de su notificación. false si no se tiene o ya no vale. */
     private static boolean stopViaNotification(Context ctx) {
         android.app.PendingIntent pi = stopIntent;
-        if (pi == null) return false;
+        if (pi == null || manual(ctx)) return false;
         try {
             pi.send();
             stopIntent = null;
@@ -213,6 +246,7 @@ public final class AaServerStarter {
      * lo apaga en cuanto el usuario desbloquee (así el puerto 5277 no queda abierto).
      */
     public static void requestStop(Context ctx) {
+        if (leaveOnInManual(ctx)) return;
         if (stopViaNotification(ctx)) return;
         String why = cannotRunReason(ctx);
         if (why == null) {
@@ -229,6 +263,7 @@ public final class AaServerStarter {
      */
     public static void stopIfUnlocked(Context ctx) {
         cancelPendingStop(ctx);
+        if (leaveOnInManual(ctx)) return;
         if (stopViaNotification(ctx)) return;
         String why = cannotRunReason(ctx);
         if (why == null) {
@@ -236,6 +271,14 @@ public final class AaServerStarter {
         } else {
             L.life("AA server: queda encendido (" + why + ")");
         }
+    }
+
+    /** Arranque manual: el servidor no se para nunca desde HeadQLink (ni ahora ni al desbloquear). */
+    private static boolean leaveOnInManual(Context ctx) {
+        if (!manual(ctx)) return false;
+        prefs(ctx).edit().putBoolean(PENDING_STOP, false).apply();
+        L.life("AA server: arranque manual: no lo apago (no se pulsa nada; queda encendido)");
+        return true;
     }
 
     /** Olvida un apagado pendiente (no se abrirán los ajustes de AA al desbloquear) y anula el que esté en cola. */
@@ -292,6 +335,10 @@ public final class AaServerStarter {
 
     /** Apaga y vuelve a encender el servidor (recupera un servidor que acepta TCP pero no responde). */
     public static boolean restartAndWait(Context ctx) {
+        if (manual(ctx)) {
+            L.w("AA server: reinicio pedido con el arranque manual: no se pulsa nada (páralo y arráncalo en Android Auto › ⋮)");
+            return false;
+        }
         L.i("AA server: reinicio");
         // Una sola visita a los ajustes: parar (sin cerrar), esperar y volver a iniciar.
         // La capa se mantiene durante los dos pasos.
@@ -322,6 +369,11 @@ public final class AaServerStarter {
     static void requestStartOnUnlock(Context ctx, String why) {
         prefs(ctx).edit().putBoolean(PENDING_STOP, false).apply();
         stopEpoch.incrementAndGet();
+        if (manual(ctx)) {
+            // Sin accesibilidad no se arranca al desbloquear: se mira y, si está apagado, se le pide al usuario.
+            AaServerManual.need(ctx, AaServerPolicy.Need.CAR_SEEN, false);
+            return;
+        }
         if (startOnUnlock) return;
         startOnUnlock = true;
         L.life("AA server: " + why + ": aviso «" + Str.get(R.string.hql_unlock_start_title)
@@ -357,6 +409,13 @@ public final class AaServerStarter {
 
     /** TouchService, al desbloquear: el arranque pedido con el móvil bloqueado o, si no, el apagado pendiente. */
     static void onUnlock(Context ctx) {
+        if (manual(ctx)) {
+            // Arranque manual (quizá cambiado con algo pendiente del automático): nada que pulsar al desbloquear.
+            if (startOnUnlock) cancelStartOnUnlock(ctx, "arranque manual");
+            runPendingStop(ctx);
+            AaServerManual.checkSoon(ctx);
+            return;
+        }
         if (!startOnUnlock) {
             runPendingStop(ctx);
             return;
@@ -452,14 +511,29 @@ public final class AaServerStarter {
         return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(DEV_MODE, -1);
     }
 
-    /** Abre los ajustes de Android Auto para que el usuario active el modo desarrollador. */
+    /** Abre los ajustes de Android Auto (modo desarrollador; en el arranque manual, su menú ⋮ con el servidor). */
     public static void openAaSettings(Context ctx) {
-        ctx.startActivity(new Intent().setClassName(AA_PKG, AA_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        ctx.startActivity(aaSettingsIntent(ctx));
+    }
+
+    /**
+     * La pantalla de ajustes de Android Auto (la misma que abre la automatización), para abrirla desde la app o desde una
+     * notificación. Si este Android Auto no la tiene, su «Info. de la app».
+     */
+    static Intent aaSettingsIntent(Context ctx) {
+        Intent i = new Intent().setClassName(AA_PKG, AA_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            if (ctx.getPackageManager().resolveActivity(i, 0) != null) return i;
+        } catch (RuntimeException ignored) {
+        }
+        return new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                android.net.Uri.parse("package:" + AA_PKG)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
     }
 
     /** Al desbloquear (TouchService, AaGuardService): el apagado pendiente, si lo hay y nadie lo ha anulado. */
     static void runPendingStop(Context ctx) {
         if (!prefs(ctx).getBoolean(PENDING_STOP, false)) return;
+        if (leaveOnInManual(ctx)) return;
         if (stopViaNotification(ctx)) return;
         prefs(ctx).edit().putBoolean(PENDING_STOP, false).apply();
         if (LinkState.running) {

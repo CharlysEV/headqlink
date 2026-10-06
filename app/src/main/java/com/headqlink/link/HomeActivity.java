@@ -90,6 +90,10 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         });
         videoRow = statusRow(status, Str.get(R.string.hql_image), R.drawable.hql_ln_screen);
         sourceRow = statusRow(status, "", R.drawable.hql_ln_phone);
+        // Arranque manual: «Esperando a que arranques el servidor de Android Auto»; al tocar, los ajustes de AA.
+        sourceRow.setOnClickListener(v -> {
+            if (waitingForAaServer()) openAaForServer();
+        });
         reqRow = statusRow(status, Str.get(R.string.hql_req_row), R.drawable.hql_ln_shield);
         reqRow.setOnClickListener(v -> startActivity(new Intent(this, ChecklistActivity.class)));
         setRow(reqRow, LinkState.Level.IDLE, Str.get(R.string.hql_checking));
@@ -119,6 +123,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         fpsMax = 0;
         mbpsMax = 0;
         render();
+        // De vuelta (quizá de los ajustes de AA) esperando al servidor del arranque manual: se mira ya, sin esperar 2 s.
+        AaServerManual.checkSoon(this);
         if (hotspotNow()) {
             // Estado de la zona Wi-Fi también sin conectar (fuera del hilo principal: escanea interfaces).
             new Thread(() -> {
@@ -180,7 +186,17 @@ public class HomeActivity extends Activity implements LinkState.Listener {
      */
     private void startLink() {
         Intent link = new Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY);
-        if (!Config.isAa(cfg.mode()) || AaServerStarter.cannotRunReason(this) != null) {
+        boolean manual = cfg.aaServerManual();
+        if (!Config.isAa(cfg.mode()) || (!manual && AaServerPolicy.onNeed(AaServerPolicy.Need.CONNECT, connectState())
+                != AaServerPolicy.Action.AUTOMATE)) {
+            // Sin Android Auto, o el automático sin poder pulsar ahora (sin accesibilidad o bloqueado): sin arrancarlo.
+            startForegroundService(link);
+            return;
+        }
+        if (manual && !AaPark.parked && !com.andrerinas.openheadunit.App.Companion.provide(this).getCommManager().isConnected()) {
+            // Arranque manual: no se pulsa nada; el enlace mira si 127.0.0.1:5277 contesta y, si no, avisa (y la fila
+            // «Auto» lo dice, con un toque para abrir Android Auto).
+            L.life("conectar: arranque manual del servidor de Android Auto (sin accesibilidad): lo comprueba el enlace");
             startForegroundService(link);
             return;
         }
@@ -203,6 +219,28 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 render();
             });
         }, "aa-connect").start();
+    }
+
+    /** Para AaServerPolicy al pulsar Conectar con el arranque automático: accesibilidad y bloqueo (como siempre). */
+    private AaServerPolicy.State connectState() {
+        android.app.KeyguardManager km = getSystemService(android.app.KeyguardManager.class);
+        return new AaServerPolicy.State().manual(false).automate(TouchService.instance != null)
+                .locked(km != null && km.isKeyguardLocked());
+    }
+
+    /** Arranque manual esperando a que el usuario arranque el servidor de AA: la fila «Auto» y el texto lo dicen. */
+    private boolean waitingForAaServer() {
+        return LinkState.running && Config.isAa(cfg.mode()) && AaServerManual.isWaiting();
+    }
+
+    private void openAaForServer() {
+        L.i("pantalla principal: abro Android Auto para arrancar su servidor (arranque manual)");
+        try {
+            AaServerStarter.openAaSettings(this);
+        } catch (RuntimeException e) {
+            L.w("no se pudieron abrir los ajustes de Android Auto: " + e.getMessage());
+            PowerHelper.openAppDetails(this, AaServerStarter.AA_PKG);
+        }
     }
 
     /** La conexión es la zona Wi-Fi: la del servicio en marcha o, parado, la configurada. */
@@ -274,8 +312,13 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             toggle.setOutlineSpotShadowColor(glow);
             toggle.setOutlineAmbientShadowColor(glow);
         }
+        boolean waitServer = waitingForAaServer();
+        hint.setOnClickListener(waitServer ? v -> openAaForServer() : null);
+        hint.setClickable(waitServer);
         if (!running) {
             hint.setText(Str.get(R.string.hql_hint_idle));
+        } else if (waitServer) {
+            hint.setText(Str.get(R.string.hql_aa_server_wait_hint));
         } else if (LinkState.car != LinkState.Car.CONNECTED) {
             hint.setText(Str.get(hotspotNow() ? R.string.hql_hint_searching_hotspot : R.string.hql_hint_searching));
         } else {
@@ -611,6 +654,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             carWait.addView(rb);
             if (min == waitBefore) rb.setChecked(true);
         }
+        // «Arranque del servidor de Android Auto» (solo en los modos con Android Auto).
+        v.findViewById(R.id.hql_v_aa_server_box).setVisibility(Config.isAa(cfg.mode()) ? View.VISIBLE : View.GONE);
+        RadioGroup aaServer = v.findViewById(R.id.hql_v_aa_server);
+        boolean manualBefore = cfg.aaServerManual();
+        aaServer.check(manualBefore ? R.id.hql_v_aa_server_manual : R.id.hql_v_aa_server_auto);
         android.widget.ScrollView scroll = new android.widget.ScrollView(this);
         scroll.addView(v);
         new MaterialAlertDialogBuilder(this)
@@ -659,6 +707,12 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                         // Se lee al perder al coche: vale ya para la próxima espera, sin reconectar.
                         cfg.setCarWaitMin((int) waitSel.getTag());
                         L.life("«Esperar al coche»: " + cfg.carWaitMin() + " min (vale para la próxima espera)");
+                    }
+                    boolean manualAfter = aaServer.getCheckedRadioButtonId() == R.id.hql_v_aa_server_manual;
+                    if (manualAfter != manualBefore) {
+                        // Se lee en cada decisión: vale para lo siguiente que necesite el servidor, sin reconectar.
+                        cfg.setAaServerManual(manualAfter);
+                        AaServerManual.onModeChanged(this, manualAfter, "Ajustes de imagen");
                     }
                     String engineAfter = engine.getCheckedRadioButtonId() == R.id.hql_v_engine_qdauto
                             ? Config.ENGINE_QDAUTO : Config.ENGINE_ORIGINAL;
