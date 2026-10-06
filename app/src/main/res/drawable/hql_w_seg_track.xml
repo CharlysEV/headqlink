@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Carril del selector de conexión del widget. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="13dp" />
+    <solid android:color="@color/hql_terminal" />
+    <stroke
+        android:width="1dp"
+        android:color="@color/hql_outline" />
+</shape>

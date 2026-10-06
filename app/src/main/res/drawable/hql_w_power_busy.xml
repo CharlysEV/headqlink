@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Botón grande del widget, en curso (buscando o esperando al coche, preparando): anillo ámbar. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+    <path
+        android:fillColor="#FF2B2312"
+        android:pathData="M5,48A43,43 0,1 1,91 48A43,43 0,1 1,5 48Z"
+        android:strokeWidth="3"
+        android:strokeColor="@color/hql_warn" />
+    <path
+        android:pathData="M37.07,36.98A17,17 0,1 0,58.93 36.98"
+        android:strokeWidth="5.5"
+        android:strokeColor="@color/hql_warn"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M48,29L48,47"
+        android:strokeWidth="5.5"
+        android:strokeColor="@color/hql_warn"
+        android:strokeLineCap="round" />
+</vector>

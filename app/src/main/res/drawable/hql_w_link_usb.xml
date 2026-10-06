@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icono lineal: cable USB (tridente). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12,4.6V18M9.6,7L12,4.4L14.4,7M12,15.2L7.2,12.4V10.2M12,13.4L16.8,11V9.4"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M7.2,7.4a1.4,1.4 0,1 1,0 2.8a1.4,1.4 0,1 1,0 -2.8zM15.6,7.1h2.4v2.4h-2.4zM12,17.6a1.8,1.8 0,1 1,0 3.6a1.8,1.8 0,1 1,0 -3.6z" />
+</vector>

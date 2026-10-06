@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: widget de la pantalla de inicio y botón de los ajustes rápidos (estilo «Eléctrico»). -->
+<resources>
+    <!-- Solo con Android 8+ (el enlace necesita servicios en primer plano y canales de notificación): values-v26. -->
+    <bool name="hql_widget_enabled">false</bool>
+
+    <!-- Esquinas del widget: en Android 12+ las del sistema (values-v31). -->
+    <dimen name="hql_widget_radius">20dp</dimen>
+
+    <style name="HQL.Widget" />
+
+    <!-- Selector de conexión: tres partes iguales; la elegida, con fondo de acento (LinkWidgetViews). -->
+    <style name="HQL.Widget.Segment">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">@drawable/hql_w_seg_off</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">2dp</item>
+        <item name="android:paddingEnd">2dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/hql_text_dim</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- Modo (Auto / Auto extendido): chips pequeños en versalitas. -->
+    <style name="HQL.Widget.Chip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="android:background">@drawable/hql_w_seg_off</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">9dp</item>
+        <item name="android:paddingEnd">9dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:fontFamily">sans-serif-condensed</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/hql_text_dim</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- «HEADQLINK» de la cabecera y «CONECTAR» / «DESCONECTAR» bajo el botón. -->
+    <style name="HQL.Widget.Label">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:fontFamily">sans-serif-condensed</item>
+        <item name="android:letterSpacing">0.14</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/hql_text_faint</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="HQL.Widget.Title">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColor">@color/hql_text</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="HQL.Widget.Detail">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:lineSpacingExtra">1dp</item>
+        <item name="android:textColor">@color/hql_text_dim</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+</resources>

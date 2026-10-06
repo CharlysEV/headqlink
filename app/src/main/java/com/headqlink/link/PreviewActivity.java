@@ -39,8 +39,13 @@ import java.util.List;
  *   adb shell am start -n com.headqlink.app/com.headqlink.link.PreviewActivity --es render all [--es suffix _despues]
  * render: all, coche (las cinco pestañas de Coche) o nombres separados por comas (PreviewShots).
  *
+ * El widget de la pantalla de inicio (WidgetShots: widget_&lt;estado&gt;_&lt;tamaño&gt;.png, cada estado a 4x2 y 2x2):
+ *   adb shell am start -n com.headqlink.app/com.headqlink.link.PreviewActivity --es render widget
+ * (o nombres: --es render widget_apagado_4x2,widget_conectado_usb_2x2). No usa el modo demostración ni toca el estado
+ * del enlace: vale también con la sesión del coche en marcha.
+ *
  * La actividad está exportada solo para quien tenga android.permission.DUMP (adb, no otras apps). Con la sesión del
- * coche en marcha no hace nada: el modo demostración no debe mezclarse con los datos reales.
+ * coche en marcha no hace nada (salvo el widget): el modo demostración no debe mezclarse con los datos reales.
  */
 public class PreviewActivity extends Activity {
     static final String EXTRA_RENDER = "render";
@@ -91,11 +96,16 @@ public class PreviewActivity extends Activity {
     }
 
     private void handle(Intent i) {
+        String render = i.getStringExtra(EXTRA_RENDER);
+        if (WidgetShots.wanted(render)) {
+            String suffix = i.getStringExtra(EXTRA_SUFFIX);
+            renderWidgets(render, suffix == null ? "" : suffix);
+            return;
+        }
         if (LinkState.running) {
             status.setText(Str.get(R.string.hql_preview_busy));
             return;
         }
-        String render = i.getStringExtra(EXTRA_RENDER);
         if (render != null) {
             String suffix = i.getStringExtra(EXTRA_SUFFIX);
             startRender(render, suffix == null ? "" : suffix);
@@ -191,6 +201,32 @@ public class PreviewActivity extends Activity {
     }
 
     // ------------------------------------------------------------------ capturas PNG
+
+    /** El widget en cada estado y tamaño (WidgetShots), como lo pinta el launcher. Rápido: en el hilo principal. */
+    private void renderWidgets(String which, String suffix) {
+        List<WidgetShots.Shot> shots = WidgetShots.select(which);
+        File dir = getExternalFilesDir("preview");
+        if (shots.isEmpty() || dir == null) {
+            status.setText(Str.get(R.string.hql_preview_busy));
+            return;
+        }
+        //noinspection ResultOfMethodCallIgnored
+        dir.mkdirs();
+        int done = 0;
+        for (WidgetShots.Shot s : shots) {
+            File f = new File(dir, s.name + suffix + ".png");
+            try {
+                android.graphics.Bitmap b = WidgetShots.render(this, s);
+                WidgetShots.save(b, f);
+                b.recycle();
+                done++;
+                L.i("vista previa: " + f.getName());
+            } catch (Exception e) {
+                L.e("vista previa: no se pudo dibujar " + s.name, e);
+            }
+        }
+        status.setText(Str.get(R.string.hql_preview_done, done, dir.getAbsolutePath()));
+    }
 
     private void startRender(String which, String suffix) {
         List<PreviewShots.Shot> shots = PreviewShots.select(which);

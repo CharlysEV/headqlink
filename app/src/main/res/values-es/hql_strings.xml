@@ -600,4 +600,33 @@
     <string name="hql_settings_energy">Energía</string>
     <string name="hql_settings_price_kwh">Precio de la electricidad</string>
     <string name="hql_settings_price_help">Para el coste de los viajes en Coche › Eficiencia y Viajes (carga en casa, tu tarifa).</string>
+    <!-- Widget de la pantalla de inicio y botón de los ajustes rápidos -->
+    <string name="hql_w_description">Conecta o desconecta con un toque y elige la conexión: zona Wi-Fi, Wi-Fi Direct o cable USB.</string>
+    <string name="hql_w_off">Apagado</string>
+    <string name="hql_w_tap_to_connect">Toca para conectar</string>
+    <string name="hql_w_searching">Buscando el coche…</string>
+    <string name="hql_w_found">Coche encontrado, conectando…</string>
+    <string name="hql_w_waiting_video">Esperando la imagen…</string>
+    <string name="hql_w_waiting_return">Esperando a que vuelva el coche</string>
+    <string name="hql_w_aa_paused">Android Auto en pausa</string>
+    <string name="hql_w_aa_server">Arranca el servidor de Android Auto</string>
+    <string name="hql_w_close_qdlink">Cierra QDLink</string>
+    <string name="hql_w_port_busy">El puerto 18463 está ocupado</string>
+    <string name="hql_w_check_link">Revisa la conexión</string>
+    <string name="hql_w_check_aa">Revisa Android Auto</string>
+    <string name="hql_w_check_app">Revisa la app</string>
+    <string name="hql_w_mode_ext">Extendido</string>
+    <string name="hql_w_link_hotspot">Zona Wi-Fi</string>
+    <string name="hql_w_link_p2p">Wi-Fi Direct</string>
+    <string name="hql_w_link_usb">Cable USB</string>
+    <string name="hql_w_cd_link">Conexión: %1$s. Toca para cambiarla</string>
+    <string name="hql_w_cd_selected">%1$s, opción elegida</string>
+    <string name="hql_w_cd_open">Abrir HeadQLink</string>
+    <string name="hql_w_add_widget">Añadir widget a la pantalla de inicio</string>
+    <string name="hql_w_add_tile">Añadir botón a los ajustes rápidos</string>
+    <string name="hql_w_pin_manual_title">Añadir el widget</string>
+    <string name="hql_w_pin_manual">Tu pantalla de inicio no deja añadirlo desde aquí. Mantén pulsado un hueco libre de la pantalla de inicio › Widgets › HeadQLink.</string>
+    <string name="hql_w_tile_added">Botón añadido a los ajustes rápidos</string>
+    <string name="hql_w_tile_already">El botón ya está en los ajustes rápidos</string>
+    <string name="hql_w_tile_manual">Abre los ajustes rápidos, toca el lápiz (editar) y arrastra «HeadQLink» a tus botones.</string>
 </resources>

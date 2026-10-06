@@ -41,6 +41,11 @@ public final class LinkState {
     static volatile boolean usbOverride;
     /** El motor no pudo abrir el UDP 18463: otra app (QDLink abierto) lo tiene. Lo enseña la comprobación de requisitos. */
     static volatile boolean udpBusy;
+    /**
+     * «Preparando…»: Conectar (pantalla principal, widget o ajustes rápidos) está arrancando el servidor de Android Auto
+     * antes del servicio (LinkControl). Sin servicio todavía: no lo borra setRunning.
+     */
+    static volatile boolean preparing;
 
     private static final CopyOnWriteArrayList<Listener> LISTENERS = new CopyOnWriteArrayList<>();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -75,6 +80,13 @@ public final class LinkState {
             usbOverride = false;
             udpBusy = false;
         }
+        changed();
+    }
+
+    /** Empieza o termina el arranque del servidor de Android Auto previo al servicio (LinkControl). */
+    static void setPreparing(boolean p) {
+        if (preparing == p) return;
+        preparing = p;
         changed();
     }
 

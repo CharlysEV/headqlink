@@ -29,14 +29,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     private View videoRow;
     private View sourceRow;
     private View networkRow;
-    private boolean starting;
     /** Estado de la zona Wi-Fi visto desde esta pantalla (antes de conectar). */
     private volatile HotspotWatcher.Probe hotspotProbe;
     private android.widget.CompoundButton btAuto;
     /** Fila «Requisitos»: «Todo listo» o «Faltan N cosas»; al tocarla, la pantalla «Comprobación». */
     private View reqRow;
-    /** Comprobando los requisitos antes de conectar (un toque más se ignora). */
-    private boolean checking;
     /** Panel «En directo»: fps y Mbps del vídeo al coche, con sus barras. */
     private View live;
     private View liveDot;
@@ -50,6 +47,13 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     private android.animation.ObjectAnimator livePulse;
     /** Desde la configuración terminada «igualmente»: ya se avisó de lo que falta, se conecta sin volver a avisar. */
     static final String EXTRA_SKIP_CHECK = "skip_check";
+    /**
+     * Abrir sin conectar solo: desde la cabecera del widget o manteniendo pulsado el botón de los ajustes rápidos (para
+     * conectar ya están sus botones).
+     */
+    static final String EXTRA_NO_AUTOCONNECT = "no_autoconnect";
+    /** TileService.ACTION_QS_TILE_PREFERENCES: el botón de los ajustes rápidos, mantenido pulsado. */
+    private static final String ACTION_TILE_PREFERENCES = "android.service.quicksettings.action.QS_TILE_PREFERENCES";
     private static final int REQ_IPTV_FILE = 10;
     private static final int REQ_RADIO_FILE = 11;
     private static final int REQ_CHECKLIST = 12;
@@ -102,15 +106,17 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 startActivity(new Intent(this, SetupActivity.class).putExtra(SetupActivity.EXTRA_STEP, 1)));
         toggle.setOnClickListener(v -> {
             if (LinkState.running) {
-                startService(new Intent(this, LinkService.class).setAction(LinkService.ACTION_STOP));
+                LinkControl.stop(this, "pantalla principal");
             } else {
-                connect();
+                LinkControl.connect(this, REQ_CHECKLIST, "pantalla principal", null);
             }
         });
 
-        if (b == null && !LinkState.running) {
-            if (getIntent().getBooleanExtra(EXTRA_SKIP_CHECK, false)) startLink();
-            else connect();
+        Intent start = getIntent();
+        boolean noAuto = start.getBooleanExtra(EXTRA_NO_AUTOCONNECT, false) || ACTION_TILE_PREFERENCES.equals(start.getAction());
+        if (b == null && !LinkState.running && !noAuto) {
+            if (start.getBooleanExtra(EXTRA_SKIP_CHECK, false)) LinkControl.start(this, "pantalla principal", null);
+            else LinkControl.connect(this, REQ_CHECKLIST, "pantalla principal", null);
         }
     }
 
@@ -123,6 +129,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         fpsMax = 0;
         mbpsMax = 0;
         render();
+        // El idioma de la app pudo cambiar: el widget lo repinta si hace falta (si no cambia nada, no hace nada).
+        WidgetUpdater.poke();
         // De vuelta (quizá de los ajustes de AA) esperando al servidor del arranque manual: se mira ya, sin esperar 2 s.
         AaServerManual.checkSoon(this);
         if (hotspotNow()) {
@@ -155,77 +163,6 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     @Override
     public void onLinkStateChanged() {
         render();
-    }
-
-    /**
-     * Conectar: antes, la comprobación de requisitos (fuera del hilo principal). Si falta algo obligatorio se abre la
-     * pantalla «Comprobación» con «Conectar igualmente»; si no, se arranca el enlace.
-     */
-    private void connect() {
-        if (checking) return;
-        checking = true;
-        new Thread(() -> {
-            java.util.List<Requirements.Item> blocking = Requirements.blocking(Checklist.evaluateNow(this));
-            runOnUiThread(() -> {
-                checking = false;
-                if (isFinishing() || isDestroyed() || LinkState.running) return;
-                if (blocking.isEmpty()) {
-                    startLink();
-                    return;
-                }
-                L.i("conectar: faltan requisitos obligatorios " + blocking + "; abro la comprobación");
-                startActivityForResult(new Intent(this, ChecklistActivity.class).putExtra(ChecklistActivity.EXTRA_GATE, true),
-                        REQ_CHECKLIST);
-            });
-        }, "hql-req-connect").start();
-    }
-
-    /**
-     * Arranca el enlace. En modo Android Auto, antes se asegura de que el servidor de AA está en
-     * marcha (ahora el móvil está desbloqueado; la automatización queda tapada por una capa).
-     */
-    private void startLink() {
-        Intent link = new Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY);
-        boolean manual = cfg.aaServerManual();
-        if (!Config.isAa(cfg.mode()) || (!manual && AaServerPolicy.onNeed(AaServerPolicy.Need.CONNECT, connectState())
-                != AaServerPolicy.Action.AUTOMATE)) {
-            // Sin Android Auto, o el automático sin poder pulsar ahora (sin accesibilidad o bloqueado): sin arrancarlo.
-            startForegroundService(link);
-            return;
-        }
-        if (manual && !AaPark.parked && !com.andrerinas.openheadunit.App.Companion.provide(this).getCommManager().isConnected()) {
-            // Arranque manual: no se pulsa nada; el enlace mira si 127.0.0.1:5277 contesta y, si no, avisa (y la fila
-            // «Auto» lo dice, con un toque para abrir Android Auto).
-            L.life("conectar: arranque manual del servidor de Android Auto (sin accesibilidad): lo comprueba el enlace");
-            startForegroundService(link);
-            return;
-        }
-        if (AaPark.parked || com.andrerinas.openheadunit.App.Companion.provide(this).getCommManager().isConnected()) {
-            // AA sigue conectado (en pausa, esperando al coche): su servidor está encendido. Nada que arrancar ni apagar:
-            // el enlace lo reanuda en cuanto llegue el coche.
-            L.life("conectar: Android Auto sigue conectado (en pausa); no hace falta arrancar su servidor");
-            AaServerStarter.cancelPendingStop(this);
-            startForegroundService(link);
-            return;
-        }
-        starting = true;
-        render();
-        new Thread(() -> {
-            boolean ok = AaServerStarter.startAndWait(this);
-            L.i("conectar: servidor de Android Auto " + (ok ? "listo" : "no confirmado"));
-            runOnUiThread(() -> {
-                starting = false;
-                startForegroundService(link);
-                render();
-            });
-        }, "aa-connect").start();
-    }
-
-    /** Para AaServerPolicy al pulsar Conectar con el arranque automático: accesibilidad y bloqueo (como siempre). */
-    private AaServerPolicy.State connectState() {
-        android.app.KeyguardManager km = getSystemService(android.app.KeyguardManager.class);
-        return new AaServerPolicy.State().manual(false).automate(TouchService.instance != null)
-                .locked(km != null && km.isKeyguardLocked());
     }
 
     /** Arranque manual esperando a que el usuario arranque el servidor de AA: la fila «Auto» y el texto lo dicen. */
@@ -271,6 +208,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         }
 
         boolean running = LinkState.running;
+        // «Preparando…»: arrancando el servidor de Android Auto antes del servicio (también desde el widget).
+        boolean starting = LinkState.preparing;
         switch (LinkState.car) {
             case CONNECTED:
                 setRow(carRow, LinkState.Level.OK, Str.get(R.string.hql_connected) + (LinkState.carDetail.isEmpty() ? "" : " · " + LinkState.carDetail));
@@ -442,7 +381,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
 
     /**
      * Menú del engranaje: comprobación de requisitos, ajustes de imagen, listas de TV y radio (solo
-     * Auto extendido), idioma y diagnóstico. (Sin «Tema»: la app va siempre en oscuro, estilo «Eléctrico».)
+     * Auto extendido), idioma, añadir el widget (y, con Android 13+, el botón de los ajustes rápidos) y diagnóstico.
+     * (Sin «Tema»: la app va siempre en oscuro, estilo «Eléctrico».)
      */
     private void showMenu(View anchor) {
         android.widget.PopupMenu pm = new android.widget.PopupMenu(this, anchor);
@@ -455,6 +395,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             m.add(0, 3, 3, Str.get(R.string.hql_radio_list));
         }
         if (android.os.Build.VERSION.SDK_INT >= 33) m.add(0, 4, 4, Str.get(R.string.hql_language));
+        if (android.os.Build.VERSION.SDK_INT >= 26) m.add(0, 8, 5, Str.get(R.string.hql_w_add_widget));
+        if (android.os.Build.VERSION.SDK_INT >= 33) m.add(0, 9, 5, Str.get(R.string.hql_w_add_tile));
         m.add(0, 6, 6, Str.get(R.string.hql_diagnostics));
         pm.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
@@ -472,6 +414,12 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     break;
                 case 7:
                     startActivity(new Intent(this, ChecklistActivity.class));
+                    break;
+                case 8:
+                    WidgetUpdater.requestPin(this);
+                    break;
+                case 9:
+                    LinkTileService.requestAdd(this);
                     break;
                 default:
                     startActivity(new Intent(this, LogActivity.class));
@@ -542,7 +490,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         super.onActivityResult(req, res, data);
         if (req == REQ_CHECKLIST) {
             // «Conectar» o «Conectar igualmente» en la comprobación.
-            if (res == RESULT_OK && !LinkState.running) startLink();
+            if (res == RESULT_OK && !LinkState.running) LinkControl.start(this, "pantalla principal", null);
             return;
         }
         if (res != RESULT_OK || data == null) return;

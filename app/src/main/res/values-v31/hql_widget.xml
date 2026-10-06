@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: en Android 12+ el widget usa el radio de esquina del sistema (como los demás widgets del móvil). -->
+<resources>
+    <dimen name="hql_widget_radius">@android:dimen/system_app_widget_background_radius</dimen>
+</resources>

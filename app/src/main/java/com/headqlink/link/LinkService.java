@@ -45,6 +45,13 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     static final String ACTION_AA_SERVER_OFF = "com.headqlink.link.AA_SERVER_OFF";
     /** El coche puso el móvil en modo accesorio (UsbAccessoryActivity), con UsbManager.EXTRA_ACCESSORY: cable USB. */
     static final String ACTION_USB_ATTACHED = "com.headqlink.link.USB_ATTACHED";
+    /**
+     * Otra conexión elegida (Config.LINK_MODE) con el enlace en marcha, desde el widget: se aplica ya (switchLink), sin
+     * reiniciar Android Auto. Con el servicio parado no hace nada: la conexión nueva vale para el próximo «Conectar».
+     */
+    static final String ACTION_SET_LINK = "com.headqlink.link.SET_LINK";
+    /** Quién lo pide, para el log (widget…). */
+    static final String EXTRA_FROM = "from";
     private static final String CHANNEL = "link";
 
     static volatile String status = "parado";
@@ -298,6 +305,18 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                 return START_NOT_STICKY;
             }
             apply(life.btGone(now(), env()));
+            return START_NOT_STICKY;
+        }
+        if (ACTION_SET_LINK.equals(intent.getAction())) {
+            String from = intent.getStringExtra(EXTRA_FROM);
+            if (!transportStarted) {
+                // Parado (o cerrándose): la conexión nueva ya está guardada y vale para el próximo «Conectar».
+                stopSelf(startId);
+                return START_NOT_STICKY;
+            }
+            // Llega con startService (el servicio ya está en primer plano); con startForegroundService haría falta esto.
+            if (!goForeground(status)) return START_NOT_STICKY;
+            switchLink(cfg.linkMode(), from != null ? from : "otra app");
             return START_NOT_STICKY;
         }
         boolean usbAttach = ACTION_USB_ATTACHED.equals(intent.getAction());
@@ -575,6 +594,72 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         if (hotspot != null) {
             hotspot.stop();
             hotspot = null;
+        }
+    }
+
+    /**
+     * Otra conexión elegida con el enlace en marcha (el widget): se aplica ya, por el mismo camino que al enchufar o quitar
+     * el cable (startUsb, stopWifi + startWifi), sin reiniciar Android Auto. Si había sesión, «coche perdido» con el
+     * vídeo vivo hasta que el coche vuelve por la conexión nueva. Con el cable del coche puesto y en uso, el cable sigue
+     * teniendo prioridad: la elegida es a la que se vuelve al quitarlo. El motor (QDAuto u original) no cambia: el de
+     * este arranque. Hilo principal.
+     */
+    private void switchLink(String target, String from) {
+        if (stopping || usb == null) return;
+        String was = wifiLinkMode;
+        boolean toUsb = Config.LINK_USB.equals(target);
+        if (target.equals(was) && usbActive == toUsb) {
+            L.i("conexión: " + Ui.linkTitle(target) + " (" + from + "): ya es la del enlace");
+            return;
+        }
+        wifiLinkMode = target;
+        if (toUsb) {
+            if (usbActive) {
+                // El cable ya iba por delante de la Wi-Fi elegida: ahora es la conexión elegida.
+                L.i("conexión: cable USB (" + from + "); el cable ya era el enlace");
+                LinkState.setActiveTransport(Config.LINK_USB, Config.ENGINE_QDAUTO, false);
+            } else {
+                L.i("conexión: " + Ui.linkTitle(was) + " → cable USB (" + from + ", con el enlace en marcha)");
+                // startUsb ya pasa a «coche perdido» si había sesión por Wi-Fi.
+                startUsb("conexión elegida: cable USB");
+                afterSwitch(false);
+            }
+            return;
+        }
+        if (usbActive) {
+            if (usb.isBusy()) {
+                L.i("conexión: " + Ui.linkTitle(target) + " (" + from + "); el cable USB del coche está en uso y tiene"
+                        + " prioridad: vuelvo a " + Ui.linkTitle(target) + " al quitarlo");
+                LinkState.setActiveTransport(Config.LINK_USB, Config.ENGINE_QDAUTO, true);
+                return;
+            }
+            L.i("conexión: cable USB → " + Ui.linkTitle(target) + " (" + from + ", con el enlace en marcha)");
+            usb.deactivate("conexión elegida: " + Ui.linkTitle(target));
+            startWifi();
+            afterSwitch(false);
+            return;
+        }
+        // De una Wi-Fi a la otra: se para la de ahora (con su sesión o su intento) y se arranca la nueva.
+        L.i("conexión: " + Ui.linkTitle(was) + " → " + Ui.linkTitle(target) + " (" + from + ", con el enlace en marcha)");
+        boolean qdWasConnected = qd != null && qd.isConnected();
+        stopWifi("cambio de conexión a " + Ui.linkTitle(target));
+        startWifi();
+        afterSwitch(qdWasConnected);
+    }
+
+    /**
+     * Tras cambiar de conexión: con el motor QDAuto, la sesión que había se cerró con el motor (sin aviso), así que es
+     * «coche perdido» (el vídeo sigue vivo para la conexión nueva). Sin sesión, «buscando» (un «coche anunciado» de la
+     * conexión de antes ya no vale), salvo con Android Auto esperando al coche.
+     */
+    private void afterSwitch(boolean qdWasConnected) {
+        if (qdWasConnected) {
+            setStatus(Str.get(R.string.hql_reconnecting));
+            LinkState.setCar(LinkState.Car.RECONNECTING, "");
+            apply(life.carLost(now(), env(), graceMs(), cfg.carWaitMs()));
+        } else if (LinkState.car == LinkState.Car.SEEN) {
+            setStatus(Str.get(R.string.hql_waiting_car));
+            LinkState.setCar(LinkState.Car.SEARCHING, "");
         }
     }
 

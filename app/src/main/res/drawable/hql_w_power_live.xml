@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Botón grande del widget, con imagen en el coche: degradado cian → verde eléctrico con halo. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+    <path
+        android:pathData="M1.5,48A46.5,46.5 0,1 1,94.5 48A46.5,46.5 0,1 1,1.5 48Z"
+        android:strokeWidth="3"
+        android:strokeColor="#594CFF9F" />
+    <path android:pathData="M5,48A43,43 0,1 1,91 48A43,43 0,1 1,5 48Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endX="82"
+                android:endY="82"
+                android:startX="14"
+                android:startY="14"
+                android:type="linear">
+                <item
+                    android:color="#FF00E5C7"
+                    android:offset="0" />
+                <item
+                    android:color="#FF4CFF9F"
+                    android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M37.07,36.98A17,17 0,1 0,58.93 36.98"
+        android:strokeWidth="5.5"
+        android:strokeColor="@color/hql_on_accent"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M48,29L48,47"
+        android:strokeWidth="5.5"
+        android:strokeColor="@color/hql_on_accent"
+        android:strokeLineCap="round" />
+</vector>

@@ -497,7 +497,58 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- headqlink: mantener pulsado el botón de los ajustes rápidos abre la app (sin conectar sola) -->
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
         </activity>
+
+        <!--
+            headqlink: widget «HeadQLink» de la pantalla de inicio (botón grande, estado, conexión y modo). No exportado:
+            Android le entrega sus avisos igualmente y los toques del selector llegan con PendingIntent propios. Desde
+            Android 8 (bool hql_widget_enabled).
+        -->
+        <receiver
+            android:name="com.headqlink.link.LinkWidget"
+            android:enabled="@bool/hql_widget_enabled"
+            android:exported="false"
+            android:label="HeadQLink">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/hql_widget_info" />
+        </receiver>
+
+        <!--
+            headqlink: puente invisible del botón grande del widget y del botón de los ajustes rápidos (Conectar con la
+            comprobación, o Desconectar). Transparente, en su propia tarea y fuera de recientes; sin recrearse al girar.
+        -->
+        <activity
+            android:name="com.headqlink.link.QuickToggleActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density|locale|layoutDirection|fontScale"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- headqlink: botón «HeadQLink» de los ajustes rápidos (tocar: Conectar / Desconectar) -->
+        <service
+            android:name="com.headqlink.link.LinkTileService"
+            android:enabled="@bool/hql_widget_enabled"
+            android:exported="true"
+            android:icon="@drawable/hql_ic_notif"
+            android:label="HeadQLink"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
 
         <activity
             android:name="com.headqlink.link.SetupActivity"

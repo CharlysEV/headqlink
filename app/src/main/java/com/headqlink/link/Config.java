@@ -138,6 +138,15 @@ final class Config {
         sp = ctx.getSharedPreferences("cfg", Context.MODE_PRIVATE);
     }
 
+    /**
+     * Avisos de cambios en los ajustes, en el hilo principal (el widget sigue la conexión y el modo, se cambien donde se
+     * cambien). Android solo guarda una referencia débil al oyente: quien llama tiene que guardarlo.
+     */
+    void listen(SharedPreferences.OnSharedPreferenceChangeListener l, boolean on) {
+        if (on) sp.registerOnSharedPreferenceChangeListener(l);
+        else sp.unregisterOnSharedPreferenceChangeListener(l);
+    }
+
     static final String VIDEO_PROFILE = "video_profile";
 
     /** Perfil elegido por el usuario, o "" si sigue el recomendado. */

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: el widget y el botón de los ajustes rápidos, desde Android 8 (values/hql_widget.xml). -->
+<resources>
+    <bool name="hql_widget_enabled">true</bool>
+</resources>

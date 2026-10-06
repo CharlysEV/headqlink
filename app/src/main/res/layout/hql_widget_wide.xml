@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    headqlink: widget 4x2 (estilo «Eléctrico»): cabecera con la marca (abre la app) y el modo, el botón grande con lo que
+    hace y el estado, y el selector de conexión. Solo vistas de RemoteViews. Lo rellena LinkWidgetViews en el idioma de la
+    app; lo de aquí es el estado «Apagado», que es lo que enseña la vista previa del selector de widgets (Android 12+).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/hql_widget_bg"
+    android:clipToOutline="true"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingTop="10dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="12dp"
+    tools:targetApi="31">
+
+    <!-- Cabecera: la marca (abre la app) y el modo -->
+    <LinearLayout
+        android:id="@+id/hql_w_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/hql_w_brand"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:layout_weight="1"
+            android:background="@drawable/hql_w_press"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/hql_logo" />
+
+            <TextView
+                android:id="@+id/hql_w_brand_text"
+                style="@style/HQL.Widget.Label"
+                android:layout_marginStart="6dp"
+                android:text="HeadQLink"
+                android:textColor="@color/hql_text_dim"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/hql_w_mode_aa"
+            style="@style/HQL.Widget.Chip"
+            android:background="@drawable/hql_w_seg_on"
+            android:text="@string/hql_mode_aa"
+            android:textColor="@color/hql_accent" />
+
+        <TextView
+            android:id="@+id/hql_w_mode_ext"
+            style="@style/HQL.Widget.Chip"
+            android:layout_marginStart="4dp"
+            android:text="@string/hql_w_mode_ext" />
+    </LinearLayout>
+
+    <!-- El botón grande (con lo que hace debajo) y el estado -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Alto según el contenido: el círculo (como mucho 84 dp) solo encoge si no cabe con su etiqueta. -->
+        <LinearLayout
+            android:id="@+id/hql_w_power"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/hql_w_press"
+            android:gravity="center"
+            android:minWidth="80dp"
+            android:orientation="vertical"
+            android:paddingStart="4dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="4dp"
+            android:paddingBottom="2dp">
+
+            <ImageView
+                android:id="@+id/hql_w_power_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:adjustViewBounds="true"
+                android:importantForAccessibility="no"
+                android:maxWidth="84dp"
+                android:maxHeight="84dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/hql_w_power_off" />
+
+            <TextView
+                android:id="@+id/hql_w_action"
+                style="@style/HQL.Widget.Label"
+                android:layout_marginTop="4dp"
+                android:text="@string/hql_connect"
+                android:textColor="@color/hql_accent" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/hql_w_title"
+                style="@style/HQL.Widget.Title"
+                android:maxLines="2"
+                android:text="@string/hql_w_off" />
+
+            <TextView
+                android:id="@+id/hql_w_detail"
+                style="@style/HQL.Widget.Detail"
+                android:text="@string/hql_w_tap_to_connect" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Conexión con el coche: la elegida va marcada; tocar otra la cambia (y la aplica con el enlace en marcha) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/hql_w_seg_track"
+        android:orientation="horizontal"
+        android:padding="3dp">
+
+        <TextView
+            android:id="@+id/hql_w_link_hotspot"
+            style="@style/HQL.Widget.Segment"
+            android:background="@drawable/hql_w_seg_on"
+            android:text="@string/hql_w_link_hotspot"
+            android:textColor="@color/hql_accent" />
+
+        <TextView
+            android:id="@+id/hql_w_link_p2p"
+            style="@style/HQL.Widget.Segment"
+            android:text="@string/hql_w_link_p2p" />
+
+        <TextView
+            android:id="@+id/hql_w_link_usb"
+            style="@style/HQL.Widget.Segment"
+            android:text="@string/hql_w_link_usb" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Parte sin elegir del selector del widget: transparente, con la onda al tocar. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/hql_ripple">
+    <item android:id="@android:id/mask">
+        <shape>
+            <corners android:radius="10dp" />
+            <solid android:color="#FFFFFFFF" />
+        </shape>
+    </item>
+</ripple>

@@ -163,6 +163,9 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
                 OemAppManager.runAutoKillIfEnabled(this@App)
             }
         }
+
+        // headqlink: el widget sigue el estado del enlace (por avisos; lee los ajustes, así que tras desbloquear).
+        com.headqlink.link.WidgetUpdater.init(this)
     }
 
     private var unlockedInitDone = false

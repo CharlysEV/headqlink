@@ -599,4 +599,33 @@
     <string name="hql_settings_energy">Energy</string>
     <string name="hql_settings_price_kwh">Electricity price</string>
     <string name="hql_settings_price_help">For the cost of trips in Car › Efficiency and Trips (home charging, your tariff).</string>
+    <!-- Widget de la pantalla de inicio y botón de los ajustes rápidos -->
+    <string name="hql_w_description">Connect or disconnect with one tap and choose the connection: hotspot, Wi-Fi Direct or USB cable.</string>
+    <string name="hql_w_off">Off</string>
+    <string name="hql_w_tap_to_connect">Tap to connect</string>
+    <string name="hql_w_searching">Looking for the car…</string>
+    <string name="hql_w_found">Car found, connecting…</string>
+    <string name="hql_w_waiting_video">Waiting for the picture…</string>
+    <string name="hql_w_waiting_return">Waiting for the car to come back</string>
+    <string name="hql_w_aa_paused">Android Auto paused</string>
+    <string name="hql_w_aa_server">Start the Android Auto server</string>
+    <string name="hql_w_close_qdlink">Close QDLink</string>
+    <string name="hql_w_port_busy">Port 18463 is busy</string>
+    <string name="hql_w_check_link">Check the connection</string>
+    <string name="hql_w_check_aa">Check Android Auto</string>
+    <string name="hql_w_check_app">Check the app</string>
+    <string name="hql_w_mode_ext">Extended</string>
+    <string name="hql_w_link_hotspot">Hotspot</string>
+    <string name="hql_w_link_p2p">Wi-Fi Direct</string>
+    <string name="hql_w_link_usb">USB cable</string>
+    <string name="hql_w_cd_link">Connection: %1$s. Tap to change it</string>
+    <string name="hql_w_cd_selected">%1$s, selected</string>
+    <string name="hql_w_cd_open">Open HeadQLink</string>
+    <string name="hql_w_add_widget">Add widget to the home screen</string>
+    <string name="hql_w_add_tile">Add button to Quick Settings</string>
+    <string name="hql_w_pin_manual_title">Add the widget</string>
+    <string name="hql_w_pin_manual">Your home screen doesn\'t allow adding it from here. Touch and hold an empty spot on the home screen › Widgets › HeadQLink.</string>
+    <string name="hql_w_tile_added">Button added to Quick Settings</string>
+    <string name="hql_w_tile_already">The button is already in Quick Settings</string>
+    <string name="hql_w_tile_manual">Open Quick Settings, tap the pencil (edit) and drag “HeadQLink” into your buttons.</string>
 </resources>
