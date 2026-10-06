@@ -40,8 +40,8 @@ Puedes elegir entre dos modos:
 
 | Modo | Qué ves en el coche |
 |---|---|
-| «Auto» | Android Auto a pantalla completa: mapas, música y mensajes. |
-| «Auto extendido» (recomendado por la app) | Lo mismo, con un panel propio a la izquierda con más información del coche y del viaje (ruta, conducción, viajes, instrumentos, eficiencia) y más funciones (fotos, vídeos, web, TV, radio, juegos). |
+| «Auto» (recomendado) | Android Auto a pantalla completa: mapas, música y mensajes. Es el más ligero para el móvil y el enlace. |
+| «Auto extendido» | Lo mismo, con un panel propio a la izquierda con más información del coche y del viaje (ruta, conducción, viajes, instrumentos, eficiencia) y más funciones (fotos, vídeos, web, TV, radio, juegos). |
 
 **Qué necesitas**
 
@@ -294,15 +294,18 @@ HeadQLink. La fila «Red» pasará de «Wi-Fi Direct: buscando el coche» a «Wi
 ### Conexión por cable USB (experimental)
 
 Como la app original del coche, HeadQLink puede llevar la imagen **por cable** en vez de por Wi-Fi: el coche pone el
-móvil en «modo accesorio» y la sesión de siempre va por el cable. **Aún no se sabe si el C10 lo hace** (la app original
-dice que solo algunos modelos), así que es experimental.
+móvil en «modo accesorio» y la sesión de siempre va por el cable. **Probado en el C10 (2026-10-06): 5 minutos a 40 fps,
+sin un solo corte**, y además el móvil carga. Sigue marcado como experimental hasta tener más viajes.
 
 1. Usa un **cable de datos** (no uno solo de carga) y conéctalo al **puerto USB de datos** del coche (el de la música o
    de Android Auto/CarPlay, no uno solo de carga).
 2. Abre la app de espejo en la pantalla del coche.
 3. Si el coche pone el móvil en modo accesorio, Android abre HeadQLink sola. Si **QDLink** también está instalada,
    Android puede preguntar **qué app abre «QDriveLink»**: elige **HeadQLink** y **«Siempre»** (o desinstala QDLink).
-4. La fila «Red» dice «Cable USB: Neusoft QDriveLink 1» y el coche conecta como siempre.
+4. La fila «Red» dice «Cable USB: Neusoft QDriveLink 1.0» y el coche conecta como siempre.
+5. **Si el coche no contesta** (la imagen no llega en unos segundos), **desenchufa y vuelve a enchufar el cable**: el
+   coche solo habla en los primeros segundos tras enchufarlo, y si HeadQLink no tenía aún el cable (por ejemplo, porque
+   Android preguntó qué app abrirlo), se pierde esa ocasión.
 
 - **No hace falta la zona Wi-Fi.** Con el cable puesto, **el cable tiene prioridad**: aunque la conexión elegida sea
   otra, HeadQLink deja el Wi-Fi en pausa y, al quitar el cable, vuelve a él. Para usar solo el cable, elige «Cable USB»

@@ -83,7 +83,7 @@ public class LogActivity extends Activity {
         } else {
             if (!Config.MODE_PATTERN.equals(mode)) return;
             String before = cfg.getString(Config.MODE_BEFORE_PATTERN);
-            cfg.setMode(before != null && !Config.MODE_PATTERN.equals(before) ? before : Config.MODE_AA_EXT);
+            cfg.setMode(before != null && !Config.MODE_PATTERN.equals(before) ? before : Config.MODE_AA);
             cfg.putString(Config.MODE_BEFORE_PATTERN, null);
         }
         L.i("prueba con patrón: " + (on ? "SÍ" : "no") + " (modo " + cfg.mode() + ")");

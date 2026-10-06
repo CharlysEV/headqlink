@@ -481,7 +481,8 @@ final class Config {
     }
 
     String mode() {
-        return sp.getString(MODE, MODE_AA_EXT);
+        // Por defecto, Auto a secas: en el coche (2026-10-06) Auto extendido dio peores sesiones (más carga y menos fps).
+        return sp.getString(MODE, MODE_AA);
     }
 
     void setMode(String m) {

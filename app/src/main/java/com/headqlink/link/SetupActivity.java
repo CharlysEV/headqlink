@@ -170,13 +170,14 @@ public class SetupActivity extends Activity {
     private void renderModes() {
         LinearLayout list = container.findViewById(R.id.hql_mode_options);
         // «Una app concreta» y «Diagnóstico» siguen disponibles por adb (extra mode), no en el menú.
-        String[] modes = {Config.MODE_AA_EXT, Config.MODE_AA};
-        if (!Config.isAa(mode)) mode = Config.MODE_AA_EXT;
+        // Auto, el recomendado, primero; Auto extendido queda como opción.
+        String[] modes = {Config.MODE_AA, Config.MODE_AA_EXT};
+        if (!Config.isAa(mode)) mode = Config.MODE_AA;
         for (String m : modes) {
             View opt = LayoutInflater.from(this).inflate(R.layout.hql_mode_option, list, false);
             ((TextView) opt.findViewById(R.id.hql_opt_title)).setText(Ui.modeTitle(m));
             ((TextView) opt.findViewById(R.id.hql_opt_detail)).setText(Ui.modeDetail(m));
-            if (Config.MODE_AA_EXT.equals(m)) {
+            if (Config.MODE_AA.equals(m)) {
                 TextView tag = opt.findViewById(R.id.hql_opt_tag);
                 tag.setText(Str.get(R.string.hql_recommended));
                 tag.setVisibility(View.VISIBLE);

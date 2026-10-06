@@ -40,8 +40,8 @@ There are two modes:
 
 | Mode | What you see in the car |
 |---|---|
-| "Auto" | Android Auto in full screen: maps, music and messages. |
-| "Auto extended" (recommended by the app) | The same, plus its own panel on the left with more car and trip information (route, driving, trips, gauges, efficiency) and more features (photos, videos, web, TV, radio, games). |
+| "Auto" (recommended) | Android Auto in full screen: maps, music and messages. It is the lightest on the phone and the link. |
+| "Auto extended" | The same, plus its own panel on the left with more car and trip information (route, driving, trips, gauges, efficiency) and more features (photos, videos, web, TV, radio, games). |
 
 **What you need**
 
@@ -288,6 +288,8 @@ What changes, and why automatic is still the **recommended** mode:
 > needs and the car can't find HeadQLink.
 
 ### USB cable connection (experimental)
+
+> **Tested on the C10 (2026-10-06): 5 minutes at 40 fps with no drops**, and the phone charges. If the car doesn't answer within a few seconds, **unplug and plug the cable back in**: the car only talks during the first seconds after plugging in.
 
 Like the car's original app, HeadQLink can carry the picture **over a cable** instead of Wi-Fi: the car switches the
 phone to "accessory mode" and the usual session goes over the cable. **It's not yet known whether the C10 does this**

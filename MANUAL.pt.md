@@ -57,8 +57,8 @@ Há dois modos à escolha:
 
 | Modo | O que vê no carro |
 |---|---|
-| «Auto» | Android Auto em ecrã inteiro: mapas, música e mensagens. |
-| «Auto estendido» (recomendado pela aplicação) | O mesmo, com um painel próprio à esquerda com mais informação do carro e da viagem (rota, condução, viagens, instrumentos, eficiência) e mais funcionalidades (fotos, vídeos, web, TV, rádio, jogos). |
+| «Auto» (recomendado) | Android Auto em ecrã inteiro: mapas, música e mensagens. É o mais leve para o telemóvel e para a ligação. |
+| «Auto estendido» | O mesmo, com um painel próprio à esquerda com mais informação do carro e da viagem (rota, condução, viagens, instrumentos, eficiência) e mais funcionalidades (fotos, vídeos, web, TV, rádio, jogos). |
 
 **O que precisa**
 
@@ -305,6 +305,8 @@ depois o HeadQLink. A linha «Rede» passa de «Wi-Fi Direct: a procurar o carro
 > de que o HeadQLink precisa e o carro não o encontra.
 
 ### Ligação por cabo USB (experimental)
+
+> **Testado no C10 (2026-10-06): 5 minutos a 40 fps sem cortes**, e o telemóvel carrega. Se o carro não responder em poucos segundos, **desligue e volte a ligar o cabo**: o carro só fala nos primeiros segundos depois de ligar o cabo.
 
 Tal como a aplicação original do carro, o HeadQLink pode levar a imagem **por cabo** em vez de por Wi-Fi: o carro põe o
 telemóvel em «modo acessório» e a sessão de sempre passa pelo cabo. **Ainda não se sabe se o C10 o faz** (a aplicação
