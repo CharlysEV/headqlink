@@ -162,7 +162,7 @@ This is the **requirements check**: a list of everything your setup needs. It's 
 | "HeadQLink accessibility" (Required with Android Auto 17.4 or later; Optional with the manual start) | HeadQLink uses it to start Android Auto without you seeing it and to receive the car's touches. In Android Settings it's called **"HeadQLink touch"**. | "Turn on" and switch on "HeadQLink touch". See the note below. |
 | "No accessibility?" (Tip, only when accessibility is missing) | You can start the Android Auto server yourself and leave it off. | "Manual start" (see [Without accessibility](#without-accessibility-manual-start-of-the-android-auto-server)). |
 | "Android Auto developer mode" (Required with 17.4 or later) | Android Auto only accepts a "car screen" inside the phone through its developer mode. You turn it on once. | "Open AA" and follow the guide below. "Check" verifies it (accessibility must be on). |
-| "Android Auto server" (Info, only with the manual start) | What is known **without connecting to it** (every connection uses it up): "In use by HeadQLink", "Not answering" (the attempts with the car fail) or, if unknown, how to start it. It never stops you connecting: if it doesn't answer, HeadQLink tells you and retries. | "Open AA" (⋮ › "Stop head unit server" if shown and ⋮ › "Start head unit server") or "Automatic mode". |
+| "Android Auto server" (Info, only with the manual start) | What is known **without connecting to it** (a test connection would block it): "In use by HeadQLink", "Not answering" (the attempts with the car fail) or, if unknown, how to start it. It never stops you connecting: if it doesn't answer, HeadQLink tells you and retries. | "Open AA" (⋮ › "Stop head unit server" if shown and ⋮ › "Start head unit server") or "Automatic mode". |
 | "Notifications" (Recommended) | To see the connection status and warnings. | "Allow" (or "Open" if you blocked them). |
 | "No battery restrictions" (Recommended) | So that Android doesn't close HeadQLink with the screen off or block the automatic connection. | "Allow" and accept Android's prompt. |
 | "Samsung: never sleeping apps" (Tip, Samsung only) | Samsung closes background apps on its own. The app can't check this. | "Open" and choose "Unrestricted". Also: Settings › Battery › Background usage limits › Never sleeping apps › add HeadQLink. |
@@ -219,36 +219,36 @@ With "Auto" and "Auto extended" HeadQLink then doesn't use it at all: accessibil
 automatic mode") and an "Android Auto server" row appears.
 
 > [!IMPORTANT]
-> **The Android Auto server serves a single connection each time you start it.** As soon as anything connects to it,
-> even for a moment, it serves nobody else until you stop it and start it again. That's why HeadQLink **doesn't check it
-> before connecting** (checking would use it up): the first real attempt with the car tells. And that's why, **every
-> time Android Auto closes** (Disconnect, phone restart, Android Auto update, picture profile change), **you have to
-> restart it by hand**: Android Auto › ⋮ › "Stop head unit server" and ⋮ › "Start head unit server".
+> **The Android Auto server keeps answering while it's on, as long as connections are closed in an orderly way.**
+> HeadQLink always closes its own that way (Disconnect, end of the trip, picture profile change), so **you don't need to
+> restart it between trips**. What does block it is a connection **cut halfway** (something that connects and leaves
+> without a word, or a session that drops abruptly): from then on it accepts connections but answers nobody until you
+> stop it and start it again. That's why HeadQLink **doesn't check it before connecting** (a check would be exactly
+> that): the first real attempt with the car tells.
 
-1. Start the server yourself before going to the car: "Open AA" › ⋮ (top right) › **"Start head unit server"**. If that
-   option isn't there, turn on developer mode first (10 taps on "Version"). If the menu says "Stop head unit server",
-   it was already on: if Android Auto has closed since you started it, stop it and start it again.
+1. Start the server yourself: "Open AA" › ⋮ (top right) › **"Start head unit server"**. If that option isn't there,
+   turn on developer mode first (10 taps on "Version"). If the menu says "Stop head unit server", it's already on:
+   leave it. It may go off when the phone restarts (or Android Auto updates): then start it again.
 2. Tap "Connect" (or let it start by itself over Bluetooth or the cable). When the car connects, HeadQLink launches
-   Android Auto and waits for it to **answer** (6 s at most). With a freshly started server it also works **with the
-   phone locked**.
-3. If it doesn't answer (off, or already used up), you'll see the **"Start (or restart) the Android Auto server"**
-   notification and the "Auto" row (and the widget) says "Waiting for the Android Auto server". Tap it: Android Auto ›
-   ⋮ › "Stop head unit server" (if shown) and ⋮ › "Start head unit server", and come back. HeadQLink retries by itself
-   every 5 s while the car is connected; as soon as Android Auto answers, the notification goes away by itself.
-4. So that you don't have to restart it on every trip, HeadQLink **doesn't close Android Auto** when "Wait for the car"
-   runs out: it closes the connection with the car but leaves Android Auto paused (notification "Android Auto paused for
-   the next trip"), and the next trip starts instantly without touching the server. Unlocking doesn't close it either.
-5. Only **"Disconnect"** (or **"Close Android Auto"** in that notification) closes Android Auto. You'll then see
-   **"Android Auto closed"**: next time, restart the server before connecting (⋮ › Stop and ⋮ › Start).
+   Android Auto and waits for it to **answer** (6 s at most). With the server on it also works **with the phone
+   locked**: no unlocking and no automation needed.
+3. If it doesn't answer (off, or blocked by a connection cut halfway), you'll see the **"Start (or restart) the Android
+   Auto server"** notification and the "Auto" row (and the widget) says "Waiting for the Android Auto server". Tap it:
+   Android Auto › ⋮ › "Stop head unit server" (if shown) and ⋮ › "Start head unit server", and come back. HeadQLink
+   retries by itself every 5 s while the car is connected; as soon as Android Auto answers, the notification goes away
+   by itself.
+4. Everything else works as with the automatic mode: if the car leaves, 30 s of live video and then Android Auto paused;
+   when "Wait for the car" runs out (or on "Disconnect") HeadQLink closes Android Auto in an orderly way. The one thing
+   it doesn't do is switch the server off (it can't without accessibility): **it stays on, and the next trip uses it
+   again without a restart**, even with the phone locked, as long as it's still on.
 
 What changes, and why automatic is still the **recommended** mode:
 
-- You have to start it by hand and **restart it every time Android Auto closes** (Disconnect, phone restart, Android
-  Auto update, picture profile change).
-- While Android Auto is paused between trips, the phone sees it connected to a "car screen" (its notification stays)
-  until you close it.
+- You have to start it by hand whenever it's off (after a phone restart, for example) and, if it ever gets blocked,
+  stop it and start it again.
 - **It stays on** until you stop it, and it listens on the whole network: on a **public Wi-Fi**, any device on that
-  network could try to connect to it. Stop it when you're not going to use it.
+  network could try to connect to it (and, by connecting and leaving without a word, leave it blocked). Stop it when
+  you're not going to use it.
 - The "App" mode (a specific app in the car) still needs accessibility for the touches.
 
 > [!TIP]
@@ -365,8 +365,8 @@ version). That tells us whether the C10 supports it.
   car · Android Auto paused". If the car comes back within that time, the picture returns **instantly**, without
   unlocking the phone or tapping anything.
 - Once "Wait for the car" runs out, HeadQLink closes everything: Android Auto, its server and the connection. To use it
-  again, tap "Connect", or let the Bluetooth automatic connection handle it. With the manual server start, Android Auto
-  isn't closed: it stays paused for the next trip ([Without
+  again, tap "Connect", or let the Bluetooth automatic connection handle it. With the manual server start it closes
+  everything the same way except the server, which stays on for the next trip ([Without
   accessibility](#without-accessibility-manual-start-of-the-android-auto-server)).
 - If you tap "Connect" and no car shows up within **5 minutes** (or "Wait for the car", if longer), HeadQLink stops by
   itself. As long as the car keeps announcing itself, even if it doesn't connect, the wait starts over.
@@ -398,7 +398,8 @@ congestiones 4`.
 - If the phone was locked when it closed, you'll see the "Auto on hold until you unlock the phone (then it closes by
   itself)" notification. **Unlock the phone once** so it closes completely: you'll see "Closing Auto…" for a few
   seconds (section 9). If you get back in the car before unlocking it and use the Bluetooth automatic connection,
-  Android Auto comes back instantly, without going through "Closing Auto…".
+  Android Auto comes back instantly, without going through "Closing Auto…". With the manual start you don't need to:
+  Android Auto closes right away and its server stays on.
 - "Closing Auto…" and "Starting Auto…" last a few seconds. If something gets them stuck, they go away by themselves
   after 15 s; if the Android Auto server may have been left on, you'll see "The Android Auto server is still on · Tap to
   turn it off": tap it with the phone unlocked.
@@ -595,8 +596,7 @@ Always start with the ⚙ menu › "Requirements check": every red row has its o
 | The picture is less smooth than with the original HeadQLink | The original sent 60 fps; HeadQLink sends 30 (what the car asks for) so the phone doesn't overheat. Or the phone is already hot and the heat adaptation has lowered the fps, or the link is tight and the bitrate or fps were lowered. | "Picture settings" › "Smoothness" › "60 fps · maximum smoothness" (with the "Car" or "Automatic" profile). If heat lowers the fps, "Heat protection" › "Gentle" (section 6). In the log, the "HQL/Térmico" lines ("estado térmico 2" or higher) and the "enlace:" lines tell you which of the two it is. |
 | The picture freezes for about 10 s and then reconnects | In earlier versions, a full frame larger than ~512 KB hung the car's receiver, which stopped reading until the connection dropped. **Fixed**: HeadQLink no longer sends any that large and keeps them at about 300 KB at most. | Update HeadQLink. If it happens with the "Basic" profile (there Android Auto decides the size), use "Automatic" or "Car". If it continues, export the log (section 8). |
 | It disconnects often | Hotspot auto-off, battery saving, QDLink open, or the car's mirroring app closed. | Short dropouts reconnect by themselves ("Reconnecting…"). If they're long or frequent: "No battery restrictions", "Samsung: never sleeping apps", turn off the hotspot's auto-off and close QDLink. If it continues, export the log (section 8). |
-| "Start (or restart) the Android Auto server" notification, or the "Auto" row says "Waiting for the Android Auto server" | Manual start, and Android Auto doesn't answer: its server is off (after restarting the phone or updating Android Auto) or has already served another connection since you started it (Disconnect, profile change…): it serves one per start. | Tap the notification or the row: Android Auto › ⋮ › "Stop head unit server" (if shown) and ⋮ › "Start head unit server". HeadQLink retries every 5 s and carries on by itself. |
-| "Android Auto closed" notification | Manual start: Android Auto closed (Disconnect, "Close Android Auto", or it dropped by itself) and its server is used up. | Before the next trip: Android Auto › ⋮ › "Stop head unit server" and ⋮ › "Start head unit server". |
+| "Start (or restart) the Android Auto server" notification, or the "Auto" row says "Waiting for the Android Auto server" | Manual start, and Android Auto doesn't answer: its server is off (after restarting the phone or updating Android Auto) or blocked: a connection was cut halfway (something connected and left without a word, or a session dropped abruptly). | Tap the notification or the row: Android Auto › ⋮ › "Stop head unit server" (if shown) and ⋮ › "Start head unit server". HeadQLink retries every 5 s and carries on by itself. |
 | Accessibility turns itself off | Android turns it off when the app is updated, or if the app crashed. Some manufacturers do too. | "Requirements check" › "Turn on". If it says "On but not running", turn it off and on. If it says "Restricted setting", use "Allow restricted settings" (section 3). Remove the battery restrictions. |
 | Android Auto asks you to check the phone | It's the first time Android Auto sees this "car screen", or it needs you to grant a permission or confirm something. | Park, unlock the phone and accept what Android Auto asks. It usually happens only once. |
 | The phone gets very hot | "Very high" or "High" profile, direct sun, screen on, wireless charging. | Section 6. |
@@ -670,9 +670,9 @@ You can ask for help on the project's GitHub page: [CharlysEV/headqlink](https:/
 > Android Auto paused and holding the server). With the phone locked it can't switch it off, and keeps it on hold until
 > you unlock ("Auto on hold until you unlock the phone…"). **Unlock the phone after every trip.**
 >
-> With the manual start (no accessibility), HeadQLink can't switch it off: Android Auto holds it, paused, between trips
-> and, once you close it, **stop it yourself** (Android Auto › ⋮ › "Stop head unit server") if you're not going to use
-> it.
+> With the manual start (no accessibility), HeadQLink can't switch it off: at the end it closes Android Auto, but the
+> server stays on (that's what lets the next trip start without touching anything). **Stop it yourself** (Android Auto ›
+> ⋮ › "Stop head unit server") if you're not going to use it, especially on a public Wi-Fi.
 
 **When you're not using it:**
 

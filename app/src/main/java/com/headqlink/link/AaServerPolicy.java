@@ -8,11 +8,12 @@ package com.headqlink.link;
  *   ({@link Action#AUTOMATE}) y, al terminar, para apagarlo. Con el móvil bloqueado no se pueden manejar los ajustes de
  *   AA: aviso «Desbloquea el móvil…» y arranque al desbloquear ({@link Action#AUTOMATE_ON_UNLOCK}). Es el comportamiento
  *   de siempre; LinkLifecycle, LinkControl y AaServerStarter lo siguen igual que antes.
- * - **Manual** (sin accesibilidad): nunca se pulsa nada y **nunca se sondea el puerto**: el servidor atiende una sola
- *   conexión por arranque y cualquier conexión TCP lo gasta (prueba real del 2026-10-06), así que antes de la sesión no
- *   hay nada que hacer ({@link Action#AT_SESSION}): lo dice el intento de verdad del Self-Mode con el coche
- *   ({@link AaServeAttempts}). Al terminar, Android Auto se queda conectado y en pausa para el próximo viaje salvo que el
- *   usuario lo cierre ({@link End#KEEP_AA}); cerrarlo gasta el arranque del servidor ({@link End#CLOSE_AA_RESTART}).
+ * - **Manual** (sin accesibilidad): nunca se pulsa nada y **nunca se sondea el puerto**: una conexión que abre y cierra
+ *   sin hablar (una sonda) bloquea el servidor hasta pararlo y volver a iniciarlo (prueba real del 2026-10-06, docs §15),
+ *   así que antes de la sesión no hay nada que hacer ({@link Action#AT_SESSION}): lo dice el intento de verdad del
+ *   Self-Mode con el coche ({@link AaServeAttempts}). Al terminar, el mismo cierre que el automático salvo apagar el
+ *   servidor, que sin accesibilidad no se puede ({@link End#LEAVE_SERVER_ON}): Android Auto se cierra con orden (ByeBye)
+ *   y su servidor sigue encendido; tras un cierre limpio vuelve a atender, así que el próximo viaje lo usa sin reiniciarlo.
  */
 final class AaServerPolicy {
     /** Lo que se sabe del servidor (automático: el último arranque o parada conocidos; UNKNOWN = no vale para decidir). */
@@ -42,8 +43,9 @@ final class AaServerPolicy {
         /** Automático sin la accesibilidad activa: no se puede arrancar (solo se registra). */
         NO_ACCESSIBILITY,
         /**
-         * Manual: nada ahora (sin sondear: cada conexión gasta el servidor). Cuando la sesión con el coche necesite AA, el
-         * Self-Mode lo intenta de verdad y, si AA no contesta, aviso y reintentos (AaServerManual).
+         * Manual: nada ahora (sin sondear: una sonda que abre y cierra sin hablar bloquea el servidor). Cuando la sesión
+         * con el coche necesite AA, el Self-Mode lo intenta de verdad y, si AA no contesta, aviso y reintentos
+         * (AaServerManual).
          */
         AT_SESSION,
     }
@@ -55,14 +57,10 @@ final class AaServerPolicy {
         /** Automático: el cierre de siempre (apagarlo ya o al desbloquear; LinkLifecycle.shutdownPlan). */
         STOP_SERVER,
         /**
-         * Manual, cierre sin Desconectar (espera vencida, Bluetooth fuera…) con AA conectado: AA se queda aparcado (el
-         * guardián) para el próximo viaje; así el servidor no hay que reiniciarlo.
+         * Manual: se cierra Android Auto con orden (ByeBye) y el servidor se queda encendido (sin accesibilidad no se
+         * para): tras un cierre limpio vuelve a atender, así que el próximo viaje lo usa sin reiniciarlo. Sin aviso.
          */
-        KEEP_AA,
-        /** Manual: se cierra AA sin haber usado su servidor (no llegó a conectarse ni a fallar): nada que avisar. */
-        CLOSE_AA,
-        /** Manual: se cierra AA con su servidor ya usado (o sin atender): aviso de que la próxima vez hay que reiniciarlo. */
-        CLOSE_AA_RESTART,
+        LEAVE_SERVER_ON,
     }
 
     /** Lo que se ve del móvil al decidir. */
@@ -72,10 +70,6 @@ final class AaServerPolicy {
         Server server = Server.UNKNOWN;
         /** Nuestra head unit está conectada a AA (o aparcada): el servidor está encendido. */
         boolean aaConnected;
-        /** AA atendió y el handshake terminó (conectado de verdad, no solo el TCP de un intento). */
-        boolean aaReady;
-        /** Manual: el arranque actual del servidor ya lo usa nuestra head unit, o los intentos fallan (aviso puesto). */
-        boolean serverUsed;
         boolean locked;
         /** TouchService activo (solo cuenta en el automático). */
         boolean canAutomate = true;
@@ -92,16 +86,6 @@ final class AaServerPolicy {
 
         State connected(boolean v) {
             aaConnected = v;
-            return this;
-        }
-
-        State ready(boolean v) {
-            aaReady = v;
-            return this;
-        }
-
-        State used(boolean v) {
-            serverUsed = v;
             return this;
         }
 
@@ -123,7 +107,7 @@ final class AaServerPolicy {
     static Action onNeed(Need need, State s) {
         // Con nuestra head unit conectada (o aparcada) el servidor está encendido, sea cual sea el modo.
         if (s.aaConnected) return Action.NONE;
-        // Manual: sin sondeos (cada conexión lo gasta); lo dice el intento real del Self-Mode con el coche.
+        // Manual: sin sondeos (una sonda lo bloquea); lo dice el intento real del Self-Mode con el coche.
         if (s.manual) return Action.AT_SESSION;
         // Automático: lo de siempre.
         if (s.server == Server.UP) return Action.NONE;
@@ -131,14 +115,13 @@ final class AaServerPolicy {
         return s.locked ? Action.AUTOMATE_ON_UNLOCK : Action.AUTOMATE;
     }
 
-    /** Qué hacer con Android Auto y su servidor al cerrar el enlace; userAction: Desconectar. */
-    static End onEnd(boolean aaMode, State s, boolean userAction) {
+    /**
+     * Qué hacer con Android Auto y su servidor al cerrar el enlace (Desconectar o fin del viaje, igual): el automático lo
+     * apaga; el manual no puede, y no hace falta reiniciarlo: AA se cierra con orden y el servidor vuelve a atender.
+     */
+    static End onEnd(boolean aaMode, State s) {
         if (!aaMode) return End.NOTHING;
-        if (!s.manual) return End.STOP_SERVER;
-        // Manual: cada arranque del servidor atiende una sola conexión. Si no lo cierra el usuario, AA se queda en pausa
-        // para el próximo viaje; cerrarlo deja el servidor gastado (hay que pararlo y volver a iniciarlo).
-        if (!userAction && s.aaReady) return End.KEEP_AA;
-        return s.aaReady || s.aaConnected || s.serverUsed ? End.CLOSE_AA_RESTART : End.CLOSE_AA;
+        return s.manual ? End.LEAVE_SERVER_ON : End.STOP_SERVER;
     }
 
     static String needName(Need n) {

@@ -359,11 +359,11 @@ class LinkLifecycleTest {
     private fun manualEnv() = Env().aa(true).manual(true).automate(false)
 
     /** AA atendió y está conectado (y, si hace falta, aparcado). */
-    private fun manualReady() = manualEnv().connected(true).ready(true)
+    private fun manualReady() = manualEnv().connected(true)
 
     @Test
     fun manualServerIsNeverCheckedBeforeTheSessionWhateverTheTrigger() {
-        // Nada de sondear el puerto (cada conexión gasta el servidor): sin acciones, solo la línea del log.
+        // Nada de sondear el puerto (una sonda bloquea el servidor): sin acciones, solo la línea del log.
         for (trigger in Trigger.values()) for (locked in listOf(false, true)) {
             val l = LinkLifecycle()
             val d = l.start(0, trigger, manualEnv().locked(locked), wait)
@@ -416,39 +416,46 @@ class LinkLifecycleTest {
     }
 
     @Test
-    fun manualServerKeepsAndroidAutoParkedWhenTheWaitRunsOut() {
+    fun manualServerFollowsTheAutomaticLifecycleAndClosesAndroidAutoWhenTheWaitRunsOut() {
         val l = LinkLifecycle()
         l.start(0, Trigger.BLUETOOTH, manualReady(), wait)
         l.carConnected(10 * sec, manualReady())
-        l.carLost(100 * sec, manualReady(), grace, wait)
-        l.timer(130 * sec, manualReady())
-        // El enlace se cierra al vencer la espera, como siempre…
+        // Coche perdido: vídeo vivo 30 s, como el automático…
+        val lost = l.carLost(100 * sec, manualReady(), grace, wait)
+        assertTrue(lost.actions().isEmpty())
+        assertEquals(Phase.GRACE, l.phase())
+        assertEquals(100 * sec + grace, l.deadlineMs())
+        // …después AA en pausa y el vídeo parado…
+        assertEquals(listOf(Action.PARK_AA, Action.STOP_VIDEO), l.timer(130 * sec, manualReady()).actions())
+        assertEquals(Phase.PARKED, l.phase())
+        assertEquals(100 * sec + wait, l.deadlineMs())
+        // …y, vencida «Esperar al coche», se cierra todo (también Android Auto: ya no se queda aparcado entre viajes).
         assertEquals(listOf(Action.SHUTDOWN), l.timer(100 * sec + wait, manualReady().parked(true)).actions())
-        // …pero AA no: se queda aparcado para el próximo viaje (su servidor atiende una conexión por arranque).
-        for (locked in listOf(false, true)) for (stopOnExit in listOf(false, true)) {
-            assertEquals(
-                "bloqueado=$locked",
-                ShutdownPlan.KEEP_AA_PARKED,
-                LinkLifecycle.shutdownPlan(manualReady().parked(true).locked(locked).stopOnExit(stopOnExit).automate(true)),
-            )
-        }
+        assertEquals(Phase.CLOSED, l.phase())
     }
 
     @Test
-    fun manualServerClosesAndroidAutoOnlyOnDisconnectAndThenAsksForARestart() {
-        // Desconectar con AA conectado: se cierra y el aviso dice que la próxima vez hay que reiniciar el servidor.
-        assertEquals(ShutdownPlan.CLOSE_AA_RESTART, LinkLifecycle.shutdownPlan(manualReady(), true))
-        assertEquals(ShutdownPlan.CLOSE_AA_RESTART, LinkLifecycle.shutdownPlan(manualReady().parked(true).locked(true), true))
-        // Con los intentos fallando (aviso puesto) también, Desconectar o no.
-        assertEquals(ShutdownPlan.CLOSE_AA_RESTART, LinkLifecycle.shutdownPlan(manualEnv().used(true), true))
-        assertEquals(ShutdownPlan.CLOSE_AA_RESTART, LinkLifecycle.shutdownPlan(manualEnv().used(true), false))
-        // Sin haber tocado el servidor (nadie llegó a conectarse): se cierra sin aviso.
-        assertEquals(ShutdownPlan.CLOSE_AA, LinkLifecycle.shutdownPlan(manualEnv(), true))
-        assertEquals(ShutdownPlan.CLOSE_AA, LinkLifecycle.shutdownPlan(manualEnv().locked(true), false))
-        assertEquals(ShutdownPlan.LINK_ONLY, LinkLifecycle.shutdownPlan(Env().aa(false).manual(true), true))
-        // El automático, como siempre (Desconectar o no).
+    fun manualServerClosesAndroidAutoAndLeavesTheServerOnWithoutParkingUntilUnlock() {
+        // Prueba real del 2026-10-06 (docs §15, B): tras un cierre limpio el servidor vuelve a atender. Al cerrar, AA se
+        // cierra con orden y el servidor se queda encendido, bloqueado el móvil o no, con o sin Desconectar (el plan es
+        // el mismo) y aunque la accesibilidad esté activa: sin apagado que esperar, no hay nada que aparcar.
+        val bools = listOf(false, true)
+        for (locked in bools) for (connected in bools) for (parked in bools) for (automate in bools)
+            for (stopOnExit in bools) for (withoutUi in bools) {
+                val e = manualEnv().locked(locked).connected(connected).parked(parked).automate(automate)
+                    .stopOnExit(stopOnExit).stopWithoutUi(withoutUi)
+                assertEquals(
+                    "bloqueado=$locked conectado=$connected aparcado=$parked accesibilidad=$automate",
+                    ShutdownPlan.LEAVE_SERVER_ON,
+                    LinkLifecycle.shutdownPlan(e),
+                )
+            }
+        assertEquals(ShutdownPlan.LINK_ONLY, LinkLifecycle.shutdownPlan(Env().aa(false).manual(true)))
+        // El automático, como siempre.
         assertEquals(ShutdownPlan.PARK_UNTIL_UNLOCK, LinkLifecycle.shutdownPlan(Env().aa(true).locked(true).connected(true)))
-        assertEquals(ShutdownPlan.STOP_SERVER, LinkLifecycle.shutdownPlan(Env().aa(true), true))
-        assertEquals(ShutdownPlan.STOP_SERVER, LinkLifecycle.shutdownPlan(Env().aa(true).connected(true).ready(true), true))
+        assertEquals(ShutdownPlan.STOP_SERVER, LinkLifecycle.shutdownPlan(Env().aa(true)))
+        assertEquals(ShutdownPlan.STOP_SERVER, LinkLifecycle.shutdownPlan(Env().aa(true).connected(true)))
+        // El automático sin accesibilidad tampoco aparca: nadie apagaría el servidor al desbloquear (igual que el manual).
+        assertEquals(ShutdownPlan.STOP_SERVER, LinkLifecycle.shutdownPlan(Env().aa(true).locked(true).connected(true).automate(false)))
     }
 }

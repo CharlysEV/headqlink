@@ -2,7 +2,10 @@
 <!--
     headqlink: widget «HeadQLink». 4x2 por defecto (targetCell* en Android 12+; minWidth/minHeight antes) y como mínimo
     2x2 (minResize*), redimensionable. Sin actualizaciones periódicas (updatePeriodMillis 0): lo repinta WidgetUpdater
-    cuando cambia algo. La vista previa del selector es la propia disposición (Android 12+) o una imagen (antes).
+    cuando cambia algo. Vista previa: la imagen del widget de verdad a 4x2 (hql_widget_preview, por idioma), como
+    previewImage (antes de Android 12) y, encajada entera en el hueco que haya, como previewLayout (hql_widget_preview):
+    con la disposición de verdad, el diálogo de Samsung «¿Quieres añadirlo a la pantalla Inicio?» la recortaba a la
+    cabecera.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -13,7 +16,7 @@
     android:minResizeWidth="110dp"
     android:minResizeHeight="110dp"
     android:previewImage="@drawable/hql_widget_preview"
-    android:previewLayout="@layout/hql_widget_wide"
+    android:previewLayout="@layout/hql_widget_preview"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="4"
     android:targetCellHeight="2"

@@ -684,11 +684,6 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                         boolean renegotiate = !before.id.equals(after.id) || before.fps != after.fps;
                         startForegroundService(new Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY)
                                 .putExtra(LinkService.EXTRA_AA_RENEGOTIATE, renegotiate));
-                        if (renegotiate && Config.isAa(cfg.mode()) && cfg.aaServerManual()) {
-                            // Arranque manual: reconectar AA gasta el arranque de su servidor (una conexión por arranque).
-                            android.widget.Toast.makeText(this, Str.get(R.string.hql_manual_reconnect_restart),
-                                    android.widget.Toast.LENGTH_LONG).show();
-                        }
                     }
                 })
                 .setNegativeButton(Str.get(R.string.hql_cancel), null)

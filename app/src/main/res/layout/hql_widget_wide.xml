@@ -2,7 +2,7 @@
 <!--
     headqlink: widget 4x2 (estilo «Eléctrico»): cabecera con la marca (abre la app) y el modo, el botón grande con lo que
     hace y el estado, y el selector de conexión. Solo vistas de RemoteViews. Lo rellena LinkWidgetViews en el idioma de la
-    app; lo de aquí es el estado «Apagado», que es lo que enseña la vista previa del selector de widgets (Android 12+).
+    app; lo de aquí es el estado «Apagado» (el de la imagen de la vista previa, hql_widget_preview, que se pinta con él).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"

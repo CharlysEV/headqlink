@@ -24,25 +24,28 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * «Arranque del servidor de Android Auto» en modo manual (sin accesibilidad). HeadQLink no pulsa nada y **nunca abre una
- * conexión a 127.0.0.1:5277 para mirar**: el servidor de head unit de desarrollador de AA atiende una sola conexión por
- * arranque y cualquier conexión lo gasta (prueba real del 2026-10-06, ver {@link AaServeAttempts}). La única conexión es
- * la del Self-Mode cuando una sesión con el coche necesita Android Auto, y {@link AaServeAttempts} decide con ella:
+ * conexión a 127.0.0.1:5277 para mirar**: el servidor de head unit de desarrollador de AA vuelve a atender después de una
+ * sesión cerrada con orden (ByeBye), pero una conexión cortada a medias, como una sonda que abre y cierra sin hablar, lo
+ * bloquea hasta pararlo y volver a iniciarlo (prueba real del 2026-10-06, docs §15, ver {@link AaServeAttempts}). La
+ * única conexión es la del Self-Mode cuando una sesión con el coche necesita Android Auto, y {@link AaServeAttempts}
+ * decide con ella:
  * - servida (AA contesta: sus primeros bytes del handshake): se sigue como siempre, también con el móvil bloqueado;
  * - no servida (rechazada, cerrada, o 6 s con el TCP abierto y sin respuesta): se cierra ese intento, aviso de prioridad
  *   alta «Arranca (o vuelve a arrancar) el servidor de Android Auto» (al tocarlo, los ajustes de AA), la fila «Auto» y
  *   el widget dicen «Esperando al servidor de Android Auto» y se reintenta cada 5 s mientras la sesión siga; el primer
  *   intento servido quita el aviso.
- * Como cada arranque del servidor sirve una sola conexión, Android Auto se mantiene conectado todo lo posible (en pausa
- * entre viajes, con el enlace o con el guardián) y solo se cierra con Desconectar o «Cerrar Android Auto»; al cerrarlo,
- * un aviso dice que la próxima vez hay que reiniciar el servidor (⋮ › Parar y ⋮ › Iniciar).
+ * Android Auto sigue el ciclo de vida del automático (vídeo vivo, pausa, cierre al vencer «Esperar al coche»); HeadQLink
+ * nunca para el servidor (no puede) y cierra siempre su conexión con orden ({@link AaClose}): el servidor sigue encendido
+ * y el próximo viaje lo vuelve a usar sin reiniciarlo, también con el móvil bloqueado.
  *
  * Todo el estado de los intentos se toca en un solo hilo («aa-server-manual»); la interfaz solo lee {@link #isWaiting()}.
  */
 public final class AaServerManual {
     private static final String CHANNEL_ASK = "aa_server_manual";
-    private static final String CHANNEL_INFO = "aa_server_info";
     private static final int NOTIF_ASK = 7;
-    private static final int NOTIF_RESTART = 8;
+    /** El aviso «Android Auto cerrado» y su canal de la versión anterior (daba por gastado el servidor; no lo está). */
+    private static final String LEGACY_CHANNEL_INFO = "aa_server_info";
+    private static final int LEGACY_NOTIF_RESTART = 8;
 
     private static final Object LOCK = new Object();
     private static ScheduledExecutorService exec;
@@ -119,30 +122,37 @@ public final class AaServerManual {
         submit(() -> apply(app, policy().soon()));
     }
 
-    /** Se cambió el ajuste: con el automático se deja de intentar (y fuera los avisos del manual). */
+    /** Se cambió el ajuste: con el automático se deja de intentar (y fuera el aviso del manual). */
     static void onModeChanged(Context ctx, boolean manual, String where) {
         L.life("arranque del servidor de Android Auto: " + (manual ? "manual (sin accesibilidad)" : "automático (accesibilidad)")
                 + " (" + where + ")");
         if (manual) return;
-        Context app = ctx.getApplicationContext();
-        app.getSystemService(NotificationManager.class).cancel(NOTIF_RESTART);
-        stop(app, "arranque automático elegido");
-    }
-
-    /** El enlace arranca: el aviso de un cierre anterior ya no hace falta (si el servidor no atiende, lo dirá el intento). */
-    static void onLinkStarting(Context ctx) {
-        ctx.getApplicationContext().getSystemService(NotificationManager.class).cancel(NOTIF_RESTART);
+        stop(ctx.getApplicationContext(), "arranque automático elegido");
     }
 
     /**
-     * El enlace se cierra: se deja de intentar y, si Android Auto se cierra con su servidor ya usado (restartNotice), el
-     * aviso de que la próxima vez hay que reiniciarlo.
+     * El enlace arranca: fuera el aviso «Android Auto cerrado» de la versión anterior y su canal, si quedaron (decían que
+     * había que reiniciar el servidor, y no hace falta: si no atiende, lo dirá el intento).
      */
-    static void onLinkClosed(Context ctx, String why, boolean restartNotice) {
+    static void onLinkStarting(Context ctx) {
+        NotificationManager nm = ctx.getApplicationContext().getSystemService(NotificationManager.class);
+        nm.cancel(LEGACY_NOTIF_RESTART);
+        nm.deleteNotificationChannel(LEGACY_CHANNEL_INFO);
+    }
+
+    /**
+     * El enlace se cierra (Desconectar, fin del viaje): se deja de intentar. Android Auto (aaConnected: lo estaba) se
+     * cierra con orden (ByeBye, {@link AaClose}) y su servidor sigue encendido: el próximo viaje lo vuelve a usar sin
+     * reiniciarlo. Sin aviso: solo el log.
+     */
+    static void onLinkClosed(Context ctx, String why, boolean aaConnected) {
         Context app = ctx.getApplicationContext();
         submit(() -> {
             apply(app, policy().reset("el enlace se cierra (" + why + ")"));
-            if (restartNotice) postRestartNotice(app, why);
+            if (aaConnected) {
+                L.life("AA server (arranque manual): Android Auto cerrado (" + why + ") con un cierre limpio (ByeBye): su"
+                        + " servidor sigue encendido y atenderá la próxima conexión sin reiniciarlo; HeadQLink no lo para");
+            }
         });
     }
 
@@ -150,15 +160,6 @@ public final class AaServerManual {
     static void stop(Context ctx, String why) {
         Context app = ctx.getApplicationContext();
         submit(() -> apply(app, policy().reset(why)));
-    }
-
-    /**
-     * Android Auto se ha cerrado con el arranque manual (Desconectar, «Cerrar Android Auto», o se cayó solo): su servidor
-     * ya atendió su única conexión de este arranque, así que la próxima vez hay que pararlo y volver a iniciarlo.
-     */
-    static void noticeRestart(Context ctx, String why) {
-        Context app = ctx.getApplicationContext();
-        submit(() -> postRestartNotice(app, why));
     }
 
     // ---------------------------------------------------------------- hilo propio
@@ -221,6 +222,7 @@ public final class AaServerManual {
     private static void launchSelfMode(Context app) {
         L.i("AA: lanzando Self-Mode");
         AaPassthroughSource.AA_LAUNCHES.incrementAndGet();
+        AaClose.noteLaunch();
         try {
             app.startForegroundService(new Intent(app, AapService.class).setAction(AapService.ACTION_START_SELF_MODE));
         } catch (RuntimeException e) {
@@ -248,7 +250,8 @@ public final class AaServerManual {
     }
 
     /**
-     * Cierra el intento con el TCP abierto y sin respuesta (el servidor ya no atiende). Si AA ha contestado justo ahora
+     * Cierra el intento con el TCP abierto y sin respuesta en 6 s (el servidor ya estaba bloqueado: no hay sesión que
+     * cerrar con orden, y el ByeBye, cifrado, no se puede mandar antes del handshake). Si AA ha contestado justo ahora
      * (el contador de respuestas ya no es el de la decisión), no se cierra: el siguiente vistazo lo da por servido.
      */
     private static boolean tearDown(Context app, long answersAtDecision) {
@@ -309,28 +312,6 @@ public final class AaServerManual {
     private static void dismissAsk(Context app, LinkState.Level level, String text) {
         app.getSystemService(NotificationManager.class).cancel(NOTIF_ASK);
         if (Str.get(R.string.hql_aa_server_wait).equals(LinkState.source)) LinkState.setSource(level, text);
-    }
-
-    private static void postRestartNotice(Context app, String why) {
-        L.lifeWarn("AA server (arranque manual): Android Auto cerrado (" + why + "): su servidor ya atendió su única"
-                + " conexión de este arranque; la próxima vez habrá que pararlo y volver a iniciarlo; aviso «"
-                + Str.get(R.string.hql_aa_restart_title) + "»");
-        NotificationManager nm = app.getSystemService(NotificationManager.class);
-        nm.createNotificationChannel(new NotificationChannel(CHANNEL_INFO, Str.get(R.string.hql_aa_server_info_channel),
-                NotificationManager.IMPORTANCE_DEFAULT));
-        PendingIntent pi = PendingIntent.getActivity(app, NOTIF_RESTART, AaServerStarter.aaSettingsIntent(app),
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        String text = Str.get(R.string.hql_aa_restart_text);
-        nm.notify(NOTIF_RESTART, new Notification.Builder(app, CHANNEL_INFO)
-                .setSmallIcon(R.drawable.hql_ic_notif)
-                .setColor(app.getColor(R.color.hql_warn))
-                .setContentTitle(Str.get(R.string.hql_aa_restart_title))
-                .setContentText(text)
-                .setStyle(new Notification.BigTextStyle().bigText(text))
-                .setOnlyAlertOnce(true)
-                .setContentIntent(pi)
-                .setAutoCancel(true)
-                .build());
     }
 
     // ---------------------------------------------------------------- utilidades

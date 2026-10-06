@@ -17,10 +17,10 @@ import java.util.List;
  * - Con el «Arranque del servidor de Android Auto» en manual (sin accesibilidad): la accesibilidad pasa a opcional
  *   («Solo para el modo automático»), el modo desarrollador no se puede comprobar (consejo, salvo que AA ya haya atendido
  *   a HeadQLink) y sale una fila informativa «Servidor de Android Auto» con el atajo a sus ajustes. Esa fila **no mira el
- *   puerto** (el servidor atiende una sola conexión por arranque y cualquier conexión lo gasta): dice lo que se sabe sin
- *   tocarlo (en uso por HeadQLink, esperando a que lo arranques, o cómo arrancarlo). Con el automático y la accesibilidad
- *   sin activar, un consejo ofrece el arranque manual. Nada de esto bloquea «Conectar»: si el servidor no atiende, el
- *   enlace avisa y reintenta hasta que lo arranque (o lo reinicie) el usuario.
+ *   puerto** (una conexión de prueba, que abre y cierra sin hablar, bloquea el servidor hasta pararlo y volver a
+ *   iniciarlo): dice lo que se sabe sin tocarlo (en uso por HeadQLink, esperando a que lo arranques, o cómo arrancarlo).
+ *   Con el automático y la accesibilidad sin activar, un consejo ofrece el arranque manual. Nada de esto bloquea
+ *   «Conectar»: si el servidor no atiende, el enlace avisa y reintenta hasta que lo arranque (o lo reinicie) el usuario.
  * - Modo App: la app elegida, la accesibilidad (toques) y «Mostrar sobre otras apps» (abrirla en segundo plano).
  * - Wi-Fi Direct: «Dispositivos Wi-Fi cercanos» (ubicación antes de Android 13), el Wi-Fi activado y la zona Wi-Fi
  *   apagada (en Samsung no conviven). Zona Wi-Fi: que esté activa, y el consejo de la banda de 5 GHz (no se puede leer).
@@ -87,7 +87,7 @@ final class Requirements {
     /**
      * Servidor de head unit de AA (127.0.0.1:5277) con el arranque manual, sin conectarse a él: IN_USE, nuestra head unit
      * lo tiene (AA conectado); WAITING, los intentos fallan (aviso «Arranca (o vuelve a arrancar)…» puesto); UNKNOWN, no
-     * se sabe sin gastarlo.
+     * se sabe sin conectarse (y una sonda lo bloquearía).
      */
     enum AaServer { IN_USE, WAITING, UNKNOWN }
 
@@ -267,7 +267,7 @@ final class Requirements {
 
     /**
      * En uso por HeadQLink: OK; los intentos fallan: aviso (no falta nada que se arregle aquí: lo arranca el usuario);
-     * sin saber: consejo (cómo arrancarlo), porque mirarlo lo gastaría.
+     * sin saber: consejo (cómo arrancarlo), porque mirarlo con una sonda lo bloquearía.
      */
     private static Status aaServerStatus(AaServer a) {
         switch (a) {

@@ -37,8 +37,8 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * Con el «Arranque del servidor de Android Auto» en manual ({@link #manual}) no se automatiza nada: ni arrancar, ni
  * parar, ni la capa, ni el botón de su notificación. Cada entrada lo comprueba; los intentos los lleva
- * {@link AaServerManual} con la conexión real del Self-Mode (nunca se sondea el puerto: el servidor atiende una sola
- * conexión por arranque y cualquier conexión lo gasta).
+ * {@link AaServerManual} con la conexión real del Self-Mode (nunca se sondea el puerto: una conexión que abre y cierra
+ * sin hablar bloquea el servidor hasta pararlo y volver a iniciarlo).
  */
 public final class AaServerStarter {
     static final String AA_PKG = "com.google.android.projection.gearhead";
@@ -151,8 +151,8 @@ public final class AaServerStarter {
     public static boolean startAndWait(Context ctx) {
         prefs(ctx).edit().putBoolean(PENDING_STOP, false).apply();
         stopEpoch.incrementAndGet();
-        // Arranque manual: no se pulsa nada ni se mira el puerto (cualquier conexión gasta el servidor). Lo llama el
-        // Self-Mode tras una conexión rechazada, que AaServerManual ya contó: aviso y reintentos.
+        // Arranque manual: no se pulsa nada ni se mira el puerto (una sonda bloquearía el servidor). Lo llama el Self-Mode
+        // tras una conexión rechazada, que AaServerManual ya contó: aviso y reintentos.
         if (manual(ctx)) return false;
         if (TouchService.instance != null && isLocked(ctx) && LinkState.running) {
             relaunchAfterUnlock = true;
@@ -306,12 +306,7 @@ public final class AaServerStarter {
                 // se suelta Android Auto y se reintenta una vez.
                 L.lifeWarn("AA server: no se pudo apagar con Android Auto conectado; lo suelto y lo reintento");
                 AaPark.release("reintento del apagado");
-                try {
-                    ctx.startService(new Intent(ctx, com.andrerinas.openheadunit.aap.AapService.class)
-                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_STOP_SERVICE));
-                } catch (RuntimeException e) {
-                    L.e("AA server: no se pudo parar Android Auto", e);
-                }
+                AaClose.stopAa(ctx, "reintento del apagado del servidor");
                 try {
                     Thread.sleep(1500);
                 } catch (InterruptedException ignored) {
@@ -436,6 +431,7 @@ public final class AaServerStarter {
             if (ok && relaunch && LinkState.running && !connected && videoWaiting) {
                 // El Self-Mode de la sesión con el coche falló por el bloqueo: se relanza (Open Headunit no lanza dos a la vez).
                 L.life("relanzo Android Auto (Self-Mode) para el coche que espera");
+                AaClose.noteLaunch();
                 try {
                     app.startForegroundService(new Intent(app, com.andrerinas.openheadunit.aap.AapService.class)
                             .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_START_SELF_MODE));

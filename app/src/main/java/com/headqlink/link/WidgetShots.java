@@ -161,6 +161,25 @@ final class WidgetShots {
         return b;
     }
 
+    /**
+     * La imagen de la vista previa (res/drawable-*nodpi/hql_widget_preview.png, que enseña también hql_widget_preview.xml):
+     * el widget de verdad, apagado, a 4x2 y a la densidad de ctx, sin fondo de pantalla ni margen (fuera de sus esquinas,
+     * transparente). La pinta WidgetRenderTest con -Ppreview.
+     */
+    static Bitmap renderPreview(Context ctx) {
+        float d = ctx.getResources().getDisplayMetrics().density;
+        int w = Math.round(WIDE_W * d);
+        int h = Math.round(WIDE_H * d);
+        RemoteViews rv = LinkWidgetViews.build(ctx, glance(ctx, "apagado"), LinkGlance.Size.WIDE);
+        View v = rv.apply(ctx, new FrameLayout(ctx));
+        v.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY));
+        v.layout(0, 0, w, h);
+        Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        v.draw(new Canvas(b));
+        return b;
+    }
+
     static void save(Bitmap b, File f) throws IOException {
         try (FileOutputStream o = new FileOutputStream(f)) {
             b.compress(Bitmap.CompressFormat.PNG, 100, o);

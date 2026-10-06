@@ -110,7 +110,8 @@ class AaServeAttemptsTest {
 
     @Test
     fun tcpAcceptedWithoutAnswerIsNotServedAfterSixSecondsAndIsClosed() {
-        // El caso real del 2026-10-06: el servidor ya atendió otra conexión; el núcleo acepta el TCP y nadie contesta.
+        // El caso real del 2026-10-06 (docs §15, C): una conexión cortada a medias bloqueó el servidor; el núcleo acepta el
+        // TCP y nadie contesta hasta pararlo y volver a iniciarlo.
         val t0 = now
         launch(1)
         dials++
@@ -122,7 +123,10 @@ class AaServeAttemptsTest {
         assertTrue("se cierra la conexión que AA no atiende", miss.tearDown)
         assertEquals("para comprobar otra vez antes de cerrar", answers, miss.answersAtDecision)
         assertTrue(miss.notice)
-        assertTrue(miss.reason, miss.reason.contains("atiende una por arranque"))
+        // Lo que de verdad pasa (bloqueado por una conexión cortada a medias), no «atiende una por arranque».
+        assertTrue(miss.reason, miss.reason.contains("su servidor está bloqueado (pasa si una conexión se cortó a medias)"))
+        assertTrue(miss.reason, miss.reason.contains("páralo y vuelve a iniciarlo"))
+        assertFalse(miss.reason, miss.reason.contains("por arranque"))
         assertEquals(Phase.RETRY_WAIT, attempts.phase())
     }
 

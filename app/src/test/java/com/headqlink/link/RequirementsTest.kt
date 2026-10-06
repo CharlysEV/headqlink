@@ -337,7 +337,7 @@ class RequirementsTest {
 
     @Test
     fun manualServerRowNeverProbesNeverBlocksAndSaysOnlyWhatIsKnown() {
-        // Sin conectarse al servidor (lo gastaría): en uso por HeadQLink, intentos fallando, o cómo arrancarlo.
+        // Sin conectarse al servidor (una sonda lo bloquearía): en uso por HeadQLink, intentos fallando, o cómo arrancarlo.
         for (state in Requirements.AaServer.values()) {
             val items = eval { manualServer = true; aaServer = state; accessibilityRunning = false; devMode = -1 }
             val server = item(items, Id.AA_SERVER)

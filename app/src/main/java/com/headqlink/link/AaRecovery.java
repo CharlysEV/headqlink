@@ -46,6 +46,7 @@ public final class AaRecovery {
                     Thread.sleep(1500);
                 } catch (InterruptedException ignored) {
                 }
+                AaClose.noteLaunch();
                 app.startForegroundService(new Intent(app, AapService.class).setAction(AapService.ACTION_START_SELF_MODE));
             }
         }, "aa-recovery").start();

@@ -12,8 +12,9 @@ import org.junit.Test
 
 /**
  * Servidor de head unit de Android Auto: modo de arranque (automático / manual) × lo que se sabe × móvil bloqueado ×
- * motivo. El manual nunca automatiza ni sondea (cada conexión gasta el servidor: lo dice el intento real con el coche) y
- * no cierra Android Auto sin Desconectar; el automático sigue igual que antes.
+ * motivo. El manual nunca automatiza ni sondea (una sonda bloquea el servidor: lo dice el intento real con el coche) y, al
+ * terminar, cierra Android Auto como el automático pero deja el servidor encendido (tras un cierre limpio vuelve a
+ * atender); el automático sigue igual que antes.
  */
 class AaServerPolicyTest {
     private fun state(manual: Boolean, server: Server, locked: Boolean, automate: Boolean = true, connected: Boolean = false) =
@@ -81,28 +82,26 @@ class AaServerPolicyTest {
     }
 
     @Test
-    fun manualEndKeepsAndroidAutoUnlessTheUserDisconnects() {
-        val ready = State().manual(true).connected(true).ready(true)
-        // Sin Desconectar (espera vencida, Bluetooth fuera, el sistema): AA se queda en pausa para el próximo viaje.
-        for (locked in bools) assertEquals(End.KEEP_AA, AaServerPolicy.onEnd(true, ready.locked(locked), false))
-        // Desconectar: se cierra, con el aviso de que la próxima vez hay que reiniciar el servidor.
-        assertEquals(End.CLOSE_AA_RESTART, AaServerPolicy.onEnd(true, ready, true))
-        // Un intento con el TCP abierto, o los intentos fallando: el servidor ya está gastado (o no atiende): aviso.
-        assertEquals(End.CLOSE_AA_RESTART, AaServerPolicy.onEnd(true, State().manual(true).connected(true), true))
-        assertEquals(End.CLOSE_AA_RESTART, AaServerPolicy.onEnd(true, State().manual(true).used(true), false))
-        assertEquals(End.CLOSE_AA_RESTART, AaServerPolicy.onEnd(true, State().manual(true).used(true), true))
-        // Sin haber tocado el servidor: se cierra sin aviso (sigue sin estrenar).
-        for (user in bools) assertEquals(End.CLOSE_AA, AaServerPolicy.onEnd(true, State().manual(true), user))
+    fun manualEndClosesAndroidAutoAndLeavesTheServerOnWhateverTheState() {
+        // Prueba real del 2026-10-06 (docs §15, B): tras un cierre limpio el servidor vuelve a atender, así que nada de
+        // dejar AA en pausa para el próximo viaje ni de pedir que se reinicie: se cierra con orden y el servidor sigue.
+        for (server in Server.values()) for (locked in bools) for (automate in bools) for (connected in bools) {
+            assertEquals(
+                "$server bloqueado=$locked accesibilidad=$automate conectado=$connected",
+                End.LEAVE_SERVER_ON,
+                AaServerPolicy.onEnd(true, state(true, server, locked, automate, connected)),
+            )
+        }
     }
 
     @Test
     fun endOfTheLink() {
-        for (manual in bools) for (server in Server.values()) for (user in bools) {
-            assertEquals(End.NOTHING, AaServerPolicy.onEnd(false, state(manual, server, false), user))
+        for (manual in bools) for (server in Server.values()) for (connected in bools) {
+            assertEquals(End.NOTHING, AaServerPolicy.onEnd(false, state(manual, server, false, connected = connected)))
         }
-        // Automático: el cierre de siempre (apagarlo), sepa lo que sepa del servidor y sea quien sea quien cierra.
-        for (server in Server.values()) for (user in bools) {
-            assertEquals(End.STOP_SERVER, AaServerPolicy.onEnd(true, state(false, server, true).ready(true), user))
+        // Automático: el cierre de siempre (apagarlo), sepa lo que sepa del servidor.
+        for (server in Server.values()) for (locked in bools) for (connected in bools) {
+            assertEquals(End.STOP_SERVER, AaServerPolicy.onEnd(true, state(false, server, locked, connected = connected)))
         }
     }
 }

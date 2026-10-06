@@ -109,8 +109,6 @@
     <string name="hql_guard_alert_title">Servidor de Android Auto abierto</string>
     <string name="hql_guard_channel">Auto en espera</string>
     <string name="hql_guard_parked">Auto en espera hasta que desbloquees el móvil (después se cierra solo)</string>
-    <string name="hql_guard_parked_manual">Android Auto en pausa para el próximo viaje (arranque manual: así no hay que reiniciar su servidor)</string>
-    <string name="hql_guard_close">Cerrar Android Auto</string>
     <string name="hql_h264_profile">Perfil H.264</string>
     <string name="hql_headwind">de cara</string>
     <string name="hql_height">alto</string>
@@ -198,7 +196,7 @@
     <string name="hql_profile_medium">Medio</string>
     <string name="hql_profile_medium_detail">720p a 45 fps constantes, recodificado en el móvil</string>
     <string name="hql_profile_reason">%1$s · %2$d GB · codificador 1080p30 %3$s · decodificador 1080p30 %4$s · codificador 720p45 %5$s</string>
-    <string name="hql_profile_reconnect_help">Si estás conectado, el coche y Auto se reconectan solos con el perfil nuevo (unos segundos). Con el arranque manual del servidor de Android Auto, después hay que reiniciarlo (⋮ › Parar y ⋮ › Iniciar).</string>
+    <string name="hql_profile_reconnect_help">Si estás conectado, el coche y Auto se reconectan solos con el perfil nuevo (unos segundos).</string>
     <string name="hql_radio">Radio</string>
     <string name="hql_radio_list">Lista de radio</string>
     <string name="hql_radio_live">En directo</string>
@@ -447,7 +445,7 @@
     <string name="hql_car_wait_title">Esperar al coche</string>
     <string name="hql_car_wait_option">%1$d min</string>
     <string name="hql_car_wait_option_default">%1$d min (recomendado)</string>
-    <string name="hql_car_wait_help">Si el coche se apaga o se corta la conexión, HeadQLink sigue escuchando y deja Android Auto en pausa este tiempo: si el coche vuelve, la imagen sale al instante, sin desbloquear. Después lo cierra todo y apaga el servidor de Android Auto. Con el arranque manual del servidor, Android Auto no se cierra: se queda en pausa para el próximo viaje (su servidor atiende una sola conexión por arranque).</string>
+    <string name="hql_car_wait_help">Si el coche se apaga o se corta la conexión, HeadQLink sigue escuchando y deja Android Auto en pausa este tiempo: si el coche vuelve, la imagen sale al instante, sin desbloquear. Después lo cierra todo y apaga el servidor de Android Auto. Con el arranque manual del servidor lo cierra todo igual, pero el servidor no lo puede apagar: sigue encendido y el próximo viaje lo vuelve a usar sin reiniciarlo.</string>
 
     <!-- headqlink: cable USB del coche (experimental) -->
     <string name="hql_link_usb">Cable USB</string>
@@ -470,22 +468,18 @@
     <string name="hql_aa_server_start_title">Arranque del servidor de Android Auto</string>
     <string name="hql_aa_server_start_auto">Automático (accesibilidad) · Recomendado</string>
     <string name="hql_aa_server_start_manual">Manual (sin accesibilidad)</string>
-    <string name="hql_aa_server_start_help">Automático: HeadQLink arranca y para solo el servidor de Android Auto, con su servicio de accesibilidad. Manual: sin accesibilidad; lo arrancas tú (Android Auto › ⋮ › Iniciar servidor de la unidad principal). Cada arranque del servidor atiende una sola conexión: HeadQLink mantiene Android Auto conectado todo lo posible (también en pausa entre viajes), pero cada vez que se cierra (Desconectar, reinicio del móvil, actualización de Android Auto, cambio de perfil de imagen) hay que reiniciarlo a mano: ⋮ › Parar servidor y ⋮ › Iniciar servidor de la unidad principal. Si al conectar no atiende, HeadQLink te avisa y lo reintenta solo. Sigue encendido hasta que lo pares (en una Wi-Fi pública, cualquier aparato de esa red podría intentar conectarse). Se aplica en el acto.</string>
+    <string name="hql_aa_server_start_help">Automático: HeadQLink arranca y para solo el servidor de Android Auto, con su servicio de accesibilidad. Manual: sin accesibilidad; lo arrancas tú (Android Auto › ⋮ › Iniciar servidor de la unidad principal) tras cada reinicio del móvil o actualización de Android Auto, y HeadQLink nunca lo para: sigue encendido entre viajes y el siguiente lo vuelve a usar sin reiniciarlo, también con el móvil bloqueado. Si alguna vez no contesta (apagado, o bloqueado por una conexión que se cortó a medias), HeadQLink te avisa y lo reintenta solo: páralo y vuelve a iniciarlo (⋮ › Parar servidor y ⋮ › Iniciar servidor de la unidad principal). En una Wi-Fi pública, cualquier aparato de esa red podría intentar conectarse: páralo cuando no lo uses. Se aplica en el acto.</string>
     <string name="hql_aa_server_wait">Esperando al servidor de Android Auto</string>
     <string name="hql_aa_server_wait_hint">Android Auto no atiende: arranca (o vuelve a arrancar) su servidor: Android Auto › ⋮ › Parar servidor (si aparece) y ⋮ › Iniciar servidor de la unidad principal. Toca aquí o la fila «Auto» para abrir Android Auto; HeadQLink lo reintenta cada 5 s y sigue solo en cuanto atienda.</string>
     <string name="hql_aa_server_ask_title">Arranca (o vuelve a arrancar) el servidor de Android Auto</string>
     <string name="hql_aa_server_ask_text">Android Auto › ⋮ › Parar servidor (si aparece) y ⋮ › Iniciar servidor de la unidad principal. Toca para abrir Android Auto; HeadQLink lo reintenta cada 5 s y sigue solo en cuanto atienda.</string>
     <string name="hql_aa_server_ask_channel">Arranque manual de Android Auto</string>
-    <string name="hql_aa_server_info_channel">Servidor de Android Auto</string>
-    <string name="hql_aa_restart_title">Android Auto cerrado</string>
-    <string name="hql_aa_restart_text">Su servidor atiende una sola conexión por arranque: la próxima vez, reinícialo antes de conectar (Android Auto › ⋮ › Parar servidor y ⋮ › Iniciar servidor de la unidad principal). Si no lo vas a usar, déjalo parado (recomendable en una Wi-Fi pública).</string>
-    <string name="hql_manual_reconnect_restart">Arranque manual: Android Auto se reconecta para aplicarlo y su servidor queda gastado. Reinícialo: Android Auto › ⋮ › Parar servidor y ⋮ › Iniciar servidor de la unidad principal.</string>
     <string name="hql_reason_manual">arranque manual: para y vuelve a iniciar su servidor en Android Auto › ⋮</string>
     <string name="hql_req_info">Información</string>
     <string name="hql_req_aa_server">Servidor de Android Auto</string>
-    <string name="hql_req_aa_server_in_use">En uso por HeadQLink (Android Auto conectado). Cuando se cierre Android Auto habrá que reiniciarlo: ⋮ › Parar servidor y ⋮ › Iniciar servidor de la unidad principal.</string>
+    <string name="hql_req_aa_server_in_use">En uso por HeadQLink (Android Auto conectado). Al cerrar Android Auto con normalidad sigue encendido y vuelve a atender: no hace falta reiniciarlo.</string>
     <string name="hql_req_aa_server_waiting">No atiende: arráncalo (o vuelve a arrancarlo) en Android Auto › ⋮ › Parar servidor (si aparece) y ⋮ › Iniciar servidor de la unidad principal. HeadQLink lo reintenta solo.</string>
-    <string name="hql_req_aa_server_tip">HeadQLink no lo comprueba antes de conectar: cada conexión lo gasta (atiende una por arranque). Arráncalo antes de conectar (⋮ › Iniciar servidor de la unidad principal); si Android Auto se ha cerrado desde entonces, páralo y vuelve a iniciarlo.</string>
+    <string name="hql_req_aa_server_tip">HeadQLink no lo comprueba antes de conectar: una conexión de prueba (que abre y cierra sin hablar) lo bloquearía. Arráncalo antes de conectar (⋮ › Iniciar servidor de la unidad principal); mientras siga encendido, vale para los viajes siguientes. Si HeadQLink avisa de que no contesta, páralo y vuelve a iniciarlo.</string>
     <string name="hql_req_auto_use">Modo automático</string>
     <string name="hql_req_manual_title">¿Sin accesibilidad?</string>
     <string name="hql_req_manual_why">Puedes arrancar tú el servidor de Android Auto (arranque manual) y no activar la accesibilidad. El automático sigue siendo el recomendado.</string>
@@ -493,9 +487,9 @@
     <string name="hql_req_acc_manual">Solo para el modo automático</string>
     <string name="hql_req_dev_manual">Sin la accesibilidad no se puede comprobar: si en Android Auto › ⋮ no ves «Iniciar servidor de la unidad principal», actívalo (guía abajo).</string>
     <string name="hql_manual_confirm_title">Arranque manual del servidor de Android Auto</string>
-    <string name="hql_manual_confirm_msg">Sin la accesibilidad, HeadQLink no arranca ni para el servidor de Android Auto:\n\n•  Arráncalo tú (Android Auto › ⋮ › Iniciar servidor de la unidad principal).\n•  Cada arranque del servidor atiende una sola conexión. HeadQLink mantiene Android Auto conectado todo lo posible (también en pausa entre viajes), pero cuando se cierra (Desconectar, reinicio del móvil, actualización de Android Auto) hay que reiniciarlo a mano: ⋮ › Parar servidor y ⋮ › Iniciar servidor de la unidad principal. Si al conectar no atiende, HeadQLink te avisa y lo reintenta solo.\n•  Se queda encendido hasta que lo pares tú. En una Wi-Fi pública, cualquier aparato de esa red podría intentar conectarse: páralo cuando no estés en el coche.\n\nEl arranque automático sigue siendo el recomendado. Puedes volver a él en Ajustes de imagen › Avanzado.</string>
+    <string name="hql_manual_confirm_msg">Sin la accesibilidad, HeadQLink no arranca ni para el servidor de Android Auto:\n\n•  Arráncalo tú (Android Auto › ⋮ › Iniciar servidor de la unidad principal) tras cada reinicio del móvil o actualización de Android Auto.\n•  HeadQLink cierra siempre Android Auto con orden, así que el servidor sigue atendiendo: vale para los viajes siguientes sin reiniciarlo, también con el móvil bloqueado. Si alguna vez no contesta (apagado, o bloqueado por una conexión que se cortó a medias), HeadQLink te avisa y lo reintenta solo: páralo y vuelve a iniciarlo.\n•  Se queda encendido hasta que lo pares tú. En una Wi-Fi pública, cualquier aparato de esa red podría intentar conectarse: páralo cuando no estés en el coche (⋮ › Parar servidor).\n\nEl arranque automático sigue siendo el recomendado. Puedes volver a él en Ajustes de imagen › Avanzado.</string>
     <string name="hql_setup_guide_manual_title">Cómo arrancar el servidor de Android Auto</string>
-    <string name="hql_setup_guide_manual">1.  Pulsa «Abrir AA».\n2.  Toca ⋮ (arriba a la derecha) › «Iniciar servidor de la unidad principal».\n3.  Si no está esa opción: baja hasta el final, toca 10 veces «Versión», acepta el aviso y repite el paso 2.\n4.  Vuelve a HeadQLink y conecta. HeadQLink no lo comprueba antes (cada conexión lo gasta): si con el coche Android Auto no atiende, te avisa y lo reintenta cada 5 s.\nCada arranque atiende una sola conexión: después de cerrar Android Auto (Desconectar, reinicio del móvil, actualización de Android Auto) hay que reiniciarlo: ⋮ › «Parar servidor unidad principal» y ⋮ › «Iniciar servidor de la unidad principal».</string>
+    <string name="hql_setup_guide_manual">1.  Pulsa «Abrir AA».\n2.  Toca ⋮ (arriba a la derecha) › «Iniciar servidor de la unidad principal».\n3.  Si no está esa opción: baja hasta el final, toca 10 veces «Versión», acepta el aviso y repite el paso 2.\n4.  Vuelve a HeadQLink y conecta. HeadQLink no lo comprueba antes (una conexión de prueba lo bloquearía): si con el coche Android Auto no contesta, te avisa y lo reintenta cada 5 s.\nHazlo tras cada reinicio del móvil o actualización de Android Auto: entre viajes sigue encendido y vale sin reiniciarlo. Si HeadQLink avisa de que no contesta: ⋮ › «Parar servidor unidad principal» y ⋮ › «Iniciar servidor de la unidad principal».</string>
     <!-- Vista previa del modo extendido (PreviewActivity, modo demostración) -->
     <string name="hql_preview_title">Vista previa del modo extendido</string>
     <string name="hql_preview_busy">La vista previa usa datos de demostración y no está disponible conectado al coche. Desconecta primero.</string>

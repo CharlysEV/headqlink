@@ -28,11 +28,13 @@ import java.util.List;
  * Seguridad: sin coche, el servidor de head unit de AA sigue encendido como mucho lo que dure «Esperar al coche»; al
  * vencer, el cierre de siempre lo apaga (ya o, con el móvil bloqueado, al desbloquearlo, con AA aparcado mientras).
  *
- * Arranque manual del servidor (sin accesibilidad, {@link Env#manualServer}): el servidor atiende una sola conexión por
- * arranque y cualquier conexión lo gasta, así que aquí no se comprueba nada ({@link AaServerPolicy.Action#AT_SESSION}):
- * lo dice el intento real del Self-Mode cuando la sesión con el coche necesita AA (AaServerManual). Por lo mismo, los
- * temporizadores no cierran Android Auto: vencida la espera, el enlace se cierra pero AA se queda aparcado para el
- * próximo viaje ({@link ShutdownPlan#KEEP_AA_PARKED}); solo Desconectar lo cierra ({@link ShutdownPlan#CLOSE_AA_RESTART}).
+ * Arranque manual del servidor (sin accesibilidad, {@link Env#manualServer}): aquí no se comprueba nada
+ * ({@link AaServerPolicy.Action#AT_SESSION}): una conexión de prueba, que abre y cierra sin hablar, bloquearía el servidor;
+ * lo dice el intento real del Self-Mode cuando la sesión con el coche necesita AA (AaServerManual). El ciclo de vida es el
+ * mismo que con el automático (vídeo vivo, AA en pausa, cierre al vencer «Esperar al coche»); al cerrar, Android Auto se
+ * cierra con orden y el servidor se queda encendido ({@link ShutdownPlan#LEAVE_SERVER_ON}): tras un cierre limpio vuelve
+ * a atender, así que el viaje siguiente lo usa sin reiniciarlo, también con el móvil bloqueado. Como no hay apagado que
+ * esperar, tampoco hace falta aparcar AA hasta desbloquear (como el automático sin accesibilidad).
  */
 final class LinkLifecycle {
     /** Sin coche desde el arranque, se busca al menos esto (o «Esperar al coche», si es más). */
@@ -86,14 +88,10 @@ final class LinkLifecycle {
         /** Se para AA; el servidor solo si se puede ahora sin que se note (ajuste stop_aa_server desactivado). */
         STOP_SERVER_IF_UNLOCKED,
         /**
-         * Arranque manual, cierre sin Desconectar con AA conectado: el enlace se cierra pero AA se queda aparcado
-         * (AaGuardService, sin soltarlo al desbloquear) para el próximo viaje: el servidor atiende una conexión por arranque.
+         * Arranque manual: se para AA con orden (ByeBye) y el servidor se queda encendido (HeadQLink no lo para: no
+         * puede), listo para el próximo viaje sin reiniciarlo. Bloqueado o no: sin apagado que esperar, nada que aparcar.
          */
-        KEEP_AA_PARKED,
-        /** Arranque manual: se cierra AA, que no llegó a usar su servidor (nada que avisar). */
-        CLOSE_AA,
-        /** Arranque manual: se cierra AA con su servidor ya usado: aviso de que la próxima vez hay que reiniciarlo. */
-        CLOSE_AA_RESTART,
+        LEAVE_SERVER_ON,
     }
 
     /** Lo que se ve del móvil en el momento del evento. */
@@ -121,10 +119,6 @@ final class LinkLifecycle {
         boolean stopServerOnExit = true;
         /** «Arranque del servidor de Android Auto»: manual (sin accesibilidad). */
         boolean manualServer;
-        /** AA atendió y el handshake terminó (conectado de verdad; no solo el TCP de un intento). */
-        boolean aaReady;
-        /** Arranque manual: nuestra head unit ya usa este arranque del servidor, o los intentos fallan (aviso puesto). */
-        boolean serverUsed;
 
         Env aa(boolean v) {
             aaMode = v;
@@ -183,16 +177,6 @@ final class LinkLifecycle {
 
         Env manual(boolean v) {
             manualServer = v;
-            return this;
-        }
-
-        Env ready(boolean v) {
-            aaReady = v;
-            return this;
-        }
-
-        Env used(boolean v) {
-            serverUsed = v;
             return this;
         }
     }
@@ -263,25 +247,15 @@ final class LinkLifecycle {
         return closeAt;
     }
 
-    /** Cómo se cierra Android Auto sin Desconectar (espera vencida, Bluetooth fuera, servicio parado por el sistema). */
+    /**
+     * Cómo se cierra Android Auto (el camino de siempre, con el móvil bloqueado o no; Desconectar o fin del viaje, igual).
+     */
     static ShutdownPlan shutdownPlan(Env e) {
-        return shutdownPlan(e, false);
-    }
-
-    /** Cómo se cierra Android Auto (el camino de siempre, con el móvil bloqueado o no). userAction: Desconectar. */
-    static ShutdownPlan shutdownPlan(Env e, boolean userAction) {
         if (!e.aaMode) return ShutdownPlan.LINK_ONLY;
-        // Arranque manual: sin accesibilidad no se para el servidor, y como atiende una conexión por arranque, AA se
-        // queda aparcado para el próximo viaje salvo con Desconectar.
-        switch (AaServerPolicy.onEnd(true, policyState(e), userAction)) {
-            case KEEP_AA:
-                return ShutdownPlan.KEEP_AA_PARKED;
-            case CLOSE_AA:
-                return ShutdownPlan.CLOSE_AA;
-            case CLOSE_AA_RESTART:
-                return ShutdownPlan.CLOSE_AA_RESTART;
-            default:
-                break;
+        // Arranque manual: el cierre del automático sin el apagado del servidor, que sin accesibilidad no se puede. Como no
+        // hay apagado que esperar, tampoco se aparca AA hasta desbloquear (igual que el automático sin accesibilidad).
+        if (AaServerPolicy.onEnd(true, policyState(e)) == AaServerPolicy.End.LEAVE_SERVER_ON) {
+            return ShutdownPlan.LEAVE_SERVER_ON;
         }
         // Con el botón «Detener» de la notificación del servidor se apaga ya, bloqueado o no; sin él, con el móvil
         // bloqueado no se pueden manejar los ajustes de AA: se aparca la sesión hasta desbloquear.
@@ -512,8 +486,8 @@ final class LinkLifecycle {
 
     /**
      * Si el servidor de AA hará falta (AaServerPolicy). Automático: si no consta encendido, arrancarlo ya o al
-     * desbloquear, una vez por búsqueda. Manual: nada (cada conexión al servidor lo gasta, así que no se comprueba antes);
-     * al arrancar, solo una línea en el log: lo dirá el intento real del Self-Mode cuando la sesión necesite AA.
+     * desbloquear, una vez por búsqueda. Manual: nada (no se comprueba antes: una conexión de prueba lo bloquearía); al
+     * arrancar, solo una línea en el log: lo dirá el intento real del Self-Mode cuando la sesión necesite AA.
      */
     private void askServer(Decision d, Env e, AaServerPolicy.Need need, String why) {
         if (!e.aaMode || e.aaParked || e.guardActive) return;
@@ -524,7 +498,7 @@ final class LinkLifecycle {
             case AT_SESSION:
                 serverAsked = true;
                 d.why(why + ": arranque manual del servidor de Android Auto (sin accesibilidad): no lo compruebo antes"
-                        + " (cada conexión al servidor lo gasta); lo dirá el intento real con el coche y, si no atiende,"
+                        + " (una conexión de prueba lo bloquearía); lo dirá el intento real con el coche y, si no atiende,"
                         + " aviso y reintento cada " + AaServeAttempts.RETRY_MS / 1000 + " s");
                 return;
             case NO_ACCESSIBILITY:
@@ -550,7 +524,7 @@ final class LinkLifecycle {
         AaServerPolicy.Server server = e.manualServer ? AaServerPolicy.Server.UNKNOWN
                 : e.serverOn ? AaServerPolicy.Server.UP : AaServerPolicy.Server.UNKNOWN;
         return new AaServerPolicy.State().manual(e.manualServer).server(server).connected(e.aaConnected)
-                .ready(e.aaReady).used(e.serverUsed).locked(e.locked).automate(e.canAutomate);
+                .locked(e.locked).automate(e.canAutomate);
     }
 
     private String phaseName() {

@@ -294,6 +294,7 @@ final class AaPassthroughSource implements VideoSource {
         }
         L.i("AA: lanzando Self-Mode");
         AA_LAUNCHES.incrementAndGet();
+        AaClose.noteLaunch();
         Intent i = new Intent(ctx, AapService.class).setAction(AapService.ACTION_START_SELF_MODE);
         ctx.startForegroundService(i);
     }

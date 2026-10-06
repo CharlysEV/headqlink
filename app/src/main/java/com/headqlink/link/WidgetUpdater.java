@@ -159,7 +159,7 @@ public final class WidgetUpdater implements LinkState.Listener, SharedPreference
         in.source = LinkState.source;
         in.udpBusy = LinkState.udpBusy;
         in.mode = cfg.mode();
-        // Arranque manual: los intentos reales fallan (nunca un sondeo del puerto, que gastaría el servidor).
+        // Arranque manual: los intentos reales fallan (nunca un sondeo del puerto, que bloquearía el servidor).
         in.aaServerWaiting = Config.isAa(in.mode) && AaServerManual.isWaiting();
         in.aaParked = AaPark.parked;
         in.linkMode = cfg.linkMode();

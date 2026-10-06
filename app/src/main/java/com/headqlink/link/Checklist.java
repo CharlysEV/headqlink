@@ -178,7 +178,7 @@ final class Checklist {
         probeSlow();
     }
 
-    /** Lo lento: la zona Wi-Fi y el puerto UDP 18463. Nunca el servidor de Android Auto (mirarlo lo gastaría). */
+    /** Lo lento: la zona Wi-Fi y el puerto UDP 18463. Nunca el servidor de Android Auto (una sonda lo bloquearía). */
     private void probeSlow() {
         if (probing) {
             probeAgain = true;
@@ -219,7 +219,8 @@ final class Checklist {
 
     /**
      * Comprobación completa ahora (también lo lento): no en el hilo principal. El servidor de Android Auto no se mira
-     * (cualquier conexión lo gastaría): con el arranque manual vale lo que se sabe sin tocarlo.
+     * (una conexión de prueba, que abre y cierra sin hablar, lo bloquearía): con el arranque manual vale lo que se sabe
+     * sin tocarlo.
      */
     static List<Requirements.Item> evaluateNow(Activity a) {
         HotspotWatcher.Probe p = HotspotWatcher.probe(a);
@@ -270,7 +271,7 @@ final class Checklist {
         s.btAuto = cfg.btAutoConnect();
         s.forceLegacyLaunch = cfg.getBool("force_legacy_launch");
         s.manualServer = cfg.aaServerManual();
-        // Sin conectarse al servidor (lo gastaría): en uso por HeadQLink, intentos fallando o sin saber.
+        // Sin conectarse al servidor (una sonda lo bloquearía): en uso por HeadQLink, intentos fallando o sin saber.
         s.aaServer = s.manualServer ? AaServerManual.serverState(a) : Requirements.AaServer.UNKNOWN;
 
         s.accessibilityRunning = TouchService.instance != null;

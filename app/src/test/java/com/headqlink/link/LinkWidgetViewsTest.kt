@@ -118,4 +118,43 @@ class LinkWidgetViewsTest {
         assertEquals("Buscando el coche…", text(s, R.id.hql_w_title))
         assertEquals("Zona Wi-Fi activa (swlan0 10.42.0.1)", text(s, R.id.hql_w_detail))
     }
+
+    @Test
+    fun thePickerPreviewIsTheWholeWidgetFittedIntoAnySlot() {
+        // El proveedor: la imagen del widget de verdad a 4x2 y una disposición que la encaja entera. Con la disposición de
+        // verdad, el diálogo de Samsung «¿Quieres añadirlo a la pantalla Inicio?», más bajo que un 4x2, la recortaba a la
+        // cabecera.
+        val ns = "http://schemas.android.com/apk/res/android"
+        val xml = ctx.resources.getXml(R.xml.hql_widget_info)
+        var previewLayout = 0
+        var previewImage = 0
+        while (xml.next() != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+            if (xml.eventType == org.xmlpull.v1.XmlPullParser.START_TAG && xml.name == "appwidget-provider") {
+                previewLayout = xml.getAttributeResourceValue(ns, "previewLayout", 0)
+                previewImage = xml.getAttributeResourceValue(ns, "previewImage", 0)
+            }
+        }
+        assertEquals(R.layout.hql_widget_preview, previewLayout)
+        assertEquals(R.drawable.hql_widget_preview, previewImage)
+        // La imagen: el 4x2 entero (340 x 180 dp), en su proporción.
+        val d = ctx.getDrawable(R.drawable.hql_widget_preview)!!
+        assertEquals(WidgetShots.WIDE_W * d.intrinsicHeight, WidgetShots.WIDE_H * d.intrinsicWidth)
+        // La disposición: solo esa imagen, en todo el hueco y encajada sin recortar, sea el hueco que sea.
+        val v = android.widget.RemoteViews(ctx.packageName, R.layout.hql_widget_preview).apply(ctx, FrameLayout(ctx))
+        val img = (v as android.view.ViewGroup).getChildAt(0) as android.widget.ImageView
+        assertEquals(1, v.childCount)
+        assertEquals(android.widget.ImageView.ScaleType.FIT_CENTER, img.scaleType)
+        for ((w, h) in listOf(900 to 150, 1020 to 540, 600 to 900)) {
+            v.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY))
+            v.layout(0, 0, w, h)
+            assertEquals("${w}x$h", w, img.width)
+            assertEquals("${w}x$h", h, img.height)
+            val r = android.graphics.RectF(0f, 0f, img.drawable.intrinsicWidth.toFloat(), img.drawable.intrinsicHeight.toFloat())
+            img.imageMatrix.mapRect(r)
+            // Entera dentro del hueco y tocando sus bordes por un lado (la mayor posible).
+            assertTrue("${w}x$h: $r", r.left >= -0.5f && r.top >= -0.5f && r.right <= w + 0.5f && r.bottom <= h + 0.5f)
+            assertTrue("${w}x$h: $r", Math.abs(r.width() - w) < 1f || Math.abs(r.height() - h) < 1f)
+        }
+    }
 }

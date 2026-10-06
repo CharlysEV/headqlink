@@ -142,8 +142,10 @@ class AapTransport(
     /**
      * headqlink: called on the first bytes the peer sends in [handshake]'s version exchange (normally the
      * VERSION_RESPONSE). The earliest proof that the peer is serving this connection: Android Auto's developer
-     * head unit server serves one connection per start, and once it has, the kernel still accepts TCP on its
-     * listening socket while nothing ever answers. Accepting is not serving; answering is.
+     * head unit server serves again after a session that ended cleanly (ByeBye), but a connection cut halfway (a
+     * probe that opens and closes without a byte) blocks it, and from then on the kernel still accepts TCP on its
+     * listening socket while nothing ever answers until the server is stopped and started. Accepting is not
+     * serving; answering is.
      */
     @Volatile var onPeerAnswered: (() -> Unit)? = null
     var isAssistantActive = false

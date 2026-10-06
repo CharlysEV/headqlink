@@ -37,4 +37,24 @@ class WidgetRenderTest {
             WidgetShots.save(WidgetShots.render(ctx, shot), File(dir, shot.name + suffix + ".png"))
         }
     }
+
+    /**
+     * La imagen de la vista previa del selector de widgets y del diálogo «¿Añadir a la pantalla de inicio?»: el widget
+     * apagado a 4x2 (3x), sin fondo, en cada idioma: hql_widget_preview_<idioma>.png, que se copian a
+     * res/drawable-nodpi (inglés) y res/drawable-<idioma>-nodpi/hql_widget_preview.png.
+     */
+    @Test
+    fun renderPickerPreview() {
+        assumeTrue(System.getProperty("hql.preview") == "1")
+        val dir = File(System.getProperty("hql.preview.dir")!!)
+        dir.mkdirs()
+        val app: Application = RuntimeEnvironment.getApplication()
+        for (tag in listOf("en", "es", "pt-PT", "pt-BR")) {
+            val loc = Locale.forLanguageTag(tag)
+            Locale.setDefault(loc)
+            val conf = android.content.res.Configuration(app.resources.configuration).apply { setLocale(loc) }
+            val ctx = app.createConfigurationContext(conf)
+            WidgetShots.save(WidgetShots.renderPreview(ctx), File(dir, "hql_widget_preview_$tag.png"))
+        }
+    }
 }

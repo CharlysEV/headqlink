@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    headqlink: vista previa del widget (previewLayout, Android 12+: selector de widgets y diálogo «¿Añadir a la pantalla de
+    inicio?»). Es la imagen del widget de verdad, apagado, a 4x2 (hql_widget_preview, la pinta WidgetRenderTest con
+    -Ppreview), encajada entera en el hueco que dé el launcher (fitCenter): con la disposición de verdad, el diálogo de
+    Samsung, con menos alto que un 4x2, la recortaba a la cabecera. Solo vistas de RemoteViews.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:contentDescription="@string/hql_w_description"
+        android:scaleType="fitCenter"
+        android:src="@drawable/hql_widget_preview" />
+</FrameLayout>

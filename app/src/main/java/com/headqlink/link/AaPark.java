@@ -13,8 +13,9 @@ import com.andrerinas.openheadunit.connection.CommManager;
 import com.andrerinas.openheadunit.decoder.video.VideoTap;
 
 /**
- * Android Auto «aparcado»: nuestra head unit sigue conectada al servidor de AA (que atiende una sola conexión), sin vídeo
- * y con el foco de vídeo en «nativo», así que AA no codifica imagen. Sin vista en el móvil (VideoTap.headless). Lo usan:
+ * Android Auto «aparcado»: nuestra head unit sigue conectada al servidor de AA (que atiende una conexión a la vez), sin
+ * vídeo y con el foco de vídeo en «nativo», así que AA no codifica imagen. Sin vista en el móvil (VideoTap.headless). Lo
+ * usan:
  * - LinkService mientras espera al coche (fase AA EN PAUSA de LinkLifecycle): si vuelve, AA sale de la pausa al instante,
  *   sin arrancar el servidor ni desbloquear;
  * - AaGuardService cuando todo se cerró con el móvil bloqueado (el servidor no se puede apagar hasta desbloquear).

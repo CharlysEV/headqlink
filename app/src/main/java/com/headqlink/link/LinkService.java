@@ -163,10 +163,6 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         e.canStopWithoutUi = AaServerStarter.canStopWithoutUi();
         e.stopServerOnExit = cfg.stopAaServerOnExit();
         e.manualServer = cfg.aaServerManual();
-        Object st = com.andrerinas.openheadunit.App.Companion.provide(this).getCommManager().getConnectionState().getValue();
-        e.aaReady = st instanceof com.andrerinas.openheadunit.connection.CommManager.ConnectionState.HandshakeComplete
-                || st instanceof com.andrerinas.openheadunit.connection.CommManager.ConnectionState.TransportStarted;
-        e.serverUsed = e.manualServer && (e.aaConnected || AaServerManual.isWaiting());
         return e;
     }
 
@@ -395,17 +391,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             L.i("aplicando ajustes: rehago el vídeo sin cerrar la sesión por cable");
             video.stop("ajustes");
             usb.restartVideo(renegotiate ? 3000 : 1000, "ajustes");
-            if (renegotiate) {
-                noteAaReconnect();
-                try {
-                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
-                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_DISCONNECT));
-                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
-                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_STOP_SELF_MODE));
-                } catch (RuntimeException e) {
-                    L.e("no se pudo desconectar Android Auto", e);
-                }
-            }
+            if (renegotiate) reconnectAa();
         }
         boolean applyQd = intent != null && ACTION_APPLY.equals(intent.getAction()) && qd != null
                 && (qd.isBusy() || video.hasVideo());
@@ -417,17 +403,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             qd.closeSession("aplicar ajustes");
             video.stop("ajustes");
             qd.pauseReconnect(renegotiate ? 3000 : 1000);
-            if (renegotiate) {
-                noteAaReconnect();
-                try {
-                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
-                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_DISCONNECT));
-                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
-                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_STOP_SELF_MODE));
-                } catch (RuntimeException e) {
-                    L.e("no se pudo desconectar Android Auto", e);
-                }
-            }
+            if (renegotiate) reconnectAa();
         }
         if (intent != null && ACTION_APPLY.equals(intent.getAction()) && session != null) {
             // Cerrar la sesión: el coche reconecta en ~5 s y la nueva sesión usa los ajustes nuevos.
@@ -435,15 +411,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             session.close();
             if (intent.getBooleanExtra(EXTRA_AA_RENEGOTIATE, false) && Config.isAa(cfg.mode())) {
                 // AA negocia resolución y fps al conectar: se desconecta y la sesión nueva lo vuelve a lanzar.
-                noteAaReconnect();
-                try {
-                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
-                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_DISCONNECT));
-                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
-                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_STOP_SELF_MODE));
-                } catch (RuntimeException e) {
-                    L.e("no se pudo desconectar Android Auto", e);
-                }
+                reconnectAa();
             }
         }
         if (!goForeground(Str.get(R.string.hql_waiting_car))) return START_NOT_STICKY;
@@ -463,10 +431,12 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             thermal = new ThermalGuard(this, hub != null ? hub::setThermalLevel : null);
             thermal.start();
             setStatus(Str.get(R.string.hql_waiting_car));
-            // El enlace va a usar el servidor de AA: un aviso viejo de «sigue encendido» (o, con el arranque manual, de
-            // «reinícialo la próxima vez») ya no vale; si el servidor no atiende, lo dirá el intento real.
+            // El enlace va a usar el servidor de AA: un aviso viejo de «sigue encendido» ya no vale (con el arranque
+            // manual, si el servidor no atiende, lo dirá el intento real), ni un cierre de AA que aún esperaba a que
+            // terminara un handshake: esa conexión es ahora la del enlace nuevo.
             AaServerStarter.cancelServerStillOn(this);
             AaServerManual.onLinkStarting(this);
+            AaClose.cancelPending("el enlace vuelve a arrancar");
             String action = intent.getAction();
             LinkLifecycle.Trigger trigger = ACTION_BT_CAR.equals(action) ? LinkLifecycle.Trigger.BLUETOOTH
                     : usbAttach ? LinkLifecycle.Trigger.USB
@@ -480,16 +450,12 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     }
 
     /**
-     * Aplicar ajustes reconecta Android Auto (resolución y fps se negocian al conectar). Con el arranque manual eso gasta el
-     * arranque de su servidor (atiende una conexión por arranque): el intento siguiente avisará para reiniciarlo.
+     * Aplicar ajustes reconecta Android Auto (resolución y fps se negocian al conectar): se desconecta con orden (ByeBye,
+     * {@link AaClose}) y la sesión nueva lo vuelve a lanzar. Su servidor sigue atendiendo, también con el arranque manual.
      */
-    private void noteAaReconnect() {
+    private void reconnectAa() {
         L.i("aplicando ajustes: reconecto Android Auto (perfil " + cfg.videoProfile().id + ")");
-        if (cfg.aaServerManual()) {
-            L.lifeWarn("aplicando ajustes: arranque manual: al reconectar Android Auto su servidor queda gastado (atiende"
-                    + " una sola conexión por arranque): habrá que pararlo y volver a iniciarlo (Android Auto › ⋮); el aviso"
-                    + " sale con el próximo intento");
-        }
+        AaClose.reconnectAa(this, "aplicar ajustes");
     }
 
     /**
@@ -882,12 +848,16 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         stopSelf();
     }
 
-    /** Cierra Android Auto por el camino de siempre (LinkLifecycle.shutdownPlan). Una vez por servicio. */
+    /**
+     * Cierra Android Auto por el camino de siempre (LinkLifecycle.shutdownPlan). Una vez por servicio. Nuestra conexión con
+     * AA se cierra siempre con orden (ByeBye; nunca un handshake cortado a medias: AaClose), que es lo que deja su servidor
+     * atendiendo para la próxima vez.
+     */
     private void closeAa(boolean userAction) {
         if (aaClosed) return;
         aaClosed = true;
         AaServerStarter.cancelStartOnUnlock(this, "el enlace se cierra");
-        LinkLifecycle.ShutdownPlan plan = LinkLifecycle.shutdownPlan(env(), userAction);
+        LinkLifecycle.ShutdownPlan plan = LinkLifecycle.shutdownPlan(env());
         switch (plan) {
             case PARK_UNTIL_UNLOCK:
                 // Móvil bloqueado: el servidor (abierto en toda la red) no se puede apagar hasta
@@ -903,45 +873,26 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                         + (plan == LinkLifecycle.ShutdownPlan.STOP_SERVER ? "apago su servidor (ya o al desbloquear)"
                         : "su servidor solo si se puede ahora"));
                 AaPark.release("cierre del enlace");
-                try {
-                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
-                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_STOP_SERVICE));
-                } catch (RuntimeException e) {
-                    L.e("no se pudo parar Android Auto", e);
-                }
+                AaClose.stopAa(this, "cierre del enlace");
                 if (plan == LinkLifecycle.ShutdownPlan.STOP_SERVER) {
                     AaServerStarter.requestStop(this);
                 } else {
                     AaServerStarter.stopIfUnlocked(this);
                 }
                 return;
-            case KEEP_AA_PARKED:
-                // Arranque manual: el servidor atiende una sola conexión por arranque. Sin Desconectar, Android Auto no
-                // se cierra: se queda aparcado con el guardián para el próximo viaje (sin reiniciar el servidor).
-                L.life("cierre (sin Desconectar): arranque manual: Android Auto se queda conectado y en pausa para el"
-                        + " próximo viaje (su servidor atiende una sola conexión por arranque; se cierra con Desconectar"
-                        + " o «Cerrar Android Auto»)");
-                AaServerManual.stop(this, "el enlace se cierra con Android Auto en pausa");
-                AaGuardService.park(this);
-                return;
-            case CLOSE_AA:
-            case CLOSE_AA_RESTART: {
-                // Arranque manual: no se pulsa nada en los ajustes de AA (ni se mira su puerto). Se cierra nuestra head
-                // unit; si ya había usado el arranque del servidor, el aviso de que la próxima vez hay que reiniciarlo.
-                boolean restart = plan == LinkLifecycle.ShutdownPlan.CLOSE_AA_RESTART;
+            case LEAVE_SERVER_ON: {
+                // Arranque manual: el cierre del automático sin el apagado del servidor (no se pulsa nada en los ajustes de
+                // AA ni se mira su puerto). Android Auto se cierra con orden y su servidor sigue atendiendo: el próximo
+                // viaje lo usa sin reiniciarlo, también con el móvil bloqueado.
                 String why = userAction ? "Desconectar" : "fin del viaje";
-                L.life("cierre" + (userAction ? " (a mano)" : "") + ": arranque manual: cierro Android Auto"
-                        + (restart ? "; su servidor ya atendió su conexión de este arranque: para volver a usarlo hay"
-                        + " que pararlo y volver a iniciarlo (Android Auto › ⋮)"
-                        : " (no llegó a usar su servidor)") + "; HeadQLink no lo para");
+                boolean connected = aaConnected();
+                L.life("cierre" + (userAction ? " (a mano)" : "") + ": arranque manual: "
+                        + (connected ? "cierro Android Auto con su ByeBye; su servidor sigue encendido y listo para el"
+                        + " próximo viaje" : "Android Auto no estaba conectado; su servidor, si está encendido, sigue así")
+                        + " (HeadQLink no lo para)");
                 AaPark.release("cierre del enlace");
-                try {
-                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
-                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_STOP_SERVICE));
-                } catch (RuntimeException e) {
-                    L.e("no se pudo parar Android Auto", e);
-                }
-                AaServerManual.onLinkClosed(this, why, restart);
+                AaClose.stopAa(this, why);
+                AaServerManual.onLinkClosed(this, why, connected);
                 return;
             }
             default:

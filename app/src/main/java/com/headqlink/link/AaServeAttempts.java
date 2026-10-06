@@ -5,13 +5,14 @@ package com.headqlink.link;
  * Android) y con el reloj inyectable: lo prueban los tests. Lo usa {@link AaServerManual}, que mira el móvil cada
  * {@link #TICK_MS} mientras hay un intento o un reintento pendiente y hace lo que dice cada {@link Step}.
  *
- * Por qué no se sondea nunca (S25 Ultra, Android Auto 17.7, 2026-10-06): el servidor de head unit de desarrollador de
- * AA atiende UNA conexión por arranque. Cualquier conexión TCP a 127.0.0.1:5277 lo gasta (AA anota «Head unit
- * connected» al aceptarla, aunque sea una sonda que solo abre y cierra) y, desde ahí, el núcleo del sistema sigue
- * aceptando el TCP en el socket que escucha pero AA ya no atiende a nadie. Que el TCP conecte no dice nada: lo único que
- * dice que AA atiende es que conteste. Así que el único intento es el del Self-Mode cuando una sesión con el coche
- * necesita Android Auto, y cuenta como «servido» en cuanto AA manda sus primeros bytes (lo primero del handshake, la
- * respuesta de versión; o, por si se pierde ese aviso, el handshake terminado).
+ * Por qué no se sondea nunca (S25 Ultra, Android Auto 17.7, 2026-10-06, docs §15): el servidor de head unit de
+ * desarrollador de AA vuelve a atender después de una sesión cerrada con orden (ByeBye), pero una conexión cortada a
+ * medias lo bloquea: una sonda que abre el TCP y lo cierra sin mandar nada (AA anota «Head unit connected» y luego
+ * «end of stream, dataReceived=false») lo deja aceptando el TCP en el socket que escucha sin contestar a nadie, hasta
+ * que se para y se vuelve a iniciar. Que el TCP conecte no dice nada: lo único que dice que AA atiende es que conteste.
+ * Así que el único intento es el del Self-Mode cuando una sesión con el coche necesita Android Auto, y cuenta como
+ * «servido» en cuanto AA manda sus primeros bytes (lo primero del handshake, la respuesta de versión; o, por si se
+ * pierde ese aviso, el handshake terminado).
  *
  * <pre>
  *  REPOSO ──la sesión necesita AA──▶ INTENTO ──AA contesta──▶ REPOSO (servido; fuera el aviso)
@@ -25,7 +26,9 @@ package com.headqlink.link;
  * {@link #DROP_GRACE_MS} (su servidor parado, AA actualizado o cerrado solo), un intento nuevo, que avisará si hace falta.
  *
  * Nunca se cierra un intento al que AA ya ha contestado: el plazo de 6 s se mira contra el contador de respuestas, que
- * solo crece, y {@link Step#answersAtDecision} deja comprobarlo otra vez justo antes de cerrar.
+ * solo crece, y {@link Step#answersAtDecision} deja comprobarlo otra vez justo antes de cerrar. Lo único que se cierra
+ * sin ByeBye es un intento al que AA no ha dicho nada en 6 s: su servidor ya estaba bloqueado y no hay sesión que cerrar
+ * con orden (el ByeBye va cifrado, tras el handshake).
  */
 final class AaServeAttempts {
     /** Reloj monótono en milisegundos (en el móvil, SystemClock.elapsedRealtime). */
@@ -65,7 +68,7 @@ final class AaServeAttempts {
         REFUSED,
         /** El TCP se abrió y se cerró sin que AA contestara (servidor parado o reiniciándose). */
         DROPPED,
-        /** TCP abierto y {@link #SERVE_TIMEOUT_MS} sin respuesta: el servidor ya atendió otra conexión. */
+        /** TCP abierto y {@link #SERVE_TIMEOUT_MS} sin respuesta: el servidor está bloqueado (una conexión se cortó a medias). */
         NO_ANSWER,
         /** {@link #DIAL_TIMEOUT_MS} sin llegar a abrir el TCP. */
         NO_DIAL,
@@ -417,9 +420,9 @@ final class AaServeAttempts {
             case DROPPED:
                 return "la conexión se cerró sin respuesta de Android Auto (servidor parado o reiniciándose)";
             case NO_ANSWER:
-                return "127.0.0.1:5277 aceptó el TCP pero Android Auto no contestó en " + SERVE_TIMEOUT_MS / 1000
-                        + " s: el servidor ya atendió otra conexión desde que se arrancó (atiende una por arranque);"
-                        + " hay que pararlo y volver a iniciarlo";
+                return "127.0.0.1:5277 aceptó el TCP y en " + SERVE_TIMEOUT_MS / 1000 + " s no llegó respuesta: Android"
+                        + " Auto no contesta: su servidor está bloqueado (pasa si una conexión se cortó a medias); páralo y"
+                        + " vuelve a iniciarlo";
             default:
                 return "el Self-Mode no llegó a conectar en " + DIAL_TIMEOUT_MS / 1000 + " s";
         }

@@ -106,7 +106,7 @@ final class LinkControl {
         }
         boolean aaConnected = com.andrerinas.openheadunit.App.Companion.provide(app).getCommManager().isConnected();
         if (manual && !AaPark.parked && !aaConnected) {
-            // Arranque manual: no se pulsa nada ni se mira el puerto (cada conexión gasta el servidor). Lo dice el intento
+            // Arranque manual: no se pulsa nada ni se mira el puerto (una sonda bloquearía el servidor). Lo dice el intento
             // real del Self-Mode con el coche: si AA no contesta, aviso, la fila «Auto» lo dice y reintento cada 5 s.
             L.life("conectar (" + from + "): arranque manual del servidor de Android Auto (sin accesibilidad): sin"
                     + " comprobarlo antes; lo dirá el intento real con el coche");
