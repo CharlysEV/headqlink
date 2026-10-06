@@ -36,7 +36,7 @@ final class DriveTab implements CarScreen {
 
     private void tick() {
         if (!running) return;
-        view.nav = NavTap.getInfo();
+        view.nav = DemoMode.navInfo();
         view.s = sensors.snapshot();
         view.road = road.state();
         view.invalidate();

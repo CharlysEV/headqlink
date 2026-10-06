@@ -30,6 +30,9 @@ final class RoadInfo {
         boolean sunGlare;
         double sunElevation = Double.NaN;
         String sunset = "";
+        /** Salida y puesta de sol de hoy (ms; -1 si no hay). */
+        long sunriseMs = -1;
+        long sunsetMs = -1;
     }
 
     private static RoadInfo instance;
@@ -47,15 +50,19 @@ final class RoadInfo {
     private boolean limitEst;
     private String road = "";
 
+    /** Modo demostración: la vía es la del guion (DemoMode), sin consultas a OpenStreetMap. */
+    private final boolean demo;
+
     private RoadInfo(Context ctx) {
         sensors = CarSensors.start(ctx);
+        demo = DemoMode.active();
     }
 
     static synchronized RoadInfo start(Context ctx) {
         if (instance == null) {
             instance = new RoadInfo(ctx);
             instance.running = true;
-            new Thread(instance::loop, "road-info").start();
+            if (!instance.demo) new Thread(instance::loop, "road-info").start();
         }
         return instance;
     }
@@ -72,7 +79,7 @@ final class RoadInfo {
     }
 
     State state() {
-        return state;
+        return demo ? DemoMode.road() : state;
     }
 
     private void loop() {
@@ -124,7 +131,7 @@ final class RoadInfo {
         st.sunElevation = sun[0];
         double diff = Math.abs(((sun[1] - s.headingDeg) + 540) % 360 - 180);
         st.sunGlare = s.speedKmh > 10 && sun[0] > 0 && sun[0] < 20 && diff < 30;
-        st.sunset = sunset(s.lat, s.lon);
+        fillSun(st, s.lat, s.lon, System.currentTimeMillis());
         state = st;
     }
 
@@ -269,19 +276,33 @@ final class RoadInfo {
         return new double[]{Math.toDegrees(el), (Math.toDegrees(az) + 360) % 360};
     }
 
-    /** Hora local de la puesta de sol de hoy (búsqueda por minutos), o "" si no hay. */
-    private static String sunset(double lat, double lon) {
-        Calendar c = Calendar.getInstance();
+    /** Salida y puesta de sol del día de nowMs (y la hora local de la puesta en texto). */
+    static void fillSun(State st, double lat, double lon, long nowMs) {
+        long[] t = sunTimes(lat, lon, nowMs, TimeZone.getDefault());
+        st.sunriseMs = t[0];
+        st.sunsetMs = t[1];
+        if (t[1] > 0) {
+            Calendar s = Calendar.getInstance(TimeZone.getDefault());
+            s.setTimeInMillis(t[1]);
+            st.sunset = String.format(Locale.getDefault(), "%02d:%02d", s.get(Calendar.HOUR_OF_DAY), s.get(Calendar.MINUTE));
+        }
+    }
+
+    /** Salida y puesta de sol del día local de dayMs (búsqueda por minutos desde el mediodía): {salida, puesta}, -1 si no hay. */
+    static long[] sunTimes(double lat, double lon, long dayMs, TimeZone tz) {
+        Calendar c = Calendar.getInstance(tz);
+        c.setTimeInMillis(dayMs);
         c.set(Calendar.HOUR_OF_DAY, 12);
         c.set(Calendar.MINUTE, 0);
-        long t = c.getTimeInMillis();
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        long noon = c.getTimeInMillis();
+        long rise = -1;
+        long set = -1;
         for (int m = 0; m < 12 * 60; m += 2) {
-            if (sunPosition(lat, lon, t + m * 60_000L)[0] < -0.83) {
-                Calendar s = Calendar.getInstance(TimeZone.getDefault());
-                s.setTimeInMillis(t + m * 60_000L);
-                return String.format(Locale.getDefault(), "%02d:%02d", s.get(Calendar.HOUR_OF_DAY), s.get(Calendar.MINUTE));
-            }
+            if (set < 0 && sunPosition(lat, lon, noon + m * 60_000L)[0] < -0.83) set = noon + m * 60_000L;
+            if (rise < 0 && sunPosition(lat, lon, noon - m * 60_000L)[0] < -0.83) rise = noon - m * 60_000L;
         }
-        return "";
+        return new long[]{rise, set};
     }
 }

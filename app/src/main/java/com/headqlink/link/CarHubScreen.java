@@ -16,7 +16,7 @@ final class CarHubScreen implements CarScreen {
     private static final int[] TABS = {R.string.hql_tab_route, R.string.hql_tab_drive, R.string.hql_tab_trips, R.string.hql_tab_gauges, R.string.hql_tab_efficiency};
     private static int lastTab;
 
-    /** Para UiPreview: pestaña con la que se abrirá la sección. */
+    /** Para la vista previa (PreviewActivity): pestaña con la que se abrirá la sección. */
     static void selectTab(int tab) {
         lastTab = Math.max(0, Math.min(TABS.length - 1, tab));
     }

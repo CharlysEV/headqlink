@@ -217,6 +217,21 @@ android {
         disable += "PackagedPrivateKey"
     }
 
+    // headqlink: las vistas del coche se pueden dibujar en el PC (Robolectric con gráficos nativos) para ver los
+    // paneles sin coche ni móvil: gradlew :app:testGithubDebugUnitTest --tests "*CarPanelRender*" -Ppreview
+    // deja los PNG en app/build/preview. Sin -Ppreview esa prueba se salta.
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all {
+                it.systemProperty("hql.preview", if (project.hasProperty("preview")) "1" else "")
+                it.systemProperty("hql.preview.dir", layout.buildDirectory.dir("preview").get().asFile.absolutePath)
+                it.systemProperty("hql.preview.suffix", (project.findProperty("previewSuffix") ?: "").toString())
+                it.systemProperty("hql.preview.only", (project.findProperty("previewOnly") ?: "").toString())
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -272,6 +287,8 @@ dependencies {
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
     // Inline mocks exercise the final Android transport classes on JDK 21.
     testImplementation("org.mockito:mockito-core:5.14.2")
+    // headqlink: dibujar las pantallas del coche en el PC (solo pruebas; ver testOptions).
+    testImplementation("org.robolectric:robolectric:4.16.1")
 
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0")
     implementation(project(":contract"))

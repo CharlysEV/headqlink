@@ -36,6 +36,10 @@ object NavTap {
         @JvmField var stepSeconds = -1L
         /** Carriles: true = recomendado. */
         @JvmField var lanes: BooleanArray? = null
+        /** La maniobra de después, si Maps la manda (tipo -1 si no). */
+        @JvmField var thenKind = -1
+        @JvmField var thenAngle = 0
+        @JvmField var thenRoad: String? = null
         @JvmField var updatedMs = 0L
     }
 
@@ -76,6 +80,14 @@ object NavTap {
                 i.lanes = BooleanArray(step.lanesCount) { idx ->
                     step.getLanes(idx).laneDirectionsList.any { it.isHighlighted }
                 }
+            }
+            val then = state.stepsList.getOrNull(1)
+            if (then != null && then.hasManeuver()) {
+                val t = Info()
+                mapManeuver(t, then.maneuver.type)
+                i.thenKind = t.kind
+                i.thenAngle = t.angle
+                i.thenRoad = then.road?.name?.takeIf { it.isNotBlank() }
             }
         } else {
             // Mensajes antiguos (NextTurnDetail / NextTurnDistanceEvent).

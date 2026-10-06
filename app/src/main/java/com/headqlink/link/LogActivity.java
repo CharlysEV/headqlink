@@ -18,8 +18,9 @@ import java.util.List;
 
 /**
  * Diagnóstico: el log de HeadQLink en vivo, con la ruta de los registros, un botón para copiarlo, «Exportar log» (ZIP en
- * Descargas/HeadQLink, o en la carpeta de la app en Android 9 o menos, con todos los registros, qdauto §7.5) y la prueba
- * sin Android Auto (patrón), para probar el enlace con un coche simulado sin adb.
+ * Descargas/HeadQLink, o en la carpeta de la app en Android 9 o menos, con todos los registros, qdauto §7.5), la prueba
+ * sin Android Auto (patrón), para probar el enlace con un coche simulado sin adb, y la vista previa del modo extendido
+ * con datos de demostración (PreviewActivity).
  */
 public class LogActivity extends Activity {
     private static final int MAX_LINES = 600;
@@ -60,6 +61,14 @@ public class LogActivity extends Activity {
         refresh();
         findViewById(R.id.hql_log_latency).setOnClickListener(v ->
                 startActivity(new android.content.Intent(this, LatencyActivity.class)));
+        // Vista previa del modo extendido con datos de demostración (no con la sesión del coche en marcha).
+        findViewById(R.id.hql_log_preview).setOnClickListener(v -> {
+            if (LinkState.running) {
+                ToastUtils.showToast(this, Str.get(R.string.hql_preview_busy), Toast.LENGTH_LONG, true);
+                return;
+            }
+            startActivity(new android.content.Intent(this, PreviewActivity.class));
+        });
         findViewById(R.id.hql_log_copy).setOnClickListener(v -> {
             getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("HeadQLink", String.join("\n", lines)));
             ToastUtils.showToast(this, Str.get(R.string.hql_log_copied), Toast.LENGTH_SHORT, true);

@@ -39,7 +39,6 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     /** Prueba sin coche: arranca la cadena de Android Auto con la geometría del coche y cuenta frames. */
     static final String ACTION_AA_TEST = "com.headqlink.link.AA_TEST";
     /** Diagnóstico sin coche: dibuja la interfaz propia (CarUi) y guarda capturas en files/ui-preview-*.png. */
-    static final String ACTION_UI_PREVIEW = "com.headqlink.link.UI_PREVIEW";
     /** Reinicia el servidor de head unit de Android Auto con la automatización de accesibilidad. */
     static final String ACTION_AA_SERVER_RESTART = "com.headqlink.link.AA_SERVER_RESTART";
     /** Aviso «El servidor de Android Auto sigue encendido · Tocar para apagarlo» (AaServerStarter). */
@@ -332,14 +331,6 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                 return START_NOT_STICKY;
             }
             new Thread(() -> L.i("AA server reinicio: " + (AaServerStarter.restartAndWait(this) ? "ok" : "fallo")), "aa-restart").start();
-            return START_NOT_STICKY;
-        }
-        if (intent != null && ACTION_UI_PREVIEW.equals(intent.getAction())) {
-            // Lanzada con startForegroundService: hay que pasar a primer plano o Android cierra la app.
-            if (!goForeground(Str.get(R.string.hql_fg_preview))) return START_NOT_STICKY;
-            UiPreview.run(this, intent.getStringExtra("screen"), () -> {
-                if (!LinkState.running) stopSelf();
-            });
             return START_NOT_STICKY;
         }
         if (intent != null && "com.headqlink.link.ENC_PROBE".equals(intent.getAction())) {

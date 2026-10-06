@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: manifiesto de las pruebas con recursos (Robolectric). Las mismas excepciones de minSdk que el de main:
+     la variante github declara minSdk 16 y algunas bibliotecas piden más. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-sdk tools:overrideLibrary="
+        com.google.android.gms.nearby, com.google.android.gms.base, com.google.android.gms.tasks, com.google.android.gms.common,
+        rikka.shizuku.api, rikka.shizuku.shared, rikka.shizuku.aidl, com.topjohnwu.superuser,
+        androidx.media3.exoplayer.hls, androidx.media3.exoplayer, androidx.media3.ui, androidx.media3.common,
+        androidx.media3.datasource, androidx.media3.decoder, androidx.media3.extractor, androidx.media3.container,
+        androidx.media3.database, androidx.media, androidx.test, androidx.test.core, androidx.test.monitor,
+        androidx.test.runner, androidx.test.services.storage, androidx.test.espresso.core, androidx.test.espresso.idling,
+        androidx.test.espresso.idling.resource, androidx.test.ext.junit, androidx.tracing, androidx.concurrent.futures" />
+</manifest>

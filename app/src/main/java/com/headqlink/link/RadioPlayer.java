@@ -116,7 +116,7 @@ final class RadioPlayer {
         changed();
     }
 
-    /** Solo UiPreview: una emisora "sonando" sin reproducir nada. */
+    /** Solo la vista previa: una emisora "sonando" sin reproducir nada. */
     static void previewOnly(Station s) {
         list.clear();
         list.add(s);

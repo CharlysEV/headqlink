@@ -525,6 +525,20 @@
             android:theme="@style/Theme.HeadQLink" />
 
         <!--
+            headqlink: vista previa del modo extendido con datos de demostración (desde Diagnóstico) y capturas PNG con
+            adb (am start con el extra render). Exportada solo para quien tenga DUMP: el shell de adb sí, otras apps no.
+        -->
+        <activity
+            android:name="com.headqlink.link.PreviewActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:exported="true"
+            android:label="@string/hql_preview_title"
+            android:launchMode="singleTop"
+            android:permission="android.permission.DUMP"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/Theme.HeadQLink" />
+
+        <!--
             headqlink: cable USB del coche (experimental). Android la lanza al enchufar el móvil cuando el coche lo pone en
             modo accesorio con el filtro de QDLink (Neusoft / QDriveLink) y da permiso para ese accesorio. Transparente:
             arranca LinkService por el cable y se cierra. Si QDLink también está instalada, Android pregunta qué app lo

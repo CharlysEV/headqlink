@@ -252,7 +252,7 @@ final class RouteTab implements CarScreen {
         chart.plan = p;
         chart.soc = soc;
         chart.status = planner.status();
-        chart.nav = NavTap.getInfo();
+        chart.nav = DemoMode.navInfo();
         chart.invalidate();
         if (p != null) {
             if (Double.isNaN(p.destTemp)) {

@@ -79,14 +79,28 @@
                 android:textSize="14sp" />
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/hql_log_qd_options"
-            style="@style/HQL.Button.Quiet"
-            android:layout_width="wrap_content"
+        <!-- headqlink: opciones de prueba del motor y vista previa del modo extendido (sin coche) -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="-12dp"
             android:layout_marginTop="4dp"
-            android:text="@string/hql_qd_test_options" />
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/hql_log_qd_options"
+                style="@style/HQL.Button.Quiet"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="-12dp"
+                android:text="@string/hql_qd_test_options" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/hql_log_preview"
+                style="@style/HQL.Button.Quiet"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/hql_preview_title" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/hql_log_info"

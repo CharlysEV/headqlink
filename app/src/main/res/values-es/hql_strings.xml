@@ -75,7 +75,6 @@
     <string name="hql_estimated">estimado</string>
     <string name="hql_fg_aa_test">Prueba Android Auto</string>
     <string name="hql_fg_encoder">Prueba del encoder</string>
-    <string name="hql_fg_preview">Vista previa de la interfaz</string>
     <string name="hql_fg_restart_aa">Reiniciando servidor de Android Auto</string>
     <string name="hql_finish">Terminar</string>
     <string name="hql_finish_anyway">Terminar igualmente</string>
@@ -523,4 +522,11 @@
     <string name="hql_manual_confirm_msg">Sin la accesibilidad, HeadQLink no arranca ni para el servidor de Android Auto:\n\n•  Arráncalo tú (Android Auto › ⋮ › Iniciar servidor de la unidad principal) tras cada reinicio del móvil o actualización de Android Auto. Si al conectar está apagado, HeadQLink te avisa.\n•  Se queda encendido hasta que lo pares tú. En una Wi-Fi pública, cualquier aparato de esa red podría intentar conectarse: páralo cuando no estés en el coche (⋮ › Parar servidor).\n\nEl arranque automático sigue siendo el recomendado. Puedes volver a él en Ajustes de imagen › Avanzado.</string>
     <string name="hql_setup_guide_manual_title">Cómo arrancar el servidor de Android Auto</string>
     <string name="hql_setup_guide_manual">1.  Pulsa «Abrir AA».\n2.  Toca ⋮ (arriba a la derecha) › «Iniciar servidor de la unidad principal».\n3.  Si no está esa opción: baja hasta el final, toca 10 veces «Versión», acepta el aviso y repite el paso 2.\n4.  Vuelve a HeadQLink: la fila «Servidor de Android Auto» pasa a «Encendido».\nHazlo tras cada reinicio del móvil o actualización de Android Auto. Para pararlo: ⋮ › «Parar servidor unidad principal».</string>
+    <!-- Vista previa del modo extendido (PreviewActivity, modo demostración) -->
+    <string name="hql_preview_title">Vista previa del modo extendido</string>
+    <string name="hql_preview_busy">La vista previa usa datos de demostración y no está disponible conectado al coche. Desconecta primero.</string>
+    <string name="hql_preview_demo_toast">Modo demostración: trayecto simulado, no se guarda nada. Toca el panel como en el coche.</string>
+    <string name="hql_preview_rendering">Generando las capturas… %1$d de %2$d</string>
+    <string name="hql_preview_done">Hecho: %1$d imágenes en
+%2$s</string>
 </resources>

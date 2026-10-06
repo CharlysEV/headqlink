@@ -75,7 +75,6 @@
     <string name="hql_estimated">estimated</string>
     <string name="hql_fg_aa_test">Android Auto test</string>
     <string name="hql_fg_encoder">Encoder test</string>
-    <string name="hql_fg_preview">Interface preview</string>
     <string name="hql_fg_restart_aa">Restarting the Android Auto server</string>
     <string name="hql_finish">Finish</string>
     <string name="hql_finish_anyway">Finish anyway</string>
@@ -522,4 +521,11 @@
     <string name="hql_manual_confirm_msg">Without accessibility, HeadQLink neither starts nor stops the Android Auto server:\n\n•  Start it yourself (Android Auto › ⋮ › Start head unit server) after every phone restart or Android Auto update. If it is off when connecting, HeadQLink tells you.\n•  It stays on until you stop it. On a public Wi-Fi, any device on that network could try to connect: stop it when you are not in the car (⋮ › Stop head unit server).\n\nAutomatic start is still the recommended mode. You can go back to it in Picture settings › Advanced.</string>
     <string name="hql_setup_guide_manual_title">How to start the Android Auto server</string>
     <string name="hql_setup_guide_manual">1.  Tap \"Open AA\".\n2.  Tap ⋮ (top right) › \"Start head unit server\".\n3.  If that option is missing: scroll to the bottom, tap \"Version\" 10 times, accept the warning and repeat step 2.\n4.  Come back to HeadQLink: the \"Android Auto server\" row turns to \"On\".\nDo it after every phone restart or Android Auto update. To stop it: ⋮ › \"Stop head unit server\".</string>
+    <!-- Vista previa del modo extendido (PreviewActivity, modo demostración) -->
+    <string name="hql_preview_title">Extended mode preview</string>
+    <string name="hql_preview_busy">The preview uses demo data and is not available while connected to the car. Disconnect first.</string>
+    <string name="hql_preview_demo_toast">Demo mode: simulated drive, nothing is saved. Tap the panel as in the car.</string>
+    <string name="hql_preview_rendering">Rendering previews… %1$d of %2$d</string>
+    <string name="hql_preview_done">Done: %1$d images in
+%2$s</string>
 </resources>

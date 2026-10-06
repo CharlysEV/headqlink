@@ -41,7 +41,7 @@ final class GamesScreen implements CarScreen {
     private static final int[] TINTS = {0xFFFDD663, 0xFF81C995, 0xFF8AB4F8, 0xFFF6AEA9, 0xFFC58AF9};
 
     private boolean running;
-    /** Solo UiPreview: abrir este juego en modo demostración al crear la pantalla (-1: menú). */
+    /** Solo la vista previa: abrir este juego en modo demostración al crear la pantalla (-1: menú). */
     static int previewGame = -1;
 
     @Override
@@ -147,7 +147,7 @@ final class GamesScreen implements CarScreen {
         /** Nueva partida. */
         abstract void reset();
 
-        /** Solo UiPreview: un estado de juego que enseñe algo. */
+        /** Solo la vista previa: un estado de juego que enseñe algo. */
         void demo() {
         }
 

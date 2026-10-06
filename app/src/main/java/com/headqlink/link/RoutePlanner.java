@@ -83,11 +83,16 @@ final class RoutePlanner {
     }
 
     static Place manualDestination() {
+        if (DemoMode.active()) return DemoMode.place();
         return manual;
     }
 
     /** Fija (o quita, con null) el destino elegido en el coche; la ruta se calcula enseguida. */
     static void setManualDestination(Place pl) {
+        if (DemoMode.active()) {
+            DemoMode.setPlace(pl);
+            return;
+        }
         manual = pl;
         RoutePlanner r = instance;
         if (r != null) {
@@ -136,17 +141,20 @@ final class RoutePlanner {
     private String failedDestination;
     // Batería: % fijado por el usuario menos la energía estimada desde entonces.
     private double lastKwhTotal;
+    /** Modo demostración: la ruta y la batería son las de DemoMode (sin red y sin tocar los ajustes). */
+    private final boolean demo;
 
     private RoutePlanner(Context ctx) {
         this.ctx = ctx.getApplicationContext();
         this.sensors = CarSensors.start(ctx);
+        demo = DemoMode.active();
     }
 
     static synchronized RoutePlanner start(Context ctx) {
         if (instance == null) {
             instance = new RoutePlanner(ctx);
             instance.running = true;
-            new Thread(instance::loop, "route-planner").start();
+            if (!instance.demo) new Thread(instance::loop, "route-planner").start();
         }
         return instance;
     }
@@ -163,15 +171,17 @@ final class RoutePlanner {
     }
 
     Plan plan() {
-        return plan;
+        return demo ? DemoMode.plan() : plan;
     }
 
     String status() {
+        if (demo) return DemoMode.plan() == null ? noRoute() : "";
         return status;
     }
 
     /** % de batería estimado ahora, o NaN si el usuario no lo ha indicado. */
     double socNow() {
+        if (demo) return DemoMode.soc(sensors.snapshot().kwhTotal);
         Config c = new Config(ctx);
         double set = c.socPct();
         if (Double.isNaN(set)) return Double.NaN;
@@ -180,6 +190,10 @@ final class RoutePlanner {
 
     /** El usuario indica el % de batería actual. */
     void setSoc(double pct) {
+        if (demo) {
+            DemoMode.setSoc(pct, sensors.snapshot().kwhTotal);
+            return;
+        }
         Config c = new Config(ctx);
         c.setSoc(Math.max(0, Math.min(100, pct)));
     }

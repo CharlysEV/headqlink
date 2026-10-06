@@ -31,6 +31,9 @@ import java.util.Locale;
  * - Altitud y pendiente: barómetro (relativo, anclado a la altitud del GPS) o GPS si no hay.
  * - Viento y temperatura: Open-Meteo (gratuito, sin cuenta) cada 5 min o 5 km.
  * Todo vive en un hilo propio; los paneles leen {@link #snapshot()}.
+ *
+ * Con el modo demostración activo (DemoMode, solo la vista previa) no se usa ningún sensor ni la red: el trayecto
+ * de DemoDrive entra por el mismo camino que el GPS ({@link #fix}), con un reloj simulado.
  */
 final class CarSensors implements SensorEventListener, LocationListener {
     /** Estado para los paneles (copia; unidades SI salvo que se indique). */
@@ -70,7 +73,7 @@ final class CarSensors implements SensorEventListener, LocationListener {
     private final HandlerThread thread = new HandlerThread("car-sensors");
     private Handler h;
     private SensorManager sm;
-    private final Snapshot s = new Snapshot();
+    private Snapshot s = new Snapshot();
     private int users;
 
     // Estado interno (hilo de sensores).
@@ -87,6 +90,7 @@ final class CarSensors implements SensorEventListener, LocationListener {
     private double gradeDist;
     private double lastAlt = Double.NaN;
     private long tripStartMs;
+    private boolean tripStarted;
     private long lastWeatherMs;
     private Location lastWeatherLoc;
     // Cronómetro 0-50 / 0-100.
@@ -95,6 +99,13 @@ final class CarSensors implements SensorEventListener, LocationListener {
     private String lastTimer = "";
     private final EnergyModel model = new EnergyModel();
     private long lastEnergyNs;
+    // Modo demostración: trayecto, última muestra aplicada, su reloj (ns) y su posición.
+    private DemoDrive demo;
+    private int demoK = -1;
+    private long demoNs;
+    private double demoLat;
+    private double demoLon;
+    private final Runnable demoTick = this::demoTick;
 
     private CarSensors(Context ctx) {
         this.ctx = ctx.getApplicationContext();
@@ -111,6 +122,16 @@ final class CarSensors implements SensorEventListener, LocationListener {
         if (instance == null || --instance.users > 0) return;
         instance.end();
         instance = null;
+    }
+
+    /** ¿Hay sensores en marcha (de una sesión o de la vista previa)? */
+    static synchronized boolean isRunning() {
+        return instance != null;
+    }
+
+    /** Reloj de los sensores (ms): el del sistema, o el simulado en el modo demostración. */
+    private long nowMs() {
+        return demo != null ? demoNs / 1_000_000 : SystemClock.elapsedRealtime();
     }
 
     synchronized Snapshot snapshot() {
@@ -131,7 +152,7 @@ final class CarSensors implements SensorEventListener, LocationListener {
         c.climbM = s.climbM;
         c.descentM = s.descentM;
         c.tripKm = s.tripKm;
-        c.tripSec = tripStartMs > 0 ? (SystemClock.elapsedRealtime() - tripStartMs) / 1000 : 0;
+        c.tripSec = tripStarted ? (nowMs() - tripStartMs) / 1000 : 0;
         c.windKmh = s.windKmh;
         c.windFromDeg = s.windFromDeg;
         c.headwindKmh = s.headwindKmh;
@@ -149,7 +170,8 @@ final class CarSensors implements SensorEventListener, LocationListener {
         s.maxSpeedKmh = s.maxAccelG = s.maxBrakeG = s.maxLeftG = s.maxRightG = 0;
         s.climbM = s.descentM = s.tripKm = 0;
         s.timer = "";
-        tripStartMs = SystemClock.elapsedRealtime();
+        tripStartMs = nowMs();
+        tripStarted = true;
     }
 
     boolean hasLocationPermission() {
@@ -160,7 +182,17 @@ final class CarSensors implements SensorEventListener, LocationListener {
     private void begin() {
         thread.start();
         h = new Handler(thread.getLooper());
+        demo = DemoMode.drive();
+        if (demo != null) {
+            synchronized (this) {
+                demoSeekLocked(DemoMode.time());
+            }
+            if (DemoMode.live()) h.postDelayed(demoTick, 100);
+            L.i("sensores: modo demostración (sin GPS, barómetro ni red)");
+            return;
+        }
         tripStartMs = SystemClock.elapsedRealtime();
+        tripStarted = true;
         sm = ctx.getSystemService(SensorManager.class);
         register(Sensor.TYPE_GRAVITY, SensorManager.SENSOR_DELAY_GAME);
         register(Sensor.TYPE_GYROSCOPE, SensorManager.SENSOR_DELAY_GAME);
@@ -185,6 +217,12 @@ final class CarSensors implements SensorEventListener, LocationListener {
     }
 
     private void end() {
+        if (demo != null) {
+            h.removeCallbacks(demoTick);
+            thread.quitSafely();
+            L.i("sensores: parados (demostración)");
+            return;
+        }
         sm.unregisterListener(this);
         try {
             ctx.getSystemService(LocationManager.class).removeUpdates(this);
@@ -234,12 +272,24 @@ final class CarSensors implements SensorEventListener, LocationListener {
 
     @Override
     public synchronized void onLocationChanged(Location loc) {
+        double step = lastLoc != null ? lastLoc.distanceTo(loc) : 0;
+        lastLoc = loc;
+        boolean altGood = loc.hasAltitude() && loc.hasVerticalAccuracy() && loc.getVerticalAccuracyMeters() < 15;
+        fix(SystemClock.elapsedRealtimeNanos(), loc.hasSpeed() ? loc.getSpeed() : 0, loc.hasBearing(), loc.getBearing(),
+                loc.getLatitude(), loc.getLongitude(), step, loc.hasAltitude() ? loc.getAltitude() : Double.NaN, altGood);
+        maybeFetchWeather(loc);
+    }
+
+    /**
+     * Una posición nueva (del GPS o de la demostración): reloj (ns), velocidad (m/s), rumbo, coordenadas, metros
+     * desde la anterior (0 en la primera) y altitud del GPS (NaN si no hay; altGood si es precisa).
+     */
+    private void fix(long now, double v, boolean hasBearing, double bearing, double lat, double lon, double step,
+                     double gpsAlt, boolean altGood) {
         s.gps = true;
-        long now = SystemClock.elapsedRealtimeNanos();
-        double v = loc.hasSpeed() ? loc.getSpeed() : 0;
         s.speedKmh = v * 3.6;
         if (s.speedKmh > s.maxSpeedKmh) s.maxSpeedKmh = s.speedKmh;
-        if (loc.hasBearing() && v > 1.5) s.headingDeg = loc.getBearing();
+        if (hasBearing && v > 1.5) s.headingDeg = bearing;
 
         // Aceleración longitudinal: derivada de la velocidad, filtrada.
         if (lastSpeed >= 0) {
@@ -254,26 +304,21 @@ final class CarSensors implements SensorEventListener, LocationListener {
         }
         lastSpeed = v;
         lastSpeedNs = now;
-        launchTimer(s.speedKmh);
+        launchTimer(s.speedKmh, now / 1_000_000);
 
         // Distancia del viaje.
-        double step = 0;
-        if (lastLoc != null) {
-            step = lastLoc.distanceTo(loc);
-            if (step < 200) s.tripKm += step / 1000;
-        }
-        lastLoc = loc;
+        if (step > 0 && step < 200) s.tripKm += step / 1000;
 
         // Altitud: barómetro anclado al GPS (el GPS da el nivel; el barómetro, los cambios finos).
         double alt;
         if (!Double.isNaN(baroAlt)) {
-            if (loc.hasAltitude() && loc.hasVerticalAccuracy() && loc.getVerticalAccuracyMeters() < 15) {
-                double off = loc.getAltitude() - baroAlt;
+            if (altGood) {
+                double off = gpsAlt - baroAlt;
                 baroOffset = Double.isNaN(baroOffset) ? off : baroOffset * 0.995 + off * 0.005;
             }
             alt = baroAlt + (Double.isNaN(baroOffset) ? 0 : baroOffset);
         } else {
-            alt = loc.hasAltitude() ? loc.getAltitude() : Double.NaN;
+            alt = gpsAlt;
         }
         if (!Double.isNaN(alt)) {
             s.altitudeM = Double.isNaN(s.altitudeM) ? alt : s.altitudeM * 0.7 + alt * 0.3;
@@ -296,8 +341,8 @@ final class CarSensors implements SensorEventListener, LocationListener {
             }
         }
         updateHeadwind();
-        s.lat = loc.getLatitude();
-        s.lon = loc.getLongitude();
+        s.lat = lat;
+        s.lon = lon;
         // Energía estimada acumulada (para el % de batería y los viajes).
         if (lastEnergyNs != 0) {
             double dtH = (now - lastEnergyNs) / 3.6e12;
@@ -307,12 +352,10 @@ final class CarSensors implements SensorEventListener, LocationListener {
             }
         }
         lastEnergyNs = now;
-        maybeFetchWeather(loc);
     }
 
-    /** 0-50 y 0-100 km/h: se arma parado (< 2 km/h) y cuenta desde que pasa de 3 km/h. */
-    private void launchTimer(double kmh) {
-        long now = SystemClock.elapsedRealtime();
+    /** 0-50 y 0-100 km/h: se arma parado (< 2 km/h) y cuenta desde que pasa de 3 km/h. now: reloj en ms. */
+    private void launchTimer(double kmh, long now) {
         if (kmh < 2) {
             launchArmed = true;
             launchStartMs = 0;
@@ -336,6 +379,76 @@ final class CarSensors implements SensorEventListener, LocationListener {
             launchStartMs = 0;
             lastTimer = "";
         }
+    }
+
+    // ------------------------------------------------------------------ modo demostración
+
+    /** DemoMode cambió el instante (capturas): se recalcula todo desde el principio del trayecto. */
+    static void demoSeek() {
+        CarSensors c;
+        synchronized (CarSensors.class) {
+            c = instance;
+        }
+        if (c == null || c.demo == null) return;
+        synchronized (c) {
+            c.demoSeekLocked(DemoMode.time());
+        }
+    }
+
+    /** Vuelve a empezar y aplica todas las muestras hasta t (s): máximos, desnivel y energía cuadran con el guion. */
+    private void demoSeekLocked(double t) {
+        s = new Snapshot();
+        s.baro = true;
+        hasGravity = false;
+        yawRate = 0;
+        lastSpeed = -1;
+        lastSpeedNs = 0;
+        longFilt = 0;
+        baroAlt = Double.NaN;
+        baroOffset = Double.NaN;
+        gradeRefAlt = Double.NaN;
+        gradeDist = 0;
+        lastAlt = Double.NaN;
+        launchStartMs = 0;
+        launchArmed = false;
+        lastTimer = "";
+        lastEnergyNs = 0;
+        demoK = -1;
+        demoNs = 0;
+        tripStartMs = 0;
+        tripStarted = true;
+        demoFeedTo(demo.index(t));
+    }
+
+    private void demoFeedTo(int k) {
+        for (int i = demoK + 1; i <= k; i++) demoFeed(i);
+    }
+
+    private void demoFeed(int k) {
+        DemoDrive d = demo;
+        demoNs = Math.round(k * DemoDrive.DT * 1e9);
+        s.windKmh = DemoDrive.WIND_KMH;
+        s.windFromDeg = DemoDrive.WIND_FROM_DEG;
+        s.tempC = DemoDrive.TEMP_C;
+        baroAlt = d.altM[k];
+        double step = demoK >= 0 ? RoadInfo.dist(demoLat, demoLon, d.lat[k], d.lon[k]) : 0;
+        demoLat = d.lat[k];
+        demoLon = d.lon[k];
+        yawRate = d.yawRad[k];
+        fix(demoNs, Math.max(0, d.speedKmh[k]) / 3.6, true, d.headingDeg[k], d.lat[k], d.lon[k], step, d.altM[k], true);
+        updateLateral();
+        demoK = k;
+    }
+
+    /** Vista previa en vivo: el reloj de la demostración avanza 0,1 s cada 100 ms (y vuelve a empezar al final). */
+    private void demoTick() {
+        if (demo == null) return;
+        boolean wrapped = DemoMode.advance(DemoDrive.DT);
+        synchronized (this) {
+            if (wrapped) demoSeekLocked(DemoMode.time());
+            else demoFeedTo(demo.index(DemoMode.time()));
+        }
+        h.postDelayed(demoTick, 100);
     }
 
     private void updateHeadwind() {

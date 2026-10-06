@@ -350,7 +350,24 @@ final class CarUi {
         });
     }
 
-    /** Solo para UiPreview: abre una pantalla por nombre (aa, car, photos, videos, web, tv, games, gauges, efficiency). */
+    /**
+     * Solo para las capturas en el PC (Robolectric): la interfaz en una vista normal, sin pantalla virtual ni
+     * Presentation. Se cierra con stop().
+     */
+    View attachOffscreen(Context c) {
+        View r = buildRoot(c);
+        current = this;
+        TripLog.start(ctx);
+        RoutePlanner.start(ctx);
+        RoadInfo.start(ctx);
+        open("aa");
+        return r;
+    }
+
+    /**
+     * Solo para la vista previa (PreviewActivity) y las capturas: abre una pantalla por nombre (aa, car, car-N con la
+     * pestaña N de Coche, photos, videos, web, tv, radio, games, settings, aa-rail, radio-mini, game-N).
+     */
     void showForPreview(String name) {
         main.post(() -> {
             // "car-N": sección Coche en la pestaña N.

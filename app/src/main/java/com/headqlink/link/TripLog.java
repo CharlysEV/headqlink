@@ -45,17 +45,20 @@ final class TripLog {
     private double startClimb;
     private double startDescent;
     private double maxKmh;
+    /** Modo demostración: no se graba nada (los viajes que se ven son los de DemoMode). */
+    private final boolean demo;
 
     private TripLog(Context ctx) {
         this.ctx = ctx.getApplicationContext();
         sensors = CarSensors.start(ctx);
+        demo = DemoMode.active();
     }
 
     static synchronized void start(Context ctx) {
         if (instance != null) return;
         instance = new TripLog(ctx);
         instance.running = true;
-        new Thread(instance::loop, "trip-log").start();
+        if (!instance.demo) new Thread(instance::loop, "trip-log").start();
     }
 
     static synchronized void stop() {
@@ -90,6 +93,7 @@ final class TripLog {
     }
 
     private void save() {
+        if (demo) return;
         CarSensors.Snapshot s = sensors.snapshot();
         if (Double.isNaN(startKwh)) return;
         double km = s.kmTotal - startKm;
@@ -125,6 +129,7 @@ final class TripLog {
 
     /** Últimos viajes guardados, del más reciente al más antiguo. */
     static List<Trip> recent(Context ctx, int max) {
+        if (DemoMode.active()) return DemoMode.trips(max);
         List<Trip> out = new ArrayList<>();
         File[] files = new File(ctx.getExternalFilesDir(null), "trips").listFiles((d, n) -> n.endsWith(".json"));
         if (files == null) return out;
