@@ -981,3 +981,78 @@ todo (ACK no pedidos, puerto, vigilancia y ping).
   y «por ACK no pedido». Contra el móvil: `--scenario caida --target <IP del móvil>`.
 
 Sin probar todavía en el coche.
+
+## 14. Cable USB (AOA, experimental) (2026-10-06)
+
+**Qué hace QDLink por USB** (spec `01` §7, `04` §3.5 y §8.4). El coche es el *host* USB y pone el móvil en modo
+accesorio con «Neusoft / QDriveLink / 1»; QDLink abre el accesorio (`getAccessoryList()` hasta 5 veces cada 50 ms,
+permiso, `openAccessory`) y habla **el mismo protocolo 5A5A y la misma sesión** que por Wi-Fi, sin UDP ni TCP. Cierra
+con `USB_ACCESSORY_DETACHED` o `ACTION_POWER_DISCONNECTED`. No se sabe si el C10 lo hace («solo algunos modelos»).
+
+**Trama implementada** (`wire/BlockFraming`, en `:qdcore`):
+
+| Sentido | Regla |
+|---|---|
+| Escritura (móvil y coche simulado) | Cada mensaje (JSON de control, heartbeat, SPS/PPS, IDR, P) se rellena con ceros hasta un múltiplo de 512 B y sale en **un solo** `write()`. El `totalSize` de la cabecera es el real (48 + N en vídeo). El AppStatus `!BIN` ya mide 512. |
+| Lectura | Peticiones siempre múltiplo de 512 y nunca más allá del final (con relleno) del mensaje en curso: un bloque al empezar (como QDLink), la cabecera da `totalSize`, el resto del cuerpo en bloques enteros directos al destino y la cola por el búfer con una petición de un bloque, que trae el relleno. En USB eso evita que el núcleo tire lo que sobra de un paquete o que una lectura espere al mensaje siguiente. |
+| Tolerancia | Lecturas cortas: se sigue leyendo. Relleno: se salta a la entrada del mensaje siguiente; si donde tocaba relleno llega un magic, el emisor no rellena (`unpaddedMessages`) y se sigue sin perder nada. Ceros de más entre mensajes: se saltan (`strayZeroBytes`), nunca son basura. `!BIN` de 512: sin relleno. |
+| Sin cambios | Watchdog, heartbeats, IDR, tope de 480 KiB (sobre el tamaño real), handshake y táctil. |
+
+**Transporte.** `PhoneSession` va sobre `SessionTransport`: `TcpTransport` (el TCP de siempre; con `blockSize` 512 para
+probar la trama) o `StreamTransport` (el `ParcelFileDescriptor` del accesorio). Sin socket no hay NetStat: la puerta del
+freno queda abierta, la del «último frame» se queda en «como mucho un frame en la cola del núcleo» y `LinkRateController`
+usa el retraso del vídeo en la cola de la sesión (`videoQueueLagMs` ≥ 66 ms durante 500 ms) y los vaciados por retraso.
+
+**En la app.**
+
+- Conexión «Cable USB» (etiqueta «Experimental») en el paso 2, tras «Punto de acceso del móvil» (recomendado) y
+  «Wi-Fi Direct». Sin requisitos de Wi-Fi ni de zona Wi-Fi: un consejo del cable de datos y, con QDLink instalada, el
+  aviso de elegir HeadQLink al preguntar Android qué app abre «QDriveLink».
+- `UsbAccessoryActivity` (transparente; filtro `res/xml/hql_usb_accessory_filter.xml`: Neusoft / QDriveLink, sin
+  versión) arranca `LinkService` con `ACTION_USB_ATTACHED`, **sea cual sea la conexión elegida**. Con el cable puesto el
+  cable tiene prioridad: se para el Wi-Fi (motor, descubrimiento, intento, P2P o vigilancia de la zona Wi-Fi) y al
+  quitarlo vuelve el Wi-Fi configurado. El enlace por cable usa siempre el motor QDAuto.
+- `UsbLink`: abre el accesorio con el permiso del aviso de conexión (si no lo hay, lo pide con un `PendingIntent` propio,
+  mutable en Android 12+ y explícito); el mismo `QdSessionBridge`, `VideoHub` y ciclo de vida que por Wi-Fi (arranque
+  con disparador `USB`, que pide el servidor de AA como el Bluetooth del coche). Al quitar el cable o perder la
+  alimentación: cierre de la sesión y «coche perdido»; al volver a enchufarlo, se reanuda al instante. Si la sesión
+  termina con el cable puesto, se vuelve a abrir con espera creciente (1, 2, 5, 10, 30 s).
+- Ajustes aplicados con el cable: no se cierra la sesión (no se sabe si el coche repite el saludo por el cable); se
+  rehace el vídeo (`QdSessionBridge.restartVideo`).
+- Open Headunit: `UsbLauncherListener.onUsbAccessoryDetach` ya no corta la sesión de Android Auto en Self Mode (el
+  accesorio que se va es el cable del coche).
+- **Sondeo (`HQL/USB`)**, con el servicio en marcha (cualquier conexión) y desde la actividad: extras de la difusión fija
+  `USB_STATE` (`connected`, `configured`, `host_connected`, `accessory`, funciones…), `ACTION_POWER_CONNECTED/
+  DISCONNECTED`, alimentación según la batería y `getAccessoryList()` con fabricante, modelo, descripción, versión, URI,
+  serie y permiso de cada accesorio, sean o no de Neusoft.
+
+**Qué buscar en el log** (`logs/qd-*.log`, etiqueta `HQL/USB`):
+
+| Línea | Significado |
+|---|---|
+| `sondeo (servicio en marcha): USB_STATE {accessory=false configured=true connected=true … } · alimentación USB · accesorios: ninguno` | Estado al arrancar |
+| `USB_STATE: accessory=true … ` y `getAccessoryList (1 intento): fabricante «Neusoft» · modelo «QDriveLink» · … (permiso de HeadQLink: sí)` | El coche puso el móvil en modo accesorio, con sus nombres |
+| `aviso de Android android.hardware.usb.action.USB_ACCESSORY_ATTACHED: accesorio …` | La actividad del accesorio |
+| `accesorio Neusoft QDriveLink 1 conectado · abierto (…)` · `sesión S3 por cable en marcha (USB · Neusoft QDriveLink 1 · bloques de 512 B)` | Apertura y sesión |
+| `S3: trama de bloques: … B de relleno enviados · del coche N mensajes con relleno, 0 sin él` | Al cerrar la sesión: si el coche no rellena, «sin él» > 0 |
+| `accesorio desconectado: …` · `cierro la sesión S3: cable USB desconectado` · `cable USB fuera (…): vuelvo al Wi-Fi (…)` | Cable quitado |
+| `alimentación desconectada (ACTION_POWER_DISCONNECTED)` · `cierro la sesión S3: el cable dejó de alimentar el móvil (como QDLink)` | Sin alimentación |
+| `pido permiso para abrir …` · `permiso para …: concedido` | Diálogo de permiso |
+
+**Probar la trama desde el PC.** En el móvil: Diagnóstico › «Opciones de prueba (QDAuto)» › «Trama del cable USB por
+Wi-Fi» (`qd_usb_over_tcp`), Desconectar y Conectar (zona Wi-Fi). En el PC:
+
+```powershell
+qdsim\build\install\qdsim\bin\qdsim.bat --scenario normal --usb-framing --target <IP del móvil>
+qdsim\build\install\qdsim\bin\qdsim.bat --scenario reconnect --sessions 5 --usb-framing --target <IP del móvil>
+qdsim\build\install\qdsim\bin\qdsim.bat --scenario normal --usb-framing --local-phone
+```
+
+El coche simulado rellena y lee en bloques, y la comprobación `trama_usb` exige que todos los mensajes del móvil lleguen
+rellenos (FAIL con la pista de la opción si no). Al acabar, **apagar la opción** (el C10 por Wi-Fi no la entiende).
+
+**Pruebas en el PC.** `:qdcore`: `BlockFramingTest` (9) y `UsbSessionTest` (6, sesión completa por tubos en memoria
+con la trama en los dos sentidos). App: `RequirementsTest`, `LinkModeDefaultTest`, `LinkLifecycleTest` y
+`LinkRateControllerTest` con casos del cable. `:qdsim`: `QuirksTest` (`trama_usb` y la opción).
+
+Sin probar todavía en el móvil ni en el coche: lo primero es enchufar el cable en el C10 y exportar el log.

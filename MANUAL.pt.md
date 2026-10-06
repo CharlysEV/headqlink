@@ -147,6 +147,7 @@ Ecrã «O seu telemóvel, no ecrã do C10», com o que é preciso «Antes de com
 |---|---|---|
 | «Hotspot do telemóvel» | O carro liga-se ao hotspot do seu telemóvel. | **Recomendada**: é a que foi testada no C10, também com o ecrã desligado. |
 | «Wi-Fi Direct» | O carro cria a rede e o telemóvel liga-se a ela. O hotspot do telemóvel tem de estar desligado. | É a ligação do HeadQLink original. Com o motor QDAuto ainda não foi testada no carro. |
+| «Cabo USB» (etiqueta «Experimental») | O telemóvel liga-se por cabo à porta USB de dados do carro, sem Wi-Fi. | **Experimental**: só funciona se o carro puser o telemóvel em modo acessório, e ainda não se sabe se o C10 o faz. Veja [Ligação por cabo USB (experimental)](#ligação-por-cabo-usb-experimental). |
 
 > [!TIP]
 > A aplicação vem com «Hotspot do telemóvel» selecionado, com a etiqueta «Recomendado». Se preferir «Wi-Fi Direct»,
@@ -268,6 +269,31 @@ depois o HeadQLink. A linha «Rede» passa de «Wi-Fi Direct: a procurar o carro
 > [!IMPORTANT]
 > Se o QDLink estiver instalado no telemóvel, **force a paragem dele antes de ligar**. Se estiver aberto, ocupa a porta
 > de que o HeadQLink precisa e o carro não o encontra.
+
+### Ligação por cabo USB (experimental)
+
+Tal como a aplicação original do carro, o HeadQLink pode levar a imagem **por cabo** em vez de por Wi-Fi: o carro põe o
+telemóvel em «modo acessório» e a sessão de sempre passa pelo cabo. **Ainda não se sabe se o C10 o faz** (a aplicação
+original diz que só alguns modelos), por isso é experimental.
+
+1. Use um **cabo de dados** (não um só de carregamento) e ligue-o à **porta USB de dados** do carro (a da música ou do
+   Android Auto/CarPlay, não uma só de carregamento).
+2. Abra a aplicação de espelhamento no ecrã do carro.
+3. Se o carro puser o telemóvel em modo acessório, o Android abre o HeadQLink sozinho. Se o **QDLink** também estiver
+   instalado, o Android pode perguntar **que aplicação abre «QDriveLink»**: escolha o **HeadQLink** e **«Sempre»** (ou
+   desinstale o QDLink).
+4. A linha «Rede» diz «Cabo USB: Neusoft QDriveLink 1» e o carro liga-se como sempre.
+
+- **Não é preciso o hotspot.** Com o cabo ligado, **o cabo tem prioridade**: mesmo que a ligação escolhida seja outra,
+  o HeadQLink põe o Wi-Fi em pausa e, ao retirar o cabo, volta a ele. Para usar só o cabo, escolha «Cabo USB» em
+  «Alterar».
+- Retirar o cabo é como se o carro se fosse embora (vídeo ativo 30 s e depois o Android Auto em pausa); ao voltar a
+  ligá-lo, retoma de imediato.
+
+**Se não funcionar**, exporte o registo ([secção 8](#8-exportar-o-registo-para-pedir-ajuda)) logo a seguir a ligar o
+cabo e envie-no-lo, com a hora. Procuramos as linhas **`HQL/USB`**: o que diz o Android do cabo (`USB_STATE`), se o
+carro pôs o telemóvel em modo acessório e com que nome (fabricante, modelo e versão). Com isso saberemos se o C10 o
+admite.
 
 ### O que vê e como se usa
 

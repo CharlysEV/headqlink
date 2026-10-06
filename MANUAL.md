@@ -132,6 +132,7 @@ Pantalla «Tu móvil, en la pantalla del C10», con lo que hace falta «Antes de
 |---|---|---|
 | «Punto de acceso del móvil» | El coche se conecta a la zona Wi-Fi de tu móvil. | **Recomendada**: es la que se ha probado en el C10, también con la pantalla apagada. |
 | «Wi-Fi Direct» | El coche crea la red y el móvil se une. La zona Wi-Fi del móvil tiene que estar apagada. | Es la conexión del HeadQLink original. Con el motor QDAuto aún no se ha probado en el coche. |
+| «Cable USB» (etiqueta «Experimental») | El móvil va por cable al puerto USB de datos del coche, sin Wi-Fi. | **Experimental**: solo funciona si el coche pone el móvil en modo accesorio, y aún no se sabe si el C10 lo hace. Ver [Conexión por cable USB (experimental)](#conexión-por-cable-usb-experimental). |
 
 > [!TIP]
 > La app marca por defecto «Punto de acceso del móvil», con la etiqueta «Recomendado». Si prefieres «Wi-Fi Direct»,
@@ -256,6 +257,30 @@ HeadQLink. La fila «Red» pasará de «Wi-Fi Direct: buscando el coche» a «Wi
 > [!IMPORTANT]
 > Si QDLink está instalada en el móvil, **fuerza su detención antes de conectar**. Si está abierta, ocupa el puerto que
 > necesita HeadQLink y el coche no la encuentra.
+
+### Conexión por cable USB (experimental)
+
+Como la app original del coche, HeadQLink puede llevar la imagen **por cable** en vez de por Wi-Fi: el coche pone el
+móvil en «modo accesorio» y la sesión de siempre va por el cable. **Aún no se sabe si el C10 lo hace** (la app original
+dice que solo algunos modelos), así que es experimental.
+
+1. Usa un **cable de datos** (no uno solo de carga) y conéctalo al **puerto USB de datos** del coche (el de la música o
+   de Android Auto/CarPlay, no uno solo de carga).
+2. Abre la app de espejo en la pantalla del coche.
+3. Si el coche pone el móvil en modo accesorio, Android abre HeadQLink sola. Si **QDLink** también está instalada,
+   Android puede preguntar **qué app abre «QDriveLink»**: elige **HeadQLink** y **«Siempre»** (o desinstala QDLink).
+4. La fila «Red» dice «Cable USB: Neusoft QDriveLink 1» y el coche conecta como siempre.
+
+- **No hace falta la zona Wi-Fi.** Con el cable puesto, **el cable tiene prioridad**: aunque la conexión elegida sea
+  otra, HeadQLink deja el Wi-Fi en pausa y, al quitar el cable, vuelve a él. Para usar solo el cable, elige «Cable USB»
+  con «Cambiar».
+- Quitar el cable es como si el coche se fuera (vídeo vivo 30 s y luego Android Auto en pausa); al volver a enchufarlo
+  se reanuda al instante.
+
+**Si no funciona**, exporta el log ([sección 8](#8-exportar-el-log-para-pedir-ayuda)) justo después de enchufar el
+cable y envíanoslo, con la hora. Buscamos las líneas **`HQL/USB`**: qué dice Android del cable (`USB_STATE`), si el
+coche puso el móvil en modo accesorio y con qué nombre (fabricante, modelo y versión). Con eso sabremos si el C10 lo
+admite.
 
 ### Qué ves y cómo se maneja
 

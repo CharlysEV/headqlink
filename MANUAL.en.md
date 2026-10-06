@@ -131,6 +131,7 @@ The "Your phone, on the C10's screen" screen, with what you need "Before you sta
 |---|---|---|
 | "Phone hotspot" | The car joins your phone's hotspot. | **Recommended**: it's the one tested on the C10, also with the screen off. |
 | "Wi-Fi Direct" | The car creates the network and the phone joins it. The phone's hotspot must be off. | The original HeadQLink's connection. Not yet tested in the car with the QDAuto engine. |
+| "USB cable" ("Experimental" tag) | The phone connects with a cable to the car's USB data port, without Wi-Fi. | **Experimental**: it only works if the car switches the phone to accessory mode, and it's not yet known whether the C10 does. See [USB cable connection (experimental)](#usb-cable-connection-experimental). |
 
 > [!TIP]
 > The app selects "Phone hotspot" by default, with the "Recommended" tag. If you prefer "Wi-Fi Direct", tap it before
@@ -252,6 +253,30 @@ Tap **"Finish"**. If something required is missing, the "Still missing" prompt t
 > [!IMPORTANT]
 > If QDLink is installed on the phone, **force stop it before connecting**. If it's open, it takes the port HeadQLink
 > needs and the car can't find HeadQLink.
+
+### USB cable connection (experimental)
+
+Like the car's original app, HeadQLink can carry the picture **over a cable** instead of Wi-Fi: the car switches the
+phone to "accessory mode" and the usual session goes over the cable. **It's not yet known whether the C10 does this**
+(the original app says only some models do), so it's experimental.
+
+1. Use a **data cable** (not a charge-only one) and plug it into the car's **USB data port** (the one for music or
+   Android Auto/CarPlay, not a charge-only port).
+2. Open the mirroring app on the car's screen.
+3. If the car switches the phone to accessory mode, Android opens HeadQLink by itself. If **QDLink** is also installed,
+   Android may ask **which app opens "QDriveLink"**: choose **HeadQLink** and **"Always"** (or uninstall QDLink).
+4. The "Network" row says "USB cable: Neusoft QDriveLink 1" and the car connects as usual.
+
+- **No hotspot needed.** With the cable plugged in, **the cable takes priority**: even if another connection is chosen,
+  HeadQLink pauses Wi-Fi and goes back to it when you unplug the cable. To use only the cable, choose "USB cable" with
+  "Change".
+- Unplugging the cable is like the car going away (video kept alive for 30 s, then Android Auto paused); plugging it
+  back in resumes instantly.
+
+**If it doesn't work**, export the log ([section 8](#8-exporting-the-log-to-ask-for-help)) right after plugging in the
+cable and send it to us, with the time. We're looking for the **`HQL/USB`** lines: what Android says about the cable
+(`USB_STATE`), whether the car switched the phone to accessory mode and under what name (manufacturer, model and
+version). That tells us whether the C10 supports it.
 
 ### What you see and how to use it
 
