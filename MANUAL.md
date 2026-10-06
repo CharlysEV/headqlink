@@ -292,13 +292,13 @@ La radio entre el móvil y el coche no siempre lleva los 5 Mbit/s que pide el C1
 2,4 GHz o con interferencias, la imagen iba a saltos y con retraso. Ahora, con los perfiles «Coche», «Automático»,
 «Medio» y «Muy bajo» (los que recodifican en el móvil):
 
-- HeadQLink mide el enlace diez veces por segundo (datos pendientes de enviar, retransmisiones, tiempo de ida y vuelta)
-  y, si se atasca, **baja el bitrate** (×0,7 cada vez, hasta 1,5 Mbit/s) en medio segundo; si aun así sigue atascado,
-  baja a **24 fps**. Cuando el enlace lleva 5 segundos limpio vuelve poco a poco (primero los fps, luego +15 % de
-  bitrate cada 5 s) hasta lo que pide el coche. Se nota como una imagen algo más blanda durante unos segundos, en vez
-  de a tirones.
-- El perfil «Coche» codifica a **tasa constante** (sin ráfagas), y lo que no cabe en el enlace se descarta en el móvil
-  antes de acumular retraso (como mucho ~150 ms en cola).
+- HeadQLink mide el enlace diez veces por segundo (datos pendientes de enviar y tiempo de ida y vuelta) y, si se
+  atasca de verdad (medio segundo seguido con datos acumulados o con el tiempo de ida y vuelta disparado), **baja el
+  bitrate** (×0,75 cada vez, como mucho hasta la mitad de lo que pide el coche: 2,5 Mbit/s en el C10); si aun así sigue
+  atascado, baja a **24 fps**. Cuando el enlace lleva 3 segundos limpio vuelve rápido (primero los fps, luego +25 % de
+  bitrate cada 3 s): del mínimo a lo que pide el coche en unos 12 s. Las retransmisiones sueltas de la Wi-Fi no
+  cuentan (son normales).
+- Lo que no cabe en el enlace se descarta en el móvil antes de acumular retraso (como mucho ~150 ms en cola).
 - Si el coche deja de leer un momento pero sigue hablando (heartbeats, toques), la sesión aguanta hasta **20 s** antes
   de darla por perdida (antes, 10 s), tirando el vídeo viejo y mandando una imagen fresca en cuanto puede.
 

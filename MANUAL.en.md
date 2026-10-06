@@ -286,12 +286,13 @@ The radio between the phone and the car doesn't always carry the 5 Mbit/s the C1
 phone, on 2.4 GHz or with interference, the picture stuttered and lagged. Now, with the "Car", "Automatic", "Medium"
 and "Very low" profiles (the ones that re-encode on the phone):
 
-- HeadQLink measures the link ten times a second (data waiting to be sent, retransmissions, round-trip time) and, if it
-  clogs, **lowers the bitrate** (×0.7 each step, down to 1.5 Mbit/s) within half a second; if it's still clogged, it
-  drops to **24 fps**. Once the link has been clean for 5 seconds it comes back gradually (fps first, then +15 % bitrate
-  every 5 s) up to what the car asks for. You'll see a slightly softer picture for a few seconds instead of stutter.
-- The "Car" profile encodes at a **constant rate** (no bursts), and whatever doesn't fit in the link is dropped on the
-  phone before lag builds up (at most ~150 ms queued).
+- HeadQLink measures the link ten times a second (data waiting to be sent and round-trip time) and, if it really
+  clogs (half a second in a row with data piling up or a soaring round-trip time), **lowers the bitrate** (×0.75 each
+  step, never below half of what the car asks for: 2.5 Mbit/s on the C10); if it's still clogged, it drops to
+  **24 fps**. Once the link has been clean for 3 seconds it comes back quickly (fps first, then +25 % bitrate every
+  3 s): from the minimum to what the car asks for in about 12 s. Occasional Wi-Fi retransmissions don't count (they're
+  normal).
+- Whatever doesn't fit in the link is dropped on the phone before lag builds up (at most ~150 ms queued).
 - If the car stops reading for a moment but keeps talking (heartbeats, touches), the session holds on for up to **20 s**
   before giving it up (it used to be 10 s), discarding the old video and sending a fresh picture as soon as it can.
 

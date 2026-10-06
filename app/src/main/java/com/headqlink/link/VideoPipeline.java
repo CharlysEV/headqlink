@@ -271,11 +271,12 @@ final class VideoPipeline {
         vp.qpIMax = IdrSizeController.QP_MAX;
         boolean latestFrame = source instanceof AaPassthroughSource;
         if (latestFrame) {
-            // Como SspSession: sin IDR periódicos (el coche pide uno cuando lo necesita), intra-refresh. En Coche, tasa
-            // constante (si el códec la admite): sin las ráfagas VBR (P-frames de 276 KB a 15-19 Mbit/s en el coche) que
-            // atascan la radio; con enc_vbr se vuelve a VBR. En los demás perfiles, VBR salvo enc_cbr.
+            // Como SspSession: sin IDR periódicos (el coche pide uno cuando lo necesita), intra-refresh. VBR en todos los
+            // perfiles salvo enc_cbr: en el viaje 6 (2026-10-06) el CBR del perfil Coche dio peor imagen que el VBR del
+            // perfil Alto con el mismo bitrate, y el CBR rellena la radio con la pantalla quieta (ver SspSession). Las
+            // ráfagas del VBR las frena el bitrate adaptable al enlace (LinkRateController).
             VideoProfile prof = cfg.videoProfile();
-            vp.cbr = cfg.getBool("enc_cbr") || (prof.followsCar && !cfg.getBool("enc_vbr"));
+            vp.cbr = cfg.getBool("enc_cbr");
             vp.intraRefreshFrames = cfg.getBool("enc_no_ir") ? 0 : vp.fps;
             vp.iFrameIntervalSec = cfg.getBool("enc_no_ir") ? 10 : 30;
             vp.repeatAfterUs = 100_000;

@@ -915,3 +915,15 @@ controlador del enlace sigue tomando el menor de los dos topes (térmico y enlac
   lista sincronizada mientras otros hilos registraban (fallo esporádico): ahora es `CopyOnWriteArrayList`.
 
 Sin probar todavía en el móvil ni en el coche.
+
+### 12.8 Viaje 6 (2026-10-06): ajuste del bitrate adaptable y vuelta a VBR
+
+Con la 0.2.3 en el coche, el perfil Coche (CBR) se quedó en 1,7-2,5 Mbit/s durante toda la sesión y la imagen se
+pixeló (fondo y carátula de Spotify en bloques). El control bajaba por «retrans +2..+7» con un IDR pasando por la cola
+(cola ≥ 48 KB unos 250 ms) y subía +15 % cada 5 s. En el mismo enlace, el perfil Alto (VBR, ABR propio de headqlink),
+frenado por el calor a 30 fps y 5 Mbit/s, llevó 4,3-4,8 Mbit/s sin perder un frame y con buena imagen.
+
+Cambios:
+- `LinkRateController`: fuera la regla de retransmisiones; cola alta sostenida 500 ms (antes 300); suelo =
+  max(1,5 Mbit/s, 50 % del bitrate del coche) → 2,54 Mbit/s en el C10; bajada ×0,75; subida +25 % cada 3 s.
+- Perfil Coche otra vez en **VBR** (`enc_cbr` sigue forzando CBR para pruebas; `enc_vbr` ya no hace falta).

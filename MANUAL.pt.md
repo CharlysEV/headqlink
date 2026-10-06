@@ -304,13 +304,13 @@ A rádio entre o telemóvel e o carro nem sempre leva os 5 Mbit/s que o C10 pede
 2,4 GHz ou com interferências, a imagem ia aos saltos e com atraso. Agora, com os perfis «Carro», «Automático», «Médio»
 e «Muito baixo» (os que recodificam no telemóvel):
 
-- O HeadQLink mede a ligação dez vezes por segundo (dados à espera de envio, retransmissões, tempo de ida e volta) e,
-  se entupir, **baixa a taxa de bits** (×0,7 de cada vez, até 1,5 Mbit/s) em meio segundo; se mesmo assim continuar
-  entupida, desce para **24 fps**. Quando a ligação leva 5 segundos limpa, volta aos poucos (primeiro os fps, depois
-  +15 % de taxa de bits a cada 5 s) até ao que o carro pede. Nota-se como uma imagem um pouco mais suave durante uns
-  segundos, em vez de aos saltos.
-- O perfil «Carro» codifica a **taxa constante** (sem rajadas), e o que não cabe na ligação é descartado no telemóvel
-  antes de acumular atraso (no máximo ~150 ms em fila).
+- O HeadQLink mede a ligação dez vezes por segundo (dados à espera de envio e tempo de ida e volta) e, se entupir a
+  sério (meio segundo seguido com dados acumulados ou com o tempo de ida e volta disparado), **baixa a taxa de bits**
+  (×0,75 de cada vez, nunca abaixo de metade do que o carro pede: 2,5 Mbit/s no C10); se mesmo assim continuar
+  entupida, desce para **24 fps**. Quando a ligação leva 3 segundos limpa, volta depressa (primeiro os fps, depois
+  +25 % de taxa de bits a cada 3 s): do mínimo ao que o carro pede em cerca de 12 s. As retransmissões soltas do Wi-Fi
+  não contam (são normais).
+- O que não cabe na ligação é descartado no telemóvel antes de acumular atraso (no máximo ~150 ms em fila).
 - Se o carro deixar de ler por um momento mas continuar a falar (heartbeats, toques), a sessão aguenta até **20 s**
   antes de a dar por perdida (antes, 10 s), deitando fora o vídeo velho e mandando uma imagem fresca assim que puder.
 
