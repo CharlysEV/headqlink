@@ -5,8 +5,8 @@ import java.util.List;
 
 /**
  * Las capturas de la vista previa del modo extendido: nombre del PNG, pantalla del panel y el instante del trayecto de
- * demostración que mejor la enseña (Conducción, llegando a una salida con radar; Instrumentos, en la curva de la
- * salida tras el frenazo; Eficiencia, al final de la bajada recuperando energía…). Las usan PreviewActivity (en el
+ * demostración que mejor la enseña (Conducción, llegando a una salida con radar; Instrumentos, en pleno frenazo;
+ * Eficiencia, al final de la bajada recuperando energía…), más los estados vacíos. Las usan PreviewActivity (en el
  * móvil, con adb) y la prueba que dibuja en el PC.
  */
 final class PreviewShots {
@@ -15,12 +15,19 @@ final class PreviewShots {
         final String screen;
         final double seekSec;
         final long waitMs;
+        /** Estado de la demostración (DemoMode.applyState): "", "sin_ruta" o "sin_viajes". */
+        final String state;
 
         Shot(String name, String screen, double seekSec, long waitMs) {
+            this(name, screen, seekSec, waitMs, "");
+        }
+
+        Shot(String name, String screen, double seekSec, long waitMs, String state) {
             this.name = name;
             this.screen = screen;
             this.seekSec = seekSec;
             this.waitMs = waitMs;
+            this.state = state;
         }
     }
 
@@ -28,8 +35,12 @@ final class PreviewShots {
             new Shot("coche_ruta", "car-0", 300, 1800),
             new Shot("coche_conduccion", "car-1", 572, 1800),
             new Shot("coche_viajes", "car-2", 600, 1800),
-            new Shot("coche_instrumentos", "car-3", 606, 1800),
+            new Shot("coche_instrumentos", "car-3", 408.6, 1800),
             new Shot("coche_eficiencia", "car-4", 396, 1800),
+            // Los estados vacíos: sin destino (Ruta y Conducción) y sin viajes guardados.
+            new Shot("coche_ruta_sin_destino", "car-0", 30, 1500, "sin_ruta"),
+            new Shot("coche_conduccion_sin_ruta", "car-1", 30, 1500, "sin_ruta"),
+            new Shot("coche_viajes_vacio", "car-2", 0, 1500, "sin_viajes"),
             new Shot("auto", "aa", 300, 1500),
             new Shot("fotos", "photos", 300, 2500),
             new Shot("videos", "videos", 300, 2500),

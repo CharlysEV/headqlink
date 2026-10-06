@@ -137,7 +137,7 @@ final class DemoDrive {
         simulate(new Random(seed));
         double t = 0;
         for (int i = 0; i < 17; i++) t += LEGS[i][0];
-        cameraKm = distKm[index(t + 112)];
+        cameraKm = distKm[index(t + 137)];
     }
 
     private void simulate(Random rnd) {

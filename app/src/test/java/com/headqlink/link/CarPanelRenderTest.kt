@@ -53,9 +53,12 @@ class CarPanelRenderTest {
             container.addView(root, FrameLayout.LayoutParams(W, H))
             idle(500)
             val only = System.getProperty("hql.preview.only") ?: ""
+            val wanted = only.split(",").filter { it.isNotBlank() }
             for (shot in PreviewShots.ALL) {
-                if (!shot.name.startsWith("coche_") && shot.name != "auto") continue
-                if (only.isNotEmpty() && !only.split(",").contains(shot.name)) continue
+                // Por defecto, la sección Coche y Auto; las demás pantallas (red, galería…), solo si se piden.
+                if (wanted.isEmpty() && !shot.name.startsWith("coche_") && shot.name != "auto") continue
+                if (wanted.isNotEmpty() && !wanted.contains(shot.name)) continue
+                DemoMode.applyState(shot.state)
                 DemoMode.seek(shot.seekSec)
                 ui.showForPreview(shot.screen)
                 idle(shot.waitMs)

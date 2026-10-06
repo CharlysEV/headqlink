@@ -29,6 +29,8 @@ final class DemoMode {
     /** % de batería «indicado» y la energía de los sensores en ese momento. */
     private static volatile double socSet;
     private static volatile double socKwhAt;
+    private static RoutePlanner.Place defaultPlace;
+    private static List<TripLog.Trip> defaultTrips;
 
     private DemoMode() {
     }
@@ -52,6 +54,8 @@ final class DemoMode {
         p.lat = plan.destLat;
         p.lon = plan.destLon;
         place = p;
+        defaultPlace = p;
+        defaultTrips = trips;
         socSet = 88;
         socKwhAt = 0;
         DemoMode.live = live;
@@ -67,6 +71,8 @@ final class DemoMode {
         plan = null;
         trips = null;
         place = null;
+        defaultPlace = null;
+        defaultTrips = null;
         L.i("modo demostración: desactivado");
     }
 
@@ -99,6 +105,16 @@ final class DemoMode {
         }
         t = nt;
         return false;
+    }
+
+    /**
+     * Estado de la demostración para una captura: "" (con destino y viajes), "sin_ruta" (sin destino: Ruta y
+     * Conducción vacías) o "sin_viajes" (la pestaña Viajes sin viajes guardados).
+     */
+    static void applyState(String state) {
+        if (drive == null) return;
+        place = "sin_ruta".equals(state) ? null : defaultPlace;
+        trips = "sin_viajes".equals(state) ? new ArrayList<>() : defaultTrips;
     }
 
     /** Fija el instante (capturas): los sensores se recalculan hasta ahí. */

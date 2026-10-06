@@ -129,13 +129,13 @@ final class CarStyle {
     static LinearLayout tabs(Context c, String[] names, int selected, java.util.function.IntConsumer onSelect) {
         LinearLayout row = new LinearLayout(c);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(24, 18, 24, 10);
+        row.setPadding(24, 16, 24, 12);
         TextView[] views = new TextView[names.length];
         for (int i = 0; i < names.length; i++) {
             int idx = i;
-            TextView t = text(c, names[i], 24, TEXT);
+            TextView t = text(c, names[i], 25, TEXT);
             t.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
-            t.setPadding(30, 12, 30, 12);
+            t.setPadding(32, 12, 32, 12);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.rightMargin = 10;
@@ -151,8 +151,8 @@ final class CarStyle {
     }
 
     private static void styleTab(TextView t, boolean on) {
-        t.setBackground(on ? accent(30) : round(PILL_BG, 30));
-        t.setTextColor(on ? ON_ACCENT : TEXT);
+        t.setBackground(on ? accent(30) : CarKit.outlined(CarKit.SURFACE_HI, CarKit.OUTLINE, 30));
+        t.setTextColor(on ? ON_ACCENT : CarKit.DIM);
     }
 
     static FrameLayout.LayoutParams match() {

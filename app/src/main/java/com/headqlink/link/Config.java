@@ -370,6 +370,11 @@ final class Config {
         return sp.getFloat("price_kwh", 0.20f);
     }
 
+    /** €/kWh para el coste de los viajes (Ajustes del coche), entre 0 y 1 €. */
+    void setElectricityPrice(double eurPerKwh) {
+        sp.edit().putFloat("price_kwh", (float) Math.max(0, Math.min(1, Math.round(eurPerKwh * 100) / 100.0))).apply();
+    }
+
     double fuelPrice() {
         return sp.getFloat("price_fuel", 1.60f);
     }

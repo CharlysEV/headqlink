@@ -225,6 +225,7 @@ public class PreviewActivity extends Activity {
             return;
         }
         PreviewShots.Shot s = shots.get(i);
+        DemoMode.applyState(s.state);
         DemoMode.seek(s.seekSec);
         ui.showForPreview(s.screen);
         status.setText(Str.get(R.string.hql_preview_rendering, i + 1, shots.size()));

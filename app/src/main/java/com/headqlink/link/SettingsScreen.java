@@ -13,8 +13,9 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 /**
- * Ajustes desde el coche: perfil de imagen (con el recomendado marcado), panel que se oculta solo y
- * optimizaciones de latencia. Lo mismo que en el móvil (Ajustes de imagen), sin tener que cogerlo.
+ * Ajustes desde el coche: perfil de imagen (con el recomendado marcado), panel que se oculta solo,
+ * optimizaciones de latencia y el precio de la electricidad (coste de los viajes en la sección Coche). Lo mismo que
+ * en el móvil (Ajustes de imagen), sin tener que cogerlo.
  * Cambiar de perfil reconecta coche y Android Auto (unos segundos).
  */
 final class SettingsScreen implements CarScreen {
@@ -112,6 +113,42 @@ final class SettingsScreen implements CarScreen {
         ui.addView(toggle(c, Str.get(R.string.hql_low_latency_reconnect), cfg.lowLatency(),
                 on -> cfg.putBool(Config.LOW_LATENCY, on)));
         col.addView(ui, cardLp());
+
+        // Energía: €/kWh para el coste de los viajes y la pestaña Eficiencia.
+        LinearLayout energy = CarStyle.card(c);
+        energy.addView(title(c, Str.get(R.string.hql_settings_energy)));
+        LinearLayout priceRow = new LinearLayout(c);
+        priceRow.setOrientation(LinearLayout.HORIZONTAL);
+        priceRow.setGravity(Gravity.CENTER_VERTICAL);
+        priceRow.setPadding(0, 16, 0, 4);
+        TextView priceLabel = CarStyle.text(c, Str.get(R.string.hql_settings_price_kwh), 24, CarStyle.TEXT);
+        priceRow.addView(priceLabel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView minus = CarStyle.pill(c, "−");
+        TextView value = CarStyle.text(c, "", 30, CarStyle.TEXT);
+        value.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        value.setGravity(Gravity.CENTER);
+        value.setMinWidth(190);
+        TextView plus = CarStyle.pill(c, "+");
+        minus.setMinWidth(80);
+        plus.setMinWidth(80);
+        priceRow.addView(minus);
+        priceRow.addView(value);
+        priceRow.addView(plus);
+        Runnable showPrice = () -> value.setText(String.format(java.util.Locale.getDefault(), "%.2f €/kWh", cfg.electricityPrice()));
+        showPrice.run();
+        minus.setOnClickListener(v -> {
+            cfg.setElectricityPrice(cfg.electricityPrice() - 0.01);
+            showPrice.run();
+        });
+        plus.setOnClickListener(v -> {
+            cfg.setElectricityPrice(cfg.electricityPrice() + 0.01);
+            showPrice.run();
+        });
+        energy.addView(priceRow);
+        TextView priceHelp = CarStyle.text(c, Str.get(R.string.hql_settings_price_help), 20, CarStyle.TEXT_DIM);
+        priceHelp.setPadding(6, 6, 0, 0);
+        energy.addView(priceHelp);
+        col.addView(energy, cardLp());
 
         // Conexión (solo lectura): modo, motor, coche e interfaz local (qdauto §5.2).
         LinearLayout conn = CarStyle.card(c);
@@ -215,6 +252,11 @@ final class SettingsScreen implements CarScreen {
         boolean renegotiate = !before.id.equals(after.id) || before.fps != after.fps;
         L.i("ajustes desde el coche: perfil " + (pending.isEmpty() ? "automático" : pending) + " · fluidez " + pendingFluid
                 + (renegotiate ? " (reconecta AA)" : ""));
+        if (DemoMode.active()) {
+            // Vista previa: el ajuste queda guardado, pero no hay sesión que reconectar (ni se arranca el enlace).
+            refresh();
+            return;
+        }
         apply.setText(Str.get(R.string.hql_reconnecting_short));
         apply.setEnabled(false);
         // La sesión se cierra (y con ella esta pantalla); el coche vuelve a conectar solo.

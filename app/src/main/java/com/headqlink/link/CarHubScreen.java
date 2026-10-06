@@ -31,6 +31,7 @@ final class CarHubScreen implements CarScreen {
         Context c = h.context();
         LinearLayout col = new LinearLayout(c);
         col.setOrientation(LinearLayout.VERTICAL);
+        col.setBackgroundColor(CarKit.BG);
         String[] names = new String[TABS.length];
         for (int i = 0; i < TABS.length; i++) names[i] = Str.get(TABS[i]);
         col.addView(CarStyle.tabs(c, names, lastTab, this::open));
