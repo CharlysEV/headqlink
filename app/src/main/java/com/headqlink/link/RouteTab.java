@@ -315,7 +315,8 @@ final class RouteTab implements CarScreen {
                     + (c.maxKw > 0 ? String.format(Locale.getDefault(), " · %.0f kW", c.maxKw) : "")
                     + (c.detail.isEmpty() ? "" : " · " + c.detail);
             TextView detail = CarStyle.text(ctx, sub, 20, CarKit.DIM);
-            detail.setSingleLine(true);
+            // Dos renglones: con la potencia y el detalle, uno solo cortaba el texto («350 k…»).
+            detail.setMaxLines(2);
             detail.setEllipsize(android.text.TextUtils.TruncateAt.END);
             txt.addView(name);
             txt.addView(detail);

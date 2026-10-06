@@ -568,7 +568,7 @@
     <!-- Sección Coche rediseñada: Ruta -->
     <string name="hql_battery_arrival">Bateria na chegada</string>
     <string name="hql_route_chargers_hint">Escolha um destino para ver os carregadores ao longo da rota.</string>
-    <string name="hql_charger_line">km %1$.0f da rota · a %2$.0f km</string>
+    <string name="hql_charger_line">a %2$.0f km · km %1$.0f da rota</string>
     <string name="hql_remaining">Faltam</string>
     <string name="hql_energy_needed">Você precisa</string>
     <string name="hql_expected_use">Consumo previsto</string>
