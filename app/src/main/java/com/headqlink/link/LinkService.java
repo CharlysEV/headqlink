@@ -163,6 +163,10 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         e.canStopWithoutUi = AaServerStarter.canStopWithoutUi();
         e.stopServerOnExit = cfg.stopAaServerOnExit();
         e.manualServer = cfg.aaServerManual();
+        Object st = com.andrerinas.openheadunit.App.Companion.provide(this).getCommManager().getConnectionState().getValue();
+        e.aaReady = st instanceof com.andrerinas.openheadunit.connection.CommManager.ConnectionState.HandshakeComplete
+                || st instanceof com.andrerinas.openheadunit.connection.CommManager.ConnectionState.TransportStarted;
+        e.serverUsed = e.manualServer && (e.aaConnected || AaServerManual.isWaiting());
         return e;
     }
 
@@ -202,10 +206,6 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                 case START_SERVER_ON_UNLOCK:
                     AaServerStarter.requestStartOnUnlock(this, "el coche lo necesitará y el móvil está bloqueado");
                     break;
-                case CHECK_SERVER:
-                    // Arranque manual: se mira 127.0.0.1:5277 en otro hilo; si está apagado, aviso y espera (cada 2 s).
-                    AaServerManual.need(this, needFor(before), false);
-                    break;
                 case SHUTDOWN:
                     shutdownAll();
                     return;
@@ -216,22 +216,6 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             // Sin vídeo y escuchando al coche: «Reconectando… (Android Auto en espera)» si AA quedó en pausa.
             setStatus(Str.get(AaPark.parked ? R.string.hql_waiting_car_paused : R.string.hql_waiting_car));
             LinkState.setCar(AaPark.parked ? LinkState.Car.RECONNECTING : LinkState.Car.SEARCHING, "");
-        }
-    }
-
-    /** Por qué arrancó el enlace, para el log del arranque manual del servidor de AA. */
-    private AaServerPolicy.Need startNeed = AaServerPolicy.Need.CONNECT;
-
-    /** Para el log del arranque manual: la comprobación del arranque, del coche anunciado o de la vuelta del coche. */
-    private AaServerPolicy.Need needFor(LinkLifecycle.Phase before) {
-        switch (before) {
-            case CLOSED:
-                return startNeed;
-            case GRACE:
-            case PARKED:
-                return AaServerPolicy.Need.RESUME;
-            default:
-                return AaServerPolicy.Need.CAR_SEEN;
         }
     }
 
@@ -412,7 +396,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             video.stop("ajustes");
             usb.restartVideo(renegotiate ? 3000 : 1000, "ajustes");
             if (renegotiate) {
-                L.i("aplicando ajustes: reconecto Android Auto (perfil " + cfg.videoProfile().id + ")");
+                noteAaReconnect();
                 try {
                     startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
                             .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_DISCONNECT));
@@ -434,7 +418,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             video.stop("ajustes");
             qd.pauseReconnect(renegotiate ? 3000 : 1000);
             if (renegotiate) {
-                L.i("aplicando ajustes: reconecto Android Auto (perfil " + cfg.videoProfile().id + ")");
+                noteAaReconnect();
                 try {
                     startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
                             .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_DISCONNECT));
@@ -451,7 +435,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             session.close();
             if (intent.getBooleanExtra(EXTRA_AA_RENEGOTIATE, false) && Config.isAa(cfg.mode())) {
                 // AA negocia resolución y fps al conectar: se desconecta y la sesión nueva lo vuelve a lanzar.
-                L.i("aplicando ajustes: reconecto Android Auto (perfil " + cfg.videoProfile().id + ")");
+                noteAaReconnect();
                 try {
                     startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
                             .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_DISCONNECT));
@@ -479,20 +463,33 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             thermal = new ThermalGuard(this, hub != null ? hub::setThermalLevel : null);
             thermal.start();
             setStatus(Str.get(R.string.hql_waiting_car));
-            // El enlace va a usar el servidor de AA: un aviso viejo de «sigue encendido» ya no vale.
+            // El enlace va a usar el servidor de AA: un aviso viejo de «sigue encendido» (o, con el arranque manual, de
+            // «reinícialo la próxima vez») ya no vale; si el servidor no atiende, lo dirá el intento real.
             AaServerStarter.cancelServerStillOn(this);
+            AaServerManual.onLinkStarting(this);
             String action = intent.getAction();
             LinkLifecycle.Trigger trigger = ACTION_BT_CAR.equals(action) ? LinkLifecycle.Trigger.BLUETOOTH
                     : usbAttach ? LinkLifecycle.Trigger.USB
                     : ACTION_APPLY.equals(action) ? LinkLifecycle.Trigger.USER : LinkLifecycle.Trigger.OTHER;
-            startNeed = trigger == LinkLifecycle.Trigger.BLUETOOTH ? AaServerPolicy.Need.BLUETOOTH
-                    : trigger == LinkLifecycle.Trigger.USB ? AaServerPolicy.Need.USB : AaServerPolicy.Need.CONNECT;
             apply(life.start(now(), trigger, env(), cfg.carWaitMs()));
         } else {
             L.i("ajustes actualizados: " + cfg.summary() + " (se aplican en la próxima sesión)");
         }
         // Sin relanzamiento automático: HeadQLink solo arranca cuando el usuario abre la app.
         return START_NOT_STICKY;
+    }
+
+    /**
+     * Aplicar ajustes reconecta Android Auto (resolución y fps se negocian al conectar). Con el arranque manual eso gasta el
+     * arranque de su servidor (atiende una conexión por arranque): el intento siguiente avisará para reiniciarlo.
+     */
+    private void noteAaReconnect() {
+        L.i("aplicando ajustes: reconecto Android Auto (perfil " + cfg.videoProfile().id + ")");
+        if (cfg.aaServerManual()) {
+            L.lifeWarn("aplicando ajustes: arranque manual: al reconectar Android Auto su servidor queda gastado (atiende"
+                    + " una sola conexión por arranque): habrá que pararlo y volver a iniciarlo (Android Auto › ⋮); el aviso"
+                    + " sale con el próximo intento");
+        }
     }
 
     /**
@@ -890,7 +887,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         if (aaClosed) return;
         aaClosed = true;
         AaServerStarter.cancelStartOnUnlock(this, "el enlace se cierra");
-        LinkLifecycle.ShutdownPlan plan = LinkLifecycle.shutdownPlan(env());
+        LinkLifecycle.ShutdownPlan plan = LinkLifecycle.shutdownPlan(env(), userAction);
         switch (plan) {
             case PARK_UNTIL_UNLOCK:
                 // Móvil bloqueado: el servidor (abierto en toda la red) no se puede apagar hasta
@@ -918,11 +915,25 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                     AaServerStarter.stopIfUnlocked(this);
                 }
                 return;
-            case LEAVE_SERVER_ON:
-                // Arranque manual: no se pulsa nada en los ajustes de AA. Se para nuestra head unit y, si el servidor
-                // sigue encendido, un aviso dice cómo pararlo (recomendable en una Wi-Fi pública).
-                L.life("cierre" + (userAction ? " (a mano)" : "") + ": paro Android Auto; su servidor queda encendido"
-                        + " (arranque manual: HeadQLink no lo para)");
+            case KEEP_AA_PARKED:
+                // Arranque manual: el servidor atiende una sola conexión por arranque. Sin Desconectar, Android Auto no
+                // se cierra: se queda aparcado con el guardián para el próximo viaje (sin reiniciar el servidor).
+                L.life("cierre (sin Desconectar): arranque manual: Android Auto se queda conectado y en pausa para el"
+                        + " próximo viaje (su servidor atiende una sola conexión por arranque; se cierra con Desconectar"
+                        + " o «Cerrar Android Auto»)");
+                AaServerManual.stop(this, "el enlace se cierra con Android Auto en pausa");
+                AaGuardService.park(this);
+                return;
+            case CLOSE_AA:
+            case CLOSE_AA_RESTART: {
+                // Arranque manual: no se pulsa nada en los ajustes de AA (ni se mira su puerto). Se cierra nuestra head
+                // unit; si ya había usado el arranque del servidor, el aviso de que la próxima vez hay que reiniciarlo.
+                boolean restart = plan == LinkLifecycle.ShutdownPlan.CLOSE_AA_RESTART;
+                String why = userAction ? "Desconectar" : "fin del viaje";
+                L.life("cierre" + (userAction ? " (a mano)" : "") + ": arranque manual: cierro Android Auto"
+                        + (restart ? "; su servidor ya atendió su conexión de este arranque: para volver a usarlo hay"
+                        + " que pararlo y volver a iniciarlo (Android Auto › ⋮)"
+                        : " (no llegó a usar su servidor)") + "; HeadQLink no lo para");
                 AaPark.release("cierre del enlace");
                 try {
                     startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
@@ -930,12 +941,13 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                 } catch (RuntimeException e) {
                     L.e("no se pudo parar Android Auto", e);
                 }
-                AaServerManual.onLinkClosed(this, userAction ? "Desconectar" : "fin del viaje");
+                AaServerManual.onLinkClosed(this, why, restart);
                 return;
+            }
             default:
                 L.life("cierre" + (userAction ? " (a mano)" : "") + ": sin Android Auto que cerrar");
-                // Modo sin Android Auto con el arranque manual: la espera del servidor (si la había) ya no hace falta.
-                if (AaServerManual.isWaiting()) AaServerManual.stop(this, "el enlace se cierra");
+                // Modo sin Android Auto con el arranque manual: los intentos (si los había) ya no hacen falta.
+                AaServerManual.stop(this, "el enlace se cierra");
         }
     }
 

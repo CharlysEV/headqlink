@@ -20,13 +20,19 @@ public final class AaRecovery {
     }
 
     public static void onServerDeaf(Context ctx) {
+        Context app = ctx.getApplicationContext();
+        if (AaServerStarter.manual(app)) {
+            // Arranque manual: no se reinicia nada; los intentos (AaServerManual) ya cierran el que no contesta, avisan
+            // y reintentan cada 5 s hasta que el usuario lo pare y lo vuelva a iniciar.
+            L.i("AA recuperación: el servidor de AA no contesta; arranque manual: lo llevan los intentos (aviso y reintento)");
+            return;
+        }
         long now = System.currentTimeMillis();
         if (now - lastAttempt < COOLDOWN_MS) {
             L.i("AA recuperación: ya se intentó hace menos de un minuto");
             return;
         }
         lastAttempt = now;
-        Context app = ctx.getApplicationContext();
         String why = AaServerStarter.cannotRunReason(app);
         if (why != null) {
             L.w("AA recuperación: el servidor de AA no responde y no se puede reiniciar ahora (" + why + ")");

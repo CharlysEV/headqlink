@@ -14,10 +14,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * «Conectar» y «Desconectar», iguales desde la pantalla principal, el widget y el botón de los ajustes rápidos.
  *
- * Conectar: primero la comprobación de requisitos (fuera del hilo principal); si falta algo obligatorio, la pantalla
- * «Comprobación» con «Conectar igualmente» (startActivityForResult: con RESULT_OK, {@link #start}). Después, en modo
- * Android Auto con el arranque automático, su servidor (accesibilidad, tras la capa: el móvil está desbloqueado porque
- * alguien acaba de tocar el botón) y luego el servicio en primer plano.
+ * Conectar: primero la comprobación de requisitos (fuera del hilo principal, sin tocar el servidor de Android Auto);
+ * si falta algo obligatorio, la pantalla «Comprobación» con «Conectar igualmente» (startActivityForResult: con
+ * RESULT_OK, {@link #start}). Después, en modo Android Auto con el arranque automático, su servidor (accesibilidad, tras
+ * la capa: el móvil está desbloqueado porque alguien acaba de tocar el botón) y luego el servicio en primer plano.
  *
  * Se llama desde una actividad que está delante (HomeActivity o el puente invisible QuickToggleActivity): Android 12+
  * solo deja arrancar un servicio en primer plano desde una app visible, y la comprobación necesita una actividad.
@@ -106,10 +106,10 @@ final class LinkControl {
         }
         boolean aaConnected = com.andrerinas.openheadunit.App.Companion.provide(app).getCommManager().isConnected();
         if (manual && !AaPark.parked && !aaConnected) {
-            // Arranque manual: no se pulsa nada; el enlace mira si 127.0.0.1:5277 contesta y, si no, avisa (y la fila
-            // «Auto» lo dice, con un toque para abrir Android Auto).
-            L.life("conectar (" + from + "): arranque manual del servidor de Android Auto (sin accesibilidad): lo"
-                    + " comprueba el enlace");
+            // Arranque manual: no se pulsa nada ni se mira el puerto (cada conexión gasta el servidor). Lo dice el intento
+            // real del Self-Mode con el coche: si AA no contesta, aviso, la fila «Auto» lo dice y reintento cada 5 s.
+            L.life("conectar (" + from + "): arranque manual del servidor de Android Auto (sin accesibilidad): sin"
+                    + " comprobarlo antes; lo dirá el intento real con el coche");
             launch(app, link, from);
             run(done);
             return;

@@ -109,6 +109,8 @@
     <string name="hql_guard_alert_title">Android Auto server open</string>
     <string name="hql_guard_channel">Auto on hold</string>
     <string name="hql_guard_parked">Auto on hold until you unlock the phone (then it closes by itself)</string>
+    <string name="hql_guard_parked_manual">Android Auto paused for the next trip (manual start: so its server needs no restart)</string>
+    <string name="hql_guard_close">Close Android Auto</string>
     <string name="hql_h264_profile">H.264 profile</string>
     <string name="hql_headwind">headwind</string>
     <string name="hql_height">height</string>
@@ -196,7 +198,7 @@
     <string name="hql_profile_medium">Medium</string>
     <string name="hql_profile_medium_detail">720p at a steady 45 fps, re-encoded on the phone</string>
     <string name="hql_profile_reason">%1$s · %2$d GB · 1080p30 encoder %3$s · 1080p30 decoder %4$s · 720p45 encoder %5$s</string>
-    <string name="hql_profile_reconnect_help">If you are connected, the car and Auto reconnect by themselves with the new profile (a few seconds).</string>
+    <string name="hql_profile_reconnect_help">If you are connected, the car and Auto reconnect by themselves with the new profile (a few seconds). With the manual start of the Android Auto server, you then have to restart it (⋮ › Stop and ⋮ › Start).</string>
     <string name="hql_radio">Radio</string>
     <string name="hql_radio_list">Radio list</string>
     <string name="hql_radio_live">Live</string>
@@ -444,7 +446,7 @@
     <string name="hql_car_wait_title">Wait for the car</string>
     <string name="hql_car_wait_option">%1$d min</string>
     <string name="hql_car_wait_option_default">%1$d min (recommended)</string>
-    <string name="hql_car_wait_help">If the car turns off or the connection drops, HeadQLink keeps listening and leaves Android Auto paused for this long: if the car comes back, the picture returns instantly, without unlocking. After that it closes everything and turns off the Android Auto server.</string>
+    <string name="hql_car_wait_help">If the car turns off or the connection drops, HeadQLink keeps listening and leaves Android Auto paused for this long: if the car comes back, the picture returns instantly, without unlocking. After that it closes everything and turns off the Android Auto server. With the manual server start, Android Auto is not closed: it stays paused for the next trip (its server serves a single connection per start).</string>
 
     <!-- headqlink: cable USB del coche (experimental) -->
     <string name="hql_link_usb">USB cable</string>
@@ -467,22 +469,22 @@
     <string name="hql_aa_server_start_title">Android Auto server start</string>
     <string name="hql_aa_server_start_auto">Automatic (accessibility) · Recommended</string>
     <string name="hql_aa_server_start_manual">Manual (no accessibility)</string>
-    <string name="hql_aa_server_start_help">Automatic: HeadQLink starts and stops the Android Auto server by itself, with its accessibility service. Manual: no accessibility needed, but you start it yourself (Android Auto › ⋮ › Start head unit server) after every phone restart or Android Auto update, and it stays on until you stop it (on a public Wi-Fi, any device on that network could try to connect). If it is off when connecting, HeadQLink tells you. Applies immediately.</string>
-    <string name="hql_aa_server_wait">Waiting for you to start the Android Auto server</string>
-    <string name="hql_aa_server_wait_hint">Start the server: Android Auto › ⋮ › Start head unit server. Tap here or the \"Auto\" row to open Android Auto; HeadQLink carries on by itself as soon as it answers.</string>
-    <string name="hql_aa_server_ready">Android Auto server ready</string>
-    <string name="hql_aa_server_ask_title">Start the Android Auto server</string>
-    <string name="hql_aa_server_ask_text">Android Auto › ⋮ › Start head unit server. Tap to open Android Auto; HeadQLink carries on by itself as soon as it is on.</string>
+    <string name="hql_aa_server_start_help">Automatic: HeadQLink starts and stops the Android Auto server by itself, with its accessibility service. Manual: no accessibility; you start it yourself (Android Auto › ⋮ › Start head unit server). Each start of the server serves a single connection: HeadQLink keeps Android Auto connected as long as it can (paused between trips too), but every time it closes (Disconnect, phone restart, Android Auto update, picture profile change) you have to restart it by hand: ⋮ › Stop head unit server and ⋮ › Start head unit server. If it does not answer when connecting, HeadQLink tells you and retries by itself. It stays on until you stop it (on a public Wi-Fi, any device on that network could try to connect). Applies immediately.</string>
+    <string name="hql_aa_server_wait">Waiting for the Android Auto server</string>
+    <string name="hql_aa_server_wait_hint">Android Auto does not answer: start (or restart) its server: Android Auto › ⋮ › Stop head unit server (if shown) and ⋮ › Start head unit server. Tap here or the \"Auto\" row to open Android Auto; HeadQLink retries every 5 s and carries on by itself as soon as it answers.</string>
+    <string name="hql_aa_server_ask_title">Start (or restart) the Android Auto server</string>
+    <string name="hql_aa_server_ask_text">Android Auto › ⋮ › Stop head unit server (if shown) and ⋮ › Start head unit server. Tap to open Android Auto; HeadQLink retries every 5 s and carries on by itself as soon as it answers.</string>
     <string name="hql_aa_server_ask_channel">Android Auto manual start</string>
     <string name="hql_aa_server_info_channel">Android Auto server</string>
-    <string name="hql_aa_server_still_on_text">You can stop it in Android Auto › ⋮ › Stop head unit server (recommended if you join a public Wi-Fi).</string>
+    <string name="hql_aa_restart_title">Android Auto closed</string>
+    <string name="hql_aa_restart_text">Its server serves a single connection per start: next time, restart it before connecting (Android Auto › ⋮ › Stop head unit server and ⋮ › Start head unit server). If you are not going to use it, leave it stopped (recommended on a public Wi-Fi).</string>
+    <string name="hql_manual_reconnect_restart">Manual start: Android Auto reconnects to apply this and its server is used up. Restart it: Android Auto › ⋮ › Stop head unit server and ⋮ › Start head unit server.</string>
     <string name="hql_reason_manual">manual start: stop and start its server again in Android Auto › ⋮</string>
-    <string name="hql_reason_start_server_manual">start its server in Android Auto › ⋮ › Start head unit server</string>
     <string name="hql_req_info">Info</string>
     <string name="hql_req_aa_server">Android Auto server</string>
-    <string name="hql_req_aa_server_on">On. It stays on afterwards: stop it in Android Auto › ⋮ › Stop head unit server if you are going to join a public Wi-Fi.</string>
-    <string name="hql_req_aa_server_off">Off: start it in Android Auto › ⋮ › Start head unit server. If it is still off when connecting, HeadQLink tells you and waits.</string>
-    <string name="hql_req_aa_server_unknown">Could not be checked</string>
+    <string name="hql_req_aa_server_in_use">In use by HeadQLink (Android Auto connected). When Android Auto closes, you will have to restart it: ⋮ › Stop head unit server and ⋮ › Start head unit server.</string>
+    <string name="hql_req_aa_server_waiting">Not answering: start (or restart) it in Android Auto › ⋮ › Stop head unit server (if shown) and ⋮ › Start head unit server. HeadQLink retries by itself.</string>
+    <string name="hql_req_aa_server_tip">HeadQLink does not check it before connecting: every connection uses it up (it serves one per start). Start it before connecting (⋮ › Start head unit server); if Android Auto has closed since then, stop it and start it again.</string>
     <string name="hql_req_auto_use">Automatic mode</string>
     <string name="hql_req_manual_title">No accessibility?</string>
     <string name="hql_req_manual_why">You can start the Android Auto server yourself (manual start) and leave accessibility off. Automatic is still the recommended mode.</string>
@@ -490,9 +492,9 @@
     <string name="hql_req_acc_manual">Only for the automatic mode</string>
     <string name="hql_req_dev_manual">Can\'t be checked without accessibility: if Android Auto › ⋮ doesn\'t show \"Start head unit server\", turn it on (guide below).</string>
     <string name="hql_manual_confirm_title">Manual start of the Android Auto server</string>
-    <string name="hql_manual_confirm_msg">Without accessibility, HeadQLink neither starts nor stops the Android Auto server:\n\n•  Start it yourself (Android Auto › ⋮ › Start head unit server) after every phone restart or Android Auto update. If it is off when connecting, HeadQLink tells you.\n•  It stays on until you stop it. On a public Wi-Fi, any device on that network could try to connect: stop it when you are not in the car (⋮ › Stop head unit server).\n\nAutomatic start is still the recommended mode. You can go back to it in Picture settings › Advanced.</string>
+    <string name="hql_manual_confirm_msg">Without accessibility, HeadQLink neither starts nor stops the Android Auto server:\n\n•  Start it yourself (Android Auto › ⋮ › Start head unit server).\n•  Each start of the server serves a single connection. HeadQLink keeps Android Auto connected as long as it can (paused between trips too), but once it closes (Disconnect, phone restart, Android Auto update) you have to restart it by hand: ⋮ › Stop head unit server and ⋮ › Start head unit server. If it does not answer when connecting, HeadQLink tells you and retries by itself.\n•  It stays on until you stop it. On a public Wi-Fi, any device on that network could try to connect: stop it when you are not in the car.\n\nAutomatic start is still the recommended mode. You can go back to it in Picture settings › Advanced.</string>
     <string name="hql_setup_guide_manual_title">How to start the Android Auto server</string>
-    <string name="hql_setup_guide_manual">1.  Tap \"Open AA\".\n2.  Tap ⋮ (top right) › \"Start head unit server\".\n3.  If that option is missing: scroll to the bottom, tap \"Version\" 10 times, accept the warning and repeat step 2.\n4.  Come back to HeadQLink: the \"Android Auto server\" row turns to \"On\".\nDo it after every phone restart or Android Auto update. To stop it: ⋮ › \"Stop head unit server\".</string>
+    <string name="hql_setup_guide_manual">1.  Tap \"Open AA\".\n2.  Tap ⋮ (top right) › \"Start head unit server\".\n3.  If that option is missing: scroll to the bottom, tap \"Version\" 10 times, accept the warning and repeat step 2.\n4.  Come back to HeadQLink and connect. HeadQLink does not check it beforehand (every connection uses it up): if Android Auto does not answer with the car, it tells you and retries every 5 s.\nEach start serves a single connection: after Android Auto closes (Disconnect, phone restart, Android Auto update) restart it: ⋮ › \"Stop head unit server\" and ⋮ › \"Start head unit server\".</string>
     <!-- Vista previa del modo extendido (PreviewActivity, modo demostración) -->
     <string name="hql_preview_title">Extended mode preview</string>
     <string name="hql_preview_busy">The preview uses demo data and is not available while connected to the car. Disconnect first.</string>
@@ -608,7 +610,8 @@
     <string name="hql_w_waiting_video">Waiting for the picture…</string>
     <string name="hql_w_waiting_return">Waiting for the car to come back</string>
     <string name="hql_w_aa_paused">Android Auto paused</string>
-    <string name="hql_w_aa_server">Start the Android Auto server</string>
+    <string name="hql_w_aa_server">Waiting for the Android Auto server</string>
+    <string name="hql_w_aa_server_hint">Android Auto › ⋮ › Stop and Start server</string>
     <string name="hql_w_close_qdlink">Close QDLink</string>
     <string name="hql_w_port_busy">Port 18463 is busy</string>
     <string name="hql_w_check_link">Check the connection</string>

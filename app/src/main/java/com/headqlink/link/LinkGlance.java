@@ -16,6 +16,7 @@ import java.util.Locale;
  * sesión sin imagen todavía ───────────▶ ámbar «Coche conectado»
  * sesión con imagen ───────────────────▶ verde «Coche conectado» · 30 fps · 4,8 Mbit/s
  * coche perdido (AA vivo o en pausa) ──▶ ámbar «Esperando a que vuelva el coche»
+ * arranque manual, AA no atiende ──────▶ ámbar «Esperando al servidor de Android Auto» (con o sin coche)
  * un problema (puerto, red, Auto) ─────▶ rojo
  * </pre>
  */
@@ -42,7 +43,7 @@ final class LinkGlance {
         LIVE,
         /** «Esperando a que vuelva el coche»: sesión perdida, Android Auto vivo o en pausa. */
         WAITING_RETURN,
-        /** Arranque manual: «Arranca el servidor de Android Auto». */
+        /** Arranque manual con los intentos fallando: «Esperando al servidor de Android Auto». */
         AA_SERVER,
         /** El UDP 18463 lo tiene otra app (QDLink abierto). */
         PORT_BUSY,
@@ -71,6 +72,8 @@ final class LinkGlance {
         AA_PAUSED,
         /** «El puerto 18463 está ocupado». */
         PORT_BUSY,
+        /** Arranque manual: cómo reiniciar el servidor («Android Auto › ⋮ › Parar e Iniciar servidor»). */
+        AA_SERVER_HINT,
     }
 
     /**
@@ -115,7 +118,7 @@ final class LinkGlance {
         LinkState.Level sourceLevel = LinkState.Level.IDLE;
         String source = "";
         boolean udpBusy;
-        /** Arranque manual del servidor de Android Auto y aún no contesta. */
+        /** Arranque manual del servidor de Android Auto y los intentos fallan (AA no atiende; nunca por un sondeo). */
         boolean aaServerWaiting;
         /** Android Auto aparcado (en pausa, esperando al coche). */
         boolean aaParked;
@@ -178,6 +181,9 @@ final class LinkGlance {
         if (in.sourceLevel == LinkState.Level.ERROR) {
             return make(Look.ERROR, stop, Status.SOURCE_PROBLEM, Detail.SOURCE, in.source, in);
         }
+        // Arranque manual y AA no atiende los intentos: lo único que lo arregla es reiniciar su servidor. Va por delante de
+        // la sesión con el coche (sin AA, lo que llega al coche es la animación de espera, no la imagen).
+        if (in.aaServerWaiting) return make(Look.BUSY, stop, Status.AA_SERVER, Detail.AA_SERVER_HINT, "", in);
         if (!connected && in.udpBusy) {
             return make(Look.ERROR, stop, Status.PORT_BUSY, Detail.PORT_BUSY, "", in);
         }
@@ -197,7 +203,6 @@ final class LinkGlance {
             case RECONNECTING:
                 return make(Look.BUSY, stop, Status.WAITING_RETURN, in.aaParked ? Detail.AA_PAUSED : Detail.NONE, "", in);
             default:
-                if (in.aaServerWaiting) return make(Look.BUSY, stop, Status.AA_SERVER, Detail.NONE, "", in);
                 return make(Look.BUSY, stop, Status.SEARCHING, empty(in.network) ? Detail.NONE : Detail.NETWORK,
                         in.network, in);
         }

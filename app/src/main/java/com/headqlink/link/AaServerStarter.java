@@ -36,8 +36,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * hace solo al desbloquear. Si un apagado no se confirma, una notificación lo dice y permite reintentarlo.
  *
  * Con el «Arranque del servidor de Android Auto» en manual ({@link #manual}) no se automatiza nada: ni arrancar, ni
- * parar, ni la capa, ni el botón de su notificación. Cada entrada lo comprueba y lo pasa a {@link AaServerManual}, que
- * solo mira si 127.0.0.1:5277 contesta y se lo pide al usuario.
+ * parar, ni la capa, ni el botón de su notificación. Cada entrada lo comprueba; los intentos los lleva
+ * {@link AaServerManual} con la conexión real del Self-Mode (nunca se sondea el puerto: el servidor atiende una sola
+ * conexión por arranque y cualquier conexión lo gasta).
  */
 public final class AaServerStarter {
     static final String AA_PKG = "com.google.android.projection.gearhead";
@@ -106,7 +107,7 @@ public final class AaServerStarter {
         return new Config(ctx).aaServerManual();
     }
 
-    /** El servidor contestó (arranque manual): el modo desarrollador de AA está activo (solo desde él se arranca). */
+    /** AA atendió un intento (arranque manual): el modo desarrollador de AA está activo (solo desde él se arranca). */
     static void noteDevModeOn(Context ctx) {
         android.content.SharedPreferences sp = prefs(ctx);
         if (sp.getInt(DEV_MODE, -1) != 1) sp.edit().putInt(DEV_MODE, 1).apply();
@@ -115,15 +116,9 @@ public final class AaServerStarter {
     /** El servidor de AA no está en marcha y no hemos podido arrancarlo: se muestra en la pantalla principal. */
     public static void reportCannotStart(Context ctx) {
         if (manual(ctx)) {
-            // Arranque manual: si se está esperando al usuario, la fila «Auto» ya lo dice (y vuelve sola al encenderse).
-            if (AaServerManual.isWaiting()) {
-                L.i("AA: esperando a que arranques el servidor de Android Auto (arranque manual)");
-                LinkState.setSource(LinkState.Level.BUSY, Str.get(R.string.hql_aa_server_wait));
-            } else if (!LinkState.running) {
-                String msg = Str.get(R.string.hql_aa_no_start_why, Str.get(R.string.hql_reason_start_server_manual));
-                L.w("AA: " + msg);
-                LinkState.setSource(LinkState.Level.ERROR, msg);
-            }
+            // Arranque manual: el intento rechazado ya lo cuenta AaServerManual, que pone el aviso, la fila «Auto» y los
+            // reintentos (sin sondear el puerto).
+            L.i("AA: 127.0.0.1:5277 no acepta la conexión; arranque manual: lo llevan los intentos (aviso y reintento)");
             return;
         }
         String why = cannotRunReason(ctx);
@@ -156,8 +151,9 @@ public final class AaServerStarter {
     public static boolean startAndWait(Context ctx) {
         prefs(ctx).edit().putBoolean(PENDING_STOP, false).apply();
         stopEpoch.incrementAndGet();
-        // Arranque manual: no se pulsa nada; si no contesta, aviso al usuario y relanzamiento al encenderse.
-        if (manual(ctx)) return AaServerManual.awaitForSession(ctx);
+        // Arranque manual: no se pulsa nada ni se mira el puerto (cualquier conexión gasta el servidor). Lo llama el
+        // Self-Mode tras una conexión rechazada, que AaServerManual ya contó: aviso y reintentos.
+        if (manual(ctx)) return false;
         if (TouchService.instance != null && isLocked(ctx) && LinkState.running) {
             relaunchAfterUnlock = true;
             requestStartOnUnlock(ctx, "Android Auto necesita su servidor y el móvil está bloqueado");
@@ -370,8 +366,8 @@ public final class AaServerStarter {
         prefs(ctx).edit().putBoolean(PENDING_STOP, false).apply();
         stopEpoch.incrementAndGet();
         if (manual(ctx)) {
-            // Sin accesibilidad no se arranca al desbloquear: se mira y, si está apagado, se le pide al usuario.
-            AaServerManual.need(ctx, AaServerPolicy.Need.CAR_SEEN, false);
+            // Sin accesibilidad no se arranca al desbloquear, y no se mira el puerto: lo dirá el intento con el coche.
+            L.life("AA server: " + why + ": arranque manual: nada que arrancar al desbloquear (lo dirá el intento real)");
             return;
         }
         if (startOnUnlock) return;

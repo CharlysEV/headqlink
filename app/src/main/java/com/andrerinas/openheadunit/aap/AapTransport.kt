@@ -138,6 +138,14 @@ class AapTransport(
     /** Set by [AapControl] when VIDEO_FOCUS_NATIVE triggers a stop (user tapped Exit). */
     @Volatile var wasUserExit: Boolean = false
     @Volatile var onQuit: ((Boolean) -> Unit)? = null
+
+    /**
+     * headqlink: called on the first bytes the peer sends in [handshake]'s version exchange (normally the
+     * VERSION_RESPONSE). The earliest proof that the peer is serving this connection: Android Auto's developer
+     * head unit server serves one connection per start, and once it has, the kernel still accepts TCP on its
+     * listening socket while nothing ever answers. Accepting is not serving; answering is.
+     */
+    @Volatile var onPeerAnswered: (() -> Unit)? = null
     var isAssistantActive = false
     var onAudioFocusStateChanged: ((Boolean) -> Unit)? = null
     var onUpdateUiConfigReplyReceived: (() -> Unit)? = null
@@ -1007,6 +1015,8 @@ class AapTransport(
                         .toInt().coerceAtLeast(100)
                     ret = connection.recvBlocking(buffer, buffer.size, remaining, false)
                     if (ret < 0) transportError = true   // EOF or IOException, not a timeout
+                    // headqlink: the first bytes from the peer - it serves this connection (see onPeerAnswered).
+                    if (ret > 0 && !peerSentBytes) onPeerAnswered?.invoke()
                     if (ret > 0) peerSentBytes = true
                     if (ret <= 0) break  // timeout or error — fall through to outer retry
                     if (ret >= 6

@@ -62,8 +62,6 @@ final class Checklist {
     private volatile Requirements.Hotspot hotspot = Requirements.Hotspot.CHECKING;
     private volatile HotspotWatcher.Probe hotspotProbe;
     private volatile Requirements.Port port = Requirements.Port.UNKNOWN;
-    /** Arranque manual: si el servidor de AA contesta en 127.0.0.1:5277 (también lo lento: una conexión). */
-    private volatile Requirements.AaServer aaServer = Requirements.AaServer.CHECKING;
     /** Último wifi_state del aviso de la zona Wi-Fi (-1 = ninguno). */
     private volatile int apState = -1;
     private boolean probing;
@@ -92,13 +90,19 @@ final class Checklist {
             main.postDelayed(refreshLater, 1200);
         }
     };
-    /** Del enlace solo importan «en marcha» y «puerto ocupado» (el resto cambia a menudo durante una sesión). */
+    /**
+     * Del enlace solo importan «en marcha», «puerto ocupado» y, con el arranque manual, si se espera al servidor de
+     * Android Auto (el resto cambia a menudo durante una sesión).
+     */
     private boolean lastRunning;
     private boolean lastUdpBusy;
+    private boolean lastAaWaiting;
     private final LinkState.Listener linkListener = () -> {
-        if (LinkState.running == lastRunning && LinkState.udpBusy == lastUdpBusy) return;
+        boolean aaWaiting = AaServerManual.isWaiting();
+        if (LinkState.running == lastRunning && LinkState.udpBusy == lastUdpBusy && aaWaiting == lastAaWaiting) return;
         lastRunning = LinkState.running;
         lastUdpBusy = LinkState.udpBusy;
+        lastAaWaiting = aaWaiting;
         refresh();
     };
 
@@ -137,6 +141,7 @@ final class Checklist {
                     Settings.Secure.getUriFor(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES), false, accessibilityObserver);
             lastRunning = LinkState.running;
             lastUdpBusy = LinkState.udpBusy;
+            lastAaWaiting = AaServerManual.isWaiting();
             LinkState.addListener(linkListener);
         }
         if (awaitingDevMode) {
@@ -168,11 +173,12 @@ final class Checklist {
     /** Vuelve a evaluar con lo rápido ya y lanza lo lento (zona Wi-Fi y puerto) en un hilo. */
     void refresh() {
         if (act.isDestroyed()) return;
-        items = Requirements.evaluate(read(act, cfg, hotspot, port, aaServer, checkingDevMode));
+        items = Requirements.evaluate(read(act, cfg, hotspot, port, checkingDevMode));
         onChange.run();
         probeSlow();
     }
 
+    /** Lo lento: la zona Wi-Fi y el puerto UDP 18463. Nunca el servidor de Android Auto (mirarlo lo gastaría). */
     private void probeSlow() {
         if (probing) {
             probeAgain = true;
@@ -180,24 +186,21 @@ final class Checklist {
         }
         probing = true;
         int ap = apState;
-        boolean probeServer = cfg.aaServerManual() && Config.isAa(cfg.mode());
         new Thread(() -> {
             HotspotWatcher.Probe p = HotspotWatcher.probe(act, ap);
             Requirements.Port pt = currentPort(true);
-            Requirements.AaServer as = probeServer ? aaServerNow(act) : Requirements.AaServer.UNKNOWN;
             main.post(() -> {
                 probing = false;
                 hotspotProbe = p;
                 Requirements.Hotspot h = hotspotOf(p.getState());
-                boolean changed = h != hotspot || pt != port || as != aaServer;
+                boolean changed = h != hotspot || pt != port;
                 hotspot = h;
                 port = pt;
-                aaServer = as;
                 if (probeAgain) {
                     probeAgain = false;
                     refresh();
                 } else if (changed && !act.isDestroyed()) {
-                    items = Requirements.evaluate(read(act, cfg, hotspot, port, aaServer, checkingDevMode));
+                    items = Requirements.evaluate(read(act, cfg, hotspot, port, checkingDevMode));
                     onChange.run();
                 }
             });
@@ -214,18 +217,13 @@ final class Checklist {
 
     // ---------------------------------------------------------------- lectura del estado
 
-    /** Comprobación completa ahora (también lo lento): no en el hilo principal. */
+    /**
+     * Comprobación completa ahora (también lo lento): no en el hilo principal. El servidor de Android Auto no se mira
+     * (cualquier conexión lo gastaría): con el arranque manual vale lo que se sabe sin tocarlo.
+     */
     static List<Requirements.Item> evaluateNow(Activity a) {
         HotspotWatcher.Probe p = HotspotWatcher.probe(a);
-        Requirements.Snapshot s = read(a, new Config(a), hotspotOf(p.getState()), currentPort(true),
-                Requirements.AaServer.UNKNOWN, false);
-        if (Requirements.needsAaServerProbe(s)) s.aaServer = aaServerNow(a);
-        return Requirements.evaluate(s);
-    }
-
-    /** Arranque manual: ¿contesta el servidor de head unit de AA? Bloquea (como mucho unos cientos de ms). */
-    private static Requirements.AaServer aaServerNow(Context ctx) {
-        return AaServerManual.probe(ctx) == AaServerPolicy.Server.UP ? Requirements.AaServer.ON : Requirements.AaServer.OFF;
+        return Requirements.evaluate(read(a, new Config(a), hotspotOf(p.getState()), currentPort(true), false));
     }
 
     private static Requirements.Hotspot hotspotOf(HotspotWatcher.State s) {
@@ -263,7 +261,7 @@ final class Checklist {
     }
 
     private static Requirements.Snapshot read(Activity a, Config cfg, Requirements.Hotspot hotspot, Requirements.Port port,
-                                              Requirements.AaServer aaServer, boolean checkingDev) {
+                                              boolean checkingDev) {
         Requirements.Snapshot s = new Requirements.Snapshot();
         int sdk = Build.VERSION.SDK_INT;
         s.sdk = sdk;
@@ -272,7 +270,8 @@ final class Checklist {
         s.btAuto = cfg.btAutoConnect();
         s.forceLegacyLaunch = cfg.getBool("force_legacy_launch");
         s.manualServer = cfg.aaServerManual();
-        s.aaServer = aaServer;
+        // Sin conectarse al servidor (lo gastaría): en uso por HeadQLink, intentos fallando o sin saber.
+        s.aaServer = s.manualServer ? AaServerManual.serverState(a) : Requirements.AaServer.UNKNOWN;
 
         s.accessibilityRunning = TouchService.instance != null;
         s.accessibilityEnabled = accessibilityEnabled(a);
@@ -645,13 +644,11 @@ final class Checklist {
     private String aaServerText(Requirements.Status st) {
         switch (st) {
             case OK:
-                return Str.get(R.string.hql_req_aa_server_on);
+                return Str.get(R.string.hql_req_aa_server_in_use);
             case WARN:
-                return Str.get(R.string.hql_req_aa_server_off);
-            case CHECKING:
-                return Str.get(R.string.hql_checking);
+                return Str.get(R.string.hql_req_aa_server_waiting);
             default:
-                return Str.get(R.string.hql_req_aa_server_unknown);
+                return Str.get(R.string.hql_req_aa_server_tip);
         }
     }
 
@@ -855,7 +852,6 @@ final class Checklist {
     private void setManual(boolean manual) {
         cfg.setAaServerManual(manual);
         AaServerManual.onModeChanged(act, manual, "Comprobación");
-        aaServer = Requirements.AaServer.CHECKING;
         refresh();
     }
 

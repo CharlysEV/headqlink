@@ -11,8 +11,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Servidor de head unit de Android Auto: modo de arranque (automático / manual) × servidor (encendido, apagado, sin
- * saber) × móvil bloqueado × motivo. El manual nunca automatiza nada y el automático sigue igual que antes.
+ * Servidor de head unit de Android Auto: modo de arranque (automático / manual) × lo que se sabe × móvil bloqueado ×
+ * motivo. El manual nunca automatiza ni sondea (cada conexión gasta el servidor: lo dice el intento real con el coche) y
+ * no cierra Android Auto sin Desconectar; el automático sigue igual que antes.
  */
 class AaServerPolicyTest {
     private fun state(manual: Boolean, server: Server, locked: Boolean, automate: Boolean = true, connected: Boolean = false) =
@@ -22,12 +23,11 @@ class AaServerPolicyTest {
     private val bools = listOf(false, true)
 
     @Test
-    fun manualNeverAutomatesWhateverTheTriggerOrLock() {
-        for (need in allNeeds) for (locked in bools) for (automate in bools) {
-            val ctx = "$need bloqueado=$locked accesibilidad=$automate"
-            assertEquals(ctx, Action.NONE, AaServerPolicy.onNeed(need, state(true, Server.UP, locked, automate)))
-            assertEquals(ctx, Action.ASK_USER, AaServerPolicy.onNeed(need, state(true, Server.DOWN, locked, automate)))
-            assertEquals(ctx, Action.PROBE, AaServerPolicy.onNeed(need, state(true, Server.UNKNOWN, locked, automate)))
+    fun manualNeverAutomatesNorProbesWhateverTheTriggerOrLock() {
+        for (need in allNeeds) for (locked in bools) for (automate in bools) for (server in Server.values()) {
+            val ctx = "$need $server bloqueado=$locked accesibilidad=$automate"
+            // Ni arrancar, ni comprobar el puerto: lo dirá el intento real del Self-Mode con el coche.
+            assertEquals(ctx, Action.AT_SESSION, AaServerPolicy.onNeed(need, state(true, server, locked, automate)))
         }
     }
 
@@ -44,7 +44,7 @@ class AaServerPolicyTest {
 
     @Test
     fun automaticIsTheBehaviourOfAlways() {
-        for (need in allNeeds.filter { it != Need.WATCH }) {
+        for (need in allNeeds) {
             // Sin dato o apagado: se arranca ya, o al desbloquear con el aviso.
             for (server in listOf(Server.DOWN, Server.UNKNOWN)) {
                 assertEquals("$need $server", Action.AUTOMATE, AaServerPolicy.onNeed(need, state(false, server, false)))
@@ -61,53 +61,48 @@ class AaServerPolicyTest {
             // Consta encendido: nada (lo de siempre: el arranque anticipado no se repite).
             for (locked in bools) assertEquals(Action.NONE, AaServerPolicy.onNeed(need, state(false, Server.UP, locked)))
         }
-        // La vigilancia periódica es solo del manual.
-        for (server in Server.values()) for (locked in bools) {
-            assertEquals(Action.NONE, AaServerPolicy.onNeed(Need.WATCH, state(false, server, locked)))
-        }
     }
 
     @Test
     fun exhaustiveMatrixKeepsEachModeInItsLane() {
         for (manual in bools) for (server in Server.values()) for (locked in bools) for (automate in bools) for (need in allNeeds) {
-            val a = AaServerPolicy.onNeed(need, state(manual, server, locked, automate))
-            val ctx = "manual=$manual $server bloqueado=$locked accesibilidad=$automate $need → $a"
-            if (manual) {
-                assertTrue(ctx, a == Action.NONE || a == Action.PROBE || a == Action.ASK_USER)
-                // El bloqueo no cambia nada en el manual: la notificación se ve en la pantalla de bloqueo.
-                assertEquals(ctx, AaServerPolicy.onNeed(need, state(true, server, !locked, automate)), a)
-            } else {
-                assertFalse(ctx, a == Action.PROBE || a == Action.ASK_USER)
+            for (connected in bools) {
+                val a = AaServerPolicy.onNeed(need, state(manual, server, locked, automate, connected))
+                val ctx = "manual=$manual $server bloqueado=$locked accesibilidad=$automate conectado=$connected $need → $a"
+                if (manual) {
+                    assertTrue(ctx, a == Action.NONE || a == Action.AT_SESSION)
+                    // El bloqueo no cambia nada en el manual: nunca hace falta desbloquear para nada.
+                    assertEquals(ctx, AaServerPolicy.onNeed(need, state(true, server, !locked, automate, connected)), a)
+                } else {
+                    assertFalse(ctx, a == Action.AT_SESSION)
+                }
             }
         }
     }
 
     @Test
-    fun bluetoothOrCableWithThePhoneLockedAndTheServerAlreadyUpNeedNoUnlock() {
-        for (need in listOf(Need.BLUETOOTH, Need.USB, Need.CAR_SEEN, Need.SESSION)) {
-            assertEquals(Action.NONE, AaServerPolicy.onNeed(need, state(true, Server.UP, true, automate = false)))
-        }
+    fun manualEndKeepsAndroidAutoUnlessTheUserDisconnects() {
+        val ready = State().manual(true).connected(true).ready(true)
+        // Sin Desconectar (espera vencida, Bluetooth fuera, el sistema): AA se queda en pausa para el próximo viaje.
+        for (locked in bools) assertEquals(End.KEEP_AA, AaServerPolicy.onEnd(true, ready.locked(locked), false))
+        // Desconectar: se cierra, con el aviso de que la próxima vez hay que reiniciar el servidor.
+        assertEquals(End.CLOSE_AA_RESTART, AaServerPolicy.onEnd(true, ready, true))
+        // Un intento con el TCP abierto, o los intentos fallando: el servidor ya está gastado (o no atiende): aviso.
+        assertEquals(End.CLOSE_AA_RESTART, AaServerPolicy.onEnd(true, State().manual(true).connected(true), true))
+        assertEquals(End.CLOSE_AA_RESTART, AaServerPolicy.onEnd(true, State().manual(true).used(true), false))
+        assertEquals(End.CLOSE_AA_RESTART, AaServerPolicy.onEnd(true, State().manual(true).used(true), true))
+        // Sin haber tocado el servidor: se cierra sin aviso (sigue sin estrenar).
+        for (user in bools) assertEquals(End.CLOSE_AA, AaServerPolicy.onEnd(true, State().manual(true), user))
     }
 
     @Test
     fun endOfTheLink() {
-        for (manual in bools) for (server in Server.values()) {
-            assertEquals(End.NOTHING, AaServerPolicy.onEnd(false, state(manual, server, false)))
+        for (manual in bools) for (server in Server.values()) for (user in bools) {
+            assertEquals(End.NOTHING, AaServerPolicy.onEnd(false, state(manual, server, false), user))
         }
-        // Automático: el cierre de siempre (apagarlo), sepa lo que sepa del servidor.
-        for (server in Server.values()) assertEquals(End.STOP_SERVER, AaServerPolicy.onEnd(true, state(false, server, true)))
-        // Manual: nunca se para; se avisa si sigue encendido (o si no se pudo mirar).
-        assertEquals(End.LEAVE_ON_NOTICE, AaServerPolicy.onEnd(true, state(true, Server.UP, false)))
-        assertEquals(End.LEAVE_ON_NOTICE, AaServerPolicy.onEnd(true, state(true, Server.UNKNOWN, true)))
-        assertEquals(End.NOTHING, AaServerPolicy.onEnd(true, state(true, Server.DOWN, false)))
-    }
-
-    @Test
-    fun checkCadence() {
-        assertEquals(2_000L, AaServerPolicy.nextCheckMs(true, true, true, true))
-        assertEquals(60_000L, AaServerPolicy.nextCheckMs(true, true, true, false))
-        assertEquals(-1L, AaServerPolicy.nextCheckMs(false, true, true, true))
-        assertEquals(-1L, AaServerPolicy.nextCheckMs(true, false, true, true))
-        assertEquals(-1L, AaServerPolicy.nextCheckMs(true, true, false, true))
+        // Automático: el cierre de siempre (apagarlo), sepa lo que sepa del servidor y sea quien sea quien cierra.
+        for (server in Server.values()) for (user in bools) {
+            assertEquals(End.STOP_SERVER, AaServerPolicy.onEnd(true, state(false, server, true).ready(true), user))
+        }
     }
 }

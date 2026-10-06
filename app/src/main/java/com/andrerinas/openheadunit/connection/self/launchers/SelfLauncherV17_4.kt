@@ -96,6 +96,9 @@ class SelfLauncherV17_4(
             commManager.isConnected
         }
         diag("Path3:connect1", if (success) "OK" else "REFUSED")
+        // headqlink: the manual start counts its attempts from this real dial (it never probes the port: any
+        // connection uses up the server's one session per start). An accepted TCP is not "served" yet.
+        com.headqlink.link.AaServerManual.onDevServerDial(services.aap, success)
 
         if (!success && !commManager.isConnected) {
             diag("Path3", "starting AA server via accessibility...")

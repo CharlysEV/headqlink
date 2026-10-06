@@ -94,7 +94,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         });
         videoRow = statusRow(status, Str.get(R.string.hql_image), R.drawable.hql_ln_screen);
         sourceRow = statusRow(status, "", R.drawable.hql_ln_phone);
-        // Arranque manual: «Esperando a que arranques el servidor de Android Auto»; al tocar, los ajustes de AA.
+        // Arranque manual: «Esperando al servidor de Android Auto» (los intentos fallan); al tocar, los ajustes de AA.
         sourceRow.setOnClickListener(v -> {
             if (waitingForAaServer()) openAaForServer();
         });
@@ -131,7 +131,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         render();
         // El idioma de la app pudo cambiar: el widget lo repinta si hace falta (si no cambia nada, no hace nada).
         WidgetUpdater.poke();
-        // De vuelta (quizá de los ajustes de AA) esperando al servidor del arranque manual: se mira ya, sin esperar 2 s.
+        // De vuelta (quizá de los ajustes de AA) esperando al servidor del arranque manual: el reintento, ya (sin sondear).
         AaServerManual.checkSoon(this);
         if (hotspotNow()) {
             // Estado de la zona Wi-Fi también sin conectar (fuera del hilo principal: escanea interfaces).
@@ -165,7 +165,10 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         render();
     }
 
-    /** Arranque manual esperando a que el usuario arranque el servidor de AA: la fila «Auto» y el texto lo dicen. */
+    /**
+     * Arranque manual con los intentos fallando (AA no atiende): la fila «Auto» («Esperando al servidor de Android Auto»)
+     * y el texto de debajo (cómo pararlo y volver a iniciarlo) lo dicen.
+     */
     private boolean waitingForAaServer() {
         return LinkState.running && Config.isAa(cfg.mode()) && AaServerManual.isWaiting();
     }
@@ -681,6 +684,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                         boolean renegotiate = !before.id.equals(after.id) || before.fps != after.fps;
                         startForegroundService(new Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY)
                                 .putExtra(LinkService.EXTRA_AA_RENEGOTIATE, renegotiate));
+                        if (renegotiate && Config.isAa(cfg.mode()) && cfg.aaServerManual()) {
+                            // Arranque manual: reconectar AA gasta el arranque de su servidor (una conexión por arranque).
+                            android.widget.Toast.makeText(this, Str.get(R.string.hql_manual_reconnect_restart),
+                                    android.widget.Toast.LENGTH_LONG).show();
+                        }
                     }
                 })
                 .setNegativeButton(Str.get(R.string.hql_cancel), null)

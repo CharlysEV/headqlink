@@ -276,11 +276,20 @@ final class AaPassthroughSource implements VideoSource {
      * Sin intervención del usuario: conexión WiFi de Open Headunit en manual (su modo "AA nativo"
      * crearía su propio grupo WiFi Direct y nos echaría del grupo del coche) y, si AA no está
      * conectado, arranque del Self-Mode (que a su vez arranca el servidor de AA si hace falta).
+     * Con el arranque manual del servidor, el Self-Mode lo lanza AaServerManual: cuenta el intento como servido solo
+     * si AA contesta y, si no, avisa y lo reintenta cada 5 s (sin sondear nunca el puerto).
      */
     private void ensureAaConnected() {
         configureAa();
+        boolean manual = AaServerManual.applies(ctx);
         if (comm().isConnected()) {
             L.i("AA: ya conectado");
+            // Arranque manual: se vigila que siga conectado mientras la sesión lo use (si cae, intento y aviso).
+            if (manual) AaServerManual.sessionNeedsAa(ctx, "la sesión con el coche usa Android Auto");
+            return;
+        }
+        if (manual) {
+            AaServerManual.sessionNeedsAa(ctx, "la sesión con el coche necesita Android Auto");
             return;
         }
         L.i("AA: lanzando Self-Mode");

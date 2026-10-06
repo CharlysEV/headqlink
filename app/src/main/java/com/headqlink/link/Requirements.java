@@ -15,10 +15,12 @@ import java.util.List;
  *   accesibilidad de HeadQLink y el modo desarrollador de AA (arrancan su servidor de head unit). Con una versión más
  *   vieja AA se lanza sin ellos (SelfLauncherManager) y no salen.
  * - Con el «Arranque del servidor de Android Auto» en manual (sin accesibilidad): la accesibilidad pasa a opcional
- *   («Solo para el modo automático»), el modo desarrollador no se puede comprobar (consejo, salvo que el servidor
- *   conteste) y sale una fila informativa «Servidor de Android Auto: encendido / apagado» con el atajo a sus ajustes.
- *   Con el automático y la accesibilidad sin activar, un consejo ofrece el arranque manual. Nada de esto bloquea
- *   «Conectar»: con el servidor apagado, el enlace avisa y espera a que lo arranque el usuario.
+ *   («Solo para el modo automático»), el modo desarrollador no se puede comprobar (consejo, salvo que AA ya haya atendido
+ *   a HeadQLink) y sale una fila informativa «Servidor de Android Auto» con el atajo a sus ajustes. Esa fila **no mira el
+ *   puerto** (el servidor atiende una sola conexión por arranque y cualquier conexión lo gasta): dice lo que se sabe sin
+ *   tocarlo (en uso por HeadQLink, esperando a que lo arranques, o cómo arrancarlo). Con el automático y la accesibilidad
+ *   sin activar, un consejo ofrece el arranque manual. Nada de esto bloquea «Conectar»: si el servidor no atiende, el
+ *   enlace avisa y reintenta hasta que lo arranque (o lo reinicie) el usuario.
  * - Modo App: la app elegida, la accesibilidad (toques) y «Mostrar sobre otras apps» (abrirla en segundo plano).
  * - Wi-Fi Direct: «Dispositivos Wi-Fi cercanos» (ubicación antes de Android 13), el Wi-Fi activado y la zona Wi-Fi
  *   apagada (en Samsung no conviven). Zona Wi-Fi: que esté activa, y el consejo de la banda de 5 GHz (no se puede leer).
@@ -82,8 +84,12 @@ final class Requirements {
 
     enum Oem { NONE, SAMSUNG, OTHER }
 
-    /** Servidor de head unit de AA (127.0.0.1:5277), solo se mira con el arranque manual. */
-    enum AaServer { ON, OFF, UNKNOWN, CHECKING }
+    /**
+     * Servidor de head unit de AA (127.0.0.1:5277) con el arranque manual, sin conectarse a él: IN_USE, nuestra head unit
+     * lo tiene (AA conectado); WAITING, los intentos fallan (aviso «Arranca (o vuelve a arrancar)…» puesto); UNKNOWN, no
+     * se sabe sin gastarlo.
+     */
+    enum AaServer { IN_USE, WAITING, UNKNOWN }
 
     /** Foto del estado del móvil. Por defecto, un móvil con todo en orden en Auto ampliado y Wi-Fi Direct. */
     static final class Snapshot {
@@ -183,7 +189,7 @@ final class Requirements {
             out.add(new Item(Id.ANDROID_AUTO, Importance.REQUIRED, st, h));
         }
         if (manual) {
-            // Informativa: apagado no bloquea (al conectar, el enlace avisa y espera a que lo arranques).
+            // Informativa: nunca bloquea (si no atiende, el enlace avisa y reintenta hasta que lo arranques).
             out.add(new Item(Id.AA_SERVER, Importance.INFO, aaServerStatus(s.aaServer), Hint.NONE));
         }
         if (server || app) {
@@ -209,8 +215,8 @@ final class Requirements {
         }
         if (server) {
             if (manual) {
-                // Sin accesibilidad no se puede abrir su menú para comprobarlo; si el servidor contesta, está activo.
-                boolean on = s.devMode == 1 || s.aaServer == AaServer.ON;
+                // Sin accesibilidad no se puede abrir su menú para comprobarlo; si AA atiende a HeadQLink, está activo.
+                boolean on = s.devMode == 1 || s.aaServer == AaServer.IN_USE;
                 out.add(new Item(Id.AA_DEVMODE, Importance.RECOMMENDED, on ? Status.OK : Status.TIP,
                         on ? Hint.NONE : Hint.MANUAL));
             } else {
@@ -259,24 +265,19 @@ final class Requirements {
         return Collections.unmodifiableList(out);
     }
 
-    /** Encendido: OK; apagado: aviso (no falta nada: lo arranca el usuario cuando haga falta). */
+    /**
+     * En uso por HeadQLink: OK; los intentos fallan: aviso (no falta nada que se arregle aquí: lo arranca el usuario);
+     * sin saber: consejo (cómo arrancarlo), porque mirarlo lo gastaría.
+     */
     private static Status aaServerStatus(AaServer a) {
         switch (a) {
-            case ON:
+            case IN_USE:
                 return Status.OK;
-            case OFF:
+            case WAITING:
                 return Status.WARN;
-            case CHECKING:
-                return Status.CHECKING;
             default:
-                return Status.UNKNOWN;
+                return Status.TIP;
         }
-    }
-
-    /** Si la comprobación tiene que mirar el servidor de AA (arranque manual con AA 17.4+ en un modo Auto). */
-    static boolean needsAaServerProbe(Snapshot s) {
-        boolean aa = Config.MODE_AA.equals(s.mode) || Config.MODE_AA_EXT.equals(s.mode);
-        return aa && s.manualServer && s.aaVersion != null && !s.forceLegacyLaunch && usesHeadUnitServer(s.aaVersion);
     }
 
     private static Status hotspotStatus(Hotspot h, boolean wantOn) {

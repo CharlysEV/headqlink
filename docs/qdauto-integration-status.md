@@ -1097,89 +1097,172 @@ restringidos», y eso es lo que más cuesta a los usuarios.
 (`auto`, por defecto: lo de siempre) o «Manual (sin accesibilidad)» (`manual`). Está en Ajustes de imagen › Avanzado
 (solo en los modos Auto) y en la Comprobación: con el automático y la accesibilidad sin activar, la fila «¿Sin
 accesibilidad?» ofrece «Arranque manual» (con un diálogo que explica lo que cambia); con el manual, la fila del servidor
-lleva «Modo automático». También como extra `aa_server_start`. Se lee en cada decisión: vale en el acto.
+lleva «Modo automático». También como extra `aa_server_start`. Se lee en cada decisión: vale en el acto. El manual solo
+manda con AA 17.4 o más (su servidor de head unit) y sin `force_legacy_launch` (`AaServerManual.applies`).
 
-**Qué hace el manual.** Nunca se pulsa nada (ni arrancar, ni parar, ni la capa, ni el botón de la notificación de AA):
+### 15.1 Prueba real: el servidor atiende UNA conexión por arranque (S25 Ultra, AA 17.7, 2026-10-06 18:31-18:34)
+
+La primera versión del manual (commit `084df42f`) miraba si el servidor «contestaba» abriendo y cerrando una conexión
+TCP a 127.0.0.1:5277 (400 ms de plazo): en cada arranque del enlace y con el coche anunciado, cada 2 s esperando al
+usuario, cada 60 s esperando al coche, al cerrar (para el aviso «sigue encendido») y en cada «Comprobación» (que corre
+también en cada `onResume` de la pantalla principal y al pulsar Conectar). En el móvil (logcat):
+
+| Hora | Qué pasó |
+|---|---|
+| 18:31-18:33 | Manual con el servidor apagado: la notificación «Arranca el servidor de Android Auto» funciona; al tocarla, los ajustes de AA; el usuario lo arranca (⋮ › Iniciar servidor de la unidad principal) |
+| 18:33:12.080 | `GH.DHUService: Network server running on port 5277` |
+| 18:33:12 | La sonda de HeadQLink conecta y cierra |
+| 18:33:12.092 | `GH.DHUService: Head unit connected`: AA da la «head unit» por conectada al aceptar el TCP y arranca una sesión de proyección (`CAR.SETUP`, `GH.CarConnSessMgr` tipo 3); la sonda cierra sin mandar nada: `CAR.GAL ReaderThread: end of stream received, dataReceived=false` → `ProjectionErrorCode = PROTOCOL_IO_ERROR(3) … READER_CLOSE(52)` → desmontaje |
+| 18:33:26 | Otra sonda completa el TCP (el núcleo sigue aceptando en el socket que escucha) y dice «encendido»: falso |
+| 18:33:27 | La conexión real del Self-Mode completa el TCP… y nunca sale otro `Head unit connected`: AA no la atiende. `AA: no se pudo pedir IDR (AA no conectado o ciclo en curso)`, la proyección en la pantalla de espera de 800x480 y 13 fotogramas en 40 s; `CAR.SERVICE: Delaying day/night mode update because projection has not started` |
+
+**Conclusión.** El servidor de head unit de desarrollador de AA atiende **una conexión por arranque**: cualquier TCP a
+5277 (también una sonda que solo abre y cierra) lo gasta, y que el TCP conecte **no** dice que vaya a atender. En el
+automático funciona porque la automatización lo arranca justo antes de que conecte el Self-Mode y lo para después (y
+`AaRecovery` lo reinicia si se queda «sordo»).
+
+### 15.2 Qué hace el manual ahora
+
+Nunca se pulsa nada y **nunca se abre una conexión a 5277 salvo la conexión de verdad del Self-Mode**. Fuera
+`AaServerManual.probe` y todo lo que lo usaba: la comprobación de cada arranque (`CHECK_SERVER`), la vigilancia de 2 s y
+60 s, el aviso «sigue encendido» del final y la fila de la «Comprobación».
 
 | Situación | Qué pasa |
 |---|---|
-| Conectar, Bluetooth del coche, cable USB, coche anunciado | `LinkLifecycle` pide `CHECK_SERVER` (en cada arranque, sea cual sea el disparador, y otra vez con el coche anunciado: el último estado conocido no vale). `AaServerManual` mira en su hilo si 127.0.0.1:5277 contesta (conexión con 400 ms de tiempo máximo; si nuestra head unit está conectada no conecta: está encendido) |
-| Encendido | Se sigue como siempre: el Self-Mode conecta solo, **también con el móvil bloqueado** (Bluetooth y cable no necesitan desbloquear) |
-| Apagado cuando hace falta (lo anterior, una sesión que necesita AA —Self-Mode sin 5277— o el coche que vuelve con AA en pausa pero caído) | Notificación de prioridad alta **«Arranca el servidor de Android Auto»** («Android Auto › ⋮ › Iniciar servidor de la unidad principal»; al tocarla, los ajustes de AA, el mismo intent que la automatización, o su Info. de la app si no existe). La fila «Auto» dice «Esperando a que arranques el servidor de Android Auto» y, al tocarla (o el texto de debajo), abre lo mismo. Se mira cada **2 s** |
-| El usuario lo arranca | Fuera la notificación, `AA server: listo (arrancado a mano)` y la fila «Servidor de Android Auto listo». Si una sesión esperaba a AA, se relanza el Self-Mode 1,5 s después (cuando el intento fallido ya ha terminado) |
-| Esperando al coche con el servidor encendido | Se vuelve a mirar cada **60 s** (cada comprobación es una conexión que AA acepta y ve cerrarse; con AA conectado no se conecta) |
-| Desconectar o fin del viaje | `ShutdownPlan.LEAVE_SERVER_ON`: se para nuestra head unit, el servidor no se toca y no hay guardián (no habría nada que apagar al desbloquear). 1,5 s después, si sigue contestando, **una** notificación «El servidor de Android Auto sigue encendido · Puedes pararlo en Android Auto › ⋮ › Parar servidor (recomendable si te conectas a una Wi-Fi pública)» (al tocarla, los ajustes de AA). Si ya estaba apagado, solo el log |
-| Red de seguridad | Todas las entradas de `AaServerStarter` que pulsan algo lo comprueban: `runAndWait` (por `cannotRunReason`), `restartAndWait`, `requestStop`, `stopIfUnlocked`, `runPendingStop`, `onUnlock`, `requestStartOnUnlock` y el botón de la notificación de AA. `ACTION_AA_SERVER_RESTART` se rechaza. `AaRecovery` (servidor «sordo») dice «Auto no responde: arranque manual: para y vuelve a iniciar su servidor en Android Auto › ⋮». Un guardián que tuviera AA aparcado de antes del cambio lo suelta al desbloquear sin apagar el servidor (y avisa si sigue encendido) |
+| Conectar, Bluetooth del coche, cable USB, coche anunciado | Nada con el servidor (`AaServerPolicy.Action.AT_SESSION`): una línea en el log. Con el servidor recién arrancado, la llegada por Bluetooth o por cable funciona con el móvil bloqueado |
+| Una sesión con el coche necesita AA (arranca el vídeo de AA, el coche vuelve de la pausa con AA caído) | `AaPassthroughSource.ensureAaConnected` → `AaServerManual.sessionNeedsAa` → intento N: se lanza el Self-Mode, que marca 127.0.0.1:5277 |
+| AA contesta | **Servido**: fuera el aviso (si estaba); la fila «Auto» pasa a «Arrancando Auto» y luego a la imagen; consta el modo desarrollador. Mientras la sesión lo use, se mira cada 2 s que siga conectado |
+| AA no contesta | Rechazado (servidor apagado: al momento), cerrado sin respuesta, **6 s con el TCP abierto y sin respuesta** (servidor gastado) o 30 s sin llegar a marcar: se cierra ese intento (`CommManager.disconnect` sin ByeBye, salvo que AA haya contestado justo entonces, y `ACTION_STOP_SELF_MODE`), aviso de prioridad alta **«Arranca (o vuelve a arrancar) el servidor de Android Auto»** («Android Auto › ⋮ › Parar servidor (si aparece) y ⋮ › Iniciar servidor de la unidad principal…»; al tocarlo, los ajustes de AA, como antes), la fila «Auto» y el widget dicen **«Esperando al servidor de Android Auto»** y **reintento cada 5 s** (otra conexión de verdad) mientras la sesión necesite AA. Volver a la pantalla principal de HeadQLink adelanta el reintento a 0,5 s |
+| Un reintento es servido | Fuera el aviso. Un servidor recién (re)arrancado atiende al primer reintento |
+| La sesión deja de necesitar AA (3 s sin el vídeo de AA) | Se deja de intentar y fuera el aviso |
+| AA se cae con la sesión en marcha (servidor parado, AA actualizado) | 3 s sin AA: intento nuevo (que avisará si el servidor no atiende) |
+| Vence «Esperar al coche», Bluetooth fuera sin sesión, el sistema para el servicio | `ShutdownPlan.KEEP_AA_PARKED`: se cierra el enlace pero **AA no**: se queda aparcado con `AaGuardService` («Android Auto en pausa para el próximo viaje», botón «Cerrar Android Auto»), que **no lo suelta al desbloquear**. El viaje siguiente lo adopta (`ADOPT_PARK`) y sale al instante, sin tocar el servidor. Los 30 s de vídeo vivo solo lo aparcan, como siempre |
+| Desconectar, o «Cerrar Android Auto» | Se cierra AA y aviso **«Android Auto cerrado»** (la próxima vez hay que reiniciar el servidor: ⋮ › Parar y ⋮ › Iniciar) si ya había usado el arranque (`CLOSE_AA_RESTART`: AA conectado, un intento abierto o los intentos fallando). Sin haberlo tocado: `CLOSE_AA`, sin aviso |
+| AA aparcado por el guardián se cae solo | El guardián se va con el mismo aviso «Android Auto cerrado» |
+| Cambio de perfil (o de modo desde el widget) en marcha | Reconectar AA gasta el arranque del servidor: aviso en pantalla, línea en el log y el aviso de reiniciarlo con el siguiente intento |
+| Red de seguridad | Ninguna entrada de `AaServerStarter` pulsa nada con el manual. `startAndWait` (lo llama el Self-Mode tras una marcación rechazada) devuelve false sin mirar el puerto; `reportCannotStart` solo lo apunta; `AaRecovery` (servidor «sordo») ya no pone el error rojo: lo llevan los intentos |
 
-**Comprobación (`Requirements`).** Con el manual y AA 17.4+ en un modo Auto: «Accesibilidad» pasa a **Opcional**
-(«Solo para el modo automático»); «Modo desarrollador» pasa a consejo si no se sabe (sin accesibilidad no se puede abrir
-el menú para comprobarlo; si el servidor contesta, consta activo); fila nueva **«Servidor de Android Auto»** de
-importancia «Información» (Encendido / Apagado / Comprobando…) con «Abrir AA» y «Modo automático», y la guía «Cómo
-arrancar el servidor de Android Auto». Nada de esto cuenta en «Faltan N» ni bloquea «Conectar» (tampoco en la
-configuración inicial, ni en el arranque por Bluetooth o por cable, que no pasan por la comprobación). El modo App sigue
-pidiendo la accesibilidad como obligatoria (toques), elija lo que elija el usuario.
+**Comprobación (`Requirements`).** Como antes («Accesibilidad» opcional, «Modo desarrollador» consejo salvo que conste,
+el modo App igual, nada bloquea «Conectar»), salvo la fila **«Servidor de Android Auto»**, que ya no mira el puerto:
+«En uso por HeadQLink» (AA conectado: ✓), «No atiende» (los intentos fallan: !) o, sin saber, cómo arrancarlo y cuándo
+reiniciarlo (consejo). `Requirements.AaServer` pasa a `IN_USE` / `WAITING` / `UNKNOWN` (fuera `ON`, `OFF`, `CHECKING` y
+`needsAaServerProbe`); que AA haya atendido a HeadQLink consta como modo desarrollador activo.
 
-**Decisión pura (`AaServerPolicy`).** `onNeed(motivo, estado)` con el modo, el servidor (UP, DOWN, UNKNOWN), AA
-conectado, móvil bloqueado y accesibilidad:
+**Decisión pura (`AaServerPolicy`).** `onNeed`: con AA conectado, `NONE`; manual, siempre `AT_SESSION` (bloqueado o no,
+sea cual sea el motivo); automático, lo de siempre (`NONE` / `AUTOMATE` / `AUTOMATE_ON_UNLOCK` / `NO_ACCESSIBILITY`).
+`onEnd(aaMode, estado, Desconectar)`: automático, `STOP_SERVER`; manual, `KEEP_AA` (sin Desconectar y con AA atendido),
+`CLOSE_AA_RESTART` (servidor usado) o `CLOSE_AA`. Los intentos los decide `AaServeAttempts` (puro, reloj inyectable):
 
-| | Servidor encendido / AA conectado | Apagado | Sin dato |
-|---|---|---|---|
-| Manual (bloqueado o no, cualquier motivo) | `NONE` | `ASK_USER` | `PROBE` |
-| Automático, desbloqueado | `NONE` | `AUTOMATE` | `AUTOMATE` |
-| Automático, bloqueado | `NONE` | `AUTOMATE_ON_UNLOCK` | `AUTOMATE_ON_UNLOCK` |
-| Automático sin accesibilidad | `NONE` | `NO_ACCESSIBILITY` | `NO_ACCESSIBILITY` |
+| Fase | Pasa a |
+|---|---|
+| REPOSO | INTENTO cuando la sesión necesita AA y no está conectado; con AA servido y la sesión usándolo, vigila (2 s) y, si AA falta 3 s, INTENTO |
+| INTENTO | REPOSO si AA contesta (contador de respuestas o handshake terminado); ESPERA si no (rechazado, cerrado, 6 s con TCP, 30 s sin marcar), con el aviso al primer fallo |
+| ESPERA | INTENTO a los 5 s (o 0,5 s al volver a la app) si la sesión sigue necesitando AA; REPOSO, sin aviso, si deja de necesitarlo 3 s; REPOSO si una respuesta tardía llega con el TCP abierto |
 
-La vigilancia (`WATCH`) es solo del manual. `onEnd`: automático → `STOP_SERVER` (el cierre de siempre); manual →
-`LEAVE_ON_NOTICE` (o nada si ya está apagado). La usan `LinkLifecycle` (sus decisiones del automático son las de antes,
-línea por línea), `HomeActivity` (Conectar) y `AaServerManual`.
+### 15.3 La señal de «servido»
 
-**Código.** `[hql]AaServerPolicy.java` (puro) y `[hql]AaServerManual.java` (nuevos); `Config` (`aa_server_start`,
-`servidorAA=` en el resumen del arranque); `AaServerStarter` (el desvío y la red de seguridad, `aaSettingsIntent`);
-`LinkLifecycle` (`Env.manualServer`, `CHECK_SERVER`, `LEAVE_SERVER_ON`); `LinkService`; `HomeActivity` (Conectar, fila
-«Auto», ajuste); `AaGuardService`; `Requirements` y `Checklist`; `hql_dialog_video.xml`; textos en los cuatro idiomas;
-manuales (sección «Sin accesibilidad», con el consejo de Obtainium).
+**Los primeros bytes que manda AA en el intercambio de versión** (normalmente su VERSION_RESPONSE), lo primero del
+handshake de AAP: `AapTransport.handshake` llama a `onPeerAnswered` con el primer `recv > 0` y `CommManager.peerAnswers`
+(un contador que solo crece) lo cuenta; `AaServeAttempts` lo compara con el valor de antes de lanzar. Por qué esta:
 
-**Qué buscar en el log** (todo con «ciclo:»):
+- Es la más temprana fiable: un servidor gastado acepta el TCP (lo acepta el núcleo) pero nunca escribe un byte, y uno
+  que atiende contesta en milisegundos (`Head unit connected` 12 ms después de arrancar, en la prueba).
+- Con el contador, un intento servido que se cae entre dos vistazos (cada 250 ms) sigue contando como servido.
+- El plazo de 6 s nunca cierra una conexión a la que AA ya ha contestado, que gastaría un servidor recién arrancado: se
+  mira el contador al decidir y otra vez justo antes de cerrar. Con `HandshakeComplete` (el SSL terminado) como señal, una
+  respuesta a los 5,9 s con el SSL a los 6,1 s se habría cerrado.
+- Respaldo: `HandshakeComplete` y `TransportStarted` también cuentan.
+
+No vale que el TCP conecte (`CommManager.isConnected` ya es cierto en `Connected`) ni el «CONNECTED via dev server» del
+Self-Mode.
+
+**Código.** `[hql]AaServeAttempts.java` (nuevo, puro); `AaServerManual` (reescrito: sin sondeo; lanza el Self-Mode,
+mira el móvil cada 250 ms con algo pendiente y cada 2 s vigilando, cierra el intento y pone o quita los avisos);
+`AaServerPolicy`; `LinkLifecycle` (fuera `CHECK_SERVER` y `LEAVE_SERVER_ON`; `KEEP_AA_PARKED`, `CLOSE_AA`,
+`CLOSE_AA_RESTART`; `Env.aaReady`, `Env.serverUsed`; `shutdownPlan(env, Desconectar)`); `LinkService`; `AaGuardService`
+(sabor manual: sin soltarlo al desbloquear, «Cerrar Android Auto», aviso si se cae); `AaPassthroughSource`;
+`AaServerStarter`; `AaRecovery`; `LinkControl`; `HomeActivity` (aviso al cambiar de perfil); `Requirements` y
+`Checklist`; `LinkGlance`, `LinkWidgetViews` y `WidgetUpdater` (el widget: «Esperando al servidor de Android Auto» por
+delante del estado del coche, con «Android Auto › ⋮ › Parar e Iniciar servidor» debajo); `Config`. En Open Headunit,
+tres ganchos marcados «headqlink»: `AapTransport.onPeerAnswered`, `CommManager.peerAnswers` y, en
+`SelfLauncherV17_4.tryDevServer`, `AaServerManual.onDevServerDial` (TCP aceptado o rechazado: así se sabe al momento
+que está apagado). Textos en los cuatro idiomas (la descripción de la opción, el diálogo, la guía, la ayuda de «Esperar
+al coche» y del perfil) y manuales (sección «Sin accesibilidad»).
+
+### 15.4 Qué buscar en el log
+
+Todo con «ciclo:» en `headqlink-*.log` (logcat: etiqueta `HeadQLink`):
 
 | Línea | Significado |
 |---|---|
 | `servicio iniciado. … servidorAA=manual` | El ajuste |
-| `conectar: arranque manual del servidor de Android Auto (sin accesibilidad): lo comprueba el enlace` | Conectar sin automatización |
-| `arranque (Conectar): arranque manual del servidor de Android Auto (sin accesibilidad): compruebo si contesta y, si no, aviso para que lo arranques` | `CHECK_SERVER` (también «Bluetooth del coche», «cable USB del coche», «coche anunciado») |
-| `AA server: encendido (127.0.0.1:5277 contesta; Bluetooth del coche; arranque manual)` | Encendido: se sigue |
-| `W AA server: apagado (Conectar, móvil bloqueado): aviso «Arranca el servidor de Android Auto» y miro cada 2 s si 127.0.0.1:5277 contesta (arranque manual, sin accesibilidad)` | Se le pide al usuario |
-| `AA server: listo (arrancado a mano)` | Lo arrancó el usuario |
-| `relanzo Android Auto (Self-Mode) para el coche que espera (servidor arrancado a mano)` | Una sesión esperaba a AA |
-| `cierre (a mano): paro Android Auto; su servidor queda encendido (arranque manual: HeadQLink no lo para)` | Desconectar |
-| `W AA server: sigue encendido tras Desconectar (arranque manual: HeadQLink no lo para); aviso «El servidor de Android Auto sigue encendido» con cómo pararlo (Android Auto › ⋮ › Parar servidor)` / `AA server: apagado al cerrar (fin del viaje): nada que avisar` | El aviso del final |
-| `arranque del servidor de Android Auto: manual (sin accesibilidad) (Ajustes de imagen)` | Cambio del ajuste |
-| `AA server: no se puede automatizar: arranque manual: …` | La red de seguridad paró una automatización |
+| `arranque (Conectar): arranque manual del servidor de Android Auto (sin accesibilidad): no lo compruebo antes (cada conexión al servidor lo gasta); …` | Arranque sin sondeo (también «Bluetooth del coche», «cable USB del coche», «coche anunciado») |
+| `AA server (arranque manual): intento 1 (la sesión con el coche necesita Android Auto): lanzo Android Auto (Self-Mode) contra 127.0.0.1:5277; …` y `AA: lanzando Self-Mode` | Un intento |
+| `AA server (arranque manual): intento 1: 127.0.0.1:5277 acepta el TCP a los 15 ms; espero a que Android Auto conteste (como mucho 6 s)` | TCP abierto: aún no es «servido» |
+| `AA server (arranque manual): intento 1: servido: Android Auto contestó (intento lanzado hace 140 ms)` (`; quito el aviso` si lo había) | Servido |
+| `W ciclo: AA server (arranque manual): intento 1: no servido (a los 6080 ms): 127.0.0.1:5277 aceptó el TCP pero Android Auto no contestó en 6 s: el servidor ya atendió otra conexión …; cierro esa conexión; reintento en 5 s; aviso «Arranca (o vuelve a arrancar) el servidor de Android Auto»` | Servidor gastado |
+| `W ciclo: AA server (arranque manual): intento 1: no servido (a los 20 ms): 127.0.0.1:5277 rechaza la conexión (el servidor de Android Auto está apagado); reintento en 5 s; …` | Servidor apagado |
+| `AA server (arranque manual): intento 2 (reintento): lanzo …` | Reintento (cada 5 s) |
+| `AA server (arranque manual): de vuelta en HeadQLink: adelanto el reintento` | De vuelta de los ajustes de AA |
+| `AA server (arranque manual): dejo de intentarlo: la sesión con el coche ya no necesita Android Auto; quito el aviso` | Sin sesión |
+| `AA server (arranque manual): intento 1 (Android Auto se desconectó con la sesión en marcha): lanzo …` | AA cayó en marcha |
+| `cierre (sin Desconectar): arranque manual: Android Auto se queda conectado y en pausa para el próximo viaje …` y `AA guardián: Android Auto en pausa para el próximo viaje (arranque manual: …)` | Vence la espera |
+| `AA guardián: desbloqueado con el arranque manual: Android Auto sigue en pausa para el próximo viaje …` | Desbloquear no lo cierra |
+| `AA guardián: paso Android Auto aparcado al enlace (…)` | El viaje siguiente lo adopta |
+| `cierre (a mano): arranque manual: cierro Android Auto; su servidor ya atendió su conexión de este arranque: …` y `W ciclo: AA server (arranque manual): Android Auto cerrado (Desconectar): … aviso «Android Auto cerrado»` | Desconectar |
+| `AA guardián: «Cerrar Android Auto» pulsado: cierro Android Auto (arranque manual)` | Cerrar desde el guardián |
+| `W ciclo: aplicando ajustes: arranque manual: al reconectar Android Auto su servidor queda gastado …` | Cambio de perfil en marcha |
 
-**Cómo comprobarlo en el móvil.**
-1. Ajustes de imagen › Avanzado › «Manual (sin accesibilidad)» y desactivar la accesibilidad: la Comprobación no pide
-   nada obligatorio; «Servidor de Android Auto · Apagado».
-2. Conectar con el servidor apagado: notificación y fila «Auto»; tocarla, ⋮ › «Iniciar servidor de la unidad
-   principal», volver: en ~2 s «listo (arrancado a mano)» y la fila «Servidor de Android Auto listo».
-3. Con el servidor encendido y el móvil bloqueado, la llegada por Bluetooth o por cable conecta sin desbloquear.
-4. Desconectar: notificación «sigue encendido»; tocarla abre AA (⋮ › «Parar servidor unidad principal»).
-5. Que nunca aparezca «Arrancando Auto…» / «Cerrando Auto…».
+En logcat, además: `OPENHU` (`SelfMode: diag [Path3:connect1] OK` o `REFUSED`, `Handshake: Version response
+received`, `HeadlessDriver: handshake completo, arranco la lectura`) y AA (`GH.DHUService: Network server running on
+port 5277`, `GH.DHUService: Head unit connected`, `CAR.GAL`, `ProjectionErrorCode`). Por cada arranque del servidor
+debe haber **un solo** `Head unit connected`, y debe ser el del Self-Mode.
 
-**Pruebas en el PC.** `AaServerPolicyTest` (7: el manual nunca automatiza, sea cual sea el motivo o el bloqueo; con AA
-conectado no hace falta nada; el automático de siempre; matriz completa modo × servidor × bloqueo × accesibilidad ×
-motivo; Bluetooth o cable con el móvil bloqueado y el servidor encendido; el final; cadencia de 2 s y 60 s).
-`LinkLifecycleTest` +5 (comprobación en cada disparador en vez de automatizar, otra vez con el coche anunciado, nada con
-AA conectado o aparcado, vuelta de la pausa con AA caído, el servidor se queda encendido y nunca se aparca hasta
-desbloquear). `RequirementsTest` +4 (accesibilidad opcional y fila del servidor, servidor apagado informativo y sin
-bloquear, el modo App y AA < 17.4 no cambian, la oferta del manual en el automático).
+### 15.5 Cómo comprobarlo en el móvil
 
-**Limitaciones.** Sin probar en el móvil. Cada comprobación con el servidor encendido es una conexión TCP que AA acepta y
-ve cerrarse al instante (por eso 60 s esperando al coche y ninguna con AA conectado); no se ha visto aún si AA lo anota o
-muestra algo. Los nombres del menú de AA en inglés y portugués («Start head unit server», «Iniciar servidor da unidade
-principal») se han escrito sin verlos en el móvil.
+1. Manual y accesibilidad desactivada; Ajustes de AA › ⋮ › «Parar servidor» (si sale). Abrir HeadQLink y la
+   «Comprobación» varias veces: en logcat **ningún** `GH.DHUService` nuevo (antes, cada vez, una conexión).
+2. Conectar con el coche y el servidor apagado: `no servido … rechaza la conexión`, la notificación y la fila «Auto» y el
+   widget en «Esperando al servidor de Android Auto»; `intento 2 (reintento)` cada ~5 s.
+3. Tocar la notificación › ⋮ › «Iniciar servidor de la unidad principal» y volver: un solo `Head unit connected`, `intento
+   N: servido … quito el aviso` y la imagen en el coche.
+4. Con el servidor gastado (Desconectar y Conectar sin reiniciarlo): `acepta el TCP` y, 6 s después, `no servido …
+   aceptó el TCP pero Android Auto no contestó en 6 s`; ⋮ › Parar y ⋮ › Iniciar: servido en el siguiente reintento.
+5. Apagar el coche y esperar a que venza «Esperar al coche»: «Android Auto en pausa para el próximo viaje»; desbloquear
+   no lo cierra; el viaje siguiente (Bluetooth) sale al instante, sin `lanzando Self-Mode` ni `Head unit connected`.
+6. Desconectar: «Android Auto cerrado».
 
-**Resultados en el PC.** `cmd /c ".\gradlew.bat :qdcore:test :app:testGithubDebugUnitTest :app:assembleGithubDebug
---console=plain"`: **BUILD SUCCESSFUL** (con el commit anterior, el del cable USB, incluido). `:qdcore`: 156/156 (sin
-cambios). App: 2857 pruebas, 0 fallos y 1 saltada (la de `sh`); el paquete `com.headqlink.link`, 199/199.
+### 15.6 Pruebas en el PC
+
+`AaServeAttemptsTest` (17, nuevo, con un reloj de mentira: servido al primer intento sin aviso; rechazado → aviso una
+vez y reintento a los 5 s, no antes, hasta el servido que lo quita; TCP sin respuesta → no servido a los 6 s justos y se
+cierra; respuesta a los 5,9 s → servido y nunca se cierra; el handshake terminado cuenta; cerrado sin respuesta, también
+entre dos vistazos; 30 s sin marcar, y atascado conectando se cierra; nunca dos intentos a la vez ni con AA conectado;
+sin sesión 3 s se deja de intentar y fuera el aviso, un parpadeo no; sin sesión no se reintenta ni se avisa; volver a la
+app adelanta el reintento; reiniciar quita el aviso; respuesta tardía en la espera = servido; cada intento y su
+resultado en el log con su número; AA que cae en marcha → intento tras 3 s; la vigilancia empieza con AA conectado y
+acaba con la sesión; los tiempos). `AaServerPolicyTest` (6: el manual nunca automatiza ni sondea, AA conectado no pide
+nada, el automático de siempre, matriz completa, el final del manual con y sin Desconectar, el final del automático).
+`LinkLifecycleTest` (los 5 del manual, nuevos: ningún arranque comprueba nada; AA conectado o aparcado no dice nada y el
+guardián se adopta; la vuelta con AA caído deja el intento al vídeo; vencida la espera AA se queda aparcado; solo
+Desconectar lo cierra y avisa). `RequirementsTest` (la fila del servidor sin sondeo: en uso, no atiende, consejo).
+`LinkGlanceTest` (+1: «Esperando al servidor de Android Auto» con cualquier estado del coche, sin tapar un error).
+
+### 15.7 Limitaciones
+
+- Sin probar en el móvil (todo lo de 15.2 en adelante).
+- El plazo de 6 s se cuenta desde el primer vistazo con el TCP abierto (cada 250 ms). Si el Self-Mode prueba antes las
+  vías inalámbricas (receptores de AA activados), puede tardar hasta ~20 s en marcar 5277 (plazo sin marcar: 30 s).
+- Entre viajes, AA sigue conectado a nuestra «head unit» aparcada (su notificación y el modo coche del móvil) hasta
+  Desconectar o «Cerrar Android Auto». Si Android no deja al guardián pasar a primer plano, AA sigue aparcado (ping)
+  pero nadie avisa si se cae: el próximo intento lo dirá.
+- Los nombres del menú de AA en inglés y portugués siguen escritos sin verlos en el móvil.
+
+### 15.8 Resultados en el PC
+
+`cmd /c ".\gradlew.bat :qdcore:test :app:testGithubDebugUnitTest :app:assembleGithubDebug --console=plain"`:
+**BUILD SUCCESSFUL**. `:qdcore`: 156/156. App: 2921 pruebas, 0 fallos y 3 saltadas (la de `sh` y las dos de dibujo, que piden
+`-Ppreview`); el paquete `com.headqlink.link`, 263 (17 de `AaServeAttemptsTest`).
 
 ---
 
@@ -1190,8 +1273,9 @@ cambios). App: 2857 pruebas, 0 fallos y 1 saltada (la de `sh`); el paquete `com.
 - **Widget «HeadQLink»**: 4x2 por defecto y redimensionable hasta 2x2. El botón grande (Conectar / Desconectar), el
   estado, el selector de conexión («Zona Wi-Fi», «Wi-Fi Direct», «Cable USB») y, en el 4x2 con altura, el modo («Auto» /
   «Extendido»). En 2x2, el botón, el estado y el icono de la conexión (al tocarlo, la siguiente). Colores: gris
-  apagado; ámbar en curso (preparando, buscando, coche encontrado, sesión sin imagen, esperando a que vuelva); verde con
-  imagen, con fps y Mbit/s; rojo con un problema (puerto 18463, red, Android Auto). La marca abre la app sin conectar.
+  apagado; ámbar en curso (preparando, buscando, coche encontrado, sesión sin imagen, esperando a que vuelva y, con el
+  arranque manual, «Esperando al servidor de Android Auto», §15); verde con imagen, con fps y Mbit/s; rojo con un
+  problema (puerto 18463, red, Android Auto). La marca abre la app sin conectar.
 - **Botón «HeadQLink» de los ajustes rápidos**: tocarlo, Conectar / Desconectar; mantenerlo pulsado, la app
   (`QS_TILE_PREFERENCES`, sin conectar sola). Activo con el enlace en marcha; el subtítulo dice el estado o las cifras.
 - **Menú ⚙**: «Añadir widget a la pantalla de inicio» (`requestPinAppWidget`; si el launcher no lo admite, cómo hacerlo
@@ -1248,7 +1332,7 @@ Recursos `hql_widget_*` y `hql_w_*`, textos en los cuatro idiomas y manuales («
    abre la app sin conectar.
 5. Con QDLink abierto: rojo, «Cierra QDLink».
 
-**Pruebas en el PC.** `LinkGlanceTest` (13: apagado, preparando, buscando, coche encontrado por Wi-Fi o por cable, verde
+**Pruebas en el PC.** `LinkGlanceTest` (13, hoy 14 con el de §15: apagado, preparando, buscando, coche encontrado por Wi-Fi o por cable, verde
 con fps y Mbit/s y su formato por idioma, sesión sin imagen, esperando, problemas, un aviso viejo de la red no tapa el
 verde, el selector con el cable por delante, el ciclo del 2x2, los tamaños y cuándo repintar). `LinkWidgetViewsTest` (5,
 Robolectric: las `RemoteViews` aplicadas como lo hace el launcher, en cada estado y tamaño: textos, colores,

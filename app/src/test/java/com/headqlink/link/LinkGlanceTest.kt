@@ -57,8 +57,27 @@ class LinkGlanceTest {
         assertEquals("Zona Wi-Fi activa (swlan0 10.42.0.1)", g.text)
         // Sin texto de red, sin detalle.
         assertEquals(Detail.NONE, running().detail)
-        // Arranque manual esperando al servidor de Android Auto.
-        assertEquals(Status.AA_SERVER, running { aaServerWaiting = true }.status)
+    }
+
+    @Test
+    fun manualStartWithAndroidAutoNotAnsweringWaitsForItsServerWhateverTheCarDoes() {
+        // Los intentos reales fallan (nunca un sondeo): «Esperando al servidor de Android Auto» y cómo reiniciarlo.
+        for (car in listOf(LinkState.Car.SEARCHING, LinkState.Car.SEEN, LinkState.Car.CONNECTED, LinkState.Car.RECONNECTING)) {
+            val g = running { this.car = car; aaServerWaiting = true }
+            assertEquals("$car", Status.AA_SERVER, g.status)
+            assertEquals(Look.BUSY, g.look)
+            assertEquals(Detail.AA_SERVER_HINT, g.detail)
+            assertEquals(Action.DISCONNECT, g.action)
+        }
+        // Lo que llegue al coche mientras tanto es la animación de espera, no Android Auto: nada de verde.
+        val splash = running { car = LinkState.Car.CONNECTED; video = "1 fps · 0,1 Mbps"; aaServerWaiting = true }
+        assertEquals(Status.AA_SERVER, splash.status)
+        // Un error de la fila «Auto» sigue mandando; y sin esperar al servidor, lo de siempre.
+        val error = running { aaServerWaiting = true; sourceLevel = LinkState.Level.ERROR; source = "Auto no responde" }
+        assertEquals(Status.SOURCE_PROBLEM, error.status)
+        assertEquals(Status.LIVE, running { car = LinkState.Car.CONNECTED; video = "30 fps · 4,8 Mbps" }.status)
+        // Parado no hay intentos.
+        assertEquals(Status.OFF, glance { aaServerWaiting = true }.status)
     }
 
     @Test

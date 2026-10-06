@@ -118,7 +118,8 @@ final class Config {
     /**
      * «Arranque del servidor de Android Auto» (AA 17.4+): AA_SERVER_AUTO (por defecto y recomendado: la accesibilidad
      * pulsa su menú de desarrollador para arrancarlo y pararlo) o AA_SERVER_MANUAL (sin accesibilidad: lo arranca el
-     * usuario; HeadQLink solo mira si 127.0.0.1:5277 contesta, avisa si no y nunca lo para). Se lee en cada decisión.
+     * usuario; HeadQLink nunca lo sondea ni lo para: el servidor atiende una conexión por arranque, así que lo dice el
+     * intento real del Self-Mode, y si no atiende, avisa y reintenta). Se lee en cada decisión.
      */
     static final String AA_SERVER_START = "aa_server_start";
     static final String AA_SERVER_AUTO = "auto";

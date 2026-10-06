@@ -31,12 +31,19 @@ import com.andrerinas.openheadunit.decoder.video.VideoTap;
  * - si el enlace vuelve a arrancar (Bluetooth del coche, Conectar), le pasa AA aparcado (handOver) y se va sin
  *   apagar nada: el coche lo usa al instante;
  * - si la conexión se pierde antes, una notificación avisa de que el servidor ha quedado abierto.
+ *
+ * Con el arranque manual del servidor (sin accesibilidad) lo guarda también al vencer «Esperar al coche», bloqueado o
+ * no: el servidor atiende una sola conexión por arranque, así que Android Auto se queda aparcado para el próximo viaje y
+ * no se suelta al desbloquear. Se cierra con «Cerrar Android Auto» (en su notificación); al cerrarse (o si se cae solo),
+ * un aviso dice que la próxima vez hay que reiniciar el servidor.
  */
 public class AaGuardService extends Service {
     private static final String CHANNEL = "aa_guard";
     private static final String CHANNEL_ALERT = "aa_guard_alert";
     private static final int NOTIF_ID = 3;
     private static final int ALERT_ID = 4;
+    /** «Cerrar Android Auto» en la notificación del guardián (arranque manual). */
+    private static final String ACTION_CLOSE = "com.headqlink.link.GUARD_CLOSE";
     private static final long CHECK_MS = 15_000;
     /** Tras desbloquear: tiempo máximo para que el apagado del servidor cierre la sesión. */
     private static final long RELEASE_MAX_MS = 20_000;
@@ -51,21 +58,30 @@ public class AaGuardService extends Service {
     private boolean alerted;
     private boolean releasing;
     private long releaseStart;
+    /** Arranque manual: el «desbloqueado, AA sigue en pausa» ya está en el log (una vez). */
+    private boolean unlockLogged;
 
-    /** Aparca la sesión de AA hasta que el usuario desbloquee (llamar con AA conectado y el móvil bloqueado). */
+    /**
+     * Aparca la sesión de AA hasta que el usuario desbloquee (automático: llamar con AA conectado y el móvil bloqueado)
+     * o, con el arranque manual, hasta el próximo viaje o «Cerrar Android Auto».
+     */
     static void park(Context ctx) {
-        L.life("AA guardián: sesión aparcada hasta desbloquear (servidor ocupado por nuestra head unit)");
+        boolean manual = AaServerStarter.manual(ctx);
+        L.life(manual ? "AA guardián: Android Auto en pausa para el próximo viaje (arranque manual: su servidor atiende"
+                + " una sola conexión por arranque; no se suelta al desbloquear, solo con «Cerrar Android Auto»)"
+                : "AA guardián: sesión aparcada hasta desbloquear (servidor ocupado por nuestra head unit)");
         // Ya, antes de que se cierre la sesión con el coche: sin vista en el móvil y sin vídeo de AA.
-        AaPark.park(ctx, "todo cerrado con el móvil bloqueado");
+        AaPark.park(ctx, manual ? "en pausa para el próximo viaje" : "todo cerrado con el móvil bloqueado");
         active = true;
         handingOver = false;
         try {
             ctx.startForegroundService(new Intent(ctx, AaGuardService.class));
         } catch (RuntimeException e) {
-            // Android no deja arrancarlo ahora: AA sigue aparcado (ping) y el apagado pendiente se hace al desbloquear.
+            // Android no deja arrancarlo ahora: AA sigue aparcado (ping) y el apagado pendiente se hace al desbloquear
+            // (con el arranque manual no hay apagado: AA sigue en pausa, sin nadie que avise si se cae).
             active = false;
-            L.lifeWarn("AA guardián: Android no deja arrancarlo (" + e.getClass().getSimpleName()
-                    + "); el servidor se apagará al desbloquear");
+            L.lifeWarn("AA guardián: Android no deja arrancarlo (" + e.getClass().getSimpleName() + "); "
+                    + (manual ? "Android Auto sigue en pausa sin guardián" : "el servidor se apagará al desbloquear"));
         }
     }
 
@@ -109,6 +125,13 @@ public class AaGuardService extends Service {
                 else main.postDelayed(this, 1000);
                 return;
             }
+            if (!cm.isConnected() && AaServerStarter.manual(AaGuardService.this)) {
+                // Arranque manual: Android Auto se cerró solo (actualización, reinicio de AA…): su servidor ya no atiende.
+                L.lifeWarn("AA guardián: Android Auto en pausa se ha cerrado solo (arranque manual)");
+                finish();
+                AaServerManual.noticeRestart(AaGuardService.this, "Android Auto se cerró solo");
+                return;
+            }
             if (!cm.isConnected() && !alerted) {
                 alerted = true;
                 L.lifeWarn("AA guardián: se perdió la conexión con el servidor aparcado; aviso al usuario");
@@ -122,23 +145,47 @@ public class AaGuardService extends Service {
         return App.Companion.provide(this).getCommManager();
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    /** La notificación del guardián: automático, hasta desbloquear; manual, hasta el próximo viaje, con «Cerrar Android Auto». */
+    private Notification notification() {
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, Str.get(R.string.hql_guard_channel), NotificationManager.IMPORTANCE_LOW));
-        Notification n = new Notification.Builder(this, CHANNEL)
+        boolean manual = AaServerStarter.manual(this);
+        String text = Str.get(manual ? R.string.hql_guard_parked_manual : R.string.hql_guard_parked);
+        Notification.Builder b = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.hql_ic_notif)
                 .setColor(getColor(R.color.hql_accent))
                 .setContentTitle("HeadQLink")
-                .setContentText(Str.get(R.string.hql_guard_parked))
-                .setOngoing(true)
-                .build();
+                .setContentText(text)
+                .setOngoing(true);
+        if (manual) {
+            b.setStyle(new Notification.BigTextStyle().bigText(text));
+            PendingIntent close = PendingIntent.getService(this, 1, new Intent(this, AaGuardService.class).setAction(ACTION_CLOSE),
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            b.addAction(new Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(this,
+                    R.drawable.hql_ic_notif), Str.get(R.string.hql_guard_close), close).build());
+        }
+        return b.build();
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
         try {
-            startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+            startForeground(NOTIF_ID, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
         } catch (RuntimeException e) {
             L.e("AA guardián: no se pudo pasar a primer plano", e);
             active = false;
             stopSelf();
+            return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_CLOSE.equals(intent.getAction())) {
+            // «Cerrar Android Auto» (arranque manual): se suelta AA; su servidor queda gastado para la próxima vez.
+            if (active && !handingOver) {
+                L.life("AA guardián: «Cerrar Android Auto» pulsado: cierro Android Auto (arranque manual)");
+                finish();
+                AaServerManual.noticeRestart(this, "«Cerrar Android Auto»");
+            } else if (!started) {
+                stopSelf();
+            }
             return START_NOT_STICKY;
         }
         if (handingOver) {
@@ -169,17 +216,20 @@ public class AaGuardService extends Service {
     /** Desbloqueado: se apaga el servidor (TouchService, tras la capa) y se suelta la sesión. */
     private void beginRelease() {
         if (releasing || !active) return;
-        releasing = true;
-        releaseStart = System.currentTimeMillis();
         if (AaServerStarter.manual(this)) {
-            // Se eligió el arranque manual con Android Auto aparcado: no se pulsa nada; se suelta AA y, si el servidor
-            // sigue encendido, el aviso de cómo pararlo.
-            L.life("AA guardián: desbloqueado con el arranque manual: suelto la sesión y no apago el servidor");
+            // Arranque manual (también si se eligió con AA ya aparcado): no se pulsa nada y AA no se suelta al desbloquear:
+            // su servidor atiende una sola conexión por arranque. Sigue en pausa para el próximo viaje.
+            if (!unlockLogged) {
+                unlockLogged = true;
+                L.life("AA guardián: desbloqueado con el arranque manual: Android Auto sigue en pausa para el próximo"
+                        + " viaje (se cierra con «Cerrar Android Auto»)");
+            }
             AaServerStarter.cancelPendingStop(this);
-            finish();
-            AaServerManual.tellIfStillOnLater(this, "soltar Android Auto aparcado");
+            getSystemService(NotificationManager.class).notify(NOTIF_ID, notification());
             return;
         }
+        releasing = true;
+        releaseStart = System.currentTimeMillis();
         L.life("AA guardián: desbloqueado, apago el servidor y suelto la sesión");
         AaPark.stopPing();
         AaServerStarter.runPendingStop(this);

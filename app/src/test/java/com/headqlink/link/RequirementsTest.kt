@@ -311,7 +311,7 @@ class RequirementsTest {
 
     @Test
     fun manualServerStartMakesAccessibilityOptionalAndAddsTheServerRow() {
-        val items = eval { manualServer = true; aaServer = Requirements.AaServer.ON; accessibilityRunning = false; accessibilityEnabled = false; restrictedSettings = true; devMode = -1 }
+        val items = eval { manualServer = true; aaServer = Requirements.AaServer.IN_USE; accessibilityRunning = false; accessibilityEnabled = false; restrictedSettings = true; devMode = -1 }
         assertEquals(
             listOf(
                 Id.ANDROID_AUTO, Id.AA_SERVER, Id.ACCESSIBILITY, Id.AA_DEVMODE, Id.NEARBY_WIFI, Id.WIFI_ON, Id.HOTSPOT_OFF,
@@ -328,7 +328,7 @@ class RequirementsTest {
         val server = item(items, Id.AA_SERVER)
         assertEquals(Importance.INFO, server.importance)
         assertEquals(Status.OK, server.status)
-        // El servidor contesta: el modo desarrollador está activo aunque no se haya podido comprobar.
+        // AA atiende a HeadQLink: el modo desarrollador está activo aunque no se haya podido comprobar.
         assertEquals(Status.OK, item(items, Id.AA_DEVMODE).status)
         assertEquals(0, Requirements.missingCount(items))
         assertTrue("Conectar no se bloquea", Requirements.blocking(items).isEmpty())
@@ -336,15 +336,15 @@ class RequirementsTest {
     }
 
     @Test
-    fun manualServerOffIsInformativeAndNeverBlocks() {
+    fun manualServerRowNeverProbesNeverBlocksAndSaysOnlyWhatIsKnown() {
+        // Sin conectarse al servidor (lo gastaría): en uso por HeadQLink, intentos fallando, o cómo arrancarlo.
         for (state in Requirements.AaServer.values()) {
             val items = eval { manualServer = true; aaServer = state; accessibilityRunning = false; devMode = -1 }
             val server = item(items, Id.AA_SERVER)
             val expected = when (state) {
-                Requirements.AaServer.ON -> Status.OK
-                Requirements.AaServer.OFF -> Status.WARN
-                Requirements.AaServer.CHECKING -> Status.CHECKING
-                Requirements.AaServer.UNKNOWN -> Status.UNKNOWN
+                Requirements.AaServer.IN_USE -> Status.OK
+                Requirements.AaServer.WAITING -> Status.WARN
+                Requirements.AaServer.UNKNOWN -> Status.TIP
             }
             assertEquals(state.toString(), expected, server.status)
             assertFalse(server.counts())
@@ -352,13 +352,15 @@ class RequirementsTest {
             assertTrue(state.toString(), Requirements.blocking(items).isEmpty())
             assertEquals(state.toString(), 0, Requirements.missingCount(items))
         }
-        // Apagado y sin saber el modo desarrollador: consejo (no se puede comprobar sin la accesibilidad).
-        val dev = item(eval { manualServer = true; aaServer = Requirements.AaServer.OFF; devMode = -1 }, Id.AA_DEVMODE)
-        assertEquals(Status.TIP, dev.status)
-        assertEquals(Hint.MANUAL, dev.hint)
-        assertFalse(dev.counts())
-        // Ya comprobado antes (con el automático): activo.
-        assertEquals(Status.OK, item(eval { manualServer = true; aaServer = Requirements.AaServer.OFF; devMode = 1 }, Id.AA_DEVMODE).status)
+        // Sin saber y sin el modo desarrollador comprobado: consejo (no se puede comprobar sin la accesibilidad).
+        for (state in listOf(Requirements.AaServer.UNKNOWN, Requirements.AaServer.WAITING)) {
+            val dev = item(eval { manualServer = true; aaServer = state; devMode = -1 }, Id.AA_DEVMODE)
+            assertEquals(Status.TIP, dev.status)
+            assertEquals(Hint.MANUAL, dev.hint)
+            assertFalse(dev.counts())
+        }
+        // Ya comprobado antes (con el automático, o porque AA atendió un intento): activo.
+        assertEquals(Status.OK, item(eval { manualServer = true; aaServer = Requirements.AaServer.UNKNOWN; devMode = 1 }, Id.AA_DEVMODE).status)
     }
 
     @Test
@@ -373,10 +375,8 @@ class RequirementsTest {
         val old = eval { aaVersion = "17.3.1"; manualServer = true }
         assertNull(Requirements.find(old, Id.AA_SERVER))
         assertNull(Requirements.find(old, Id.ACCESSIBILITY))
-        assertFalse(Requirements.needsAaServerProbe(Snapshot().apply { aaVersion = "17.3.1"; manualServer = true }))
-        assertFalse(Requirements.needsAaServerProbe(Snapshot().apply { mode = Config.MODE_APP; manualServer = true }))
-        assertFalse(Requirements.needsAaServerProbe(Snapshot()))
-        assertTrue(Requirements.needsAaServerProbe(Snapshot().apply { manualServer = true }))
+        assertFalse(Requirements.usesHeadUnitServer("17.3.1"))
+        assertTrue(Requirements.usesHeadUnitServer("17.7.0"))
     }
 
     @Test

@@ -174,6 +174,17 @@ class CommManager(
 
     /** The endpoint [silentPeerFailures] is counting; a different one starts its own streak. */
     @Volatile private var silentPeerEndpoint: String? = null
+
+    private val _peerAnswers = java.util.concurrent.atomic.AtomicLong()
+
+    /**
+     * headqlink: handshakes whose peer has answered (sent its first bytes of the version exchange), ever. Only
+     * grows, so a caller that read it before dialling can tell whether *its* connection was served even if the
+     * session has already ended by the time it looks again. See [AapTransport.onPeerAnswered] for why accepting
+     * the TCP connection proves nothing on the head unit server path.
+     */
+    val peerAnswers: Long
+        get() = _peerAnswers.get()
     var onUpdateUiConfigReplyReceived: (() -> Unit)? = null
 
     /**
@@ -520,6 +531,7 @@ class CommManager(
                     }
                     _transport!!.onAudioFocusStateChanged = { isPlaying -> onAudioFocusStateChanged?.invoke(isPlaying) }
                     _transport!!.onUpdateUiConfigReplyReceived = { onUpdateUiConfigReplyReceived?.invoke() }
+                    _transport!!.onPeerAnswered = { _peerAnswers.incrementAndGet() }
                 }
                 // Held locally because startHandshake() quits the transport on failure, and
                 // quitting nulls _transport before it returns — the failure reason would be

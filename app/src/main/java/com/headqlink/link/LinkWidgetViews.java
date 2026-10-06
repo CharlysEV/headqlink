@@ -162,6 +162,8 @@ final class LinkWidgetViews {
                 return c.getString(R.string.hql_w_aa_paused);
             case PORT_BUSY:
                 return c.getString(R.string.hql_w_port_busy);
+            case AA_SERVER_HINT:
+                return c.getString(R.string.hql_w_aa_server_hint);
             default:
                 return "";
         }

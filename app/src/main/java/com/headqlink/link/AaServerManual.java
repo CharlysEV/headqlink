@@ -2,64 +2,61 @@ package com.headqlink.link;
 
 import com.andrerinas.openheadunit.R;
 
-import android.app.KeyguardManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.os.SystemClock;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
+import com.andrerinas.openheadunit.App;
+import com.andrerinas.openheadunit.aap.AapService;
+import com.andrerinas.openheadunit.aap.protocol.proto.Control;
+import com.andrerinas.openheadunit.connection.CommManager;
+import com.andrerinas.openheadunit.decoder.video.VideoTap;
+
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * «Arranque del servidor de Android Auto» en modo manual (sin accesibilidad). HeadQLink no pulsa nada: mira si el servidor
- * de head unit de AA contesta en 127.0.0.1:5277 (conexión con tiempo corto, siempre fuera del hilo principal) y decide
- * con {@link AaServerPolicy}:
- * - encendido: se sigue como siempre (el Self-Mode conecta solo, también con el móvil bloqueado);
- * - apagado cuando hace falta (Conectar, Bluetooth o cable del coche, coche anunciado, sesión que necesita AA): aviso de
- *   prioridad alta «Arranca el servidor de Android Auto» (al tocarlo, los ajustes de AA), la fila «Auto» lo dice y se
- *   vuelve a mirar cada 2 s; en cuanto contesta, fuera el aviso, «AA server: listo (arrancado a mano)» en el log y, si
- *   una sesión esperaba a Android Auto, se relanza el Self-Mode;
- * - mientras el enlace espera al coche, se vuelve a mirar cada minuto (sin tocar AA si nuestra head unit está conectada);
- * - al cerrar el enlace no se puede parar: si sigue encendido, un aviso (una vez por cierre) dice cómo pararlo.
+ * «Arranque del servidor de Android Auto» en modo manual (sin accesibilidad). HeadQLink no pulsa nada y **nunca abre una
+ * conexión a 127.0.0.1:5277 para mirar**: el servidor de head unit de desarrollador de AA atiende una sola conexión por
+ * arranque y cualquier conexión lo gasta (prueba real del 2026-10-06, ver {@link AaServeAttempts}). La única conexión es
+ * la del Self-Mode cuando una sesión con el coche necesita Android Auto, y {@link AaServeAttempts} decide con ella:
+ * - servida (AA contesta: sus primeros bytes del handshake): se sigue como siempre, también con el móvil bloqueado;
+ * - no servida (rechazada, cerrada, o 6 s con el TCP abierto y sin respuesta): se cierra ese intento, aviso de prioridad
+ *   alta «Arranca (o vuelve a arrancar) el servidor de Android Auto» (al tocarlo, los ajustes de AA), la fila «Auto» y
+ *   el widget dicen «Esperando al servidor de Android Auto» y se reintenta cada 5 s mientras la sesión siga; el primer
+ *   intento servido quita el aviso.
+ * Como cada arranque del servidor sirve una sola conexión, Android Auto se mantiene conectado todo lo posible (en pausa
+ * entre viajes, con el enlace o con el guardián) y solo se cierra con Desconectar o «Cerrar Android Auto»; al cerrarlo,
+ * un aviso dice que la próxima vez hay que reiniciar el servidor (⋮ › Parar y ⋮ › Iniciar).
  *
- * Todo el estado se toca en un solo hilo («aa-server-manual»); la interfaz solo lee {@link #isWaiting()}.
+ * Todo el estado de los intentos se toca en un solo hilo («aa-server-manual»); la interfaz solo lee {@link #isWaiting()}.
  */
-final class AaServerManual {
-    static final String HOST = "127.0.0.1";
-    static final int PORT = 5277;
-    /** Conexión a localhost: si escucha, contesta en el acto; si no, la rechaza en el acto. */
-    private static final int PROBE_TIMEOUT_MS = 400;
-    /** Tras parar Android Auto al cerrar, lo que se espera antes de mirar si el servidor sigue encendido. */
-    private static final long END_PROBE_DELAY_MS = 1_500;
-    /** Tras arrancarlo el usuario, lo que se espera antes de relanzar el Self-Mode (el intento fallido tiene que acabar). */
-    private static final long RELAUNCH_DELAY_MS = 1_500;
-
+public final class AaServerManual {
     private static final String CHANNEL_ASK = "aa_server_manual";
     private static final String CHANNEL_INFO = "aa_server_info";
     private static final int NOTIF_ASK = 7;
-    private static final int NOTIF_STILL_ON = 8;
+    private static final int NOTIF_RESTART = 8;
 
     private static final Object LOCK = new Object();
     private static ScheduledExecutorService exec;
 
-    /** Solo en el hilo propio. */
-    private static ScheduledFuture<?> next;
-    private static AaServerPolicy.Server last = AaServerPolicy.Server.UNKNOWN;
-    /** Por qué se espera al usuario (para las comprobaciones siguientes). */
-    private static volatile AaServerPolicy.Need waitingFor = AaServerPolicy.Need.WATCH;
+    /** Marcaciones del Self-Mode a 127.0.0.1:5277: TCP aceptado o rechazado (las cuenta onDevServerDial). */
+    private static final AtomicLong DIALS = new AtomicLong();
+    private static final AtomicLong REFUSALS = new AtomicLong();
 
-    /** Aviso «Arranca el servidor…» puesto y mirando cada 2 s. */
+    /** Solo en el hilo propio. */
+    private static AaServeAttempts attempts;
+    private static ScheduledFuture<?> tick;
+
+    /** Aviso «Arranca (o vuelve a arrancar)…» puesto: los intentos fallan. */
     private static volatile boolean waiting;
-    /** Una sesión esperaba a Android Auto: al encenderse el servidor se relanza el Self-Mode. */
-    private static volatile boolean relaunch;
 
     private AaServerManual() {
     }
@@ -68,158 +65,227 @@ final class AaServerManual {
         return new Config(ctx).aaServerManual();
     }
 
-    /** Se está esperando a que el usuario arranque el servidor (para la fila «Auto» de la pantalla principal). */
+    /**
+     * El arranque manual manda aquí: elegido, modo con Android Auto y AA 17.4 o más (su servidor de head unit, sin
+     * force_legacy_launch). Con un AA más viejo el Self-Mode no usa 127.0.0.1:5277 y se lanza como siempre.
+     */
+    static boolean applies(Context ctx) {
+        Config cfg = new Config(ctx);
+        if (!cfg.aaServerManual() || !Config.isAa(cfg.mode()) || cfg.getBool("force_legacy_launch")) return false;
+        try {
+            String v = ctx.getPackageManager().getPackageInfo(AaServerStarter.AA_PKG, 0).versionName;
+            return Requirements.usesHeadUnitServer(v);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Los intentos fallan y está puesto el aviso (la fila «Auto» de la pantalla principal y el widget). */
     static boolean isWaiting() {
         return waiting;
     }
 
-    /**
-     * ¿Contesta el servidor de head unit de AA? Bloquea como mucho {@link #PROBE_TIMEOUT_MS}: nunca en el hilo principal.
-     * Con nuestra head unit conectada a AA no se conecta (AA atiende una sola conexión): está encendido.
-     */
-    static AaServerPolicy.Server probe(Context ctx) {
-        if (aaConnected(ctx)) return AaServerPolicy.Server.UP;
-        Socket s = new Socket();
-        try {
-            s.connect(new InetSocketAddress(HOST, PORT), PROBE_TIMEOUT_MS);
-            AaServerStarter.noteDevModeOn(ctx);
-            return AaServerPolicy.Server.UP;
-        } catch (IOException | RuntimeException e) {
-            return AaServerPolicy.Server.DOWN;
-        } finally {
-            try {
-                s.close();
-            } catch (IOException ignored) {
-            }
-        }
+    /** Para la «Comprobación»: lo que se sabe del servidor sin conectarse a él. */
+    static Requirements.AaServer serverState(Context ctx) {
+        if (waiting) return Requirements.AaServer.WAITING;
+        return aaConnected(ctx) ? Requirements.AaServer.IN_USE : Requirements.AaServer.UNKNOWN;
     }
 
     /**
-     * El servidor hace falta: se mira ya (en el hilo propio) y, si está apagado y el enlace en marcha, se avisa al
-     * usuario y se sigue mirando. relaunchSelfMode: una sesión espera a AA (relanzar el Self-Mode al encenderse).
+     * Una sesión con el coche necesita Android Auto (AaPassthroughSource: arranca o vuelve el vídeo de AA). Sin AA
+     * conectado, lanza el Self-Mode y mira si AA lo atiende (si no, aviso y reintentos); con AA conectado, vigila que siga
+     * (si se cae con la sesión en marcha, intento nuevo). Nunca sondea el puerto.
      */
-    static void need(Context ctx, AaServerPolicy.Need need, boolean relaunchSelfMode) {
-        if (relaunchSelfMode) relaunch = true;
+    static void sessionNeedsAa(Context ctx, String why) {
         Context app = ctx.getApplicationContext();
-        submit(() -> {
-            cancelNext();
-            check(app, need);
-        });
+        submit(() -> apply(app, policy().need(seen(app), why)));
     }
 
     /**
-     * Self-Mode (hilo de E/S): 127.0.0.1:5277 no contestó. true si ahora sí (el usuario lo acaba de arrancar); si no,
-     * con el enlace en marcha, el aviso y la espera (con relanzamiento al encenderse) y false. Nunca pulsa nada.
+     * Self-Mode (SelfLauncherV17_4, hilo de E/S): resultado de su conexión a 127.0.0.1:5277. TCP aceptado no es
+     * «servido» (eso lo dice la respuesta de AA); rechazado es servidor apagado. Se cuenta siempre, se use o no el manual.
      */
-    static boolean awaitForSession(Context ctx) {
-        if (probe(ctx) == AaServerPolicy.Server.UP) {
-            L.life("AA server: encendido (127.0.0.1:" + PORT + " contesta; arranque manual)");
-            return true;
-        }
-        if (!LinkState.running) {
-            L.w("AA server: apagado y el enlace no está en marcha (arranque manual): arráncalo en Android Auto › ⋮");
-            return false;
-        }
-        need(ctx, AaServerPolicy.Need.SESSION, true);
-        return false;
+    public static void onDevServerDial(Context ctx, boolean connected) {
+        (connected ? DIALS : REFUSALS).incrementAndGet();
+        Context app = ctx.getApplicationContext();
+        if (!enabled(app)) return;
+        submit(() -> apply(app, policy().tick(seen(app))));
     }
 
-    /** Pantalla principal o comprobación de vuelta (quizá de los ajustes de AA): mirar ya si se estaba esperando. */
+    /** Pantalla principal de vuelta (quizá de los ajustes de AA) o móvil desbloqueado: reintento ya si se esperaba. */
     static void checkSoon(Context ctx) {
-        if (waiting) need(ctx, waitingForNow(), false);
+        if (!waiting) return;
+        Context app = ctx.getApplicationContext();
+        submit(() -> apply(app, policy().soon()));
     }
 
-    private static AaServerPolicy.Need waitingForNow() {
-        return waiting ? waitingFor : AaServerPolicy.Need.WATCH;
-    }
-
-    /** Se cambió el ajuste: con el manual y el enlace en marcha se mira ya; con el automático se deja de esperar. */
+    /** Se cambió el ajuste: con el automático se deja de intentar (y fuera los avisos del manual). */
     static void onModeChanged(Context ctx, boolean manual, String where) {
         L.life("arranque del servidor de Android Auto: " + (manual ? "manual (sin accesibilidad)" : "automático (accesibilidad)")
                 + " (" + where + ")");
+        if (manual) return;
         Context app = ctx.getApplicationContext();
-        if (manual) {
-            if (LinkState.running) need(app, AaServerPolicy.Need.WATCH, false);
-        } else {
-            app.getSystemService(NotificationManager.class).cancel(NOTIF_STILL_ON);
-            submit(() -> stopInternal(app, "arranque automático elegido"));
-        }
+        app.getSystemService(NotificationManager.class).cancel(NOTIF_RESTART);
+        stop(app, "arranque automático elegido");
     }
 
-    /** El enlace se cierra con el servidor que no se puede parar: deja de mirar y, si sigue encendido, lo dice. */
-    static void onLinkClosed(Context ctx, String why) {
+    /** El enlace arranca: el aviso de un cierre anterior ya no hace falta (si el servidor no atiende, lo dirá el intento). */
+    static void onLinkStarting(Context ctx) {
+        ctx.getApplicationContext().getSystemService(NotificationManager.class).cancel(NOTIF_RESTART);
+    }
+
+    /**
+     * El enlace se cierra: se deja de intentar y, si Android Auto se cierra con su servidor ya usado (restartNotice), el
+     * aviso de que la próxima vez hay que reiniciarlo.
+     */
+    static void onLinkClosed(Context ctx, String why, boolean restartNotice) {
         Context app = ctx.getApplicationContext();
         submit(() -> {
-            stopInternal(app, "el enlace se cierra");
-            schedule(() -> tellIfStillOn(app, why), END_PROBE_DELAY_MS);
+            apply(app, policy().reset("el enlace se cierra (" + why + ")"));
+            if (restartNotice) postRestartNotice(app, why);
         });
     }
 
-    /** Deja de esperar y de vigilar (sin avisos). */
+    /** Se deja de intentar (sin avisos nuevos). */
     static void stop(Context ctx, String why) {
         Context app = ctx.getApplicationContext();
-        submit(() -> stopInternal(app, why));
+        submit(() -> apply(app, policy().reset(why)));
     }
 
-    /** Otro cierre que deja el servidor encendido (guardián en modo manual): mirar y avisar. */
-    static void tellIfStillOnLater(Context ctx, String why) {
+    /**
+     * Android Auto se ha cerrado con el arranque manual (Desconectar, «Cerrar Android Auto», o se cayó solo): su servidor
+     * ya atendió su única conexión de este arranque, así que la próxima vez hay que pararlo y volver a iniciarlo.
+     */
+    static void noticeRestart(Context ctx, String why) {
         Context app = ctx.getApplicationContext();
-        schedule(() -> tellIfStillOn(app, why), END_PROBE_DELAY_MS);
+        submit(() -> postRestartNotice(app, why));
     }
 
     // ---------------------------------------------------------------- hilo propio
 
-    private static void check(Context app, AaServerPolicy.Need need) {
+    private static AaServeAttempts policy() {
+        if (attempts == null) attempts = new AaServeAttempts(SystemClock::elapsedRealtime);
+        return attempts;
+    }
+
+    /** Lo que se ve ahora (sin tocar la red). */
+    private static AaServeAttempts.Seen seen(Context app) {
+        AaServeAttempts.Seen s = new AaServeAttempts.Seen();
+        // El vídeo de AA de una sesión con el coche espera (su grifo puesto) y sigue el manual (la versión de AA ya la
+        // miró quien pidió el intento: aquí, cada 250 ms, solo los ajustes).
         Config cfg = new Config(app);
-        boolean manual = cfg.aaServerManual();
-        boolean aaMode = Config.isAa(cfg.mode()) || AaPark.parked;
-        if (!manual || !aaMode) {
-            stopInternal(app, manual ? "modo sin Android Auto" : "arranque automático");
-            return;
+        s.sessionWantsAa = LinkState.running && VideoTap.getSink() != null && cfg.aaServerManual() && Config.isAa(cfg.mode());
+        try {
+            CommManager cm = comm(app);
+            Object st = cm.getConnectionState().getValue();
+            s.tcpUp = cm.isConnected();
+            s.connecting = st instanceof CommManager.ConnectionState.Connecting;
+            s.handshakeDone = st instanceof CommManager.ConnectionState.HandshakeComplete
+                    || st instanceof CommManager.ConnectionState.TransportStarted;
+            s.answers = cm.getPeerAnswers();
+        } catch (RuntimeException e) {
+            L.w("AA server (arranque manual): no se pudo leer el estado de Android Auto: " + e);
         }
-        boolean connected = aaConnected(app);
-        AaServerPolicy.Server server = probe(app);
-        boolean locked = isLocked(app);
-        AaServerPolicy.State st = new AaServerPolicy.State().manual(true).server(server).connected(connected).locked(locked);
-        AaServerPolicy.Action a = AaServerPolicy.onNeed(need, st);
-        AaServerPolicy.Server before = last;
-        last = server;
-        if (a == AaServerPolicy.Action.ASK_USER) {
-            if (!LinkState.running) {
-                L.i("AA server: apagado (" + AaServerPolicy.needName(need) + "; arranque manual) con el enlace parado: no aviso");
-                relaunch = false;
-                return;
+        s.dials = DIALS.get();
+        s.refusals = REFUSALS.get();
+        return s;
+    }
+
+    private static void apply(Context app, AaServeAttempts.Step step) {
+        // Antes de los efectos: la fila «Auto», el widget y la comprobación lo leen al repintar por el cambio de LinkState.
+        waiting = attempts != null && attempts.waiting();
+        if (step.reason != null) {
+            String line = "AA server (arranque manual): " + step.reason;
+            if (step.kind == AaServeAttempts.Kind.MISSED) L.lifeWarn(line);
+            else L.life(line);
+        }
+        switch (step.kind) {
+            case LAUNCH:
+                launchSelfMode(app);
+                break;
+            case SERVED:
+                onServed(app, step);
+                break;
+            case MISSED:
+                onMissed(app, step);
+                break;
+            case STOP:
+                if (step.dismiss) dismissAsk(app, LinkState.Level.IDLE, "");
+                break;
+            default:
+                break;
+        }
+        scheduleTick(app);
+    }
+
+    private static void launchSelfMode(Context app) {
+        L.i("AA: lanzando Self-Mode");
+        AaPassthroughSource.AA_LAUNCHES.incrementAndGet();
+        try {
+            app.startForegroundService(new Intent(app, AapService.class).setAction(AapService.ACTION_START_SELF_MODE));
+        } catch (RuntimeException e) {
+            L.e("AA server (arranque manual): no se pudo lanzar Android Auto (Self-Mode)", e);
+        }
+    }
+
+    private static void onServed(Context app, AaServeAttempts.Step step) {
+        // Solo desde su modo desarrollador se arranca el servidor: consta activo.
+        AaServerStarter.noteDevModeOn(app);
+        if (step.dismiss) dismissAsk(app, LinkState.Level.BUSY, Str.get(R.string.hql_starting_auto));
+    }
+
+    private static void onMissed(Context app, AaServeAttempts.Step step) {
+        boolean closed = true;
+        if (step.tearDown) closed = tearDown(app, step.answersAtDecision);
+        // El lanzador del Self-Mode queda limpio (y su plazo de 10 s no hace nada) antes del reintento.
+        if (closed) stopSelfMode(app);
+        if (step.notice) postAsk(app);
+        if (step.retry) {
+            LinkState.setSource(LinkState.Level.BUSY, Str.get(R.string.hql_aa_server_wait));
+        } else if (step.dismiss) {
+            dismissAsk(app, LinkState.Level.IDLE, "");
+        }
+    }
+
+    /**
+     * Cierra el intento con el TCP abierto y sin respuesta (el servidor ya no atiende). Si AA ha contestado justo ahora
+     * (el contador de respuestas ya no es el de la decisión), no se cierra: el siguiente vistazo lo da por servido.
+     */
+    private static boolean tearDown(Context app, long answersAtDecision) {
+        try {
+            CommManager cm = comm(app);
+            if (cm.getPeerAnswers() != answersAtDecision) {
+                L.life("AA server (arranque manual): Android Auto contestó justo al ir a cerrar el intento: no lo cierro");
+                return false;
             }
-            if (!waiting) startAsking(app, need, locked);
-            else if (need != AaServerPolicy.Need.WATCH) waitingFor = need;
-        } else if (waiting) {
-            onUp(app);
-        } else if (before != AaServerPolicy.Server.UP || need != AaServerPolicy.Need.WATCH) {
-            L.life("AA server: encendido (" + (connected ? "Android Auto conectado" : "127.0.0.1:" + PORT + " contesta") + "; "
-                    + AaServerPolicy.needName(need) + "; arranque manual)");
+            cm.disconnect(false, false, Control.ByeByeReason.USER_SELECTION, false);
+        } catch (RuntimeException e) {
+            L.e("AA server (arranque manual): no se pudo cerrar el intento", e);
         }
-        scheduleNext(app, cfg);
+        return true;
     }
 
-    private static void scheduleNext(Context app, Config cfg) {
-        long ms = AaServerPolicy.nextCheckMs(LinkState.running, cfg.aaServerManual(), Config.isAa(cfg.mode()) || AaPark.parked,
-                waiting);
-        if (ms < 0) {
-            stopInternal(app, "el enlace no está en marcha");
-            return;
+    private static void stopSelfMode(Context app) {
+        try {
+            app.startService(new Intent(app, AapService.class).setAction(AapService.ACTION_STOP_SELF_MODE));
+        } catch (RuntimeException e) {
+            L.w("AA server (arranque manual): no se pudo parar el Self-Mode: " + e);
         }
-        next = schedule(() -> {
-            next = null;
-            check(app, waitingForNow());
-        }, ms);
     }
 
-    private static void startAsking(Context app, AaServerPolicy.Need need, boolean locked) {
-        waiting = true;
-        waitingFor = need == AaServerPolicy.Need.WATCH ? AaServerPolicy.Need.CAR_SEEN : need;
-        L.lifeWarn("AA server: apagado (" + AaServerPolicy.needName(need) + (locked ? ", móvil bloqueado" : "")
-                + "): aviso «" + Str.get(R.string.hql_aa_server_ask_title) + "» y miro cada "
-                + AaServerPolicy.POLL_MS / 1000 + " s si 127.0.0.1:" + PORT + " contesta (arranque manual, sin accesibilidad)");
+    private static void scheduleTick(Context app) {
+        ScheduledFuture<?> f = tick;
+        tick = null;
+        if (f != null) f.cancel(false);
+        long delay = attempts != null ? attempts.tickDelayMs() : -1;
+        if (delay < 0) return;
+        tick = schedule(() -> {
+            tick = null;
+            apply(app, policy().tick(seen(app)));
+        }, delay);
+    }
+
+    private static void postAsk(Context app) {
         NotificationManager nm = app.getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL_ASK, Str.get(R.string.hql_aa_server_ask_channel),
                 NotificationManager.IMPORTANCE_HIGH));
@@ -237,65 +303,28 @@ final class AaServerManual {
                 .setOnlyAlertOnce(true)
                 .setContentIntent(pi)
                 .build());
-        LinkState.setSource(LinkState.Level.BUSY, Str.get(R.string.hql_aa_server_wait));
     }
 
-    /** El servidor contesta tras el aviso: fuera el aviso y, si una sesión esperaba a AA, Self-Mode otra vez. */
-    private static void onUp(Context app) {
-        waiting = false;
+    /** Fuera el aviso; la fila «Auto», si aún decía «Esperando al servidor…», pasa a level/text. */
+    private static void dismissAsk(Context app, LinkState.Level level, String text) {
         app.getSystemService(NotificationManager.class).cancel(NOTIF_ASK);
-        L.life("AA server: listo (arrancado a mano)");
-        if (Str.get(R.string.hql_aa_server_wait).equals(LinkState.source)) {
-            LinkState.setSource(LinkState.Level.OK, Str.get(R.string.hql_aa_server_ready));
-        }
-        if (!relaunch) return;
-        relaunch = false;
-        // El intento del Self-Mode que no encontró el servidor tiene que haber terminado (no se lanzan dos a la vez).
-        schedule(() -> {
-            boolean videoWaiting = com.andrerinas.openheadunit.decoder.video.VideoTap.getSink() != null;
-            if (!LinkState.running || aaConnected(app) || !videoWaiting) return;
-            L.life("relanzo Android Auto (Self-Mode) para el coche que espera (servidor arrancado a mano)");
-            try {
-                app.startForegroundService(new Intent(app, com.andrerinas.openheadunit.aap.AapService.class)
-                        .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_START_SELF_MODE));
-            } catch (RuntimeException e) {
-                L.e("no se pudo relanzar Android Auto", e);
-            }
-        }, RELAUNCH_DELAY_MS);
+        if (Str.get(R.string.hql_aa_server_wait).equals(LinkState.source)) LinkState.setSource(level, text);
     }
 
-    private static void stopInternal(Context app, String why) {
-        cancelNext();
-        relaunch = false;
-        last = AaServerPolicy.Server.UNKNOWN;
-        if (!waiting) return;
-        waiting = false;
-        app.getSystemService(NotificationManager.class).cancel(NOTIF_ASK);
-        L.life("AA server: dejo de esperar a que lo arranques (" + why + ")");
-        if (Str.get(R.string.hql_aa_server_wait).equals(LinkState.source)) LinkState.setSource(LinkState.Level.IDLE, "");
-    }
-
-    /** Tras cerrar el enlace: si el servidor sigue encendido, un aviso con cómo pararlo (nunca se pulsa nada). */
-    private static void tellIfStillOn(Context app, String why) {
-        if (LinkState.running) return; // se ha vuelto a conectar mientras tanto
-        AaServerPolicy.Server server = probe(app);
-        AaServerPolicy.End end = AaServerPolicy.onEnd(true, new AaServerPolicy.State().manual(true).server(server));
-        if (end != AaServerPolicy.End.LEAVE_ON_NOTICE) {
-            L.life("AA server: apagado al cerrar (" + why + "): nada que avisar");
-            return;
-        }
-        L.lifeWarn("AA server: sigue encendido tras " + why + " (arranque manual: HeadQLink no lo para); aviso «"
-                + Str.get(R.string.hql_server_on_title) + "» con cómo pararlo (Android Auto › ⋮ › Parar servidor)");
+    private static void postRestartNotice(Context app, String why) {
+        L.lifeWarn("AA server (arranque manual): Android Auto cerrado (" + why + "): su servidor ya atendió su única"
+                + " conexión de este arranque; la próxima vez habrá que pararlo y volver a iniciarlo; aviso «"
+                + Str.get(R.string.hql_aa_restart_title) + "»");
         NotificationManager nm = app.getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL_INFO, Str.get(R.string.hql_aa_server_info_channel),
                 NotificationManager.IMPORTANCE_DEFAULT));
-        PendingIntent pi = PendingIntent.getActivity(app, NOTIF_STILL_ON, AaServerStarter.aaSettingsIntent(app),
+        PendingIntent pi = PendingIntent.getActivity(app, NOTIF_RESTART, AaServerStarter.aaSettingsIntent(app),
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        String text = Str.get(R.string.hql_aa_server_still_on_text);
-        nm.notify(NOTIF_STILL_ON, new Notification.Builder(app, CHANNEL_INFO)
+        String text = Str.get(R.string.hql_aa_restart_text);
+        nm.notify(NOTIF_RESTART, new Notification.Builder(app, CHANNEL_INFO)
                 .setSmallIcon(R.drawable.hql_ic_notif)
                 .setColor(app.getColor(R.color.hql_warn))
-                .setContentTitle(Str.get(R.string.hql_server_on_title))
+                .setContentTitle(Str.get(R.string.hql_aa_restart_title))
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setOnlyAlertOnce(true)
@@ -306,34 +335,26 @@ final class AaServerManual {
 
     // ---------------------------------------------------------------- utilidades
 
+    private static CommManager comm(Context ctx) {
+        return App.Companion.provide(ctx).getCommManager();
+    }
+
     private static boolean aaConnected(Context ctx) {
         try {
-            return com.andrerinas.openheadunit.App.Companion.provide(ctx).getCommManager().isConnected();
+            return comm(ctx).isConnected();
         } catch (RuntimeException e) {
             return false;
         }
     }
 
-    private static boolean isLocked(Context ctx) {
-        KeyguardManager km = ctx.getSystemService(KeyguardManager.class);
-        return km != null && km.isKeyguardLocked();
-    }
-
-    private static void cancelNext() {
-        ScheduledFuture<?> f = next;
-        next = null;
-        if (f != null) f.cancel(false);
-    }
-
     private static ScheduledExecutorService exec() {
         synchronized (LOCK) {
             if (exec == null) {
-                ScheduledThreadPoolExecutor e = new ScheduledThreadPoolExecutor(1, r -> {
+                exec = new ScheduledThreadPoolExecutor(1, r -> {
                     Thread t = new Thread(r, "aa-server-manual");
                     t.setDaemon(true);
                     return t;
                 });
-                exec = e;
             }
             return exec;
         }
