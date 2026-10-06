@@ -30,7 +30,9 @@ import java.util.Locale;
  *   gravedad), así que da igual cómo esté colocado el móvil.
  * - Altitud y pendiente: barómetro (relativo, anclado a la altitud del GPS) o GPS si no hay.
  * - Viento y temperatura: Open-Meteo (gratuito, sin cuenta) cada 5 min o 5 km.
- * Todo vive en un hilo propio; los paneles leen {@link #snapshot()}.
+ * - Para los paneles, además: potencia estimada de los últimos 2 min, estela de las fuerzas G de los últimos
+ *   segundos, suavidad (Smoothness) y reparto de la energía del viaje (EnergyBreakdown).
+ * Todo vive en un hilo propio; los paneles leen {@link #snapshot()} y las historias con sus copias.
  *
  * Con el modo demostración activo (DemoMode, solo la vista previa) no se usa ningún sensor ni la red: el trayecto
  * de DemoDrive entra por el mismo camino que el GPS ({@link #fix}), con un reloj simulado.
@@ -65,7 +67,25 @@ final class CarSensors implements SensorEventListener, LocationListener {
         /** Energía estimada desde que arrancaron los sensores (kWh, modelo EnergyModel). */
         double kwhTotal;
         double kmTotal;
+        /** Energía y km del viaje (desde el arranque o «Reiniciar viaje»). */
+        double tripKwh;
+        double tripKmEnergy;
+        /** Potencia estimada en la batería ahora (kW, negativa si recupera). */
+        double powerKw;
+        /** kWh/100 km de los últimos ~20 s (NaN parado). */
+        double kwh100Now = Double.NaN;
+        /** Suavidad del viaje y de los últimos ~30 s (0-100, -1 sin datos). */
+        int smoothScore = -1;
+        int smoothRecent = -1;
+        /** Reloj de los sensores (ms), para la edad de la estela de fuerzas G. */
+        long clockMs;
     }
+
+    /** Segundos de historia de la potencia (una muestra por segundo). */
+    static final int POWER_SECS = 120;
+    /** Muestras de la estela de fuerzas G (una cada 100 ms como mucho) y su duración. */
+    static final int TRAIL = 48;
+    static final long TRAIL_MS = 4000;
 
     private static CarSensors instance;
 
@@ -106,6 +126,25 @@ final class CarSensors implements SensorEventListener, LocationListener {
     private double demoLat;
     private double demoLon;
     private final Runnable demoTick = this::demoTick;
+    // Historias y cuentas del viaje para los paneles.
+    private final float[] powerHist = new float[POWER_SECS];
+    private int powerCount;
+    private int powerHead;
+    private long powerSecMs = -1;
+    private double powerSum;
+    private int powerN;
+    private final float[] trailLat = new float[TRAIL];
+    private final float[] trailLong = new float[TRAIL];
+    private final long[] trailMs = new long[TRAIL];
+    private int trailCount;
+    private int trailHead;
+    private final Smoothness smooth = new Smoothness();
+    private long smoothNs;
+    private final EnergyBreakdown tripEnergy = new EnergyBreakdown();
+    private double tripKwhStart;
+    private double tripKmStart;
+    private double emaKwh;
+    private double emaKm;
 
     private CarSensors(Context ctx) {
         this.ctx = ctx.getApplicationContext();
@@ -162,7 +201,40 @@ final class CarSensors implements SensorEventListener, LocationListener {
         c.lon = s.lon;
         c.kwhTotal = s.kwhTotal;
         c.kmTotal = s.kmTotal;
+        c.tripKwh = s.kwhTotal - tripKwhStart;
+        c.tripKmEnergy = s.kmTotal - tripKmStart;
+        c.powerKw = s.powerKw;
+        c.kwh100Now = emaKm > 0.05 ? emaKwh / emaKm * 100 : Double.NaN;
+        c.smoothScore = smooth.score();
+        c.smoothRecent = smooth.recentScore();
+        c.clockMs = nowMs();
         return c;
+    }
+
+    /** Copia la potencia de los últimos segundos (de la más antigua a la más reciente) y devuelve cuántas hay. */
+    synchronized int powerHistory(float[] out) {
+        int n = Math.min(powerCount, out.length);
+        for (int i = 0; i < n; i++) {
+            out[i] = powerHist[(powerHead - n + i + POWER_SECS * 2) % POWER_SECS];
+        }
+        return n;
+    }
+
+    /** Copia la estela de fuerzas G (lateral, longitudinal y su reloj), de la más antigua a la más reciente. */
+    synchronized int gTrail(float[] lat, float[] lon, long[] ms) {
+        int n = Math.min(trailCount, Math.min(lat.length, Math.min(lon.length, ms.length)));
+        for (int i = 0; i < n; i++) {
+            int k = (trailHead - n + i + TRAIL * 2) % TRAIL;
+            lat[i] = trailLat[k];
+            lon[i] = trailLong[k];
+            ms[i] = trailMs[k];
+        }
+        return n;
+    }
+
+    /** Copia el reparto de la energía del viaje. */
+    synchronized void tripBreakdown(EnergyBreakdown out) {
+        out.copyFrom(tripEnergy);
     }
 
     /** Pone a cero máximos, viaje y cronómetro. */
@@ -172,6 +244,10 @@ final class CarSensors implements SensorEventListener, LocationListener {
         s.timer = "";
         tripStartMs = nowMs();
         tripStarted = true;
+        tripKwhStart = s.kwhTotal;
+        tripKmStart = s.kmTotal;
+        tripEnergy.reset();
+        smooth.reset();
     }
 
     boolean hasLocationPermission() {
@@ -343,15 +419,52 @@ final class CarSensors implements SensorEventListener, LocationListener {
         updateHeadwind();
         s.lat = lat;
         s.lon = lon;
-        // Energía estimada acumulada (para el % de batería y los viajes).
+        // Energía estimada acumulada (para el % de batería y los viajes) y su reparto.
+        boolean moving = s.speedKmh > 2;
+        s.powerKw = moving ? model.compute(s.speedKmh, s.gradePct, s.headwindKmh, s.tempC, s.longG)
+                : EnergyModel.AUX_KW + EnergyModel.hvac(Double.isNaN(s.tempC) ? 15 : s.tempC);
         if (lastEnergyNs != 0) {
             double dtH = (now - lastEnergyNs) / 3.6e12;
-            if (dtH > 0 && dtH < 0.01 && s.speedKmh > 2) {
-                s.kwhTotal += model.compute(s.speedKmh, s.gradePct, s.headwindKmh, s.tempC, s.longG) * dtH;
+            if (dtH > 0 && dtH < 0.01 && moving) {
+                s.kwhTotal += s.powerKw * dtH;
                 s.kmTotal += s.speedKmh * dtH;
+                tripEnergy.add(model, dtH);
+            }
+            if (dtH > 0 && dtH < 0.01) {
+                // kWh/100 km «ahora»: media exponencial de ~20 s de energía y distancia.
+                double decay = Math.exp(-dtH * 3600 / 20);
+                emaKwh = emaKwh * decay + (moving ? s.powerKw * dtH : 0);
+                emaKm = emaKm * decay + (moving ? s.speedKmh * dtH : 0);
             }
         }
         lastEnergyNs = now;
+        recordHistories(now);
+    }
+
+    /** Potencia (media de cada segundo), estela de fuerzas G y suavidad. */
+    private void recordHistories(long nowNs) {
+        long ms = nowNs / 1_000_000;
+        long sec = ms / 1000;
+        if (powerSecMs >= 0 && sec != powerSecMs && powerN > 0) {
+            powerHist[powerHead] = (float) (powerSum / powerN);
+            powerHead = (powerHead + 1) % POWER_SECS;
+            powerCount = Math.min(POWER_SECS, powerCount + 1);
+            powerSum = 0;
+            powerN = 0;
+        }
+        powerSecMs = sec;
+        powerSum += s.powerKw;
+        powerN++;
+        int last = (trailHead - 1 + TRAIL) % TRAIL;
+        if (trailCount == 0 || ms - trailMs[last] >= 100) {
+            trailLat[trailHead] = (float) s.latG;
+            trailLong[trailHead] = (float) s.longG;
+            trailMs[trailHead] = ms;
+            trailHead = (trailHead + 1) % TRAIL;
+            trailCount = Math.min(TRAIL, trailCount + 1);
+        }
+        if (smoothNs != 0) smooth.add(s.longG, s.latG, (nowNs - smoothNs) / 1e9, s.speedKmh > 5);
+        smoothNs = nowNs;
     }
 
     /** 0-50 y 0-100 km/h: se arma parado (< 2 km/h) y cuenta desde que pasa de 3 km/h. now: reloj en ms. */
@@ -417,6 +530,20 @@ final class CarSensors implements SensorEventListener, LocationListener {
         demoNs = 0;
         tripStartMs = 0;
         tripStarted = true;
+        powerCount = 0;
+        powerHead = 0;
+        powerSecMs = -1;
+        powerSum = 0;
+        powerN = 0;
+        trailCount = 0;
+        trailHead = 0;
+        smooth.reset();
+        smoothNs = 0;
+        tripEnergy.reset();
+        tripKwhStart = 0;
+        tripKmStart = 0;
+        emaKwh = 0;
+        emaKm = 0;
         demoFeedTo(demo.index(t));
     }
 
