@@ -34,6 +34,11 @@ public final class LinkState {
      */
     static volatile String activeLinkMode = "";
     static volatile String activeEngine = "";
+    /**
+     * El cable USB va por delante de la conexión configurada (un accesorio del coche conectado con la zona Wi-Fi o Wi-Fi
+     * Direct elegidas): al quitar el cable se vuelve a ella, así que no es un cambio pendiente.
+     */
+    static volatile boolean usbOverride;
     /** El motor no pudo abrir el UDP 18463: otra app (QDLink abierto) lo tiene. Lo enseña la comprobación de requisitos. */
     static volatile boolean udpBusy;
 
@@ -67,6 +72,7 @@ public final class LinkState {
             }
             activeLinkMode = "";
             activeEngine = "";
+            usbOverride = false;
             udpBusy = false;
         }
         changed();
@@ -81,8 +87,14 @@ public final class LinkState {
 
     /** Al arrancar el transporte (LinkService.startTransport): la conexión y el motor de este servicio. */
     static void setActiveTransport(String linkMode, String engine) {
+        setActiveTransport(linkMode, engine, false);
+    }
+
+    /** Ídem; override: el cable USB va por delante de la conexión configurada (se vuelve a ella al quitarlo). */
+    static void setActiveTransport(String linkMode, String engine, boolean override) {
         activeLinkMode = linkMode != null ? linkMode : "";
         activeEngine = engine != null ? engine : "";
+        usbOverride = override;
         changed();
     }
 
@@ -100,7 +112,7 @@ public final class LinkState {
 
     /** En marcha con otra conexión u otro motor configurados: se aplican al volver a conectar. */
     static boolean transportChangePending(Config cfg) {
-        return running && !activeLinkMode.isEmpty()
+        return running && !activeLinkMode.isEmpty() && !usbOverride
                 && (!activeLinkMode.equals(cfg.linkMode()) || !activeEngine.equals(cfg.linkEngine()));
     }
 

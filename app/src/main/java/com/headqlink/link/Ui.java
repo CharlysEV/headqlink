@@ -29,10 +29,12 @@ final class Ui {
 
     /** Nombre de la conexión con el coche. */
     static String linkTitle(String linkMode) {
+        if (Config.LINK_USB.equals(linkMode)) return Str.get(R.string.hql_link_usb);
         return Config.LINK_HOTSPOT.equals(linkMode) ? Str.get(R.string.hql_link_hotspot) : Str.get(R.string.hql_link_p2p);
     }
 
     static String linkDetail(String linkMode) {
+        if (Config.LINK_USB.equals(linkMode)) return Str.get(R.string.hql_link_usb_detail);
         return Config.LINK_HOTSPOT.equals(linkMode) ? Str.get(R.string.hql_link_hotspot_detail) : Str.get(R.string.hql_link_p2p_detail);
     }
 

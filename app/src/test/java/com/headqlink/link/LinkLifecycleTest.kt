@@ -340,4 +340,16 @@ class LinkLifecycleTest {
         assertEquals("5 min", LinkLifecycle.dur(5 * min))
         assertEquals("15 min", LinkLifecycle.dur(15 * min))
     }
+
+    @Test
+    fun usbCableStartAsksForTheServerLikeBluetooth() {
+        val life = LinkLifecycle()
+        val env = LinkLifecycle.Env().aa(true)
+        val d = life.start(0, LinkLifecycle.Trigger.USB, env, 5 * 60_000L)
+        assertTrue(d.toString(), d.has(LinkLifecycle.Action.START_SERVER))
+        assertTrue(d.toString(), d.reasons().any { it.contains("cable USB del coche") })
+        // Bloqueado: el aviso «desbloquea» y el arranque al desbloquear.
+        val locked = LinkLifecycle().start(0, LinkLifecycle.Trigger.USB, LinkLifecycle.Env().aa(true).locked(true), 5 * 60_000L)
+        assertTrue(locked.toString(), locked.has(LinkLifecycle.Action.START_SERVER_ON_UNLOCK))
+    }
 }

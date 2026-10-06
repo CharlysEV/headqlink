@@ -405,14 +405,16 @@ final class Checklist {
     /** Título de la guía bajo la lista, o null si no hace falta. */
     String guideTitle() {
         if (Config.LINK_HOTSPOT.equals(cfg.linkMode())) return Str.get(R.string.hql_hotspot_guide_title);
+        if (Config.LINK_USB.equals(cfg.linkMode())) return Str.get(R.string.hql_usb_guide_title);
         return needsDevGuide() ? Str.get(R.string.hql_setup_guide_title) : null;
     }
 
     /** La guía: cómo unir el coche a la zona Wi-Fi y, si falta, cómo activar el modo desarrollador de AA. */
     String guideText() {
         String dev = needsDevGuide() ? Str.get(R.string.hql_setup_guide) : null;
-        if (Config.LINK_HOTSPOT.equals(cfg.linkMode())) {
-            String text = Str.get(R.string.hql_hotspot_guide) + "\n\n" + Str.get(R.string.hql_hotspot_tips);
+        if (Config.LINK_HOTSPOT.equals(cfg.linkMode()) || Config.LINK_USB.equals(cfg.linkMode())) {
+            String text = Config.LINK_USB.equals(cfg.linkMode()) ? Str.get(R.string.hql_usb_guide)
+                    : Str.get(R.string.hql_hotspot_guide) + "\n\n" + Str.get(R.string.hql_hotspot_tips);
             return dev == null ? text : text + "\n\n" + Str.get(R.string.hql_setup_guide_title) + "\n" + dev;
         }
         return dev;
@@ -513,6 +515,8 @@ final class Checklist {
             case HOTSPOT_BAND:
                 return new Row(Str.get(R.string.hql_req_band), Str.get(R.string.hql_req_band_why))
                         .action(Str.get(R.string.hql_open), () -> HotspotWatcher.openSettings(act));
+            case USB_CABLE:
+                return new Row(Str.get(R.string.hql_req_usb), Str.get(R.string.hql_req_usb_why));
             case HOTSPOT_OFF: {
                 Row r = new Row(Str.get(R.string.hql_hotspot_off_row), hotspotText(it.status, false));
                 if (!ok && it.status != Requirements.Status.CHECKING) {
@@ -533,7 +537,9 @@ final class Checklist {
             case QDLINK: {
                 boolean qd = installed(act.getPackageManager(), QDLINK_PKG);
                 Row r = new Row(qd ? "QDLink" : Str.get(R.string.hql_req_port_title),
-                        it.hint == Requirements.Hint.PORT_BUSY ? Str.get(R.string.hql_req_port_busy) : Str.get(R.string.hql_req_qdlink_why));
+                        it.hint == Requirements.Hint.PORT_BUSY ? Str.get(R.string.hql_req_port_busy)
+                                : it.hint == Requirements.Hint.USB_CHOOSER ? Str.get(R.string.hql_req_usb_chooser)
+                                : Str.get(R.string.hql_req_qdlink_why));
                 if (qd) {
                     r.action(Str.get(it.hint == Requirements.Hint.PORT_BUSY ? R.string.hql_req_force_stop : R.string.hql_req_app_info),
                             () -> PowerHelper.openAppDetails(act, QDLINK_PKG));

@@ -145,6 +145,10 @@ internal class SendQueue(
     @Volatile
     private var waitingView = false
 
+    /** hql: `enqueuedNanos` de la cabeza de la cola de vídeo (0 = vacía), sin candado. */
+    @Volatile
+    private var videoHeadNanosView = 0L
+
     @Volatile
     var droppedFrames = 0L
         private set
@@ -390,6 +394,9 @@ internal class SendQueue(
     fun videoFrameDepth(): Int = videoFramesView
     fun videoByteDepth(): Long = videoBytesView
 
+    /** hql: `System.nanoTime()` en que se encoló la cabeza de la cola de vídeo, o 0 si está vacía (sin candado). */
+    fun videoHeadEnqueuedNanos(): Long = videoHeadNanosView
+
     /** Para tests: el candado lo tiene este hilo (las finalizaciones nunca deben verlo así). */
     fun isLockHeldByCurrentThread(): Boolean = lock.isHeldByCurrentThread
 
@@ -401,6 +408,7 @@ internal class SendQueue(
     private fun updateViews() {
         videoFramesView = videoFrames
         videoBytesView = videoBytes
+        videoHeadNanosView = video.firstOrNull()?.enqueuedNanos ?: 0L
     }
 
     private fun addVideo(item: Outgoing) {

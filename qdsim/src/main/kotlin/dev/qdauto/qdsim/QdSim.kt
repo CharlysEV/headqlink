@@ -86,6 +86,11 @@ class Options(
     val variants: String = "abc",
     /** `caida`: duración del corte de radio (s). */
     val radioS: Int = 12,
+    /**
+     * Trama por bloques del USB de QDLink sobre el TCP: el coche simulado rellena cada mensaje a 512 B y lee en bloques,
+     * y se comprueba que el móvil hace lo mismo (en HeadQLink: Diagnóstico › Opciones de prueba › trama USB por Wi-Fi).
+     */
+    val usbFraming: Boolean = false,
 ) {
     /** `estricto`: los WARN cuentan como FAIL y las manías no se pueden desactivar. */
     val strict: Boolean get() = scenario == "estricto"
@@ -138,6 +143,13 @@ class Options(
               --verbose            log completo del simulador
               --local-phone        prueba sin teléfono: un móvil de mentira (el núcleo con los ajustes del fork) en
                                    este mismo proceso, en 127.0.0.1
+              --usb-framing        trama del cable USB (AOA) de QDLink sobre el TCP del Wi-Fi, en los dos sentidos: cada
+                                   mensaje relleno con ceros hasta un múltiplo de 512 B (totalSize sin tocar) en un solo
+                                   write(), y lectura en bloques de 512 que salta el relleno. Comprueba también trama_usb:
+                                   todos los mensajes del móvil llegan rellenos (FAIL si alguno no). En el móvil hay que
+                                   activar antes HeadQLink › Diagnóstico › Opciones de prueba (QDAuto) › «Trama del cable
+                                   USB por Wi-Fi» (qd_usb_over_tcp) y volver a conectar; con --local-phone, el móvil local
+                                   también la usa. Ejemplo: qdsim --scenario normal --usb-framing --target <IP del móvil>
         """.trimIndent()
 
         fun parse(args: Array<String>): Options {
@@ -148,6 +160,7 @@ class Options(
             var noLimit = false
             var noSps = false
             var decode = false
+            var usbFraming = false
             var i = 0
             while (i < args.size) {
                 when (val a = args[i]) {
@@ -161,6 +174,7 @@ class Options(
                         noSps = true
                     }
                     "--decode" -> decode = true
+                    "--usb-framing" -> usbFraming = true
                     else -> {
                         require(a.startsWith("--")) { "argumento inesperado: $a" }
                         require(i + 1 < args.size) { "falta el valor de $a" }
@@ -208,6 +222,7 @@ class Options(
                 ffmpeg = ffmpeg,
                 variants = variants,
                 radioS = int("radio-s", 12).coerceAtLeast(1),
+                usbFraming = usbFraming,
             )
         }
     }
@@ -325,6 +340,7 @@ class QdSim(private val o: Options) {
         maxBroadcasts = comeback.maxBroadcasts,
         directMirrorPort = comeback.directPort,
         connectHost = comeback.directHost,
+        blockFraming = o.usbFraming,
     )
 
     /** Arranca un coche y espera a que el móvil le mande vídeo. */
@@ -392,6 +408,7 @@ class QdSim(private val o: Options) {
         say("$label: ${r.videoMessages} mensajes de vídeo (IDR ${r.idrFrames}, P ${r.pFrames}, config ${r.codecConfigMessages}) · " +
             "errores ${r.videoErrorCount} · heartbeats del móvil ${r.phoneHeartbeats}")
         if (r.videoErrorCount > 0) check(false, "$label: vídeo con errores ${r.videoErrors.take(3)}")
+        if (o.usbFraming) check(Quirks.usbFraming(r.phonePaddedMessages, r.phoneUnpaddedMessages, r.phonePaddingBytes, r.phoneStrayZeroBytes), label)
         quirks(sim, p, label)
         sim.close()
         sim.awaitTermination(5_000)
@@ -441,7 +458,11 @@ class QdSim(private val o: Options) {
         val limit = if (o.limitBytes > 0) "se cuelga con mensajes de vídeo de más de ${o.limitBytes / 1024} KiB (${o.hangMs} ms sin leer)" else "sin límite de mensaje"
         say("manías del C10: $limit · ${if (o.spsCheck) "SPS/PPS repetidos" else "sin comprobar SPS/PPS repetidos"}" +
             (if (o.decode) " · ffmpeg al final de cada sesión" else "") + if (o.strict) " · estricto: los WARN cuentan como FAIL" else "")
-        val phone = if (o.localPhone) LocalPhone(log).start() else null
+        if (o.usbFraming) {
+            say("trama del cable USB sobre el TCP: el coche rellena a 512 B y lee en bloques; el móvil tiene que hacer lo mismo" +
+                if (o.localPhone) " (móvil local con la misma trama)" else " (HeadQLink: Diagnóstico › Opciones de prueba › «Trama del cable USB por Wi-Fi»)")
+        }
+        val phone = if (o.localPhone) LocalPhone(log, o.usbFraming).start() else null
         localPhone = phone
         try {
             when (o.scenario) {

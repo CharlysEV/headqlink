@@ -6,6 +6,7 @@ import dev.qdauto.core.util.e
 import dev.qdauto.core.util.i
 import dev.qdauto.core.util.w
 import dev.qdauto.core.wire.BinBlock
+import dev.qdauto.core.wire.BlockFraming
 import dev.qdauto.core.wire.BroadcastAck
 import dev.qdauto.core.wire.CarMessages
 import dev.qdauto.core.wire.Cmd
@@ -44,6 +45,9 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * Hilos: `carsim-main` (descubrimiento y handshake), `carsim-reader` y `carsim-timer`. Las funciones de envío
  * son thread-safe y devuelven `false` si no se pudo enviar. Cada instancia sirve para una sola conexión.
+ *
+ * hql: con [CarSimConfig.blockFraming], la trama por bloques del USB (relleno a 512 B al escribir, lectura en bloques);
+ * con [startOnStreams], sin descubrimiento ni TCP: directamente sobre un par de flujos, como el accesorio USB.
  */
 class CarSim(
     val config: CarSimConfig = CarSimConfig(),
@@ -76,6 +80,14 @@ class CarSim(
 
     @Volatile
     private var out: OutputStream? = null
+
+    /** hql: flujos de [startOnStreams] (y lo que hay que cerrar con ellos). */
+    @Volatile
+    private var streams: List<Closeable>? = null
+
+    /** hql: el lector (para los contadores de la trama por bloques del informe). */
+    @Volatile
+    private var reader: FrameReader? = null
     private var mainThread: Thread? = null
     private var readerThread: Thread? = null
     private val timer = ScheduledThreadPoolExecutor(1) { r -> Thread(r, "carsim-timer").apply { isDaemon = true } }.apply {
@@ -92,6 +104,32 @@ class CarSim(
     fun start(): CarSim {
         check(started.compareAndSet(false, true)) { "start() ya se llamó" }
         mainThread = Thread({ runMain() }, "carsim-main").apply {
+            isDaemon = true
+            start()
+        }
+        return this
+    }
+
+    /**
+     * hql: sin descubrimiento ni TCP: el handshake y la sesión directamente sobre [input]/[output] (como el accesorio
+     * USB del coche, o tubos en memoria en los tests), con la trama de [CarSimConfig.blockFraming]. [closer] se cierra
+     * con el simulador (además de los dos flujos).
+     */
+    @JvmOverloads
+    fun startOnStreams(input: InputStream, output: OutputStream, label: String = "USB", closer: Closeable? = null): CarSim {
+        check(started.compareAndSet(false, true)) { "start() ya se llamó" }
+        streams = listOfNotNull(output, input, closer)
+        mainThread = Thread({
+            try {
+                setState(CarSimState.CONNECTING)
+                runSession(input, output, label)
+            } catch (e: Exception) {
+                if (!closed.get()) {
+                    log.e(TAG, "error en el simulador", e)
+                    finish("error: $e")
+                }
+            }
+        }, "carsim-main").apply {
             isDaemon = true
             start()
         }
@@ -223,7 +261,18 @@ class CarSim(
 
     // ===================================================================== informe y cierre
 
-    fun report(): CarSimReport = seen.report()
+    fun report(): CarSimReport {
+        val r = seen.report()
+        if (!config.blockFraming) return r
+        val fr = reader
+        return r.copy(
+            blockFraming = true,
+            phonePaddedMessages = fr?.paddedMessages ?: 0,
+            phoneUnpaddedMessages = fr?.unpaddedMessages ?: 0,
+            phonePaddingBytes = fr?.paddingBytes ?: 0,
+            phoneStrayZeroBytes = fr?.strayZeroBytes ?: 0,
+        )
+    }
 
     override fun close() = finish("cierre local")
 
@@ -263,29 +312,34 @@ class CarSim(
             s.tcpNoDelay = true
             s.connect(InetSocketAddress(host, port), config.connectTimeoutMs)
             socket = s
-            out = s.getOutputStream()
-            seen.noteConnected("$host:$port")
-            log.i(TAG, "conectado a $host:$port")
             if (closed.get()) {
                 s.close()
                 return
             }
-            val input = s.getInputStream()
-            readerThread = Thread({ readLoop(input) }, "carsim-reader").apply {
-                isDaemon = true
-                start()
-            }
-            schedule {
-                timer.scheduleWithFixedDelay({ heartbeatTick() }, config.heartbeatPeriodMs, config.heartbeatPeriodMs, TimeUnit.MILLISECONDS)
-            }
-            setState(CarSimState.HANDSHAKE)
-            handshake()
+            runSession(s.getInputStream(), s.getOutputStream(), "$host:$port")
         } catch (e: Exception) {
             if (!closed.get()) {
                 log.e(TAG, "error en el simulador", e)
                 finish("error: $e")
             }
         }
+    }
+
+    /** Lector, heartbeats y handshake sobre una conexión ya abierta (TCP o, hql, flujos). */
+    private fun runSession(input: InputStream, output: OutputStream, label: String) {
+        out = output
+        seen.noteConnected(label)
+        log.i(TAG, "conectado a $label" + if (config.blockFraming) " (trama USB: bloques de ${BlockFraming.BLOCK} B)" else "")
+        if (closed.get()) return
+        readerThread = Thread({ readLoop(input) }, "carsim-reader").apply {
+            isDaemon = true
+            start()
+        }
+        schedule {
+            timer.scheduleWithFixedDelay({ heartbeatTick() }, config.heartbeatPeriodMs, config.heartbeatPeriodMs, TimeUnit.MILLISECONDS)
+        }
+        setState(CarSimState.HANDSHAKE)
+        handshake()
     }
 
     /** Broadcast periódico desde el puerto del ACK hasta recibir un `Broadcast_ACK`. */
@@ -389,7 +443,8 @@ class CarSim(
     }
 
     private fun readLoop(input: InputStream) {
-        val reader = FrameReader(input, config.maxMessageBytes)
+        val reader = FrameReader(input, config.maxMessageBytes, blockSize = if (config.blockFraming) BlockFraming.BLOCK else 0)
+        this.reader = reader
         try {
             while (!closed.get()) {
                 waitWhileReadingPaused()
@@ -463,7 +518,8 @@ class CarSim(
         val o = out ?: return false
         synchronized(writeLock) {
             try {
-                o.write(bytes)
+                // hql: con la trama del USB, el mensaje con su relleno en un solo write() (como QDLink).
+                o.write(if (config.blockFraming) BlockFraming.pad(bytes) else bytes)
                 o.flush()
             } catch (e: IOException) {
                 if (!closed.get()) {
@@ -501,6 +557,12 @@ class CarSim(
         try {
             socket?.close()
         } catch (_: IOException) {
+        }
+        streams?.forEach {
+            try {
+                it.close()
+            } catch (_: Exception) {
+            }
         }
         udp?.close()
         mainThread?.interrupt()

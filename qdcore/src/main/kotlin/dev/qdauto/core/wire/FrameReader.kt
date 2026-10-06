@@ -45,17 +45,53 @@ sealed class WireMessage {
  * - magic desconocido o cabecera imposible: devuelve [WireMessage.Garbage] y se resincroniza buscando
  *   `5A5A`/`!BIN` byte a byte (QDLink descarta 16 bytes a ciegas).
  *
+ * hql: con [blockSize] > 0, trama por bloques del modo USB ([BlockFraming]):
+ * - cada `read()` pide un múltiplo de [blockSize] y nunca pasa del final (con relleno) del mensaje en curso: el primero
+ *   de un mensaje, un bloque (como QDLink); el resto del cuerpo, redondeado a bloques;
+ * - tras cada mensaje se saltan los ceros de relleno hasta el siguiente múltiplo de [blockSize] (contados desde el
+ *   inicio del mensaje). Es tolerante: si una lectura trae menos, se sigue leyendo; si el emisor no rellena (aparece un
+ *   magic donde tocaba relleno), se cuenta en [unpaddedMessages] y se sigue sin perder nada; los ceros de más entre
+ *   mensajes se saltan ([strayZeroBytes]): un mensaje nunca empieza por 0, así que el relleno no desincroniza nunca.
+ *
  * No es thread-safe: un solo hilo lector.
  */
-class FrameReader(
+class FrameReader @JvmOverloads constructor(
     private val input: InputStream,
     private val maxMessageSize: Int = DEFAULT_MAX_MESSAGE_SIZE,
     bufferSize: Int = 64 * 1024,
+    /** hql: 0 = flujo continuo (TCP); > 0 = bloques con relleno (USB: [BlockFraming.BLOCK]). */
+    val blockSize: Int = 0,
 ) {
-    private val buf = ByteArray(maxOf(bufferSize, BinBlock.SIZE))
+    private val blockMode = blockSize > 0
+    private val buf = ByteArray(
+        if (blockMode) BlockFraming.paddedSize(maxOf(bufferSize, BinBlock.SIZE + 2 * blockSize), blockSize) else maxOf(bufferSize, BinBlock.SIZE),
+    )
     private var pos = 0
     private var lim = 0
     private var eof = false
+
+    /** hql: ceros de relleno que quedan por saltar tras el último mensaje (modo bloques). */
+    private var padPending = 0
+
+    /** hql (bloques): mensajes que llegaron con su relleno completo (o que ya medían un múltiplo del bloque). */
+    @Volatile
+    var paddedMessages: Long = 0
+        private set
+
+    /** hql (bloques): mensajes tras los que el emisor no rellenó (llegó otro mensaje donde tocaba relleno). */
+    @Volatile
+    var unpaddedMessages: Long = 0
+        private set
+
+    /** hql (bloques): bytes de relleno saltados. */
+    @Volatile
+    var paddingBytes: Long = 0
+        private set
+
+    /** hql (bloques): ceros de más entre mensajes (más relleno del esperado), saltados sin dar basura. */
+    @Volatile
+    var strayZeroBytes: Long = 0
+        private set
 
     /** `System.nanoTime()` de la última lectura que devolvió datos (lo usa el watchdog). */
     @Volatile
@@ -69,11 +105,61 @@ class FrameReader(
     /** Siguiente mensaje, o `null` en fin de flujo limpio (entre mensajes). Propaga las `IOException` del stream. */
     @Throws(IOException::class)
     fun next(): WireMessage? {
+        if (blockMode) skipPadding()
         if (!ensure(4)) return if (available() == 0) null else takeGarbage(available(), "fin del flujo con ${available()} bytes sueltos")
-        return when {
+        val m = when {
             Header.hasMagic(buf, pos) -> readFrame()
             BinBlock.hasMagic(buf, pos) -> readBin()
             else -> resync("magic desconocido")
+        }
+        if (blockMode) expectPadding(m)
+        return m
+    }
+
+    /** hql (bloques): el relleno que debería seguir a [m] (de basura no se sabe: la resincronización ya buscó un magic). */
+    private fun expectPadding(m: WireMessage) {
+        val size = when (m) {
+            is WireMessage.Frame -> Header.SIZE + m.body.size
+            is WireMessage.Bin -> BinBlock.SIZE + m.block.extraSize
+            is WireMessage.Garbage -> return
+        }
+        padPending = BlockFraming.padding(size, blockSize)
+        if (padPending == 0) paddedMessages++
+    }
+
+    /**
+     * hql (bloques): salta el relleno del mensaje anterior y los ceros de más. Solo lee si no hay nada en el búfer (lo
+     * normal en USB es que el relleno llegue en la misma lectura que el final del mensaje); al principio de [next] hay
+     * que esperar al siguiente mensaje de todos modos.
+     */
+    private fun skipPadding() {
+        val expected = padPending
+        padPending = 0
+        if (expected > 0) {
+            var skipped = 0
+            var unpadded = false
+            while (skipped < expected) {
+                if (available() == 0 && !fill(expected - skipped)) break
+                if (buf[pos] != ZERO) {
+                    unpadded = true
+                    break
+                }
+                pos++
+                skipped++
+            }
+            paddingBytes += skipped
+            when {
+                skipped == expected -> paddedMessages++
+                unpadded -> unpaddedMessages++
+            }
+        }
+        while (true) {
+            if (available() == 0 && !fill(1)) return
+            if (buf[pos] != ZERO) return
+            var run = 0
+            while (pos + run < lim && buf[pos + run] == ZERO) run++
+            pos += run
+            strayZeroBytes += run
         }
     }
 
@@ -154,13 +240,16 @@ class FrameReader(
     /** Garantiza [n] bytes en el buffer; `false` si el flujo acaba antes. */
     private fun ensure(n: Int): Boolean {
         while (available() < n) {
-            if (!fill()) return false
+            if (!fill(n - available())) return false
         }
         return true
     }
 
-    /** Lee más datos al buffer (compactándolo). `false` en fin de flujo. */
-    private fun fill(): Boolean {
+    /**
+     * Lee más datos al buffer (compactándolo). `false` en fin de flujo. En flujo, todo lo que quepa; en bloques
+     * (hql), [want] bytes redondeados a bloques: al principio de un mensaje, un bloque, como QDLink.
+     */
+    private fun fill(want: Int = 1): Boolean {
         if (eof) return false
         if (pos > 0) {
             System.arraycopy(buf, pos, buf, 0, lim - pos)
@@ -168,7 +257,15 @@ class FrameReader(
             pos = 0
         }
         if (lim == buf.size) return true
-        val n = input.read(buf, lim, buf.size - lim)
+        val free = buf.size - lim
+        val request = if (blockMode) {
+            // El búfer mide al menos un !BIN y dos bloques: con lo que se pide en cada caso siempre cabe un bloque.
+            val whole = (free / blockSize) * blockSize
+            if (whole > 0) minOf(BlockFraming.paddedSize(maxOf(1, want), blockSize), whole) else free
+        } else {
+            free
+        }
+        val n = input.read(buf, lim, request)
         if (n < 0) {
             eof = true
             return false
@@ -184,6 +281,7 @@ class FrameReader(
         System.arraycopy(buf, pos, dst, 0, fromBuf)
         pos += fromBuf
         var done = fromBuf
+        if (blockMode) return readIntoBlocks(dst, done)
         while (done < dst.size && !eof) {
             val n = input.read(dst, done, dst.size - done)
             if (n < 0) {
@@ -192,6 +290,35 @@ class FrameReader(
             }
             if (n > 0) touched(n)
             done += n
+        }
+        return done
+    }
+
+    /**
+     * hql (bloques): el resto de [dst] desde [from]. Los bloques enteros, directamente al destino; la cola (menos de un
+     * bloque), a través del búfer con una petición de un bloque, que trae también el relleno (se salta en [next]).
+     * Ninguna petición pasa del final con relleno del mensaje.
+     */
+    private fun readIntoBlocks(dst: ByteArray, from: Int): Int {
+        var done = from
+        while (done < dst.size && !eof) {
+            val need = dst.size - done
+            val whole = (need / blockSize) * blockSize
+            if (whole > 0) {
+                val n = input.read(dst, done, whole)
+                if (n < 0) {
+                    eof = true
+                    break
+                }
+                if (n > 0) touched(n)
+                done += n
+            } else {
+                if (!fill(need)) break
+                val take = minOf(available(), need)
+                System.arraycopy(buf, pos, dst, done, take)
+                pos += take
+                done += take
+            }
         }
         return done
     }
@@ -206,6 +333,7 @@ class FrameReader(
         const val DEFAULT_MAX_MESSAGE_SIZE = 8 * 1024 * 1024
         const val MAX_GARBAGE_KEPT = 4096
         const val MAX_GARBAGE_SCAN = 1L shl 20
+        private const val ZERO: Byte = 0
 
         /** Utilidad para tests y herramientas: todos los mensajes de un array. */
         fun readAll(bytes: ByteArray, maxMessageSize: Int = DEFAULT_MAX_MESSAGE_SIZE): List<WireMessage> {

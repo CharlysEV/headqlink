@@ -3,6 +3,7 @@ package dev.qdauto.core.session
 import dev.qdauto.core.util.QdLog
 import dev.qdauto.core.util.d
 import dev.qdauto.core.util.w
+import dev.qdauto.core.wire.BlockFraming
 import dev.qdauto.core.wire.Direction
 import dev.qdauto.core.wire.Header
 import dev.qdauto.core.wire.MsgType
@@ -12,10 +13,11 @@ import dev.qdauto.core.wire.VideoExtHeader
 import dev.qdauto.core.wire.VideoMessage
 import java.io.IOException
 import java.io.OutputStream
+import java.util.Arrays
 
 /**
  * Bucle del hilo escritor: único que escribe en el socket, un `write()` por mensaje (como QDLink, LC/a.java:2666-2667),
- * en el orden que da [SendQueue] (control antes que vídeo).
+ * en el orden que da [SendQueue] (control antes que vídeo). hql: con [blockSize] (USB), cada mensaje con su relleno.
  *
  * hql (C2): avisa de la finalización de cada frame ([finish]: `WRITTEN`, `FAILED` y los descartes por retraso) y
  * deja ver qué está escribiendo ([current], [lastWriteEndNanos]) para las consultas sin candado.
@@ -37,7 +39,14 @@ internal class SocketWriter(
     private val gatePollNanos: Long = 2_000_000L,
     private val log: QdLog = QdLog.NONE,
     private val tag: String = "QD/Writer",
+    /**
+     * hql: 0 = cada mensaje tal cual (TCP). > 0 = trama por bloques del USB ([BlockFraming]): cada mensaje se rellena con
+     * ceros hasta un múltiplo de esto y sale igualmente en **un** `write()` (el `totalSize` de la cabecera no cambia).
+     */
+    private val blockSize: Int = 0,
 ) {
+    /** hql: búfer del mensaje con relleno (solo el hilo escritor; crece hasta el mensaje más grande). */
+    private var padded = ByteArray(0)
     /**
      * Elemento de vídeo que espera a la puerta y desde cuándo. Son campos (no variables de [nextItem]) para que el
      * control que sale mientras tanto no reinicie la espera máxima. Solo el hilo escritor.
@@ -75,7 +84,7 @@ internal class SocketWriter(
             current = item
             writeStartNanos = start
             try {
-                out.write(item.bytes)
+                writeMessage(out, item.bytes)
                 out.flush()
             } catch (e: IOException) {
                 writeStartNanos = 0
@@ -96,6 +105,24 @@ internal class SocketWriter(
                 return
             }
         }
+    }
+
+    /** Un mensaje, un `write()`; con bloques (hql), con su relleno de ceros en el mismo `write()`. */
+    private fun writeMessage(out: OutputStream, bytes: ByteArray) {
+        if (blockSize <= 0) {
+            out.write(bytes)
+            return
+        }
+        val n = BlockFraming.paddedSize(bytes.size, blockSize)
+        if (n == bytes.size) {
+            out.write(bytes)
+            return
+        }
+        if (padded.size < n) padded = ByteArray(BlockFraming.paddedSize(n, PADDED_GROWTH))
+        System.arraycopy(bytes, 0, padded, 0, bytes.size)
+        Arrays.fill(padded, bytes.size, n, 0.toByte())
+        out.write(padded, 0, n)
+        counters.paddingBytesSent.addAndGet((n - bytes.size).toLong())
     }
 
     /**
@@ -162,6 +189,9 @@ internal class SocketWriter(
 
     private companion object {
         const val LOG_EVERY_NANOS = 5_000_000_000L
+
+        /** El búfer con relleno crece de 64 KiB en 64 KiB (un IDR de 300 KB: una sola reserva). */
+        const val PADDED_GROWTH = 64 * 1024
     }
 
     private fun written(item: Outgoing) {

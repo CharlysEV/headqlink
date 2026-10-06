@@ -25,9 +25,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  * fork (ACK en cada broadcast y reenviado cada 2 s hasta el TCP, relevo, reconexión inmediata, puerto estable,
  * re-acogida tras un corte con ACK no pedidos, `MAX_LAG`, `DISCONNECT_RSP` y cierre) y un vídeo de mentira que vive
  * entre sesiones, como el `VideoHub`. Sirve para probar los escenarios en el PC sin el teléfono; no sustituye a la
- * prueba con el móvil.
+ * prueba con el móvil. Con [usbFraming], la trama por bloques del USB sobre el TCP (como el móvil con `qd_usb_over_tcp`).
  */
-class LocalPhone(private val log: QdLog) : Closeable {
+class LocalPhone(private val log: QdLog, private val usbFraming: Boolean = false) : Closeable {
     /** Por dónde volvió el coche la última vez (`vuelta del coche tras X s: …`), o `null` (se puede borrar). */
     @Volatile
     var lastReturn: Pair<CarReturn, Long>? = null
@@ -55,6 +55,7 @@ class LocalPhone(private val log: QdLog) : Closeable {
             reAckIntervalMs = 400,
             supersedeOnRebroadcast = true,
             recovery = RecoveryConfig(reclaimWindowMs = 300_000, watchMs = 300_000),
+            blockFraming = usbFraming,
         ),
         object : PhoneLinkListener {
             override fun onSessionStarted(session: PhoneSession) = say("móvil: S${session.id} conectada desde ${session.remoteAddress}")
@@ -112,7 +113,7 @@ class LocalPhone(private val log: QdLog) : Closeable {
     fun start(): LocalPhone {
         link.start()
         pump.start()
-        say("móvil local escuchando en UDP 18463 (motor QDAuto con los ajustes del fork)")
+        say("móvil local escuchando en UDP 18463 (motor QDAuto con los ajustes del fork" + (if (usbFraming) "; trama USB de 512 B sobre el TCP" else "") + ")")
         return this
     }
 

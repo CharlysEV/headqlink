@@ -102,11 +102,13 @@ public class LogActivity extends Activity {
         android.widget.CheckBox supersede = v.findViewById(R.id.hql_qd_supersede);
         android.widget.CheckBox strict = v.findViewById(R.id.hql_qd_peer_strict);
         android.widget.CheckBox qdlink = v.findViewById(R.id.hql_qd_phone_info);
+        android.widget.CheckBox usbOverTcp = v.findViewById(R.id.hql_qd_usb_over_tcp);
         android.widget.EditText gone = v.findViewById(R.id.hql_qd_car_gone);
         keep.setChecked(cfg.qdKeepVideo());
         supersede.setChecked(cfg.qdSupersede());
         strict.setChecked(cfg.peerStrict());
         qdlink.setChecked("qdlink".equals(cfg.qdPhoneInfo()));
+        usbOverTcp.setChecked(cfg.qdUsbOverTcp());
         int goneMs = cfg.getInt(Config.CAR_GONE_MS);
         if (goneMs > 0) gone.setText(String.valueOf(goneMs / 1000));
         ScrollView sv = new ScrollView(this);
@@ -119,6 +121,7 @@ public class LogActivity extends Activity {
                     cfg.putBool(Config.QD_SUPERSEDE, supersede.isChecked());
                     cfg.putBool(Config.PEER_STRICT, strict.isChecked());
                     cfg.putString(Config.QD_PHONE_INFO, qdlink.isChecked() ? "qdlink" : "fork");
+                    cfg.putBool(Config.QD_USB_OVER_TCP, usbOverTcp.isChecked());
                     int secs = 0;
                     try {
                         String s = gone.getText().toString().trim();
@@ -128,6 +131,7 @@ public class LogActivity extends Activity {
                     cfg.putInt(Config.CAR_GONE_MS, secs > 0 ? Math.max(5, Math.min(600, secs)) * 1000 : 0);
                     L.i("opciones de prueba de QDAuto: mantener vídeo " + cfg.qdKeepVideo() + " · relevo " + cfg.qdSupersede()
                             + " · filtro estricto " + cfg.peerStrict() + " · PHONE_INFO " + cfg.qdPhoneInfo()
+                            + " · trama del cable USB por Wi-Fi " + cfg.qdUsbOverTcp()
                             + " · vídeo vivo sin coche " + cfg.carGoneMs() / 1000 + " s (en la próxima pérdida del coche)");
                     if (LinkState.running) {
                         ToastUtils.showToast(this, Str.get(R.string.hql_applies_on_reconnect), Toast.LENGTH_LONG, true);

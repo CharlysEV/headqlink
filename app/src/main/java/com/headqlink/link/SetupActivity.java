@@ -191,18 +191,21 @@ public class SetupActivity extends Activity {
         renderLinkOptions();
     }
 
-    /** Conexión con el coche: Wi-Fi Direct o la zona Wi-Fi del móvil (qdauto §5.2), la recomendada (validada en el C10). */
+    /**
+     * Conexión con el coche: la zona Wi-Fi del móvil (qdauto §5.2), la recomendada (validada en el C10), Wi-Fi Direct o el
+     * cable USB (experimental: no se sabe si el C10 pone el móvil en modo accesorio).
+     */
     private void renderLinkOptions() {
         LinearLayout list = container.findViewById(R.id.hql_link_options);
         if (list == null) return;
         list.removeAllViews();
-        for (String lm : new String[]{Config.LINK_P2P, Config.LINK_HOTSPOT}) {
+        for (String lm : new String[]{Config.LINK_HOTSPOT, Config.LINK_P2P, Config.LINK_USB}) {
             View opt = LayoutInflater.from(this).inflate(R.layout.hql_mode_option, list, false);
             ((TextView) opt.findViewById(R.id.hql_opt_title)).setText(Ui.linkTitle(lm));
             ((TextView) opt.findViewById(R.id.hql_opt_detail)).setText(Ui.linkDetail(lm));
-            if (Config.DEFAULT_LINK.equals(lm)) {
+            if (Config.DEFAULT_LINK.equals(lm) || Config.LINK_USB.equals(lm)) {
                 TextView tag = opt.findViewById(R.id.hql_opt_tag);
-                tag.setText(Str.get(R.string.hql_recommended));
+                tag.setText(Str.get(Config.LINK_USB.equals(lm) ? R.string.hql_experimental : R.string.hql_recommended));
                 tag.setVisibility(View.VISIBLE);
             }
             opt.setSelected(lm.equals(linkMode));

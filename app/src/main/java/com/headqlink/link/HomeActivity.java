@@ -221,7 +221,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         String mode = cfg.mode();
         // La conexión con la que va el servicio; si se cambió en marcha, la nueva se aplica al volver a conectar.
         String link = Ui.linkTitle(LinkState.linkModeFor(cfg));
-        if (LinkState.running && !LinkState.activeLinkMode.isEmpty() && !LinkState.activeLinkMode.equals(cfg.linkMode())) {
+        if (LinkState.running && !LinkState.usbOverride && !LinkState.activeLinkMode.isEmpty() && !LinkState.activeLinkMode.equals(cfg.linkMode())) {
             link = Str.get(R.string.hql_link_pending, link, Ui.linkTitle(cfg.linkMode()));
         }
         modeView.setText(Ui.modeTitle(mode) + " · " + link);

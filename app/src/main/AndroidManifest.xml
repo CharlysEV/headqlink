@@ -43,6 +43,10 @@
     <uses-feature
         android:name="android.hardware.usb.host"
         android:required="false" />
+    <!-- headqlink: cable USB del coche (el coche es el host y el móvil, el accesorio) -->
+    <uses-feature
+        android:name="android.hardware.usb.accessory"
+        android:required="false" />
     <uses-feature
         android:name="android.hardware.screen.landscape"
         android:required="false" />
@@ -519,6 +523,28 @@
             android:exported="false"
             android:label="@string/hql_diagnostics"
             android:theme="@style/Theme.HeadQLink" />
+
+        <!--
+            headqlink: cable USB del coche (experimental). Android la lanza al enchufar el móvil cuando el coche lo pone en
+            modo accesorio con el filtro de QDLink (Neusoft / QDriveLink) y da permiso para ese accesorio. Transparente:
+            arranca LinkService por el cable y se cierra. Si QDLink también está instalada, Android pregunta qué app lo
+            abre (elegir HeadQLink y «Siempre»).
+        -->
+        <activity
+            android:name="com.headqlink.link.UsbAccessoryActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED"
+                android:resource="@xml/hql_usb_accessory_filter" />
+        </activity>
 
         <service
             android:name="com.headqlink.link.AaGuardService"

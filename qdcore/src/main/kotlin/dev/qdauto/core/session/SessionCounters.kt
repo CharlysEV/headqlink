@@ -24,6 +24,9 @@ internal class SessionCounters {
     /** hql: writes bloqueados con el coche hablando que la sesión aguantó (más de `writeStallTimeoutMs`). */
     val writeStalls = AtomicLong()
 
+    /** hql: ceros de relleno escritos (trama por bloques del USB; 0 en TCP). */
+    val paddingBytesSent = AtomicLong()
+
     /** hql: mensaje de vídeo más grande escrito (solo lo actualiza el hilo escritor). */
     @Volatile
     var maxVideoMessageBytes = 0L
@@ -75,7 +78,7 @@ internal class SessionCounters {
         lastCarHeartbeatNanos = now
     }
 
-    fun snapshot(state: SessionState, queue: SendQueue, reader: FrameReader?): SessionStats {
+    fun snapshot(state: SessionState, queue: SendQueue, reader: FrameReader?, blockSize: Int = 0): SessionStats {
         val now = System.nanoTime()
         val (fps, kbps) = videoRate.rates(now)
         return SessionStats(
@@ -107,6 +110,11 @@ internal class SessionCounters {
             videoFramesOversized = queue.oversizedFrames,
             maxOversizedBytes = maxOversized.get(),
             writeStalls = writeStalls.get(),
+            blockSize = blockSize,
+            paddingBytesSent = paddingBytesSent.get(),
+            paddingBytesReceived = reader?.paddingBytes ?: 0,
+            carMessagesPadded = reader?.paddedMessages ?: 0,
+            carMessagesUnpadded = reader?.unpaddedMessages ?: 0,
         )
     }
 }

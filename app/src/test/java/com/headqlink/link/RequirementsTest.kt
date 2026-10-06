@@ -285,4 +285,25 @@ class RequirementsTest {
         assertEquals(Perm.ASK, Requirements.permState(false, true, true)) // denegado una vez
         assertEquals(Perm.BLOCKED, Requirements.permState(false, true, false)) // denegado para siempre
     }
+
+    @Test
+    fun usbCableNeedsNoHotspotNorWifi() {
+        // Cable USB: ni zona Wi-Fi, ni Wi-Fi, ni «Dispositivos Wi-Fi cercanos», ni el puerto UDP 18463.
+        val items = eval { linkMode = Config.LINK_USB; hotspot = Hotspot.OFF; wifiOn = false; nearby = Perm.ASK; port = Port.BUSY }
+        val got = ids(items)
+        assertFalse(Id.HOTSPOT_ON in got)
+        assertFalse(Id.HOTSPOT_BAND in got)
+        assertFalse(Id.HOTSPOT_OFF in got)
+        assertFalse(Id.NEARBY_WIFI in got)
+        assertFalse(Id.WIFI_ON in got)
+        assertFalse(Id.QDLINK in got)
+        assertEquals(Status.TIP, item(items, Id.USB_CABLE).status)
+        assertEquals(0, Requirements.missingCount(items))
+        assertTrue(Requirements.blocking(items).isEmpty())
+        // Con QDLink instalada: aviso (no cuenta) de que Android puede preguntar qué app abre «QDriveLink».
+        val qd = eval { linkMode = Config.LINK_USB; qdlinkInstalled = true }
+        assertEquals(Hint.USB_CHOOSER, item(qd, Id.QDLINK).hint)
+        assertEquals(Status.WARN, item(qd, Id.QDLINK).status)
+        assertEquals(0, Requirements.missingCount(qd))
+    }
 }

@@ -121,6 +121,13 @@ data class CarSimConfig(
     val receiverHangMs: Long = 10_000,
     /** Umbral de aviso: la app tiene que recortar sus mensajes de vídeo a [RECOMMENDED_MAX_MESSAGE_BYTES]. */
     val largeMessageBytes: Int = RECOMMENDED_MAX_MESSAGE_BYTES,
+    /**
+     * hql: trama por bloques del USB de QDLink ([dev.qdauto.core.wire.BlockFraming]): el coche rellena con ceros cada
+     * mensaje hasta un múltiplo de 512 B (en un solo `write()`) y lee en bloques de 512 saltando el relleno, y el informe
+     * cuenta qué mensajes del teléfono llegaron con su relleno ([CarSimReport.phoneUnpaddedMessages]). Vale sobre el TCP
+     * (`qdsim --usb-framing`) y sobre flujos ([CarSim.startOnStreams]).
+     */
+    val blockFraming: Boolean = false,
 ) {
     companion object {
         /** Tamaño de mensaje de vídeo a partir del cual el receptor del C10 se cuelga (medido en el coche). */

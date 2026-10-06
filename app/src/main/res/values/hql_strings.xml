@@ -474,4 +474,21 @@
     <string name="hql_car_wait_option">%1$d min</string>
     <string name="hql_car_wait_option_default">%1$d min (recommended)</string>
     <string name="hql_car_wait_help">If the car turns off or the connection drops, HeadQLink keeps listening and leaves Android Auto paused for this long: if the car comes back, the picture returns instantly, without unlocking. After that it closes everything and turns off the Android Auto server.</string>
+
+    <!-- headqlink: cable USB del coche (experimental) -->
+    <string name="hql_link_usb">USB cable</string>
+    <string name="hql_link_usb_detail">The phone connects to the car\'s USB data port with a data cable, without Wi-Fi. Experimental: it only works if the car switches the phone to accessory mode (not every model does).</string>
+    <string name="hql_experimental">Experimental</string>
+    <string name="hql_req_usb">USB data cable</string>
+    <string name="hql_req_usb_why">Connect the phone to the car\'s USB data port with a data cable (not a charge-only one). The car has to switch the phone to accessory mode: if nothing happens, export the log and send it to us (HQL/USB lines).</string>
+    <string name="hql_req_usb_chooser">With QDLink installed, Android may ask which app opens «QDriveLink» when you plug in the cable: choose HeadQLink and «Always», or uninstall QDLink.</string>
+    <string name="hql_usb_guide_title">USB cable connection (experimental)</string>
+    <string name="hql_usb_guide">1. Connect the phone to the car\'s USB data port with a data cable.\n2. Open the mirroring app on the car\'s screen.\n3. If Android asks which app opens «QDriveLink», choose HeadQLink and «Always».\nHeadQLink starts on its own when the car switches the phone to accessory mode, whatever connection is chosen; when you unplug the cable it goes back to Wi-Fi. If nothing happens, export the log (Diagnostics) and send it to us.</string>
+    <string name="hql_usb_net_waiting">USB cable: waiting for the car (data cable in the car\'s USB data port)</string>
+    <string name="hql_usb_net_connected">USB cable: %1$s</string>
+    <string name="hql_usb_net_permission">USB cable: allow HeadQLink to open %1$s</string>
+    <string name="hql_usb_net_denied">USB cable: permission denied (unplug the cable and plug it in again)</string>
+    <string name="hql_usb_net_open_failed">USB cable: cannot open %1$s (is another app using it, such as QDLink?)</string>
+    <string name="hql_usb_net_other">USB cable: the accessory is not the car\'s (%1$s)</string>
+    <string name="hql_qd_usb_over_tcp">USB cable framing over Wi-Fi (test with qdsim --usb-framing): 512-byte blocks over the TCP. The car does not understand it: leave it off in the car</string>
 </resources>

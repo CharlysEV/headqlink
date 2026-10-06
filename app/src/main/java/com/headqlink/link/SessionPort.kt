@@ -12,7 +12,8 @@ import java.util.concurrent.atomic.AtomicReferenceArray
  * Fachada «amable para Java» sobre una [PhoneSession] del motor QDAuto (qdauto §4.6): envío de vídeo con su propia
  * finalización (estadísticas, traza de rendimiento y, encadenada, la del freno a AA), cabecera de vídeo, consultas de
  * cola y el estado del socket (`NetStat`) por hilo: cada hilo usuario tiene su duplicado del descriptor, porque el
- * array de muestras no es seguro entre hilos. Todos se cierran con [close].
+ * array de muestras no es seguro entre hilos. Todos se cierran con [close]. Por el cable USB no hay socket: sin NetStat
+ * (todas las consultas de la cola del kernel dan -1 y la puerta del freno queda abierta).
  */
 internal class SessionPort(val session: PhoneSession) {
     val id: Int get() = session.id
@@ -101,7 +102,8 @@ internal class SessionPort(val session: PhoneSession) {
         var ns = netStats.get(slot)
         if (ns == null) {
             if (failed[slot]) return null
-            ns = NetStat.open(session.socket)
+            val socket = session.socket
+            ns = if (socket != null) NetStat.open(socket) else null
             if (ns == null) {
                 failed[slot] = true
                 return null

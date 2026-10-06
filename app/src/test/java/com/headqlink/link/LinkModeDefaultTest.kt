@@ -30,4 +30,12 @@ class LinkModeDefaultTest {
         assertEquals(Config.LINK_P2P, Config.resolveLinkMode("", false))
         assertEquals(Config.LINK_P2P, Config.resolveLinkMode("otra", true))
     }
+
+    @Test
+    fun usbCableIsKept() {
+        assertEquals(Config.LINK_USB, Config.resolveLinkMode(Config.LINK_USB, true))
+        assertEquals(Config.LINK_USB, Config.resolveLinkMode(Config.LINK_USB, false))
+        // La recomendada sigue siendo la zona Wi-Fi.
+        assertEquals(Config.LINK_HOTSPOT, Config.DEFAULT_LINK)
+    }
 }

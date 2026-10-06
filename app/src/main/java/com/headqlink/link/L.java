@@ -134,6 +134,14 @@ final class L {
         write(level, msg, false);
     }
 
+    /**
+     * Línea que ya está en logcat y en el log unificado con su propia etiqueta (el cable USB, HQL/USB): solo a este
+     * fichero, para que también se vea en Diagnóstico.
+     */
+    static void fileOnly(String level, String msg) {
+        write(level, msg, false);
+    }
+
     private static void write(String level, String msg, boolean toUnified) {
         if (toUnified) QdTrace.forkLine(level, msg);
         String line;

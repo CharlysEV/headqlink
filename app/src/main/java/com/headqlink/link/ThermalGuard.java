@@ -42,7 +42,8 @@ final class ThermalGuard {
     }
 
     private final Context ctx;
-    private final Sink sink;
+    /** El vídeo del motor QDAuto; puede llegar después (cable USB con el motor original: setSink). */
+    private volatile Sink sink;
     private final ThermalPolicy policy = new ThermalPolicy();
     private final HandlerThread thread = new HandlerThread("hql-thermal");
     private Handler h;
@@ -63,6 +64,16 @@ final class ThermalGuard {
     ThermalGuard(Context ctx, Sink sink) {
         this.ctx = ctx.getApplicationContext();
         this.sink = sink;
+    }
+
+    /**
+     * El vídeo del motor QDAuto llega con el servicio ya en marcha (el cable USB con el motor original): desde ahora se
+     * le aplica cada nivel, y ya el actual si no es el normal.
+     */
+    void setSink(Sink s) {
+        sink = s;
+        int status = currentStatus;
+        if (s != null && currentLevel != ThermalPolicy.NORMAL && status >= 0) s.onThermalLevel(currentLevel, status);
     }
 
     static int status() {
@@ -144,12 +155,13 @@ final class ThermalGuard {
         String mode = new Config(ctx).thermalMode();
         String line = "térmico " + status + " → perfil " + ThermalPolicy.name(level) + " (protección " + ThermalPolicy.modeName(mode)
                 + ": " + ThermalPolicy.describe(mode, level, 0) + ")";
-        if (sink == null) {
+        Sink s = sink;
+        if (s == null) {
             L.i(line + "; motor original: solo se registra");
             return;
         }
         L.i(line);
-        sink.onThermalLevel(level, status);
+        s.onThermalLevel(level, status);
     }
 
     /** Temperatura de la batería (difusión fija ACTION_BATTERY_CHANGED), estado térmico, margen y nivel. */

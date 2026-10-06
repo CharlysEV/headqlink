@@ -39,10 +39,10 @@ internal class QdLinkHost(
     private val ctx: Context,
     private val cfg: Config,
     /** Conexión con la que arrancó el servicio (Config.LINK_*): la de las sesiones de este motor, aunque se cambie en marcha. */
-    val linkMode: String,
+    override val linkMode: String,
     private val hub: VideoHub,
     private val callbacks: Callbacks,
-) {
+) : BridgeHost {
     /** Avisos a LinkService, siempre en el hilo principal. */
     interface Callbacks {
         /** Primer anuncio del coche desde la última sesión. */
@@ -65,6 +65,12 @@ internal class QdLinkHost(
     private val main = Handler(Looper.getMainLooper())
     private val backoff = QuickBackoff()
     val hotspotMode = Config.LINK_HOTSPOT == linkMode
+
+    /** Prueba: la trama del cable USB sobre el TCP (qdsim --usb-framing); se lee al arrancar el motor. */
+    private val usbOverTcp = cfg.qdUsbOverTcp()
+
+    override val linkLabel: String = (if (hotspotMode) "zona Wi-Fi" else "Wi-Fi Direct") + if (usbOverTcp) " (trama USB)" else ""
+    override val isUsb: Boolean get() = false
     /** Interfaces del móvil, como mucho un escaneo por segundo (se consultan con cada broadcast). */
     @Volatile
     private var ifaceCache: Pair<Long, List<NetIfaces.Iface>>? = null
@@ -131,7 +137,11 @@ internal class QdLinkHost(
             l.start()
             link = l
             LinkState.setUdpBusy(false)
-            QdTrace.i("HQL/Enlace", "motor QDAuto escuchando (${if (hotspotMode) "zona Wi-Fi" else "Wi-Fi Direct"}) · móvil $phone")
+            QdTrace.i("HQL/Enlace", "motor QDAuto escuchando ($linkLabel) · móvil $phone")
+            if (usbOverTcp) {
+                L.w("prueba: trama del cable USB (bloques de 512 B) sobre el TCP del Wi-Fi; solo para qdsim --usb-framing, el coche no la entiende")
+                QdTrace.w("HQL/USB", "prueba qd_usb_over_tcp: las sesiones por Wi-Fi usan la trama del cable USB (relleno a 512 B y lectura en bloques)")
+            }
             if (startFailed) {
                 startFailed = false
                 L.i("motor QDAuto: el UDP 18463 ya está libre; escuchando")
@@ -235,6 +245,7 @@ internal class QdLinkHost(
             // El C10 solo se anuncia sin sesión: un broadcast con la sesión abierta y callada es que la dio por muerta.
             supersedeOnRebroadcast = cfg.qdSupersede(),
             recovery = recovery,
+            blockFraming = usbOverTcp,
         )
         return PhoneLink(config, LinkEvents(), object : dev.qdauto.core.session.SessionListener {}, QdTrace.qdLog) { s ->
             QdSessionBridge(ctx, s, this, hub, cfg, lastCar).also { bridges[s.id] = it }
@@ -242,7 +253,7 @@ internal class QdLinkHost(
     }
 
     /** Lo llama el puente con el tamaño del coche (CAR_INFO). */
-    fun onCarSize(bridge: QdSessionBridge, detail: String) {
+    override fun onCarSize(bridge: QdSessionBridge, detail: String) {
         // CAR_INFO puede llegar antes de que onSessionStarted fije la sesión actual (el coche responde en ~13 ms).
         if (!isCurrentOrNone(bridge.session.id)) return
         main.post { if (!stopping) callbacks.onCarSize(detail) }

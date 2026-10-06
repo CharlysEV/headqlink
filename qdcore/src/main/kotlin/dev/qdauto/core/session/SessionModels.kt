@@ -147,6 +147,14 @@ data class SessionStats(
     val maxOversizedBytes: Long = 0,
     /** hql: `write()` bloqueados más de [SessionConfig.writeStallTimeoutMs] con el coche hablando (la sesión aguantó). */
     val writeStalls: Long = 0,
+    /** hql: trama del transporte: 0 = flujo (TCP), 512 = bloques con relleno (USB). */
+    val blockSize: Int = 0,
+    /** hql (bloques): ceros de relleno escritos y saltados al leer. */
+    val paddingBytesSent: Long = 0,
+    val paddingBytesReceived: Long = 0,
+    /** hql (bloques): mensajes del coche con su relleno completo y sin él (el coche no rellena). */
+    val carMessagesPadded: Long = 0,
+    val carMessagesUnpadded: Long = 0,
 )
 
 /**

@@ -25,6 +25,9 @@ import java.util.Locale;
  * - **Subir**: tras RECOVER_MS seguidos sin congestión, primero vuelven los fps de la sesión; después, bitrate
  *   × STEP_UP cada RECOVER_MS limpios, hasta el techo.
  * - **Techo**: el bitrate de partida o, con calor, el tope térmico (el menor); bajarlo recorta el bitrate en el acto.
+ * - **Sin cola del kernel** (cable USB: no hay socket ni NetStat, outq y rtt a -1): la «cola alta» es el vídeo más viejo
+ *   aún sin salir de la cola de la sesión (o escribiéndose) con ≥ QUEUE_LAG_HIGH_MS durante OUTQ_HIGH_MS; además siguen
+ *   los vaciados por retraso. Con NetStat, el retraso de la cola no cuenta (ya lo dicen la cola del kernel y el rtt).
  * Cada paso devuelve un {@link Step} con el texto para el log. Thread-safe (lo usan hql-video y el resumen).
  */
 final class LinkRateController {
@@ -43,6 +46,11 @@ final class LinkRateController {
     /** El rtt alto tiene que durar esto (en el coche eran 100-300 ms sostenidos; en casa salen picos sueltos de 60 ms). */
     static final long RTT_HIGH_MS = 500;
     static final long STEP_HOLD_MS = 500;
+    /**
+     * Sin NetStat (USB): retraso del vídeo en la cola de la sesión que cuenta como cola alta. Dos frames a 30 fps; el
+     * núcleo tira los P-frames de más de 150 ms (MAX_LAG), y eso ya cuenta aparte como vaciado.
+     */
+    static final long QUEUE_LAG_HIGH_MS = 66;
     static final long RECOVER_MS = 3_000;
     static final int LOW_FPS = 24;
 
@@ -57,8 +65,14 @@ final class LinkRateController {
         final int linkWaits;
         /** Vaciados de la cola del núcleo por retraso (acumulado de la sesión). */
         final long lateFlushes;
+        /** Antigüedad del vídeo más viejo aún sin salir de la cola de la sesión (ms; -1 = no se sabe). */
+        final long queueLagMs;
 
         Sample(long nowMs, int outq, int unacked, int retrans, int rttMs, int linkWaits, long lateFlushes) {
+            this(nowMs, outq, unacked, retrans, rttMs, linkWaits, lateFlushes, -1);
+        }
+
+        Sample(long nowMs, int outq, int unacked, int retrans, int rttMs, int linkWaits, long lateFlushes, long queueLagMs) {
             this.nowMs = nowMs;
             this.outq = outq;
             this.unacked = unacked;
@@ -66,6 +80,7 @@ final class LinkRateController {
             this.rttMs = rttMs;
             this.linkWaits = linkWaits;
             this.lateFlushes = lateFlushes;
+            this.queueLagMs = queueLagMs;
         }
 
         /** Sin las esperas de la puerta ni los vaciados (los añade quien los conoce con {@link #with}). */
@@ -74,7 +89,7 @@ final class LinkRateController {
         }
 
         Sample with(int linkWaits, long lateFlushes) {
-            return new Sample(nowMs, outq, unacked, retrans, rttMs, linkWaits, lateFlushes);
+            return new Sample(nowMs, outq, unacked, retrans, rttMs, linkWaits, lateFlushes, queueLagMs);
         }
     }
 
@@ -179,15 +194,20 @@ final class LinkRateController {
         long now = s.nowMs;
         StringBuilder why = new StringBuilder();
 
-        // Cola del kernel alta (o la puerta GL cerrada por el enlace casi todo el rato) durante OUTQ_HIGH_MS.
-        boolean high = s.outq >= OUTQ_HIGH_BYTES || s.linkWaits >= LINK_WAITS_HIGH;
+        // Cola del kernel alta (o la puerta GL cerrada por el enlace casi todo el rato) durante OUTQ_HIGH_MS. Sin cola del
+        // kernel (USB), el retraso de la cola de la sesión.
+        boolean lagHigh = s.outq < 0 && s.queueLagMs >= QUEUE_LAG_HIGH_MS;
+        boolean high = s.outq >= OUTQ_HIGH_BYTES || s.linkWaits >= LINK_WAITS_HIGH || lagHigh;
         if (high) {
             if (outqHighSinceMs < 0) outqHighSinceMs = now;
         } else {
             outqHighSinceMs = -1;
         }
         if (high && now - outqHighSinceMs >= OUTQ_HIGH_MS) {
-            add(why, s.outq >= 0 ? "outq " + kb(s.outq) + " " + (now - outqHighSinceMs) + " ms" : "enlace cerrado " + (now - outqHighSinceMs) + " ms");
+            String held = (now - outqHighSinceMs) + " ms";
+            add(why, s.outq >= 0 ? "outq " + kb(s.outq) + " " + held
+                    : lagHigh ? "cola de la sesión " + s.queueLagMs + " ms de retraso, " + held
+                    : "enlace cerrado " + held);
         }
 
         // Las retransmisiones no se miran: unas pocas por segundo son normales en Wi-Fi y, si de verdad frenan el

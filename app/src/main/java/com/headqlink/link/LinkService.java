@@ -21,6 +21,11 @@ import java.net.InetAddress;
 /**
  * Servicio en primer plano: mantiene la red con el coche (Wi-Fi Direct o la zona Wi-Fi del móvil) + escucha UDP y
  * abre una sesión por cada coche que anuncia por broadcast. Funciona con la pantalla apagada (wakelock + wifilock).
+ *
+ * Cable USB (experimental, UsbLink): con la conexión «Cable USB» o en cuanto se enchufa un accesorio del coche
+ * (Neusoft / QDriveLink: UsbAccessoryActivity → ACTION_USB_ATTACHED), el cable tiene prioridad: se para el Wi-Fi
+ * (descubrimiento, intento y sesión) y la sesión va por el accesorio, con el mismo Android Auto y el mismo ciclo de
+ * vida. Al quitar el cable, «coche perdido» y, si la conexión elegida era otra, vuelve el Wi-Fi.
  */
 public class LinkService extends Service implements UdpDiscovery.Listener, SspSession.Listener {
     static final String ACTION_STOP = "com.headqlink.link.STOP";
@@ -39,6 +44,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     static final String ACTION_AA_SERVER_RESTART = "com.headqlink.link.AA_SERVER_RESTART";
     /** Aviso «El servidor de Android Auto sigue encendido · Tocar para apagarlo» (AaServerStarter). */
     static final String ACTION_AA_SERVER_OFF = "com.headqlink.link.AA_SERVER_OFF";
+    /** El coche puso el móvil en modo accesorio (UsbAccessoryActivity), con UsbManager.EXTRA_ACCESSORY: cable USB. */
+    static final String ACTION_USB_ATTACHED = "com.headqlink.link.USB_ATTACHED";
     private static final String CHANNEL = "link";
 
     static volatile String status = "parado";
@@ -55,6 +62,17 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     /** Motor QDAuto (qdauto §4.3): dueño del PhoneLink del núcleo, y el vídeo que vive entre sesiones. */
     private QdLinkHost qd;
     private VideoHub video;
+    /** Cable USB (experimental): sondeo siempre; enlace por cable cuando está activo (usbActive). */
+    private UsbLink usb;
+    /** El enlace va por el cable: el Wi-Fi está parado mientras tanto. Se cambia en el hilo principal. */
+    private volatile boolean usbActive;
+    /** Hubo alguna sesión por el cable (para el resumen del viaje). */
+    private boolean usbUsed;
+    /** El servicio arranca por el cable (ACTION_USB_ATTACHED antes de arrancar el transporte). */
+    private boolean usbAtStart;
+    /** Conexión y motor configurados al arrancar: los del Wi-Fi, al que se vuelve al quitar el cable. */
+    private String wifiLinkMode;
+    private String wifiEngine;
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
     private WifiManager.MulticastLock mcLock;
@@ -108,7 +126,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
      * se lleva su vídeo, y AA, sin imagen que recibir, pasa a la pausa en el acto).
      */
     private long graceMs() {
-        return qd != null && cfg.qdKeepVideo() ? cfg.carGoneMs() : 0;
+        return (qd != null || usbActive) && cfg.qdKeepVideo() ? cfg.carGoneMs() : 0;
     }
 
     private boolean aaConnected() {
@@ -117,6 +135,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
 
     /** Hay una sesión o un intento con el coche (con el motor original, una sesión abierta tras su broadcast). */
     private boolean linkBusy() {
+        if (usbActive) return usb != null && usb.isBusy();
         if (qd != null) return qd.isBusy();
         return session != null;
     }
@@ -261,6 +280,18 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             apply(life.btGone(now(), env()));
             return START_NOT_STICKY;
         }
+        boolean usbAttach = ACTION_USB_ATTACHED.equals(intent.getAction());
+        if (usbAttach) {
+            android.hardware.usb.UsbAccessory acc = UsbProbe.accessoryFrom(intent);
+            if (transportStarted) {
+                // startForegroundService: hay que volver a pasar a primer plano aunque ya lo esté.
+                if (!goForeground(status)) return START_NOT_STICKY;
+                onUsbCar(acc, "accesorio " + UsbProbe.shortName(acc) + " conectado");
+                return START_NOT_STICKY;
+            }
+            usbAtStart = true;
+            L.i("cable USB: accesorio del coche " + UsbProbe.shortName(acc) + " conectado: arranco el enlace por cable");
+        }
         if (ACTION_BT_CAR.equals(intent.getAction())) {
             L.i("conexión automática: Bluetooth del coche detectado");
             if (Config.isAa(cfg.mode()) && TouchService.instance == null) {
@@ -333,6 +364,26 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             startAaTest();
             return START_NOT_STICKY;
         }
+        boolean applyUsb = ACTION_APPLY.equals(intent.getAction()) && usbActive && usb != null && video != null
+                && (usb.isBusy() || video.hasVideo());
+        if (applyUsb) {
+            // Por el cable no se cierra la sesión (no se sabe si el coche repite el saludo por el cable): se rehace el vídeo.
+            boolean renegotiate = intent.getBooleanExtra(EXTRA_AA_RENEGOTIATE, false) && Config.isAa(cfg.mode());
+            L.i("aplicando ajustes: rehago el vídeo sin cerrar la sesión por cable");
+            video.stop("ajustes");
+            usb.restartVideo(renegotiate ? 3000 : 1000, "ajustes");
+            if (renegotiate) {
+                L.i("aplicando ajustes: reconecto Android Auto (perfil " + cfg.videoProfile().id + ")");
+                try {
+                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
+                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_DISCONNECT));
+                    startService(new Intent(this, com.andrerinas.openheadunit.aap.AapService.class)
+                            .setAction(com.andrerinas.openheadunit.aap.AapService.ACTION_STOP_SELF_MODE));
+                } catch (RuntimeException e) {
+                    L.e("no se pudo desconectar Android Auto", e);
+                }
+            }
+        }
         boolean applyQd = intent != null && ACTION_APPLY.equals(intent.getAction()) && qd != null
                 && (qd.isBusy() || video.hasVideo());
         if (applyQd) {
@@ -383,7 +434,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             LinkState.setCar(LinkState.Car.SEARCHING, "");
             sysMonitor = new SystemMonitor(this);
             sysMonitor.start();
-            // Con el motor QDAuto, el nivel térmico baja fps y bitrate del vídeo vivo; con el original, solo se registra.
+            // Con el motor QDAuto, el nivel térmico baja fps y bitrate del vídeo vivo; con el original, solo se registra
+            // (hasta que el cable USB traiga el vídeo del motor QDAuto: onUsbCar).
             VideoHub hub = video;
             thermal = new ThermalGuard(this, hub != null ? hub::setThermalLevel : null);
             thermal.start();
@@ -392,6 +444,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             AaServerStarter.cancelServerStillOn(this);
             String action = intent.getAction();
             LinkLifecycle.Trigger trigger = ACTION_BT_CAR.equals(action) ? LinkLifecycle.Trigger.BLUETOOTH
+                    : usbAttach ? LinkLifecycle.Trigger.USB
                     : ACTION_APPLY.equals(action) ? LinkLifecycle.Trigger.USER : LinkLifecycle.Trigger.OTHER;
             apply(life.start(now(), trigger, env(), cfg.carWaitMs()));
         } else {
@@ -408,9 +461,24 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
      */
     private void startTransport() {
         // Una sola lectura: lo que se cambie en marcha se aplica al volver a conectar, y diagnóstico e interfaz dicen esto.
-        String linkMode = cfg.linkMode();
-        String engine = cfg.linkEngine();
-        LinkState.setActiveTransport(linkMode, engine);
+        wifiLinkMode = cfg.linkMode();
+        wifiEngine = cfg.linkEngine();
+        // El sondeo del cable USB va siempre (HQL/USB); el enlace por cable, si se eligió o si el coche ya lo puso.
+        usb = new UsbLink(this, cfg, new UsbCallbacks());
+        usb.start();
+        if (usbAtStart || Config.LINK_USB.equals(wifiLinkMode)) {
+            startUsb(usbAtStart ? "accesorio del coche conectado" : "conexión elegida: cable USB");
+        } else {
+            startWifi();
+        }
+    }
+
+    /** Wi-Fi (zona Wi-Fi o Wi-Fi Direct) con el motor configurado al arrancar; también al volver de un cable quitado. */
+    private void startWifi() {
+        String linkMode = wifiLinkMode;
+        String engine = wifiEngine;
+        usbActive = false;
+        LinkState.setActiveTransport(linkMode, engine, false);
         if (Config.LINK_HOTSPOT.equals(linkMode)) {
             L.i("conexión: punto de acceso del móvil (sin Wi-Fi Direct)");
             hotspot = new HotspotWatcher(this, this::onHotspotState);
@@ -423,7 +491,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         if (Config.ENGINE_QDAUTO.equals(engine)) {
             // Los dos motores escuchan en el UDP 18463: nunca conviven.
             L.i("motor de protocolo: QDAuto");
-            video = new VideoHub(this, cfg);
+            // El vídeo (y Android Auto) sigue de una sesión por cable a la siguiente por Wi-Fi.
+            if (video == null) video = new VideoHub(this, cfg);
             qd = new QdLinkHost(this, cfg, linkMode, video, new QdCallbacks());
             qd.start();
         } else {
@@ -433,8 +502,94 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         }
     }
 
+    /**
+     * Cable USB con prioridad: se para el Wi-Fi (descubrimiento, intento y sesión) y se abre el accesorio del coche. El
+     * enlace por cable usa siempre el motor QDAuto (el original no sabe de bloques de 512 B).
+     */
+    private void startUsb(String why) {
+        boolean qdWasConnected = qd != null && qd.isConnected();
+        boolean wifi = qd != null || udp != null || p2p != null || hotspot != null;
+        stopWifi(why);
+        usbActive = true;
+        usbUsed = true;
+        boolean override = !Config.LINK_USB.equals(wifiLinkMode);
+        L.i("conexión: cable USB (" + why + ")" + (override ? "; el Wi-Fi (" + Ui.linkTitle(wifiLinkMode)
+                + ") vuelve al quitar el cable" : "") + (wifi ? "; Wi-Fi en pausa mientras tanto" : ""));
+        LinkState.setActiveTransport(Config.LINK_USB, Config.ENGINE_QDAUTO, override);
+        if (video == null) {
+            video = new VideoHub(this, cfg);
+            if (thermal != null) thermal.setSink(video::setThermalLevel);
+        }
+        usb.activate(video, why);
+        if (qdWasConnected) {
+            // La sesión por Wi-Fi se ha cerrado con el motor (sin aviso): el vídeo sigue vivo para la del cable.
+            setStatus(Str.get(R.string.hql_reconnecting));
+            LinkState.setCar(LinkState.Car.RECONNECTING, "");
+            apply(life.carLost(now(), env(), graceMs(), cfg.carWaitMs()));
+        }
+    }
+
+    /** Para el Wi-Fi (el cable tiene prioridad). Hilo principal. */
+    private void stopWifi(String why) {
+        if (qd != null) {
+            L.i("Wi-Fi en pausa (" + why + "): paro el motor QDAuto por Wi-Fi");
+            qd.stop();
+            qd = null;
+        }
+        synchronized (this) {
+            if (udp != null) {
+                udp.shutdown();
+                udp = null;
+            }
+            if (session != null) {
+                session.close();
+                session = null;
+            }
+        }
+        if (p2p != null) {
+            p2p.stop();
+            p2p = null;
+        }
+        if (hotspot != null) {
+            hotspot.stop();
+            hotspot = null;
+        }
+    }
+
+    /** Hilo principal: accesorio del coche (actividad del accesorio o sondeo) con el servicio en marcha. */
+    private void onUsbCar(android.hardware.usb.UsbAccessory acc, String why) {
+        if (stopping || usb == null) return;
+        if (!usbActive) {
+            L.i("cable USB: " + why + ": tiene prioridad sobre el Wi-Fi");
+            startUsb(why);
+            // El coche está delante: Android Auto para él (como con su anuncio por Wi-Fi).
+            apply(life.carSeen(now(), env(), cfg.carWaitMs()));
+        }
+        usb.offer(acc, why);
+    }
+
+    /** Avisos del enlace por cable (hilo principal): los del coche, como el motor QDAuto; y el cable que se va. */
+    private final class UsbCallbacks extends QdCallbacks implements UsbLink.Callbacks {
+        @Override
+        public void onUsbCarPresent(String description) {
+            onUsbCar(null, "accesorio del coche " + description + " presente");
+        }
+
+        @Override
+        public void onUsbGone(String why) {
+            if (stopping || !usbActive) return;
+            if (Config.LINK_USB.equals(wifiLinkMode)) {
+                L.i("cable USB fuera (" + why + "): espero a que se vuelva a enchufar");
+                return;
+            }
+            L.i("cable USB fuera (" + why + "): vuelvo al Wi-Fi (" + Ui.linkTitle(wifiLinkMode) + ")");
+            usb.deactivate(why);
+            startWifi();
+        }
+    }
+
     /** Avisos del motor QDAuto (hilo principal). */
-    private final class QdCallbacks implements QdLinkHost.Callbacks {
+    private class QdCallbacks implements QdLinkHost.Callbacks {
         @Override
         public void onCarSeen(String name) {
             if (LinkState.car == LinkState.Car.CONNECTED || LinkState.car == LinkState.Car.SEEN) return;
@@ -531,6 +686,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
 
     /** Hay una sesión con el coche ahora mismo. */
     private boolean isLinkConnected() {
+        if (usbActive) return usb != null && usb.isConnected();
         if (qd != null) return qd.isConnected();
         SspSession s = session;
         return s != null && s.isConnected();
@@ -561,6 +717,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
 
     @Override
     public synchronized void onCarBroadcast(InetAddress carIp, JSONObject info) {
+        // Con el cable USB el Wi-Fi está parado: un anuncio que llega tarde no abre nada.
+        if (udp == null || usbActive) return;
         if (session != null && session.isConnected()) return;
         if (session == null) {
             L.i("coche anunciado: " + info + " desde " + carIp.getHostAddress());
@@ -737,11 +895,13 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         // aparcado y con su servidor encendido sin nadie que lo cierre.
         if (!aaClosed && AaPark.parked && !AaGuardService.active) closeAa(false);
         if (sysMonitor != null) sysMonitor.stop();
-        if (qd != null) {
+        if (usb != null) usb.stop();
+        if (qd != null || usbUsed) {
             // Primero se cierra la sesión en curso y se espera su resumen (como mucho 500 ms), para que el del viaje
             // (qdauto §7.4) la incluya; los dos antes de cerrar el diario del coche.
-            qd.stop();
-            if (!qd.awaitStopped(500)) L.w("la sesión con el coche no terminó en 500 ms; el resumen del viaje puede no incluirla");
+            if (qd != null) qd.stop();
+            if (qd != null && !qd.awaitStopped(500)) L.w("la sesión con el coche no terminó en 500 ms; el resumen del viaje puede no incluirla");
+            if (usb != null && !usb.awaitStopped(500)) L.w("la sesión por cable no terminó en 500 ms; el resumen del viaje puede no incluirla");
             String trip = SessionSummary.INSTANCE.tripSummary(System.currentTimeMillis(), AaPassthroughSource.AA_LAUNCHES.get());
             QdTrace.block("HQL/Viaje", trip);
             for (String line : trip.split("\n")) L.quiet("I", line);

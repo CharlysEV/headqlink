@@ -68,7 +68,7 @@ final class SystemMonitor {
     SystemMonitor(Context ctx) {
         this.ctx = ctx.getApplicationContext();
         // La conexión de este servicio (la configurada puede haber cambiado en marcha).
-        this.p2pMode = !Config.LINK_HOTSPOT.equals(LinkState.linkModeFor(new Config(ctx)));
+        this.p2pMode = Config.LINK_P2P.equals(LinkState.linkModeFor(new Config(ctx)));
     }
 
     /** Interfaz por la que va la sesión owner (su id): swlan0, p2p0… */

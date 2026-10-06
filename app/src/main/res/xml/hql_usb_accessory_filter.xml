@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    headqlink: cable USB del coche (experimental). El C10, como host USB, pone el móvil en modo accesorio (AOA) con los
+    nombres del filtro de QDLink: fabricante «Neusoft», modelo «QDriveLink» (versión «1»). Sin versión aquí para no
+    perder un coche que anuncie otra; UsbAccessoryActivity la registra (HQL/USB).
+-->
+<resources>
+    <usb-accessory manufacturer="Neusoft" model="QDriveLink" />
+</resources>

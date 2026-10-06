@@ -87,6 +87,15 @@ data class CarSimReport(
     val keysSent: Int,
     val handshakeErrors: List<String>,
     val closeReason: String?,
+    /** hql: trama por bloques del USB ([CarSimConfig.blockFraming]). */
+    val blockFraming: Boolean = false,
+    /** hql (bloques): mensajes del teléfono que llegaron con su relleno a 512 B (o ya medían un múltiplo). */
+    val phonePaddedMessages: Long = 0,
+    /** hql (bloques): mensajes del teléfono sin relleno: el teléfono no está en la trama del USB. */
+    val phoneUnpaddedMessages: Long = 0,
+    /** hql (bloques): bytes de relleno saltados (y ceros de más entre mensajes). */
+    val phonePaddingBytes: Long = 0,
+    val phoneStrayZeroBytes: Long = 0,
 ) {
     /** Hubo vídeo, el primero fue SPS/PPS, hubo IDR y ningún error de validación. */
     val videoValid: Boolean
@@ -110,6 +119,12 @@ data class CarSimReport(
         videoErrors.take(10).forEach { appendLine("  ! $it") }
         if (unexpected.isNotEmpty()) appendLine("inesperados=$unexpected")
         if (handshakeErrors.isNotEmpty()) appendLine("handshake=$handshakeErrors")
+        if (blockFraming) {
+            appendLine(
+                "trama USB (bloques de 512 B): $phonePaddedMessages mensajes del teléfono con relleno, $phoneUnpaddedMessages sin relleno, " +
+                    "$phonePaddingBytes B de relleno" + if (phoneStrayZeroBytes > 0) ", $phoneStrayZeroBytes ceros de más" else "",
+            )
+        }
         appendLine("táctiles=$touchesSent teclas=$keysSent cierre=$closeReason")
     }
 }

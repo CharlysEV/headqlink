@@ -47,6 +47,25 @@ object Quirks {
         return Verdict(Level.PASS, "tamano_mensaje: $max (límite del coche ${carLimitBytes / 1024} KiB)")
     }
 
+    /**
+     * `trama_usb` (con `--usb-framing`): todos los mensajes del móvil tienen que llegar rellenos con ceros hasta un
+     * múltiplo de 512 B, como en el cable USB de QDLink. FAIL si alguno no (el móvil no está en la trama del USB) o si
+     * no llegó ninguno.
+     */
+    fun usbFraming(padded: Long, unpadded: Long, paddingBytes: Long, strayZeros: Long): Verdict {
+        val detail = "$padded mensajes del móvil rellenos a 512 B, $unpadded sin rellenar, $paddingBytes B de relleno" +
+            if (strayZeros > 0) ", $strayZeros ceros de más" else ""
+        return when {
+            unpadded > 0 -> Verdict(
+                Level.FAIL,
+                "trama_usb: $detail; el móvil no rellena: activa en HeadQLink Diagnóstico › Opciones de prueba (QDAuto) › " +
+                    "«Trama del cable USB por Wi-Fi» y vuelve a conectar",
+            )
+            padded == 0L -> Verdict(Level.FAIL, "trama_usb: ningún mensaje del móvil")
+            else -> Verdict(Level.PASS, "trama_usb: $detail")
+        }
+    }
+
     /** `sps_repetido`: FAIL si algún SPS/PPS no tiene un IDR detrás; WARN si precede a un IDR que nadie pidió. */
     fun spsRepeat(videoMessages: Int, s: CodecConfigSummary): Verdict {
         if (videoMessages == 0) return Verdict(Level.SKIP, "sps_repetido: sin vídeo")

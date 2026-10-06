@@ -29,6 +29,21 @@ private val WALL = object : ThreadLocal<SimpleDateFormat>() {
     override fun initialValue() = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
 }
 
+/** Dueño de las sesiones de un puente: el motor por Wi-Fi ([QdLinkHost]) o el cable USB ([UsbLink]). */
+internal interface BridgeHost {
+    /** Conexión de sus sesiones (Config.LINK_*), para el resumen y `sessions.csv`. */
+    val linkMode: String
+
+    /** «zona Wi-Fi», «Wi-Fi Direct» o «cable USB», para el log y el contexto de los cortes. */
+    val linkLabel: String
+
+    /** Sus sesiones van por el cable USB (sin socket: sin IP, interfaz ni NetStat). */
+    val isUsb: Boolean
+
+    /** El tamaño del coche (CAR_INFO) de la sesión de [bridge]. */
+    fun onCarSize(bridge: QdSessionBridge, detail: String)
+}
+
 /**
  * [SessionListener] de **una** sesión del motor QDAuto (qdauto §4.5), creado por la fábrica de [QdLinkHost] antes de
  * arrancarla: traduce los eventos del núcleo al vídeo ([VideoHub]), al estado visible ([LinkState]) y a los registros
@@ -39,7 +54,7 @@ private val WALL = object : ThreadLocal<SimpleDateFormat>() {
 internal class QdSessionBridge(
     private val ctx: android.content.Context,
     val session: PhoneSession,
-    private val host: QdLinkHost,
+    private val host: BridgeHost,
     private val hub: VideoHub,
     private val cfg: Config,
     private val car: CarAnnouncement?,
@@ -108,43 +123,62 @@ internal class QdSessionBridge(
     @Volatile
     private var monitorRunning = false
     private val localIface: String by lazy {
+        val socket = session.socket ?: return@lazy USB_IFACE
         try {
-            NetworkInterface.getByInetAddress(session.socket.localAddress)?.name ?: "?"
+            NetworkInterface.getByInetAddress(socket.localAddress)?.name ?: "?"
         } catch (_: Exception) {
             "?"
         }
     }
 
     init {
-        QdTrace.i(
-            "HQL/Puente S$sid",
-            "sesión nueva con ${session.remoteAddress} (${car?.name ?: "?"}) · motor QDAuto · ${cfg.mode()} · " +
-                (if (host.hotspotMode) "zona Wi-Fi" else "Wi-Fi Direct"),
-        )
+        val peer = if (host.isUsb) session.transport.describe() else "${session.remoteAddress} (${car?.name ?: "?"})"
+        QdTrace.i("HQL/Puente S$sid", "sesión nueva con $peer · motor QDAuto · ${cfg.mode()} · ${host.linkLabel}")
     }
 
     /** Coche e interfaz de esta sesión, para la pantalla del coche y la notificación. */
     fun describeLink(): String {
+        val socket = session.socket ?: return session.transport.describe()
         val remote = session.remoteAddress?.address?.hostAddress ?: "?"
-        val local = session.socket.localAddress?.hostAddress ?: "?"
+        val local = socket.localAddress?.hostAddress ?: "?"
         return "$remote · $localIface $local"
+    }
+
+    /**
+     * Rehace el vídeo de esta sesión sin cerrarla (ajustes aplicados con el cable USB: no se sabe si el coche repite el
+     * saludo por el cable). Solo si el coche ya pidió vídeo; hilo principal.
+     */
+    fun restartVideo(why: String) {
+        if (videoCtrlNanos == 0L || port.closed) return
+        L.i("VIDEO: S$sid rehace el vídeo sin cerrar la sesión ($why)")
+        hub.attachOrCreate(port, carVideo())
     }
 
     /** La sesión arrancó (hilo de aceptación): diarios, traza y monitor de red. */
     fun onStarted(gap: SessionBook.Gap?) {
         this.gap = gap
-        CarTrace.beginSession(session.remoteAddress.toString())
+        CarTrace.beginSession(session.remoteAddress?.toString() ?: session.transport.describe())
         perfToken = PerfTrace.beginSession("S$sid")
         PerfTrace.event(if (isInteractive()) "screen_on" else "screen_off", 1)
-        SystemMonitor.setLinkIface(localIface, sid)
+        // Por el cable no hay interfaz de red que muestrear.
+        if (session.socket != null) SystemMonitor.setLinkIface(localIface, sid)
         LinkState.setLinkDetail(describeLink(), sid)
         if (port.closed) {
             // Se cerró mientras tanto y su onClosed ya pudo borrar lo suyo: que no quede lo de una sesión muerta.
             SystemMonitor.clearLinkIface(sid)
             LinkState.clearLinkDetail(sid)
         }
-        QdTrace.i("HQL/Puente S$sid", "TCP ${session.remoteAddress} → local ${session.socket.localSocketAddress} ($localIface)")
-        QdTrace.i("HQL/Red", "interfaces al empezar S$sid: " + NetIfaces.describe(NetIfaces.scan()))
+        val socket = session.socket
+        if (socket != null) {
+            QdTrace.i(
+                "HQL/Puente S$sid",
+                "TCP ${session.remoteAddress} → local ${socket.localSocketAddress} ($localIface)" +
+                    if (session.isBlockFraming) " · trama del cable USB (bloques de 512 B)" else "",
+            )
+            QdTrace.i("HQL/Red", "interfaces al empezar S$sid: " + NetIfaces.describe(NetIfaces.scan()))
+        } else {
+            QdTrace.i("HQL/Puente S$sid", "${session.transport.describe()} (sin socket: el atasco se mide con la cola de la sesión)")
+        }
         aaCyclesAtStart = hub.aaCycles()
         startMonitor()
     }
@@ -354,7 +388,11 @@ internal class QdSessionBridge(
     private fun startMonitor() {
         monitorRunning = true
         val t = Thread({
-            if (port.monitorSample() == null) L.w("traza: sin estado del socket (librería hqlnet no disponible)")
+            if (session.socket == null) {
+                L.i("traza: por el cable USB no hay socket: sin cola del kernel ni rtt; el bitrate se adapta con el retraso de la cola de la sesión")
+            } else if (port.monitorSample() == null) {
+                L.w("traza: sin estado del socket (librería hqlnet no disponible)")
+            }
             var last = SystemClock.elapsedRealtime()
             var tick = 0
             try {
@@ -395,8 +433,10 @@ internal class QdSessionBridge(
         if (g == null || end == 0L || end > idr) return
         fun ms(a: Long, b: Long) = if (a == 0L || b == 0L) "?" else ((b - a) / 1_000_000).toString()
         reconnectMs = (idr - end) / 1_000_000
-        reconnectText = "${reconnectMs} ms desde el fin de S${g.prevSid} (broadcast +${ms(end, g.broadcastNanos)} · " +
-            "ACK +${ms(g.broadcastNanos, g.ackNanos)} · TCP +${ms(g.ackNanos, createdNanos)} · " +
+        // Por el cable: «accesorio» = el accesorio visto, «abierto» = openAccessory, «sesión» = el puente.
+        val (seen, acked, opened) = if (host.isUsb) Triple("accesorio", "abierto", "sesión") else Triple("broadcast", "ACK", "TCP")
+        reconnectText = "${reconnectMs} ms desde el fin de S${g.prevSid} ($seen +${ms(end, g.broadcastNanos)} · " +
+            "$acked +${ms(g.broadcastNanos, g.ackNanos)} · $opened +${ms(g.ackNanos, createdNanos)} · " +
             "VIDEO_CTRL +${ms(createdNanos, videoCtrlNanos)} · IDR +${ms(videoCtrlNanos, idr)})"
         val line = "reconexión $reconnectText · vídeo ${hub.lastVerdict()}"
         L.i(line)
@@ -442,13 +482,14 @@ internal class QdSessionBridge(
             port,
             LinkRateController.Sample(
                 SystemClock.elapsedRealtime(), sample.outq, sample.unacked, sample.retrans, sample.rttMs, 0, session.videoFlushes(),
+                io.videoQueueLagMs,
             ),
         )
     }
 
     private fun stallContext(): String {
         val sb = StringBuilder()
-        sb.append(if (host.hotspotMode) "zona Wi-Fi " else "Wi-Fi Direct ").append(localIface)
+        sb.append(host.linkLabel).append(" ").append(localIface)
         if (LinkState.network.isNotEmpty()) sb.append(" (").append(LinkState.network).append(')')
         sb.append(" · pantalla ").append(if (isInteractive()) "encendida" else "apagada")
         return sb.toString()
@@ -473,7 +514,7 @@ internal class QdSessionBridge(
             val s = port.stats
             fun rel(n: Long) = if (n == 0L) -1L else (n - createdNanos) / 1_000_000
             val remote = session.remoteAddress
-            val ifaceKind = NetIfaces.kindOf(localIface).label
+            val ifaceKind = if (host.isUsb) "cable USB" else NetIfaces.kindOf(localIface).label
             val cycles = hub.aaCycles()
             sampleThermal()
             val record = SessionSummary.Record(
@@ -485,10 +526,10 @@ internal class QdSessionBridge(
                 videoMode = cfg.mode(),
                 profile = if (Config.isAa(cfg.mode())) cfg.videoProfile().id else "",
                 video = port.headerText(),
-                carIp = remote?.address?.hostAddress ?: "?",
+                carIp = remote?.address?.hostAddress ?: if (host.isUsb) USB_IFACE else "?",
                 carPort = remote?.port ?: 0,
                 carName = car?.name ?: "",
-                local = (session.socket.localAddress?.hostAddress ?: "?") + ":" + session.socket.localPort,
+                local = session.socket?.let { (it.localAddress?.hostAddress ?: "?") + ":" + it.localPort } ?: USB_IFACE,
                 iface = "$localIface ($ifaceKind)",
                 closeKind = reason.kind.name,
                 closeDetail = reason.message,
@@ -545,7 +586,14 @@ internal class QdSessionBridge(
                     }
                 }
             }
-            QdTrace.i("HQL/Red", "interfaces al terminar S$sid: " + NetIfaces.describe(NetIfaces.scan()))
+            if (session.isBlockFraming) {
+                QdTrace.i(
+                    "HQL/USB",
+                    "S$sid: trama de bloques: ${st.paddingBytesSent} B de relleno enviados · del coche ${st.carMessagesPadded} mensajes " +
+                        "con relleno, ${st.carMessagesUnpadded} sin él, ${st.paddingBytesReceived} B de relleno",
+                )
+            }
+            if (session.socket != null) QdTrace.i("HQL/Red", "interfaces al terminar S$sid: " + NetIfaces.describe(NetIfaces.scan()))
         } catch (e: RuntimeException) {
             L.e("resumen de la sesión S$sid", e)
         }
@@ -579,11 +627,15 @@ internal class QdSessionBridge(
                 "heartbeats del coche ${st.carHeartbeats} · hueco máx. del coche ${st.maxCarGapMs} ms · IDR pedidos ${st.keyframeRequests}" +
                 " · mensaje de vídeo máx. ${(st.maxVideoMessageBytes + 1023) / 1024} KB" +
                 (if (st.videoFramesOversized > 0) " · descartados por tamaño ${st.videoFramesOversized}" else "") +
-                (net?.let { " · outq ${it[0]} B rtt ${it[1] / 1000} ms retrans ${it[4]} cwnd ${it[5]}" } ?: ""),
+                (net?.let { " · outq ${it[0]} B rtt ${it[1] / 1000} ms retrans ${it[4]} cwnd ${it[5]}" } ?: "") +
+                (if (session.socket == null) " · retraso de la cola ${session.videoQueueLagMs()} ms" else ""),
         )
     }
 
     private companion object {
+        /** «Interfaz» y dirección de una sesión por el cable USB (no hay red). */
+        const val USB_IFACE = "usb"
+
         /** Espera al monitor de red al cerrar (comparte con onClosed el detector de cortes y la métrica). */
         const val MONITOR_JOIN_MS = 200L
 

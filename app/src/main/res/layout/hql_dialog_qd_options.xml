@@ -39,6 +39,13 @@
         android:layout_height="wrap_content"
         android:text="@string/hql_qd_phone_info_qdlink" />
 
+    <!-- headqlink: prueba de la trama del cable USB desde el PC (qdsim con la opción usb-framing) -->
+    <CheckBox
+        android:id="@+id/hql_qd_usb_over_tcp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_qd_usb_over_tcp" />
+
     <TextView
         style="@style/HQL.Text.Label"
         android:layout_width="wrap_content"

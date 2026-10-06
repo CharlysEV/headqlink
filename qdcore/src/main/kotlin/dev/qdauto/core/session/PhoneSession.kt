@@ -24,7 +24,6 @@ import java.io.Closeable
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Socket
-import java.net.SocketException
 import java.nio.ByteBuffer
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ScheduledThreadPoolExecutor
@@ -33,7 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Sesión QDLink del lado del teléfono sobre un TCP ya aceptado (ver [MirrorServer] y [PhoneLink]).
+ * Sesión QDLink del lado del teléfono sobre un TCP ya aceptado (ver [MirrorServer] y [PhoneLink]) o, hql, sobre
+ * cualquier [SessionTransport]: el accesorio USB (AOA) del coche, con la trama por bloques de 512 B ([StreamTransport]).
  *
  * Al [start]: AppStatus `!BIN`, heartbeat (1 s y luego cada 3 s), watchdog de recepción y respuestas automáticas del
  * handshake (`PHONE_INFO` + `UPDATE_NOTIFY`, `VIDEO_SUP_RSP`, `SPEECH_ARGS`, `LAND_MODE_RSP`, `WhitelistAppOn`…),
@@ -45,12 +45,30 @@ import java.util.concurrent.atomic.AtomicInteger
  * los de envío nunca bloquean.
  */
 class PhoneSession(
-    /** hql (C3): el socket aceptado (solo lectura: `NetStat`, IP local, log; no escribir ni cerrar desde fuera). */
-    val socket: Socket,
+    /** hql: por dónde viaja la sesión (TCP del Wi-Fi o flujos del USB); lo cierra la sesión. */
+    val transport: SessionTransport,
     val config: SessionConfig = SessionConfig(),
     internal val listener: SessionListener = object : SessionListener {},
     internal val log: QdLog = QdLog.NONE,
 ) : Closeable {
+
+    /** Sobre el TCP que abrió el coche (el comportamiento de siempre). */
+    @JvmOverloads
+    constructor(
+        socket: Socket,
+        config: SessionConfig = SessionConfig(),
+        listener: SessionListener = object : SessionListener {},
+        log: QdLog = QdLog.NONE,
+    ) : this(TcpTransport(socket), config, listener, log)
+
+    /**
+     * hql (C3): el socket aceptado (solo lectura: `NetStat`, IP local, log; no escribir ni cerrar desde fuera), o `null`
+     * si la sesión no va por TCP (USB).
+     */
+    val socket: Socket? get() = transport.socket
+
+    /** hql: trama por bloques del USB (relleno a 512 B al escribir, lectura en bloques). */
+    val isBlockFraming: Boolean get() = transport.blockSize > 0
 
     val id: Int = ID_SEQ.incrementAndGet()
     internal val tag = "QD/S$id"
@@ -158,6 +176,7 @@ class PhoneSession(
         gatePollNanos = maxOf(1L, config.videoWriteGatePollMs) * 1_000_000,
         log = log,
         tag = tag,
+        blockSize = transport.blockSize,
     )
 
     @Volatile
@@ -167,7 +186,7 @@ class PhoneSession(
 
     val state: SessionState get() = currentState
     val isClosed: Boolean get() = closed.get()
-    val remoteAddress: InetSocketAddress? get() = socket.remoteSocketAddress as? InetSocketAddress
+    val remoteAddress: InetSocketAddress? get() = transport.remoteAddress
 
     /** Tamaño y parámetros sugeridos para el encoder (inCar y `VIDEO_ARGS`, con los valores de QDLink si llegan a 0). */
     val encoderSuggestion: EncoderSuggestion
@@ -189,12 +208,12 @@ class PhoneSession(
         check(started.compareAndSet(false, true)) { "start() ya se llamó" }
         check(!closed.get()) { "sesión cerrada" }
         startedAtNanos = System.nanoTime()
-        configureSocket()
-        val input = socket.getInputStream()
-        val output = socket.getOutputStream()
-        val r = FrameReader(input, config.maxMessageBytes)
+        val streams = transport.open(config, log, tag)
+        val input = streams.input
+        val output = streams.output
+        val r = FrameReader(input, config.maxMessageBytes, blockSize = transport.blockSize)
         reader = r
-        log.i(tag, "sesión con ${socket.remoteSocketAddress} (local ${socket.localSocketAddress})")
+        log.i(tag, "sesión con ${transport.describe()}")
         // AppStatus nada más conectar (LC/a.java:1697-1698), antes que cualquier respuesta: se encola antes del lector.
         if (config.sendAppStatus) enqueueRaw(BinBlock.appStatus(config.phone.sdkInt), "!BIN AppStatus")
         writerThread = startThread("qd-s$id-writer", ThreadRole.WRITER) { writer.run(output) }
@@ -309,7 +328,7 @@ class PhoneSession(
 
     // ===================================================================== estado
 
-    fun stats(): SessionStats = counters.snapshot(currentState, queue, reader)
+    fun stats(): SessionStats = counters.snapshot(currentState, queue, reader, transport.blockSize)
 
     /** hql (C2): frames de vídeo en cola, sin candados (para consultas frecuentes). */
     fun videoQueueFrames(): Int = queue.videoFrameDepth()
@@ -322,6 +341,20 @@ class PhoneSession(
 
     /** hql (C2): vaciados de la cola por `MAX_LAG`. */
     fun videoFlushes(): Long = queue.flushes
+
+    /**
+     * hql: antigüedad (ms) del vídeo más viejo que aún no ha salido entero (cabeza de la cola o el que se escribe), o 0.
+     * Sin cola del kernel (USB) es lo que dice si el enlace se atasca.
+     */
+    fun videoQueueLagMs(): Long = queueLagMs(System.nanoTime(), writer.current)
+
+    private fun queueLagMs(now: Long, cur: Outgoing?): Long {
+        var oldest = queue.videoHeadEnqueuedNanos()
+        if (cur != null && cur.isVideo && cur.writeStartNanos != 0L && cur.writeEndNanos == 0L) {
+            if (oldest == 0L || cur.enqueuedNanos < oldest) oldest = cur.enqueuedNanos
+        }
+        return if (oldest == 0L) 0L else maxOf(0L, (now - oldest) / 1_000_000)
+    }
 
     /** hql (C2): foto barata de la E/S (sin candados ni objetos grandes). */
     fun io(): IoSnapshot {
@@ -342,6 +375,7 @@ class PhoneSession(
             videoQueueFrames = queue.videoFrameDepth(),
             videoQueueBytes = queue.videoByteDepth(),
             controlQueue = queue.controlDepth(),
+            videoQueueLagMs = queueLagMs(now, cur),
         )
     }
 
@@ -362,7 +396,7 @@ class PhoneSession(
         return readerThread?.isAlive != true && writerThread?.isAlive != true && timerDone && eventsDone
     }
 
-    override fun toString(): String = "PhoneSession#$id(${socket.remoteSocketAddress}, $currentState)"
+    override fun toString(): String = "PhoneSession#$id(${transport.describe()}, $currentState)"
 
     // ===================================================================== interno (también para InboundHandler)
 
@@ -446,20 +480,9 @@ class PhoneSession(
         }
         timer.shutdownNow()
         val pending = queue.close()
-        // hql (C3): shutdown antes de close: si alguien tiene un duplicado del descriptor (NetStat), close() no basta
-        // para que el kernel mande el FIN al coche.
-        try {
-            socket.shutdownInput()
-        } catch (_: Exception) {
-        }
-        try {
-            socket.shutdownOutput()
-        } catch (_: Exception) {
-        }
-        try {
-            socket.close()
-        } catch (_: IOException) {
-        }
+        // hql: TCP: shutdown y close (el FIN al coche aunque NetStat tenga un duplicado del descriptor); USB: los flujos
+        // y el descriptor del accesorio.
+        transport.close()
         // hql (C2): lo que quedaba en cola termina con CLOSED (fuera de cualquier candado).
         for (item in pending) finish(item, FrameOutcome.CLOSED)
         events.closeWith { listener.onClosed(reason) }
@@ -738,46 +761,6 @@ class PhoneSession(
             angle = ov.angle ?: 90,
             orientation = ov.orientation ?: 1,
         )
-    }
-
-    /**
-     * Opciones de WF/d.java:88-94, salvo los tamaños de buffer (ver [SessionConfig.sendBufferBytes]).
-     * hql (C3): después, `IP_TOS` ([SessionConfig.trafficClass], con su propio `try`: hay sistemas que lo ignoran o lo
-     * rechazan) y el configurador de la app.
-     */
-    private fun configureSocket() {
-        try {
-            socket.tcpNoDelay = config.tcpNoDelay
-            config.sendBufferBytes?.let { socket.sendBufferSize = it }
-            config.receiveBufferBytes?.let { socket.receiveBufferSize = it }
-            socket.keepAlive = config.keepAlive
-        } catch (e: SocketException) {
-            log.w(tag, "no se pudieron aplicar las opciones del socket", e)
-        }
-        config.trafficClass?.let { tc ->
-            try {
-                socket.trafficClass = tc
-            } catch (e: Exception) {
-                log.w(tag, "no se pudo marcar IP_TOS=0x${Integer.toHexString(tc)}", e)
-            }
-        }
-        config.socketConfigurator?.let { configure ->
-            try {
-                configure(socket)
-            } catch (e: Exception) {
-                log.w(tag, "el configurador del socket falló", e)
-            }
-        }
-        try {
-            log.i(
-                tag,
-                "socket: TCP_NODELAY=${socket.tcpNoDelay} SO_SNDBUF=${socket.sendBufferSize} " +
-                    "SO_RCVBUF=${socket.receiveBufferSize} SO_KEEPALIVE=${socket.keepAlive} " +
-                    "IP_TOS=0x${Integer.toHexString(socket.trafficClass)}",
-            )
-        } catch (e: SocketException) {
-            log.w(tag, "no se pudieron leer las opciones del socket", e)
-        }
     }
 
     private fun startThread(name: String, role: ThreadRole, body: () -> Unit): Thread = Thread({

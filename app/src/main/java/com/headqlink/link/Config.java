@@ -52,6 +52,12 @@ final class Config {
     static final String LINK_MODE = "link_mode";
     static final String LINK_P2P = "p2p";
     static final String LINK_HOTSPOT = "hotspot";
+    /**
+     * Cable USB (experimental): el coche pone el móvil en modo accesorio (AOA, «Neusoft QDriveLink») y la sesión va por
+     * el cable con la trama de bloques de 512 B, sin Wi-Fi. Con un accesorio del coche conectado, el cable tiene
+     * prioridad aunque la conexión elegida sea otra (UsbLink).
+     */
+    static final String LINK_USB = "usb";
     /** Conexión de una instalación nueva: la zona Wi-Fi del móvil, la validada en el C10 (se marca «Recomendado»). */
     static final String DEFAULT_LINK = LINK_HOTSPOT;
 
@@ -102,6 +108,11 @@ final class Config {
     static final String QD_CAR_PING = "qd_car_ping";
     /** PHONE_INFO y ACK: "fork" (MODEL, UUID propio y tamaño del vídeo) o "qdlink" (vacíos y geometría de QDLink). */
     static final String QD_PHONE_INFO = "qd_phone_info";
+    /**
+     * Prueba (Diagnóstico › Opciones de prueba): la trama por bloques del cable USB sobre el TCP del Wi-Fi, para probarla
+     * desde el PC con «qdsim --usb-framing». Por defecto, no (el C10 por Wi-Fi no la usa).
+     */
+    static final String QD_USB_OVER_TCP = "qd_usb_over_tcp";
     /** Modo guardado al activar la prueba con patrón desde Diagnóstico. */
     static final String MODE_BEFORE_PATTERN = "mode_before_pattern";
 
@@ -187,14 +198,14 @@ final class Config {
         if (i.hasExtra(MODE)) e.putString(MODE, i.getStringExtra(MODE));
         if (i.hasExtra(LINK_MODE)) {
             String lm = i.getStringExtra(LINK_MODE);
-            if (LINK_P2P.equals(lm) || LINK_HOTSPOT.equals(lm)) e.putString(LINK_MODE, lm);
+            if (LINK_P2P.equals(lm) || LINK_HOTSPOT.equals(lm) || LINK_USB.equals(lm)) e.putString(LINK_MODE, lm);
         }
         if (i.hasExtra(LINK_ENGINE)) {
             String en = i.getStringExtra(LINK_ENGINE);
             if (ENGINE_QDAUTO.equals(en) || ENGINE_ORIGINAL.equals(en)) e.putString(LINK_ENGINE, en);
         }
         for (String k : new String[]{QD_KEEP_VIDEO, PEER_STRICT, QD_SUPERSEDE, QD_ACK_RESEND, QD_STABLE_PORT, QD_RECLAIM,
-                QD_UDP_REFRESH, QD_CAR_PING}) {
+                QD_UDP_REFRESH, QD_CAR_PING, QD_USB_OVER_TCP}) {
             if (i.hasExtra(k)) e.putBoolean(k, i.getBooleanExtra(k, false));
         }
         if (i.hasExtra(CAR_GONE_MS)) e.putInt(CAR_GONE_MS, i.getIntExtra(CAR_GONE_MS, 0));
@@ -468,7 +479,7 @@ final class Config {
         sp.edit().putString(MODE, m).apply();
     }
 
-    /** Conexión con el coche: LINK_HOTSPOT (por defecto en una instalación nueva) o LINK_P2P. */
+    /** Conexión con el coche: LINK_HOTSPOT (por defecto en una instalación nueva), LINK_P2P o LINK_USB. */
     String linkMode() {
         return resolveLinkMode(sp.getString(LINK_MODE, null), setupDone());
     }
@@ -479,11 +490,21 @@ final class Config {
      */
     static String resolveLinkMode(String stored, boolean setupDone) {
         if (stored == null) return setupDone ? LINK_P2P : DEFAULT_LINK;
-        return LINK_HOTSPOT.equals(stored) ? LINK_HOTSPOT : LINK_P2P;
+        if (LINK_HOTSPOT.equals(stored)) return LINK_HOTSPOT;
+        return LINK_USB.equals(stored) ? LINK_USB : LINK_P2P;
     }
 
     void setLinkMode(String m) {
-        sp.edit().putString(LINK_MODE, LINK_HOTSPOT.equals(m) ? LINK_HOTSPOT : LINK_P2P).apply();
+        sp.edit().putString(LINK_MODE, resolveLinkMode(m, true)).apply();
+    }
+
+    boolean isUsbMode() {
+        return LINK_USB.equals(linkMode());
+    }
+
+    /** Trama del cable USB sobre el TCP del Wi-Fi (prueba con qdsim --usb-framing). */
+    boolean qdUsbOverTcp() {
+        return sp.getBoolean(QD_USB_OVER_TCP, false);
     }
 
     boolean isHotspotMode() {
@@ -637,7 +658,7 @@ final class Config {
                 + " link=" + linkMode() + " engine=" + linkEngine() + " pantallaEncendida=" + keepScreenOn() + " termica=" + thermalMode()
                 + " esperarCoche=" + carWaitMin() + "min"
                 + (isQdEngine() ? " keepVideo=" + qdKeepVideo() + " supersede=" + qdSupersede() + " " + qdRecoverySummary()
-                + " phoneInfo=" + qdPhoneInfo()
+                + " phoneInfo=" + qdPhoneInfo() + (qdUsbOverTcp() ? " tramaUsbPorWifi" : "")
                 + " carGone=" + carGoneMs() / 1000 + "s" + (peerStrict() ? " strict" : "") : "")
                 + " (0 = lo que pida el coche)";
     }

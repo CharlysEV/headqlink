@@ -291,4 +291,36 @@ class LinkRateControllerTest {
         assertFalse(c.active())
         assertTrue(c.statsLine(), c.statsLine().startsWith("enlace: bitrate 3.6 Mbit/s (mín. 3.6 Mbit/s, techo 3.6 Mbit/s) · congestiones 0"))
     }
+
+    @Test
+    fun withoutNetStatTheSessionQueueLagCountsAsHighQueue() {
+        // Cable USB: sin socket no hay cola del kernel ni rtt; el atasco es el retraso del vídeo en la cola de la sesión.
+        val c = LinkRateController(car, 30)
+        fun usb(now: Long, lag: Long) = LinkRateController.Sample(now, -1, -1, -1, -1, 0, 0, lag)
+        // Un frame en la cola (< 66 ms) es lo normal: nunca cuenta.
+        for (t in 0L..2_000L step 100) assertNull("t=$t", c.onSample(usb(t, 40)))
+        // Retraso sostenido 500 ms: un paso, con el motivo.
+        for (t in 2_100L..2_500L step 100) assertNull("t=$t", c.onSample(usb(t, 120)))
+        val st = c.onSample(usb(2_600, 120))
+        assertNotNull(st)
+        assertTrue(st!!.text, st.text.contains("cola de la sesión 120 ms de retraso, 500 ms"))
+        assertTrue(st.bitrateAfter < car)
+        // Con NetStat el retraso de la cola no cuenta (ya lo dicen la cola del kernel y el rtt).
+        val tcp = LinkRateController(car, 30)
+        for (t in 0L..3_000L step 100) {
+            assertNull("t=$t", tcp.onSample(LinkRateController.Sample(t, 4 * kb, 2, 10, 12, 0, 0, 500)))
+        }
+        // Y sin dato (-1), tampoco.
+        val unknown = LinkRateController(car, 30)
+        for (t in 0L..3_000L step 100) assertNull("t=$t", unknown.onSample(usb(t, -1)))
+    }
+
+    @Test
+    fun withKeepsTheQueueLag() {
+        val s = LinkRateController.Sample(100, -1, -1, -1, -1, 0, 0, 90).with(3, 2)
+        assertEquals(90L, s.queueLagMs)
+        assertEquals(3, s.linkWaits)
+        assertEquals(2L, s.lateFlushes)
+        assertEquals(-1L, LinkRateController.Sample(100, 1, 1, 1, 1).queueLagMs)
+    }
 }

@@ -17,7 +17,9 @@ import java.util.List;
  * - Modo App: la app elegida, la accesibilidad (toques) y «Mostrar sobre otras apps» (abrirla en segundo plano).
  * - Wi-Fi Direct: «Dispositivos Wi-Fi cercanos» (ubicación antes de Android 13), el Wi-Fi activado y la zona Wi-Fi
  *   apagada (en Samsung no conviven). Zona Wi-Fi: que esté activa, y el consejo de la banda de 5 GHz (no se puede leer).
- * - QDLink: si está instalado, aviso de cerrarlo; si el puerto UDP 18463 está ocupado, error.
+ *   Cable USB (experimental): nada de Wi-Fi ni zona Wi-Fi; solo el consejo del cable de datos en el puerto USB de datos.
+ * - QDLink: si está instalado, aviso de cerrarlo; si el puerto UDP 18463 está ocupado, error. Con el cable USB no hay
+ *   puerto UDP: el aviso es que Android puede preguntar qué app abre «QDriveLink».
  * - Notificaciones (recomendado), Bluetooth (solo con la conexión automática), batería sin restricciones
  *   (recomendado) y el consejo del gestor de energía del fabricante.
  * - «Mostrar sobre otras apps» es opcional en los modos Auto; fotos, vídeos y ubicación, opcionales en Auto ampliado.
@@ -25,7 +27,7 @@ import java.util.List;
 final class Requirements {
     enum Id {
         ANDROID_AUTO, ACCESSIBILITY, AA_DEVMODE, TARGET_APP,
-        NEARBY_WIFI, WIFI_ON, HOTSPOT_OFF, HOTSPOT_ON, HOTSPOT_BAND,
+        NEARBY_WIFI, WIFI_ON, HOTSPOT_OFF, HOTSPOT_ON, HOTSPOT_BAND, USB_CABLE,
         QDLINK, NOTIFICATIONS, BLUETOOTH, BATTERY, BATTERY_OEM, OVERLAY, MEDIA
     }
 
@@ -55,6 +57,8 @@ final class Requirements {
         INSTALLED,
         /** El UDP 18463 está ocupado. */
         PORT_BUSY,
+        /** Cable USB con QDLink instalada: Android puede preguntar qué app abre «QDriveLink». */
+        USB_CHOOSER,
         /** Batería: la necesita la conexión automática por Bluetooth. */
         BT_AUTO,
         SAMSUNG,
@@ -153,6 +157,7 @@ final class Requirements {
         boolean aa = Config.MODE_AA.equals(s.mode) || Config.MODE_AA_EXT.equals(s.mode);
         boolean app = Config.MODE_APP.equals(s.mode);
         boolean hotspotLink = Config.LINK_HOTSPOT.equals(s.linkMode);
+        boolean usbLink = Config.LINK_USB.equals(s.linkMode);
         boolean server = aa && s.aaVersion != null && !s.forceLegacyLaunch && usesHeadUnitServer(s.aaVersion);
 
         // Lo que pide el modo.
@@ -186,12 +191,17 @@ final class Requirements {
         if (hotspotLink) {
             out.add(new Item(Id.HOTSPOT_ON, Importance.REQUIRED, hotspotStatus(s.hotspot, true), Hint.NONE));
             out.add(new Item(Id.HOTSPOT_BAND, Importance.RECOMMENDED, Status.TIP, Hint.NONE));
+        } else if (usbLink) {
+            // Lo que pide el cable no se puede leer desde la app (que el coche ponga el móvil en modo accesorio).
+            out.add(new Item(Id.USB_CABLE, Importance.RECOMMENDED, Status.TIP, Hint.NONE));
         } else {
             out.add(perm(Id.NEARBY_WIFI, Importance.REQUIRED, s.nearby));
             out.add(new Item(Id.WIFI_ON, Importance.REQUIRED, s.wifiOn ? Status.OK : Status.MISSING, Hint.NONE));
             out.add(new Item(Id.HOTSPOT_OFF, Importance.REQUIRED, hotspotStatus(s.hotspot, false), Hint.NONE));
         }
-        if (s.port == Port.BUSY) {
+        if (usbLink) {
+            if (s.qdlinkInstalled) out.add(new Item(Id.QDLINK, Importance.RECOMMENDED, Status.WARN, Hint.USB_CHOOSER));
+        } else if (s.port == Port.BUSY) {
             out.add(new Item(Id.QDLINK, Importance.REQUIRED, Status.ERROR, Hint.PORT_BUSY));
         } else if (s.qdlinkInstalled) {
             out.add(new Item(Id.QDLINK, Importance.RECOMMENDED, Status.WARN, Hint.INSTALLED));

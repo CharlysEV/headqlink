@@ -47,8 +47,8 @@ final class LinkLifecycle {
         CLOSED,
     }
 
-    /** Quién arranca el servicio. */
-    enum Trigger { USER, BLUETOOTH, OTHER }
+    /** Quién arranca el servicio. USB: el coche conectó el cable y puso el móvil en modo accesorio (está delante). */
+    enum Trigger { USER, BLUETOOTH, USB, OTHER }
 
     enum Action {
         /** AaGuardService tenía AA aparcado (servicio parado): pasa al enlace, que lo mantiene aparcado (ping). */
@@ -255,6 +255,7 @@ final class LinkLifecycle {
         d.why("arranque (" + triggerName(trigger) + "): busco al coche hasta " + dur(search));
         keepAaForTheCar(d, e, "arranque");
         if (trigger == Trigger.BLUETOOTH) askServer(d, e, "Bluetooth del coche");
+        if (trigger == Trigger.USB) askServer(d, e, "cable USB del coche");
         return d;
     }
 
@@ -482,6 +483,8 @@ final class LinkLifecycle {
                 return "Conectar";
             case BLUETOOTH:
                 return "Bluetooth del coche";
+            case USB:
+                return "cable USB del coche";
             default:
                 return "otro";
         }

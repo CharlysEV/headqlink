@@ -95,4 +95,23 @@ class QuirksTest {
             file.delete()
         }
     }
+
+    @Test
+    fun usbFramingVerdicts() {
+        val ok = Quirks.usbFraming(40, 0, 18_000, 0)
+        assertEquals(Level.PASS, ok.level)
+        assertTrue(ok.text.contains("40 mensajes del móvil rellenos a 512 B, 0 sin rellenar"), ok.text)
+        val off = Quirks.usbFraming(3, 25, 0, 0)
+        assertEquals(Level.FAIL, off.level)
+        assertTrue(off.text.contains("el móvil no rellena") && off.text.contains("Trama del cable USB por Wi-Fi"), off.text)
+        assertEquals(Level.FAIL, Quirks.usbFraming(0, 0, 0, 0).level)
+        assertTrue(Quirks.usbFraming(5, 0, 100, 1024).text.contains("1024 ceros de más"))
+    }
+
+    @Test
+    fun usbFramingOption() {
+        assertTrue(Options.parse(arrayOf("--scenario", "normal", "--usb-framing")).usbFraming)
+        assertTrue(!Options.parse(arrayOf("--scenario", "normal")).usbFraming)
+        assertTrue(Options.USAGE.contains("--usb-framing"))
+    }
 }

@@ -73,6 +73,14 @@ class UsbLauncherListener(private val manager: UsbLauncherManager) : UsbReceiver
     override fun onUsbAccessoryDetach() {
         val commManager = App.provide(service).commManager
 
+        // headqlink: con Android Auto del propio móvil (Self Mode, sesión por 127.0.0.1) el accesorio que se va es el
+        // cable del coche (el enlace USB de HeadQLink con la app de espejo), no Android Auto: no se corta su sesión, que
+        // tiene que seguir viva para reanudar al instante al volver a enchufar el cable.
+        if (commManager.isLoopbackSession) {
+            AppLog.i("USB Accessory detached with a Self Mode session: it is the car's mirroring cable (headqlink), Android Auto stays connected")
+            return
+        }
+
         AppLog.i("USB Accessory detached. This might be a transient state (e.g., 100% battery). Attempting to re-sync...")
 
         service.userExitedAA = false

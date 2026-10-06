@@ -12,6 +12,7 @@ import dev.qdauto.core.util.w
 import dev.qdauto.core.wire.AppMessage
 import dev.qdauto.core.wire.BinBlock
 import dev.qdauto.core.wire.BinaryMessage
+import dev.qdauto.core.wire.BlockFraming
 import dev.qdauto.core.wire.BtAddrRequest
 import dev.qdauto.core.wire.CarInfo
 import dev.qdauto.core.wire.CarKey
@@ -94,6 +95,11 @@ data class PhoneLinkConfig(
     val supersedeMinSilenceMs: Long = 1_000,
     /** hql: vuelta del coche tras un corte de radio: puerto estable, re-acogida y vigilancia ([RecoveryConfig]). */
     val recovery: RecoveryConfig = RecoveryConfig(),
+    /**
+     * hql: la trama por bloques del USB (relleno a 512 B al escribir, lectura en bloques; [BlockFraming]) sobre el TCP
+     * del Wi-Fi. Solo para probar la trama desde el PC con `qdsim --usb-framing`: el C10 por Wi-Fi no la usa.
+     */
+    val blockFraming: Boolean = false,
 )
 
 /** Eventos de [PhoneLink]. Llegan desde hilos internos (descubrimiento, aceptación o eventos de la sesión). */
@@ -467,7 +473,8 @@ class PhoneLink(
             val unsolicitedAt = if (a.reclaim) a.ack?.lastSentAtNanos?.takeIf { it in 1..acceptNanos } ?: 0L else 0L
             a.cancelAcks()
             val forwarding = ForwardingSessionListener(sessionListener)
-            val session = PhoneSession(socket, sessionConfigFor(a.car), SessionWatcher(a, forwarding), log)
+            val transport = TcpTransport(socket, if (config.blockFraming) BlockFraming.BLOCK else 0)
+            val session = PhoneSession(transport, sessionConfigFor(a.car), SessionWatcher(a, forwarding), log)
             var back: Loss? = null
             val accepted = synchronized(lock) {
                 if (closed || attempt !== a) {
@@ -967,9 +974,10 @@ class PhoneLink(
 /**
  * hql (C4): [SessionListener] que reenvía cada evento a [target], que se puede fijar después de construir la sesión
  * (antes de arrancarla). Sobrescribe **todos** los métodos de forma explícita (un test lo comprueba por reflexión),
- * para que uno nuevo no se pierda en silencio.
+ * para que uno nuevo no se pierda en silencio. hql: pública y abierta para el enlace USB del app (el mismo uso fuera de
+ * [PhoneLink]: el puente de una sesión necesita la sesión).
  */
-internal class ForwardingSessionListener(@Volatile var target: SessionListener) : SessionListener {
+open class ForwardingSessionListener(@Volatile var target: SessionListener) : SessionListener {
     override fun onStateChanged(from: SessionState, to: SessionState) = target.onStateChanged(from, to)
     override fun onCarInfo(info: CarInfo, message: ControlMessage) = target.onCarInfo(info, message)
     override fun onVideoSupportRequest(videoFormat: Int, message: ControlMessage) = target.onVideoSupportRequest(videoFormat, message)
