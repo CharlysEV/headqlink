@@ -1,0 +1,326 @@
+package com.headqlink.link;
+
+import com.andrerinas.openheadunit.R;
+
+import android.content.Context;
+import android.os.SystemClock;
+
+import java.util.Locale;
+
+/**
+ * Datos reales del coche (cuenta Leapmotor) para las pantallas del modo extendido, de solo lectura.
+ *
+ * Sondea el estado del coche mientras dura el modo extendido con el coche (CarUi) o la vista previa: cada 60 s, cada
+ * 30 s con la sección Coche en pantalla, y si falla, a los 2, 5 y 10 minutos. Se para con el servicio. Las pantallas
+ * leen una foto inmutable (snapshot()) con la hora del dato y la de la lectura. Una línea en el log por sondeo, sin
+ * secretos (ni VIN, ni correo, ni posición).
+ */
+final class CarCloud {
+    /** Por qué hay o no hay datos. */
+    enum State {
+        /** Android 5 o anterior (el Keystore con AES-GCM es de Android 6). */
+        UNSUPPORTED,
+        /** Sin certificado, sin sesión o sin coche elegido. */
+        NO_ACCOUNT,
+        /** Configurado pero desactivado en el móvil. */
+        OFF,
+        /** Leyendo por primera vez. */
+        WAITING,
+        OK,
+        /** El último intento falló (red, la nube…): se reintenta más tarde; puede haber datos de antes. */
+        ERROR,
+        /** La sesión caducó: hay que volver a entrar en el móvil. */
+        EXPIRED,
+        /** El servidor presenta otra clave: se decide en el móvil. */
+        SERVER_KEY
+    }
+
+    /** Foto inmutable de los datos de la nube. */
+    static final class Snapshot {
+        final State state;
+        /** El último estado leído (también tras un error), o null. */
+        final LeapStatus status;
+        /** Hora (de pared) de la última lectura buena, o 0. */
+        final long fetchedAtMs;
+        final long latencyMs;
+        /** Capacidad de la batería del perfil elegido (kWh). */
+        final double capacityKwh;
+        final String carType;
+        /** Hora (de pared) del próximo intento tras un error, o 0. */
+        final long nextTryMs;
+        /** Datos inventados del modo demostración. */
+        final boolean demo;
+
+        Snapshot(State state, LeapStatus status, long fetchedAtMs, long latencyMs, double capacityKwh, String carType,
+                 long nextTryMs, boolean demo) {
+            this.state = state;
+            this.status = status;
+            this.fetchedAtMs = fetchedAtMs;
+            this.latencyMs = latencyMs;
+            this.capacityKwh = capacityKwh;
+            this.carType = carType == null ? "" : carType;
+            this.nextTryMs = nextTryMs;
+            this.demo = demo;
+        }
+
+        static Snapshot of(State s) {
+            return new Snapshot(s, null, 0, 0, CarCloudStore.KWH_C10_LIFE, "", 0, false);
+        }
+
+        boolean hasData() {
+            return status != null;
+        }
+
+        /** Hora del dato: la que pone el coche o, si no la da, la de la lectura. */
+        long dataTimeMs() {
+            return status != null && status.carTimeMs > 0 ? status.carTimeMs : fetchedAtMs;
+        }
+
+        long ageMs(long nowMs) {
+            return Math.max(0, nowMs - dataTimeMs());
+        }
+
+        /** % de batería real si hay datos y no son más viejos que maxAgeMs; NaN si no. */
+        double soc(long nowMs, long maxAgeMs) {
+            if (status == null || ageMs(nowMs) > maxAgeMs) return Double.NaN;
+            return status.socBest();
+        }
+
+        /** Copia con otro estado (los datos de antes se conservan). */
+        Snapshot with(State s, long nextTry) {
+            return new Snapshot(s, status, fetchedAtMs, latencyMs, capacityKwh, carType, nextTry, demo);
+        }
+    }
+
+    /** Batería real en la Ruta: datos de hasta 6 h (más viejos, mejor el % indicado a mano). */
+    static final long SOC_MAX_AGE_MS = 6 * 3600_000L;
+    /** Potencia real en Eficiencia: solo si el dato es de hace 2 min o menos. */
+    static final long POWER_MAX_AGE_MS = 120_000L;
+
+    /** Cuándo vuelve a leer. Pura (sin Android): se prueba en el PC. */
+    static final class Policy {
+        static final long NORMAL_MS = 60_000;
+        static final long HUB_MS = 30_000;
+        static final long[] BACKOFF_MS = {120_000, 300_000, 600_000};
+        /** Sin cuenta o desactivado: se mira cada tanto si eso cambia (sin red). */
+        static final long IDLE_MS = 30_000;
+
+        private Policy() {
+        }
+
+        /** Espera hasta la siguiente lectura: 60 s (30 s con la sección Coche a la vista) o 2, 5 y 10 min tras errores. */
+        static long delayMs(int failures, boolean hubVisible) {
+            if (failures <= 0) return hubVisible ? HUB_MS : NORMAL_MS;
+            return BACKOFF_MS[Math.min(failures, BACKOFF_MS.length) - 1];
+        }
+    }
+
+    private static volatile Snapshot current = Snapshot.of(State.NO_ACCOUNT);
+    private static volatile boolean running;
+    private static volatile boolean hubVisible;
+    /** EXPIRED / SERVER_KEY / NO_ACCOUNT: no se vuelve a intentar hasta que cambie algo en el móvil. */
+    private static volatile boolean blocked;
+    /** Leer en cuanto se pueda (algo cambió en el móvil). */
+    private static volatile boolean pollNow;
+    private static final Object WAKE = new Object();
+    /** Sube con cada start(): un hilo viejo que aún termina su petición no sigue en bucle junto al nuevo. */
+    private static volatile int generation;
+    private static Context app;
+
+    private CarCloud() {
+    }
+
+    /** Arranca el sondeo (CarUi.start: modo extendido con el coche o vista previa). */
+    static synchronized void start(Context ctx) {
+        if (running) return;
+        app = ctx.getApplicationContext();
+        running = true;
+        blocked = false;
+        pollNow = false;
+        int gen = ++generation;
+        // Capturas de la vista previa (reloj quieto): sin red, con los datos inventados de DemoMode.
+        if (DemoMode.active() && !DemoMode.live()) return;
+        Thread t = new Thread(() -> loop(gen), "carcloud");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /** Para el sondeo (CarUi.stop: se acaba el modo extendido o el servicio). */
+    static synchronized void stop() {
+        if (!running) return;
+        running = false;
+        generation++;
+        wake();
+    }
+
+    static boolean running() {
+        return running;
+    }
+
+    /** La sección Coche entra o sale de la pantalla (cada 30 s mientras se vea). */
+    static void setHubVisible(boolean on) {
+        if (hubVisible == on) return;
+        hubVisible = on;
+        wake();
+    }
+
+    /** Algo cambió en el móvil (sesión, coche, certificado, activado): se vuelve a mirar ya. */
+    static void settingsChanged() {
+        blocked = false;
+        pollNow = true;
+        CarCloudSession.invalidate();
+        wake();
+    }
+
+    private static void wake() {
+        synchronized (WAKE) {
+            WAKE.notifyAll();
+        }
+    }
+
+    /** Lo último que se sabe (en la demostración, sus datos inventados si no hay reales). */
+    static Snapshot snapshot() {
+        Snapshot s = current;
+        if (DemoMode.active() && !s.hasData()) return DemoMode.cloudSnapshot();
+        return s;
+    }
+
+    // ------------------------------------------------------------------ bucle
+
+    private static State gate(CarCloudStore st) {
+        if (!CarCloudStore.supported()) return State.UNSUPPORTED;
+        if (!st.hasIdentity() || !st.hasSession()) return State.NO_ACCOUNT;
+        if (!st.enabled()) return State.OFF;
+        return null;
+    }
+
+    private static boolean alive(int gen) {
+        return running && gen == generation;
+    }
+
+    private static void loop(int gen) {
+        L.i("nube Leapmotor: sondeo en marcha (cada 60 s; 30 s con la sección Coche en pantalla)");
+        int failures = 0;
+        long lastAttempt = 0;
+        while (alive(gen)) {
+            CarCloudStore st = new CarCloudStore(app);
+            State g = gate(st);
+            if (g != null) {
+                if (current.state != g) current = Snapshot.of(g);
+                failures = 0;
+                lastAttempt = 0; // en cuanto se pueda, se lee
+                pollNow = false;
+                sleep(Policy.IDLE_MS);
+                continue;
+            }
+            if (blocked) {
+                pollNow = false;
+                sleep(Policy.IDLE_MS);
+                continue;
+            }
+            if (pollNow) {
+                pollNow = false;
+                lastAttempt = 0;
+                failures = 0;
+            }
+            // Espera hasta que toque (se recalcula si la sección Coche aparece o desaparece).
+            long due = lastAttempt == 0 ? 0 : lastAttempt + Policy.delayMs(failures, hubVisible);
+            long now = SystemClock.elapsedRealtime();
+            if (now < due) {
+                sleep(due - now);
+                continue;
+            }
+            lastAttempt = SystemClock.elapsedRealtime();
+            if (!current.hasData() && current.state != State.ERROR) {
+                current = new Snapshot(State.WAITING, null, 0, 0, st.capacityKwh(), st.carType(), 0, false);
+            }
+            failures = pollOnce(st, failures, gen);
+        }
+        L.i("nube Leapmotor: sondeo parado");
+    }
+
+    /** Un sondeo: actualiza la foto y el log; devuelve los fallos seguidos. */
+    private static int pollOnce(CarCloudStore st, int failures, int gen) {
+        long t0 = SystemClock.elapsedRealtime();
+        try {
+            LeapStatus s = CarCloudSession.readStatus(app);
+            if (!alive(gen)) return failures;
+            long lat = SystemClock.elapsedRealtime() - t0;
+            long wall = System.currentTimeMillis();
+            Snapshot snap = new Snapshot(State.OK, s, wall, lat, st.capacityKwh(), st.carType(), 0, false);
+            current = snap;
+            L.i("nube Leapmotor: " + s.logLine() + " · dato del coche de hace " + agoLog(snap.ageMs(wall)) + " · " + lat + " ms");
+            return 0;
+        } catch (LeapApi.SessionExpiredException e) {
+            current = current.with(State.EXPIRED, 0);
+            blocked = true;
+            L.w("nube Leapmotor: la sesión caducó (" + e.getMessage() + "); vuelve a entrar en el móvil (Datos del coche)");
+            return failures;
+        } catch (LeapHttps.ServerKeyChangedException e) {
+            current = current.with(State.SERVER_KEY, 0);
+            blocked = true;
+            L.w("nube Leapmotor: el servidor presenta otra clave (huella " + e.detail.fingerprint
+                    + "); no me conecto hasta que lo aceptes en el móvil (Datos del coche)");
+            return failures;
+        } catch (CarCloudSession.NotConfiguredException e) {
+            current = Snapshot.of(State.NO_ACCOUNT);
+            blocked = true;
+            L.i("nube Leapmotor: sin configurar del todo (" + e.getMessage() + ")");
+            return 0;
+        } catch (Exception e) {
+            int n = failures + 1;
+            long wait = Policy.delayMs(n, hubVisible);
+            current = current.with(State.ERROR, System.currentTimeMillis() + wait);
+            L.w("nube Leapmotor: sin datos (" + safeError(e) + ", " + (SystemClock.elapsedRealtime() - t0) + " ms); fallo "
+                    + n + ", reintento en " + wait / 60_000 + " min");
+            return n;
+        }
+    }
+
+    /** Publica una lectura hecha fuera del sondeo («Leer estado ahora» en el móvil): la ven las pantallas del coche. */
+    static void publish(Context ctx, LeapStatus s, long latencyMs) {
+        CarCloudStore st = new CarCloudStore(ctx);
+        current = new Snapshot(State.OK, s, System.currentTimeMillis(), latencyMs, st.capacityKwh(), st.carType(), 0, false);
+    }
+
+    private static void sleep(long ms) {
+        synchronized (WAKE) {
+            if (!running || pollNow) return;
+            try {
+                WAKE.wait(Math.max(1, ms));
+            } catch (InterruptedException ignored) {
+                // Hilo propio: nadie lo interrumpe; se sigue y el bucle mira si debe parar.
+            }
+        }
+    }
+
+    /** El error para el log: el tipo y el mensaje, sin URLs con datos (el de la API no lleva el cuerpo). */
+    static String safeError(Throwable e) {
+        return Http.safeError(e);
+    }
+
+    private static String agoLog(long ms) {
+        long s = ms / 1000;
+        if (s < 120) return s + " s";
+        if (s < 7200) return s / 60 + " min";
+        return String.format(Locale.US, "%.1f h", s / 3600.0);
+    }
+
+    // ------------------------------------------------------------------ textos para las pantallas
+
+    /** «hace 40 s», «hace 3 min», «hace 2 h», «hace 1 d». */
+    static String ago(long ms) {
+        long s = Math.max(0, ms) / 1000;
+        if (s < 60) return Str.get(R.string.hql_cloud_ago_s, s);
+        long m = s / 60;
+        if (m < 60) return Str.get(R.string.hql_cloud_ago_min, m);
+        long h = m / 60;
+        if (h < 48) return Str.get(R.string.hql_cloud_ago_h, h);
+        return Str.get(R.string.hql_cloud_ago_d, h / 24);
+    }
+
+    /** «real · hace 40 s» (la edad del dato del coche). */
+    static String realLabel(Snapshot s, long nowMs) {
+        return Str.get(R.string.hql_cloud_real_ago, ago(s.ageMs(nowMs)));
+    }
+}

@@ -575,6 +575,14 @@
             android:label="@string/hql_diagnostics"
             android:theme="@style/Theme.HeadQLink" />
 
+        <!-- headqlink: datos reales del coche (cuenta Leapmotor, opcional y de solo lectura), desde el menú ⚙ -->
+        <activity
+            android:name="com.headqlink.link.CarCloudActivity"
+            android:exported="false"
+            android:label="@string/hql_cloud_menu"
+            android:theme="@style/Theme.HeadQLink"
+            android:windowSoftInputMode="adjustResize" />
+
         <!--
             headqlink: vista previa del modo extendido con datos de demostración (desde Diagnóstico) y capturas PNG con
             adb (am start con el extra render). Exportada solo para quien tenga DUMP: el shell de adb sí, otras apps no.

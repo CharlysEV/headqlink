@@ -9,11 +9,13 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
 /**
- * Sección "Coche": pestañas Ruta, Conducción, Viajes, Instrumentos y Eficiencia, todo con datos del
- * móvil (GPS, sensores) y servicios abiertos, sin datos del coche.
+ * Sección "Coche": pestañas Ruta, Conducción, Viajes, Instrumentos y Eficiencia, con datos del móvil (GPS, sensores) y
+ * servicios abiertos, y Estado, con los datos reales del coche si hay cuenta de Leapmotor (CarCloud, solo lectura).
+ * Mientras se ve la sección, la nube se lee cada 30 s (si no, cada 60 s).
  */
 final class CarHubScreen implements CarScreen {
-    private static final int[] TABS = {R.string.hql_tab_route, R.string.hql_tab_drive, R.string.hql_tab_trips, R.string.hql_tab_gauges, R.string.hql_tab_efficiency};
+    private static final int[] TABS = {R.string.hql_tab_route, R.string.hql_tab_drive, R.string.hql_tab_trips, R.string.hql_tab_gauges,
+            R.string.hql_tab_efficiency, R.string.hql_tab_status};
     private static int lastTab;
 
     /** Para la vista previa (PreviewActivity): pestaña con la que se abrirá la sección. */
@@ -38,6 +40,7 @@ final class CarHubScreen implements CarScreen {
         body = new FrameLayout(c);
         col.addView(body, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         open(lastTab);
+        CarCloud.setHubVisible(true);
         return col;
     }
 
@@ -58,6 +61,9 @@ final class CarHubScreen implements CarScreen {
             case 3:
                 current = new InstrumentsScreen();
                 break;
+            case 5:
+                current = new CarStatusTab();
+                break;
             default:
                 current = new EfficiencyScreen();
         }
@@ -68,6 +74,7 @@ final class CarHubScreen implements CarScreen {
     public void destroy() {
         if (current != null) current.destroy();
         current = null;
+        CarCloud.setHubVisible(false);
     }
 
     /** Las pestañas trabajan dentro del cuerpo, debajo de la fila de pestañas. */

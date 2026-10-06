@@ -29,7 +29,9 @@ import java.util.Locale;
  * rojo, bajadas en verde: ahí se recupera), con el viento por tramos, los cargadores, la batería prevista y «estás
  * aquí»; debajo, el consumo de cada tramo. A la derecha, la batería al llegar en un anillo (con el % actual que indica
  * el usuario, ±5), el tiempo en el destino a la hora de llegada y los cargadores junto a la ruta («Ir» abre la
- * navegación de Google Maps en el móvil y AA la muestra). Todo estimado: ver RoutePlanner y EnergyModel.
+ * navegación de Google Maps en el móvil y AA la muestra). Todo estimado: ver RoutePlanner y EnergyModel. Con la cuenta
+ * de Leapmotor (CarCloud), el % de ahora es el REAL del coche (sin ±5, con la edad del dato) y la batería al llegar
+ * sale de él con la capacidad de la variante elegida.
  */
 final class RouteTab implements CarScreen {
     private static final long TICK_MS = 1000;
@@ -53,6 +55,12 @@ final class RouteTab implements CarScreen {
     private int shownChargersFor = -1;
     private RoutePlanner.Plan plan;
     private double soc = Double.NaN;
+    /** El % de ahora es el real del coche (nube de Leapmotor), no el indicado. */
+    private boolean realSoc;
+    /** Capacidad con la que se pasa de kWh a %: la de la variante con datos reales; si no, la del modelo. */
+    private double capKwh = EnergyModel.USABLE_KWH;
+    private CarCloud.Snapshot cloud = CarCloud.Snapshot.of(CarCloud.State.NO_ACCOUNT);
+    private LinearLayout socControls;
     private String status = "";
     private NavTap.Info nav = new NavTap.Info();
     private final Runnable tickTask = this::tick;
@@ -113,6 +121,7 @@ final class RouteTab implements CarScreen {
         batteryCard = CarKit.add(right, new CarKit.Card(ctx, Str.get(R.string.hql_battery_arrival), this::paintBattery), 0, 290);
         // Batería: el usuario indica el % actual (hasta tener datos del coche).
         LinearLayout ctl = CarKit.row(ctx);
+        socControls = ctl;
         TextView minus = CarKit.pill(ctx, "−5", false);
         TextView plus = CarKit.pill(ctx, "+5", false);
         minus.setMinWidth(92);
@@ -261,7 +270,13 @@ final class RouteTab implements CarScreen {
         if (!running) return;
         boolean manual = RoutePlanner.manualDestination() != null;
         plan = planner.plan();
-        soc = planner.socNow();
+        // Batería: la real del coche si la hay (nube de Leapmotor); si no, la indicada con ±5.
+        cloud = CarCloud.snapshot();
+        double real = cloud.soc(DemoMode.wallClockMs(), CarCloud.SOC_MAX_AGE_MS);
+        realSoc = !Double.isNaN(real);
+        soc = realSoc ? real : planner.socNow();
+        capKwh = realSoc ? cloud.capacityKwh : EnergyModel.USABLE_KWH;
+        socControls.setVisibility(realSoc ? View.GONE : View.VISIBLE);
         status = planner.status();
         nav = DemoMode.navInfo();
         boolean have = plan != null && plan.n >= 2;
@@ -389,9 +404,7 @@ final class RouteTab implements CarScreen {
 
     /** % de batería al llegar, o NaN si no se sabe. */
     private double arrivalPct() {
-        double rem = remainingKwh();
-        if (Double.isNaN(rem) || Double.isNaN(soc)) return Double.NaN;
-        return soc - rem / EnergyModel.USABLE_KWH * 100;
+        return CloudEnergy.arrivalPct(soc, remainingKwh(), capKwh);
     }
 
     private static int levelColor(double pct) {
@@ -583,7 +596,7 @@ final class RouteTab implements CarScreen {
             socLine.rewind();
             double last = soc;
             for (int i = prog; i < pl.n; i++) {
-                double sp = soc - (pl.kwhCum[i] - pl.kwhCum[prog]) / EnergyModel.USABLE_KWH * 100;
+                double sp = soc - (pl.kwhCum[i] - pl.kwhCum[prog]) / capKwh * 100;
                 last = sp;
                 float y = (float) (c.bottom - Math.max(0, Math.min(100, sp)) / 100 * c.height());
                 if (i == prog) socLine.moveTo(xFor(pl, i, c), y);
@@ -731,7 +744,15 @@ final class RouteTab implements CarScreen {
         }
         CarKit.text(cv, Str.get(R.string.hql_route_on_arrival), cx, cy + rad - 6, 19, CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.CENTER);
         float tx = cx + rad + 30;
-        CarKit.label(cv, Str.get(R.string.hql_now), tx, r.top + 18, p);
+        float lw = CarKit.label(cv, Str.get(R.string.hql_now), tx, r.top + 18, p);
+        // De dónde sale: el dato real del coche (con su edad) o la estimación desde el % indicado.
+        if (!Double.isNaN(soc)) {
+            String src = realSoc ? CarCloud.realLabel(cloud, DemoMode.wallClockMs()) : Str.get(R.string.hql_cloud_estimated);
+            p.setTypeface(CarKit.MEDIUM);
+            p.setTextSize(19);
+            CarKit.text(cv, CarKit.ellipsize(src, r.right - tx - lw - 12, p), tx + lw + 12, r.top + 18, 19,
+                    realSoc ? CarKit.ACCENT : CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        }
         CarKit.number(cv, Double.isNaN(soc) ? "—" : String.format(Locale.getDefault(), "%.0f", soc), "%", tx, r.top + 70, 50, CarKit.TEXT,
                 CarKit.REGULAR, p, Paint.Align.LEFT);
         String st;

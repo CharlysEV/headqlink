@@ -15,7 +15,7 @@ final class PreviewShots {
         final String screen;
         final double seekSec;
         final long waitMs;
-        /** Estado de la demostración (DemoMode.applyState): "", "sin_ruta" o "sin_viajes". */
+        /** Estado de la demostración (DemoMode.applyState): "", "sin_ruta", "sin_viajes", "sin_nube" o "cargando". */
         final String state;
 
         Shot(String name, String screen, double seekSec, long waitMs) {
@@ -37,6 +37,10 @@ final class PreviewShots {
             new Shot("coche_viajes", "car-2", 600, 1800),
             new Shot("coche_instrumentos", "car-3", 408.6, 1800),
             new Shot("coche_eficiencia", "car-4", 396, 1800),
+            // Estado: datos reales del coche (la nube de Leapmotor; en la demostración, inventados).
+            new Shot("coche_estado", "car-5", 300, 1800),
+            new Shot("coche_estado_cargando", "car-5", 30, 1500, "cargando"),
+            new Shot("coche_estado_sin_cuenta", "car-5", 30, 1500, "sin_nube"),
             // Los estados vacíos: sin destino (Ruta y Conducción) y sin viajes guardados.
             new Shot("coche_ruta_sin_destino", "car-0", 30, 1500, "sin_ruta"),
             new Shot("coche_conduccion_sin_ruta", "car-1", 30, 1500, "sin_ruta"),
@@ -54,7 +58,7 @@ final class PreviewShots {
     private PreviewShots() {
     }
 
-    /** "all" (o vacío): todas; "coche": las cinco pestañas de Coche; si no, nombres separados por comas. */
+    /** "all" (o vacío): todas; "coche": las seis pestañas de Coche; si no, nombres separados por comas. */
     static List<Shot> select(String which) {
         List<Shot> out = new ArrayList<>();
         String w = which == null ? "" : which.trim();

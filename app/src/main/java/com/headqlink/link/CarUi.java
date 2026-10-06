@@ -287,7 +287,9 @@ final class CarUi {
             ctx.registerReceiver(batteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
             RadioPlayer.addListener(radioChanged);
             current = this;
-            // Sección Coche: viajes, ruta y datos de la vía, mientras dure el modo ampliado.
+            // Sección Coche: viajes, ruta y datos de la vía, mientras dure el modo ampliado (y los datos reales del coche
+            // de la cuenta de Leapmotor, si está configurada: CarCloud).
+            CarCloud.start(ctx);
             TripLog.start(ctx);
             RoutePlanner.start(ctx);
             RoadInfo.start(ctx);
@@ -310,6 +312,7 @@ final class CarUi {
             RadioPlayer.removeListener(radioChanged);
             RadioPlayer.stop();
             TripLog.stop();
+            CarCloud.stop();
             RoutePlanner.stop();
             RoadInfo.stop();
             if (pres != null) pres.dismiss();
@@ -357,6 +360,7 @@ final class CarUi {
     View attachOffscreen(Context c) {
         View r = buildRoot(c);
         current = this;
+        CarCloud.start(ctx);
         TripLog.start(ctx);
         RoutePlanner.start(ctx);
         RoadInfo.start(ctx);

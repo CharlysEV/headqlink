@@ -384,7 +384,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
 
     /**
      * Menú del engranaje: comprobación de requisitos, ajustes de imagen, listas de TV y radio (solo
-     * Auto extendido), idioma, añadir el widget (y, con Android 13+, el botón de los ajustes rápidos) y diagnóstico.
+     * Auto extendido), datos del coche (cuenta Leapmotor), idioma, añadir el widget (y, con Android 13+, el botón de los
+     * ajustes rápidos) y diagnóstico.
      * (Sin «Tema»: la app va siempre en oscuro, estilo «Eléctrico».)
      */
     private void showMenu(View anchor) {
@@ -397,6 +398,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             m.add(0, 2, 2, Str.get(R.string.hql_tv_list));
             m.add(0, 3, 3, Str.get(R.string.hql_radio_list));
         }
+        // Datos reales del coche (cuenta Leapmotor, opcional y de solo lectura): CarCloudActivity.
+        m.add(0, 10, 3, Str.get(R.string.hql_cloud_menu));
         if (android.os.Build.VERSION.SDK_INT >= 33) m.add(0, 4, 4, Str.get(R.string.hql_language));
         if (android.os.Build.VERSION.SDK_INT >= 26) m.add(0, 8, 5, Str.get(R.string.hql_w_add_widget));
         if (android.os.Build.VERSION.SDK_INT >= 33) m.add(0, 9, 5, Str.get(R.string.hql_w_add_tile));
@@ -423,6 +426,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     break;
                 case 9:
                     LinkTileService.requestAdd(this);
+                    break;
+                case 10:
+                    startActivity(new Intent(this, CarCloudActivity.class));
                     break;
                 default:
                     startActivity(new Intent(this, LogActivity.class));

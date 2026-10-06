@@ -24,7 +24,8 @@ import java.util.TimeZone;
  * Pestaña "Viajes": el viaje en curso y los guardados (TripLog) como tarjetas con su recorrido dibujado, km, tiempo,
  * velocidad media, consumo estimado, desnivel y coste; a la derecha, los km de cada día de las dos últimas semanas
  * (esta semana frente a la anterior) y los récords (más largo, más eficiente, más desnivel). Sin viajes, un estado
- * vacío que explica cuándo se guardan.
+ * vacío que explica cuándo se guardan. Con la cuenta de Leapmotor, el consumo de los viajes con datos del coche al
+ * empezar y al terminar es el REAL (marcado «real») y abajo salen sus totales reales.
  */
 final class TripsTab implements CarScreen {
     private static final int DAYS = 14;
@@ -35,6 +36,8 @@ final class TripsTab implements CarScreen {
     private boolean running;
     private List<TripLog.Trip> trips;
     private CarSensors.Snapshot s = new CarSensors.Snapshot();
+    private CloudEnergy.Result liveReal = CloudEnergy.NONE;
+    private TripStats.Totals allTotals = new TripStats.Totals();
     private View live;
     private int longest = -1;
     private int efficient = -1;
@@ -53,6 +56,7 @@ final class TripsTab implements CarScreen {
         longest = TripStats.longest(trips);
         efficient = TripStats.mostEfficient(trips);
         climb = TripStats.mostClimb(trips);
+        allTotals = TripStats.totals(trips, Long.MIN_VALUE, Long.MAX_VALUE);
         Locale loc = Locale.getDefault();
         dayFmt = new java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(loc, "EEEdMMM"), loc);
         timeFmt = android.text.format.DateFormat.getTimeFormat(ctx);
@@ -93,6 +97,7 @@ final class TripsTab implements CarScreen {
     private void tick() {
         if (!running) return;
         s = sensors.snapshot();
+        liveReal = TripLog.liveReal(CarCloud.snapshot());
         // El viaje en curso, solo si ya se ha movido el coche.
         live.setVisibility(s.tripKm >= 0.1 || s.speedKmh > 3 ? View.VISIBLE : View.GONE);
         live.invalidate();
@@ -125,13 +130,37 @@ final class TripsTab implements CarScreen {
         p.setColor(CarKit.alpha(CarKit.GREEN, 0.25f));
         cv.drawCircle(r.right - 8, r.top - 30, 14, p);
         double avg = s.tripSec > 60 ? s.tripKm / (s.tripSec / 3600.0) : Double.NaN;
-        double per100 = s.tripKmEnergy > 0.3 ? s.tripKwh / s.tripKmEnergy * 100 : Double.NaN;
+        boolean real = liveReal.ok();
+        double per100 = real ? liveReal.kwhPer100 : s.tripKmEnergy > 0.3 ? s.tripKwh / s.tripKmEnergy * 100 : Double.NaN;
         float w = CarKit.number(cv, String.format(Locale.getDefault(), "%.1f", s.tripKm), "km", r.left, r.bottom - 8, 56, CarKit.TEXT,
                 CarKit.REGULAR, p, Paint.Align.LEFT);
         String sub = DriveTab.duration(s.tripSec) + (Double.isNaN(avg) ? "" : " · " + Str.get(R.string.hql_avg_kmh, avg));
         CarKit.text(cv, sub, r.left + w + 30, r.bottom - 12, 27, CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.LEFT);
         stat(cv, r.right - 200, r.bottom - 12, Double.isNaN(per100) ? "—" : String.format(Locale.getDefault(), "%.1f", per100), "kWh/100",
                 useColor(per100), p);
+        if (real) realTag(cv, r.right - 214, r.bottom - 16, Paint.Align.RIGHT, p);
+    }
+
+    /** Marca «REAL» (consumo con los datos del coche) con su base en y; devuelve su ancho. */
+    static float realTag(Canvas cv, float x, float y, Paint.Align align, Paint p) {
+        String t = Str.get(R.string.hql_cloud_real_tag).toUpperCase(Locale.getDefault());
+        p.setTypeface(CarKit.MEDIUM);
+        p.setTextSize(17);
+        p.setLetterSpacing(0.1f);
+        float tw = p.measureText(t);
+        p.setLetterSpacing(0);
+        float w = tw + 22;
+        float x0 = align == Paint.Align.RIGHT ? x - w : x;
+        RectF b = new RectF(x0, y - 22, x0 + w, y + 6);
+        p.setStyle(Paint.Style.FILL);
+        p.setColor(CarKit.alpha(CarKit.ACCENT, 0.16f));
+        cv.drawRoundRect(b, 14, 14, p);
+        p.setColor(CarKit.ACCENT);
+        p.setLetterSpacing(0.1f);
+        p.setTextAlign(Paint.Align.LEFT);
+        cv.drawText(t, x0 + 11, y - 2, p);
+        p.setLetterSpacing(0);
+        return w;
     }
 
     /** Cifra mediana con su unidad, alineada a la izquierda en x. */
@@ -250,14 +279,17 @@ final class TripsTab implements CarScreen {
             double avg = TripStats.avgKmh(t);
             String sub = DriveTab.duration(t.minutes * 60) + (Double.isNaN(avg) ? "" : " · " + Str.get(R.string.hql_avg_kmh, avg));
             CarKit.text(cv, sub, x + w + 26, top + 84, 26, CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.LEFT);
-            // Fichas: consumo, desnivel y coste.
-            double per100 = TripStats.kwhPer100(t);
+            // Fichas: consumo (el real si el viaje tiene datos del coche, con su marca), desnivel y coste.
+            double real = TripStats.realKwhPer100(t);
+            double per100 = Double.isNaN(real) ? TripStats.kwhPer100(t) : real;
             float y = getHeight() - pad - 4;
             float cx = x;
             CarIcons.leaf(cv, cx + 12, y - 12, 26, useColor(per100), p);
             cx += 32;
             cx += CarKit.number(cv, Double.isNaN(per100) ? "—" : String.format(Locale.getDefault(), "%.1f", per100), "kWh/100", cx, y, 32,
-                    useColor(per100), CarKit.MEDIUM, p, Paint.Align.LEFT) + 40;
+                    useColor(per100), CarKit.MEDIUM, p, Paint.Align.LEFT) + 14;
+            if (!Double.isNaN(real)) cx += realTag(cv, cx, y - 2, Paint.Align.LEFT, p);
+            cx += 26;
             CarIcons.mountain(cv, cx + 14, y - 12, 28, CarKit.DIM, p);
             cx += 36;
             cx += CarKit.number(cv, String.format(Locale.getDefault(), "%.0f", t.climb), "m", cx, y, 32, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT) + 40;
@@ -339,7 +371,8 @@ final class TripsTab implements CarScreen {
             CarKit.text(cv, Str.get(R.string.hql_no_records), r.left, r.top + 30, 25, CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
             return;
         }
-        float step = (r.height() - 40) / 3f;
+        boolean realLine = allTotals.realTrips > 0;
+        float step = (r.height() - (realLine ? 72 : 40)) / 3f;
         float y = r.top;
         if (longest >= 0) {
             TripLog.Trip t = trips.get(longest);
@@ -347,7 +380,7 @@ final class TripsTab implements CarScreen {
         }
         if (efficient >= 0) {
             TripLog.Trip t = trips.get(efficient);
-            record(cv, r, y + step, 1, Str.get(R.string.hql_record_efficient), String.format(Locale.getDefault(), "%.1f", TripStats.kwhPer100(t)),
+            record(cv, r, y + step, 1, Str.get(R.string.hql_record_efficient), String.format(Locale.getDefault(), "%.1f", TripStats.bestKwhPer100(t)),
                     "kWh/100 km", day(t.startMs), p);
         }
         if (climb >= 0) {
@@ -362,6 +395,13 @@ final class TripsTab implements CarScreen {
         }
         CarKit.text(cv, Str.get(R.string.hql_trips_total, trips.size(), km, kwh * cfg.electricityPrice()), r.left, r.bottom, 21, CarKit.FAINT,
                 CarKit.MEDIUM, p, Paint.Align.LEFT);
+        // Los totales reales: solo los viajes con datos del coche al empezar y al terminar.
+        if (realLine) {
+            String rt = Str.get(R.string.hql_cloud_trips_real_total, allTotals.realTrips, allTotals.realKm, allTotals.realKwhPer100());
+            p.setTypeface(CarKit.MEDIUM);
+            p.setTextSize(21);
+            CarKit.text(cv, CarKit.ellipsize(rt, r.width(), p), r.left, r.bottom - 30, 21, CarKit.ACCENT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        }
     }
 
     private void record(Canvas cv, RectF r, float y, int kind, String title, String value, String unit, String when, Paint p) {

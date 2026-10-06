@@ -20,6 +20,23 @@ final class TripStats {
         return t.km >= 0.5 ? t.kwh / t.km * 100 : Double.NaN;
     }
 
+    /** Consumo real del viaje con los datos del coche (nube de Leapmotor) al empezar y al terminar. */
+    static CloudEnergy.Result real(TripLog.Trip t) {
+        return CloudEnergy.between(t.socStart, t.odoStart, t.socEnd, t.odoEnd, t.capKwh, t.charged);
+    }
+
+    /** kWh/100 km reales del viaje, o NaN si no hay datos del coche o no dan una medida fiable. */
+    static double realKwhPer100(TripLog.Trip t) {
+        CloudEnergy.Result r = real(t);
+        return r.ok() ? r.kwhPer100 : Double.NaN;
+    }
+
+    /** El mejor dato del viaje: el real si lo hay; si no, el estimado. */
+    static double bestKwhPer100(TripLog.Trip t) {
+        double r = realKwhPer100(t);
+        return Double.isNaN(r) ? kwhPer100(t) : r;
+    }
+
     /** Velocidad media (km/h, con las paradas), o NaN sin duración. */
     static double avgKmh(TripLog.Trip t) {
         return t.minutes > 0 ? t.km / (t.minutes / 60.0) : Double.NaN;
@@ -64,9 +81,18 @@ final class TripStats {
         double km;
         double kwh;
         long minutes;
+        /** Solo los viajes con consumo real (km del cuentakilómetros y kWh de la bajada del %). */
+        int realTrips;
+        double realKm;
+        double realKwh;
 
         double kwhPer100() {
             return km >= 0.5 ? kwh / km * 100 : Double.NaN;
+        }
+
+        /** kWh/100 km reales de los viajes que los tienen (ponderado por km), o NaN. */
+        double realKwhPer100() {
+            return realKm >= 0.5 ? realKwh / realKm * 100 : Double.NaN;
         }
     }
 
@@ -78,6 +104,12 @@ final class TripStats {
             t.km += x.km;
             t.kwh += x.kwh;
             t.minutes += x.minutes;
+            CloudEnergy.Result r = real(x);
+            if (r.ok()) {
+                t.realTrips++;
+                t.realKm += r.km;
+                t.realKwh += r.kwh;
+            }
         }
         return t;
     }
@@ -91,14 +123,14 @@ final class TripStats {
         return best;
     }
 
-    /** Índice del viaje de menos kWh/100 km entre los de al menos MIN_KM_FOR_RECORD, o -1. */
+    /** Índice del viaje de menos kWh/100 km (el real si lo tiene) entre los de al menos MIN_KM_FOR_RECORD, o -1. */
     static int mostEfficient(List<TripLog.Trip> trips) {
         int best = -1;
         double bestV = Double.MAX_VALUE;
         for (int i = 0; i < trips.size(); i++) {
             TripLog.Trip t = trips.get(i);
-            double v = kwhPer100(t);
-            if (t.km < MIN_KM_FOR_RECORD || Double.isNaN(v) || t.kwh <= 0) continue;
+            double v = bestKwhPer100(t);
+            if (t.km < MIN_KM_FOR_RECORD || Double.isNaN(v) || v <= 0) continue;
             if (v < bestV) {
                 bestV = v;
                 best = i;

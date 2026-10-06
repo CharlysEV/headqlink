@@ -21,6 +21,10 @@ import java.util.Locale;
  * subidas, aceleraciones, climatización, electrónica) y cuánto se ha recuperado, las condiciones (viento respecto al
  * coche, temperatura, pendiente, altitud), el coste del viaje (€/kWh de Ajustes) frente a la gasolina, el CO₂ que no
  * ha salido por un tubo de escape y un consejo con su cifra.
+ *
+ * Con la cuenta de Leapmotor (CarCloud), el consumo del VIAJE es el REAL (la bajada del % del coche por la capacidad
+ * de la variante, entre los km de su cuentakilómetros) en cuanto la batería ha bajado un 2 % o más, y la potencia real
+ * de la batería se enseña junto a la estimada si el dato es reciente. El reparto sigue siendo del modelo (estimado).
  */
 final class EfficiencyScreen implements CarScreen {
     private static final long TICK_MS = 500;
@@ -38,6 +42,9 @@ final class EfficiencyScreen implements CarScreen {
     private final float[] power = new float[CarSensors.POWER_SECS];
     private int powerN;
     private double avgAllTrips = Double.NaN;
+    private CarCloud.Snapshot cloud = CarCloud.Snapshot.of(CarCloud.State.NO_ACCOUNT);
+    private CloudEnergy.Result realTrip = CloudEnergy.NONE;
+    private long nowMs;
     private CarKit.Card powerCard;
     private CarKit.Card condCard;
     private CarKit.Card useCard;
@@ -80,6 +87,9 @@ final class EfficiencyScreen implements CarScreen {
         s = sensors.snapshot();
         sensors.tripBreakdown(trip);
         powerN = sensors.powerHistory(power);
+        cloud = CarCloud.snapshot();
+        realTrip = TripLog.liveReal(cloud);
+        nowMs = DemoMode.wallClockMs();
         powerCard.invalidate();
         condCard.invalidate();
         useCard.invalidate();
@@ -119,6 +129,12 @@ final class EfficiencyScreen implements CarScreen {
         CarKit.number(cv, String.format(Locale.getDefault(), "%+.1f", kw).replace("+", ""), "kW", r.left, r.top + 66, 80, color, CarKit.REGULAR, p, Paint.Align.LEFT);
         int state = !moving ? R.string.hql_stopped_cap : kw < -0.3 ? R.string.hql_regenerating : R.string.hql_consuming;
         CarKit.text(cv, Str.get(state), r.right, r.top + 30, 25, kw < -0.3 && moving ? CarKit.GREEN : CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.RIGHT);
+        // La potencia real de la batería (nube de Leapmotor), si el dato es reciente.
+        double realKw = cloud.hasData() && cloud.ageMs(nowMs) <= CarCloud.POWER_MAX_AGE_MS ? cloud.status.powerKw() : Double.NaN;
+        if (!Double.isNaN(realKw)) {
+            CarKit.text(cv, Str.get(R.string.hql_cloud_power_real, num(realKw, 1), CarCloud.ago(cloud.ageMs(nowMs))), r.right, r.top + 62, 21,
+                    CarKit.ACCENT, CarKit.MEDIUM, p, Paint.Align.RIGHT);
+        }
         // Gráfica de los últimos 2 min: por encima de cero consume, por debajo recupera.
         RectF g = tmp;
         g.set(r.left + 46, r.top + 104, r.right, r.bottom - 26);
@@ -233,12 +249,13 @@ final class EfficiencyScreen implements CarScreen {
 
     private void paintUse(Canvas cv, RectF r, Paint p) {
         double trip100 = s.tripKmEnergy > 0.3 ? s.tripKwh / s.tripKmEnergy * 100 : Double.NaN;
-        double[] v = {s.kwh100Now, trip100, avgAllTrips};
-        int[] names = {R.string.hql_now, R.string.hql_trip, R.string.hql_avg_trips};
+        boolean real = realTrip.ok();
+        double[] v = {s.kwh100Now, real ? realTrip.kwhPer100 : trip100, avgAllTrips};
+        int[] names = {R.string.hql_now, real ? R.string.hql_cloud_trip_real : R.string.hql_trip, R.string.hql_avg_trips};
         float w = r.width() / 3f;
         for (int i = 0; i < 3; i++) {
             float x = r.left + i * w;
-            CarKit.label(cv, Str.get(names[i]), x, r.top + 18, p);
+            CarKit.label(cv, Str.get(names[i]), x, r.top + 18, i == 1 && real ? CarKit.ACCENT : CarKit.FAINT, p, Paint.Align.LEFT, w - 22);
             String val = Double.isNaN(v[i]) ? "—" : num(v[i], 1);
             CarKit.text(cv, val, x, r.top + 74, 50, i == 0 && v[i] < 0 ? CarKit.GREEN : useColor(v[i]), CarKit.REGULAR, p, Paint.Align.LEFT);
             if (i > 0) {
@@ -246,7 +263,22 @@ final class EfficiencyScreen implements CarScreen {
                 cv.drawRect(x - 14, r.top, x - 12, r.top + 82, p);
             }
         }
-        CarKit.text(cv, Str.get(R.string.hql_kwh100_unit), r.left, r.bottom, 21, CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        // Debajo, de dónde sale cada cifra: sin datos del coche, todo estimado; con ellos, el viaje real (o por qué aún no).
+        String unit;
+        int uc = CarKit.FAINT;
+        if (!cloud.hasData()) {
+            unit = Str.get(R.string.hql_kwh100_unit);
+        } else if (real) {
+            unit = Str.get(R.string.hql_cloud_unit_real, CarCloud.ago(cloud.ageMs(nowMs)));
+            uc = CarKit.ACCENT;
+        } else if (realTrip.kind == CloudEnergy.Kind.CHARGED) {
+            unit = Str.get(R.string.hql_cloud_unit_charged);
+        } else {
+            unit = Str.get(R.string.hql_cloud_unit_little);
+        }
+        p.setTypeface(CarKit.MEDIUM);
+        p.setTextSize(21);
+        CarKit.text(cv, CarKit.ellipsize(unit, r.width(), p), r.left, r.bottom, 21, uc, CarKit.MEDIUM, p, Paint.Align.LEFT);
     }
 
     private void paintSplit(Canvas cv, RectF r, Paint p) {
