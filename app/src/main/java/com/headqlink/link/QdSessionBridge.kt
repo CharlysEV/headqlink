@@ -90,8 +90,11 @@ internal class QdSessionBridge(
     @Volatile
     private var carInfoNanos = 0L
 
-    /** Detector de cortes de radio (qdauto §7.3), evaluado cada 100 ms en el monitor de red. */
-    private val stalls = StallDetector(sid, ::wallText, freezeMs = 250)
+    /** El coche mandó su CAR_INFO en esta sesión (por cable, solo esas sesiones reinician la espera entre aperturas). */
+    val gotCarInfo: Boolean get() = carInfoNanos != 0L
+
+    /** Detector de cortes de radio (qdauto §7.3), evaluado cada 100 ms en el monitor de red; por el cable, «CABLE». */
+    private val stalls = StallDetector(sid, ::wallText, freezeMs = 250, cable = host.isUsb)
 
     @Volatile
     private var lastRxKind: String? = null

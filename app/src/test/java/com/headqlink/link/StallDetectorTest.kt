@@ -123,4 +123,30 @@ class StallDetectorTest {
         assertNull(d.onClose(1_400, "otra vez"))
         assertTrue(d.summary().startsWith("1 cortes"))
     }
+
+    @Test
+    fun cableStallsSayTheCarIsNotReadingInsteadOfRadio() {
+        val cable = StallDetector(4, { "t$it" }, thresholdMs = 400, freezeMs = 250, progressMs = 1_000, cable = true)
+        val out = ArrayList<StallDetector.Event>()
+        var t = 1_000L
+        while (t <= 3_000L) {
+            // Sin socket: sin NetStat (-1); un write de vídeo atascado desde 1,5 s y el coche callado desde 1,2 s.
+            out += cable.onSample(
+                StallDetector.Sample(
+                    nowMs = t, lastReceiveMs = 1_200, lastRxKind = "HEARTBEAT", writingSinceMs = if (t >= 1_500) 1_500 else 0,
+                    writingLabel = "VIDEO_P", writingBytes = 20_000, lastWriteEndMs = 1_400,
+                ),
+            )
+            t += 100
+        }
+        val start = out.first { it.phase == StallDetector.Phase.START }
+        assertEquals(StallDetector.Kind.RADIO, start.kind)
+        assertTrue(start.text, start.text.startsWith("Corte S4 INICIO CABLE: el coche no lee · último RX t1200 (HEARTBEAT)"))
+        assertTrue(start.text, start.text.contains("write de VIDEO_P 20000 B"))
+        val progress = out.first { it.phase == StallDetector.Phase.PROGRESS }
+        assertTrue(progress.text, progress.text.contains("(CABLE: el coche no lee)"))
+        assertTrue(cable.summary(), cable.summary().startsWith("1 cortes (cable 1,"))
+        // Por Wi-Fi, como siempre.
+        assertTrue(StallDetector(1, { "t$it" }).summary().startsWith("sin cortes"))
+    }
 }

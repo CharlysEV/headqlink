@@ -1056,3 +1056,28 @@ con la trama en los dos sentidos). App: `RequirementsTest`, `LinkModeDefaultTest
 `LinkRateControllerTest` con casos del cable. `:qdsim`: `QuirksTest` (`trama_usb` y la opción).
 
 Sin probar todavía en el móvil ni en el coche: lo primero es enchufar el cable en el C10 y exportar el log.
+
+### 14.1 Prueba real por cable (2026-10-06): espera creciente, accesorio desaparecido y «CABLE»
+
+Log del móvil `qd-20261006-131226.log` (primera prueba con el cable en el C10):
+
+| Qué pasó | Causa | Arreglo |
+|---|---|---|
+| Con el accesorio abierto pero el coche aún sin hablar, una sesión nueva cada ~11 s (WATCHDOG a los 10 s + reapertura en 1 s): **115 sesiones en 20 min** | La espera creciente (1, 2, 5, 10, 30 s) solo contaba las sesiones de menos de 10 s; las del watchdog duraban justo 10 s y la reiniciaban siempre | `UsbReopenPolicy` (puro): **1, 2, 5, 10, 30, 60 s** por cada sesión fallida seguida (sin ningún mensaje del coche, sin `CAR_INFO`, o con `CAR_INFO` pero de menos de 10 s); solo la reinicia una sesión con `CAR_INFO` de 10 s o más (o un accesorio que vuelve). Mientras dura la espera, solo abre el reintento programado (un `USB_STATE` repetido o la alimentación ya no abren antes). En 20 min de coche callado: unas 21 sesiones en vez de 115 |
+| Al quitar el cable, S124 → S125 → S126 en milisegundos con `write failed: ENODEV` | El descriptor ya no valía, pero `getAccessoryList` y los avisos seguían ofreciendo el accesorio | ENODEV o EIO (o «No such device», «I/O error») en el cierre o en sus causas = **accesorio desaparecido**: no se reabre (ni en espera se le da prioridad sobre el Wi-Fi) hasta un `USB_STATE accessory=true` **nuevo** (paso de no a sí) o `USB_ACCESSORY_ATTACHED`; LinkService lo trata como un cable quitado (vuelve al Wi-Fi si la conexión elegida es otra) |
+| «Corte … RADIO» en sesiones por cable | El detector de cortes no sabía del transporte | Por el cable, el mismo corte y los mismos datos se escriben **«Corte S3 INICIO CABLE: el coche no lee · …»** y «sigue … (CABLE: el coche no lee)»; en el resumen, «cable» en vez de «radio». La fila de `PerfTrace` sigue siendo `stall_radio` |
+
+Líneas nuevas (etiqueta `HQL/USB`):
+
+| Línea | Significado |
+|---|---|
+| `vuelvo a mirar el accesorio en 5000 ms (S12: la sesión terminó con el cable puesto (10 s de sesión, sin ningún mensaje del coche): no reinicia la espera; fallida 3 seguida, vuelvo a abrir en 5 s (1, 2, 5, 10, 30, 60 s))` | Espera creciente |
+| `… (600 s de sesión, con CAR_INFO); espera creciente reiniciada (había 4 fallidas seguidas)` | Una sesión buena la reinicia |
+| `espera creciente en curso: no abro por «USB_STATE» (lo hará el reintento programado)` | Otro aviso durante la espera (una línea por espera) |
+| `W S125: accesorio desaparecido (ENODEV; 0 s de sesión): no lo vuelvo a abrir hasta que el coche lo vuelva a poner en modo accesorio (USB_STATE accessory=true o USB_ACCESSORY_ATTACHED)` | ENODEV/EIO |
+| `accesorio desaparecido (ENODEV/EIO): no lo abro (…) hasta que …` | Intentos refrenados (una línea) |
+| `USB_STATE accessory=true: el accesorio del coche ha vuelto; se puede abrir otra vez` | Vuelta del accesorio |
+
+Pruebas: `UsbReopenPolicyTest` (5: espera creciente con sesiones calladas, reinicio solo con CAR_INFO de ≥ 10 s, 20 min de
+coche callado, ENODEV/EIO hasta que vuelve, detección de ENODEV/EIO sin falsos positivos) y un caso nuevo en
+`StallDetectorTest` (textos «CABLE: el coche no lee» y resumen «cable»).

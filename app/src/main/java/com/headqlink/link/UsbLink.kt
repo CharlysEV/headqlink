@@ -40,9 +40,11 @@ import java.util.concurrent.TimeUnit
  *   LinkService le da prioridad al cable (para el Wi-Fi y llama a [activate]);
  * - **activo**: abre el accesorio (`getAccessoryList` hasta 5 veces, cada 50 ms, como QDLink; con el permiso del aviso
  *   de conexión o, si no lo hay, pidiéndolo), arranca la sesión con un [QdSessionBridge] (el mismo camino de Android
- *   Auto que por Wi-Fi) y, si la sesión termina con el cable puesto, vuelve a abrirlo con una espera creciente. Al
- *   quitar el cable (`USB_ACCESSORY_DETACHED`) o perder la alimentación (`ACTION_POWER_DISCONNECTED`, como QDLink)
- *   cierra la sesión: LinkService pasa a «coche perdido» y, al volver a enchufarlo, se reanuda al instante.
+ *   Auto que por Wi-Fi) y, si la sesión termina con el cable puesto, vuelve a abrirlo con una espera creciente
+ *   ([UsbReopenPolicy]: 1, 2, 5, 10, 30, 60 s; solo la reinicia una sesión con `CAR_INFO`). Al quitar el cable
+ *   (`USB_ACCESSORY_DETACHED`), perder la alimentación (`ACTION_POWER_DISCONNECTED`, como QDLink) o ver ENODEV/EIO en el
+ *   descriptor (accesorio desaparecido: no se reabre hasta que vuelva) cierra la sesión: LinkService pasa a «coche
+ *   perdido» y, al volver a enchufarlo, se reanuda al instante.
  *
  * Hilos: los receptores en el principal; abrir y esperar, en `hql-usb`; los eventos de la sesión, en los suyos.
  */
@@ -103,8 +105,18 @@ internal class UsbLink(
     @Volatile
     private var pauseUntilMs = 0L
 
-    /** Solo `hql-usb`: sesiones seguidas que duraron poco con el cable puesto (espera creciente). */
-    private var quickEnds = 0
+    /** Solo `hql-usb`: espera creciente entre sesiones fallidas y accesorio desaparecido (ENODEV/EIO). */
+    private val reopen = UsbReopenPolicy()
+
+    /** Solo `hql-usb`: ya se dijo en el log que el accesorio desapareció y no se reabre (una línea, no una por intento). */
+    private var goneLogged = false
+
+    /**
+     * Solo `hql-usb`: la espera creciente tras una sesión manda; hasta este instante (elapsedRealtime) solo abre el
+     * reintento programado, no otros avisos (USB_STATE repetido, alimentación). 0 = sin espera.
+     */
+    private var backoffUntilMs = 0L
+    private var backoffLogged = false
     private var retry: ScheduledFuture<*>? = null
 
     /** Último texto del sondeo de accesorios y de USB_STATE (para no repetir líneas iguales). */
@@ -164,7 +176,8 @@ internal class UsbLink(
             UsbProbe.step("enlace por cable activo ($why): busco el accesorio del coche (bloques de ${BlockFraming.BLOCK} B, sin UDP ni TCP)")
         }
         network(LinkState.Level.BUSY, Str.get(R.string.hql_usb_net_waiting))
-        submit { quickEnds = 0; tryOpen(why, requestPermission = true, preferred = null) }
+        // Activar no vale como «el accesorio volvió» (puede venir de un USB_STATE viejo): la espera sí empieza de cero.
+        submit { resetBackoff(); tryOpen(why, requestPermission = true, preferred = null) }
     }
 
     /** Vuelta al Wi-Fi: se cierra la sesión por cable y se queda en espera (sondeo). */
@@ -180,7 +193,11 @@ internal class UsbLink(
     fun offer(acc: UsbAccessory?, why: String) {
         book.noteBroadcast(System.nanoTime())
         if (!active) return
-        submit { quickEnds = 0; tryOpen(why, requestPermission = true, preferred = acc) }
+        submit {
+            // Con el accesorio del aviso (USB_ACCESSORY_ATTACHED) el coche lo ha vuelto a poner: se puede abrir otra vez.
+            if (acc != null) accessoryArrived("USB_ACCESSORY_ATTACHED") else resetBackoff()
+            tryOpen(why, requestPermission = true, preferred = acc)
+        }
     }
 
     /** Con el servicio: todo cerrado (sesión, receptores, hilo). */
@@ -245,7 +262,11 @@ internal class UsbLink(
         val mode = UsbProbe.accessoryMode(i)
         val changed = mode != lastAccessoryMode
         lastAccessoryMode = mode
-        if (mode == true && changed) book.noteBroadcast(System.nanoTime())
+        if (mode == true && changed) {
+            book.noteBroadcast(System.nanoTime())
+            // Paso nuevo a modo accesorio: si desapareció con ENODEV/EIO, ya se puede volver a abrir.
+            submit { accessoryArrived("USB_STATE accessory=true") }
+        }
         // Al pasar a modo accesorio la lista puede tardar un poco: hasta 5 intentos (como QDLink).
         if (changed || mode == true) lookForCar("USB_STATE", expectAccessory = mode == true)
         if (mode == false && changed && active && (session != null || openedAtMs != 0L)) {
@@ -308,7 +329,10 @@ internal class UsbLink(
         val list = accessoryList(if (expectAccessory) OPEN_TRIES else 1)
         val car = pick(list)
         if (!active) {
-            if (car != null && UsbProbe.hasPermission(ctx, car)) {
+            if (car != null && !reopen.mayOpen()) {
+                // Sigue en la lista tras un ENODEV/EIO (lista vieja mientras se quita el cable): no se le da prioridad.
+                logGoneOnce("en espera")
+            } else if (car != null && UsbProbe.hasPermission(ctx, car)) {
                 UsbProbe.step("accesorio del coche presente (${UsbProbe.shortName(car)}) con permiso: el cable tiene prioridad sobre el Wi-Fi")
                 main.post { if (!stopping && !active) callbacks.onUsbCarPresent(UsbProbe.shortName(car)) }
             } else if (car != null) {
@@ -322,10 +346,23 @@ internal class UsbLink(
         tryOpen(why, requestPermission = true, preferred = car)
     }
 
-    private fun tryOpen(why: String, requestPermission: Boolean, preferred: UsbAccessory?) {
+    private fun tryOpen(why: String, requestPermission: Boolean, preferred: UsbAccessory?, fromRetry: Boolean = false) {
         if (!active || stopping) return
         val cur = session
         if (cur != null && !cur.isClosed) return
+        if (!fromRetry && SystemClock.elapsedRealtime() < backoffUntilMs) {
+            if (!backoffLogged) {
+                backoffLogged = true
+                UsbProbe.log("espera creciente en curso: no abro por «$why» (lo hará el reintento programado)")
+            }
+            return
+        }
+        if (fromRetry) backoffUntilMs = 0L
+        if (!reopen.mayOpen()) {
+            logGoneOnce(why)
+            network(LinkState.Level.BUSY, Str.get(R.string.hql_usb_net_waiting))
+            return
+        }
         val wait = pauseUntilMs - SystemClock.elapsedRealtime()
         if (wait > 0) {
             scheduleRetry(wait + 50, "reconexión en pausa")
@@ -455,22 +492,86 @@ internal class UsbLink(
         book.confirm(s.id, Runnable { if (!stopping) callbacks.onCarConnected(detail) })
     }
 
-    /** Hilo de eventos de [s]: fin de la sesión. Con el cable puesto, se vuelve a abrir con una espera creciente. */
+    /**
+     * Hilo de eventos de [s]: fin de la sesión. Con el cable puesto, se vuelve a abrir con la espera de [UsbReopenPolicy]
+     * (crece mientras las sesiones no traigan CAR_INFO); con ENODEV/EIO en el descriptor, el accesorio ha desaparecido.
+     */
     private fun ended(s: PhoneSession, reason: CloseReason) {
-        bridges.remove(s.id)
+        val bridge = bridges.remove(s.id)
         if (session === s) session = null
         lastSession = s
         val text = reason.toString()
         val current = book.ended(s.id, Runnable { if (!stopping) callbacks.onCarLost(text) })
         UsbProbe.step("sesión S${s.id} por cable terminada: $reason")
         if (!current || stopping || !active) return
-        val lived = SystemClock.elapsedRealtime() - openedAtMs
-        submit {
-            quickEnds = if (lived < QUICK_END_MS) quickEnds + 1 else 0
-            val delay = BACKOFF_MS[minOf(quickEnds, BACKOFF_MS.size - 1)]
-            network(LinkState.Level.BUSY, Str.get(R.string.hql_usb_net_waiting))
-            scheduleRetry(delay, "la sesión terminó con el cable puesto (${lived / 1000} s de sesión)")
+        val stats = try {
+            s.stats()
+        } catch (_: RuntimeException) {
+            null
         }
+        val lived = stats?.uptimeMs ?: (SystemClock.elapsedRealtime() - openedAtMs)
+        val carMessages = stats?.messagesReceived ?: 0L
+        val carInfo = bridge?.gotCarInfo == true
+        val reasonText = describe(reason)
+        submit {
+            val d = reopen.onSessionEnd(carMessages, carInfo, lived, reasonText)
+            network(LinkState.Level.BUSY, Str.get(R.string.hql_usb_net_waiting))
+            if (!d.reopen) {
+                retry?.cancel(false)
+                goneLogged = true
+                UsbProbe.warn("S${s.id}: ${d.text}")
+                main.post { onAccessoryGone("accesorio desaparecido tras S${s.id} (ENODEV/EIO)") }
+                return@submit
+            }
+            backoffUntilMs = SystemClock.elapsedRealtime() + d.delayMs
+            backoffLogged = false
+            scheduleRetry(d.delayMs, "S${s.id}: ${d.text}")
+        }
+    }
+
+    /** Motivo de cierre con toda la cadena de causas (el ENODEV/EIO puede venir en una causa). */
+    private fun describe(reason: CloseReason): String {
+        val sb = StringBuilder(reason.toString())
+        var t: Throwable? = reason.error
+        var depth = 0
+        while (t != null && depth < 5) {
+            sb.append(" | ").append(t.toString())
+            t = t.cause
+            depth++
+        }
+        return sb.toString()
+    }
+
+    /** Hilo principal: el descriptor dio ENODEV/EIO; como un cable quitado (LinkService vuelve al Wi-Fi si toca). */
+    private fun onAccessoryGone(why: String) {
+        lastListText = ""
+        if (openedAtMs != 0L) {
+            openedAtMs = 0L
+            if (active && !stopping) callbacks.onUsbGone(why)
+        }
+    }
+
+    /** Solo `hql-usb`: el coche vuelve a ofrecer el accesorio; si había desaparecido, se puede abrir otra vez. */
+    private fun accessoryArrived(how: String) {
+        val wasGone = reopen.onAccessoryArrived()
+        goneLogged = false
+        backoffUntilMs = 0L
+        if (wasGone) UsbProbe.step("$how: el accesorio del coche ha vuelto; se puede abrir otra vez")
+    }
+
+    /** Solo `hql-usb`: la espera creciente empieza de cero (sin tocar «accesorio desaparecido»). */
+    private fun resetBackoff() {
+        if (reopen.mayOpen()) reopen.onAccessoryArrived()
+        backoffUntilMs = 0L
+    }
+
+    private fun logGoneOnce(why: String) {
+        if (goneLogged) return
+        goneLogged = true
+        UsbProbe.log(
+            "accesorio desaparecido (ENODEV/EIO): no lo abro ($why) hasta que el coche lo vuelva a poner en modo accesorio " +
+                "(USB_STATE accessory=true o USB_ACCESSORY_ATTACHED)",
+        )
     }
 
     private fun scheduleRetry(delayMs: Long, why: String) {
@@ -478,7 +579,7 @@ internal class UsbLink(
         if (!active || stopping) return
         UsbProbe.log("vuelvo a mirar el accesorio en $delayMs ms ($why)")
         retry = try {
-            exec.schedule({ tryOpen(why, requestPermission = false, preferred = null) }, delayMs, TimeUnit.MILLISECONDS)
+            exec.schedule({ tryOpen(why, requestPermission = false, preferred = null, fromRetry = true) }, delayMs, TimeUnit.MILLISECONDS)
         } catch (_: RuntimeException) {
             null
         }
@@ -529,9 +630,5 @@ internal class UsbLink(
 
         /** Tras perder la alimentación, cuándo se mira si el accesorio sigue. */
         private const val POWER_RECHECK_MS = 1_500L
-
-        /** Una sesión que dura menos que esto con el cable puesto cuenta para la espera creciente. */
-        private const val QUICK_END_MS = 10_000L
-        private val BACKOFF_MS = longArrayOf(1_000, 2_000, 5_000, 10_000, 30_000)
     }
 }

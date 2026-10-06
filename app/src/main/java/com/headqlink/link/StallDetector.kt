@@ -15,6 +15,9 @@ import java.util.Locale
  * [progressMs] y FIN (vuelve el RX o avanza el TX, o se cierra la sesión). Sin Android y con reloj inyectado (ms
  * monótonos; [wall] los pasa a hora del día): lo prueban los tests. Lo usan dos hilos (el monitor de red con
  * [onSample], el de eventos con [onClose] y el resumen): todo va con el candado del objeto.
+ *
+ * Por el cable USB ([cable]) no hay radio: el mismo corte (`Kind.RADIO`, los mismos datos) se escribe
+ * «CABLE: el coche no lee», y en el resumen «cable» en vez de «radio».
  */
 internal class StallDetector(
     private val sid: Int,
@@ -22,6 +25,7 @@ internal class StallDetector(
     private val thresholdMs: Long = 400,
     private val freezeMs: Long = 150,
     private val progressMs: Long = 1_000,
+    private val cable: Boolean = false,
 ) {
     enum class Kind { RADIO, COCHE_NO_LEE, MOVIL_CONGELADO }
 
@@ -205,7 +209,8 @@ internal class StallDetector(
     }
 
     private fun startText(kind: Kind, s: Sample, rxStopped: Boolean, writeStuck: Boolean): String {
-        val sb = StringBuilder("Corte S").append(sid).append(" INICIO ").append(kind).append(": ")
+        val sb = StringBuilder("Corte S").append(sid).append(" INICIO ").append(label(kind))
+            .append(if (cable && kind == Kind.RADIO) " · " else ": ")
         sb.append("último RX ").append(if (s.lastReceiveMs > 0) wall(s.lastReceiveMs) else "?")
         s.lastRxKind?.let { sb.append(" (").append(it).append(')') }
         if (!rxStopped) sb.append(" (el coche sigue hablando)")
@@ -223,7 +228,7 @@ internal class StallDetector(
     }
 
     private fun progressText(kind: Kind, s: Sample): String {
-        val sb = StringBuilder("Corte S").append(sid).append(" sigue ").append(s.nowMs - startMs).append(" ms (").append(kind).append(')')
+        val sb = StringBuilder("Corte S").append(sid).append(" sigue ").append(s.nowMs - startMs).append(" ms (").append(label(kind)).append(')')
         netText(sb, s)
         if (s.retrans >= 0 && startRetrans >= 0) sb.append(" (+").append(s.retrans - startRetrans).append(')')
         return sb.toString()
@@ -241,13 +246,16 @@ internal class StallDetector(
     @Synchronized
     fun summary(): String {
         val sb = StringBuilder()
-        if (count == 0) sb.append("sin cortes") else sb.append(count).append(" cortes (radio ").append(radio)
+        if (count == 0) sb.append("sin cortes") else sb.append(count).append(if (cable) " cortes (cable " else " cortes (radio ").append(radio)
             .append(", coche sin leer ").append(peer).append("), máx. ").append(maxMs).append(" ms")
         if (freezes > 0) sb.append(" · móvil congelado ").append(freezes).append(" veces (máx. ").append(maxFreezeMs).append(" ms)")
         if (retransAtFirst >= 0 && lastRetrans >= 0) sb.append(" · retrans +").append(lastRetrans - retransAtFirst)
         sb.append(" · outq máx. ").append(kb(maxOutq))
         return sb.toString()
     }
+
+    /** Nombre del tipo en el log: por el cable no hay radio, el coche simplemente no lee. */
+    private fun label(kind: Kind): String = if (cable && kind == Kind.RADIO) "CABLE: el coche no lee" else kind.name
 
     private fun kb(bytes: Int): String = if (bytes < 1024) "$bytes B" else String.format(Locale.US, "%d KB", bytes / 1024)
 }
