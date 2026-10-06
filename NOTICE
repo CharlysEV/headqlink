@@ -1,0 +1,12 @@
+HeadQLink is licensed under the GNU Affero General Public License v3.0 (see LICENSE). Its base,
+Open Headunit, and the other projects it builds on are credited in README.md.
+
+Leapmotor cloud client (read-only real car data, optional):
+  This product includes code ported from LMB10 (https://github.com/txurtxil/LPB10) by txurtxil,
+  licensed under the GNU General Public License v3.0 and combined with HeadQLink under section 13
+  of both licenses. Only the read-only part of the protocol was ported (login, session refresh,
+  request signing, vehicle list and status); none of LMB10's remote-control functions.
+    app/src/main/java/com/headqlink/link/LeapCrypto.java  - signing, HKDF key, account PKCS#12 password, device id
+    app/src/main/java/com/headqlink/link/LeapApi.java     - login, session, token refresh, vehicle list and status
+    app/src/main/java/com/headqlink/link/LeapStatus.java  - signal table, field merging, conversions, charge/tyre rules
+  The unofficial Leapmotor API may stop working at any time. HeadQLink is not affiliated with Leapmotor.

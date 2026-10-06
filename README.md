@@ -128,6 +128,13 @@ are preserved, including [Michael Reid's](COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt
 is an independent project with no relationship to Open Headunit or its authors.** It is not
 endorsed, supported or affiliated with them in any way.
 
+The optional, read-only "real car data" feature (Leapmotor account: battery, range, charging, tyre
+pressures, doors and odometer in the extended mode) uses a client ported from
+[LMB10](https://github.com/txurtxil/LPB10) by **txurtxil** (GPL-3.0), combined here under section 13 of
+the GPL-3.0/AGPL-3.0: login, session refresh, request signing, vehicle list and status only, never any
+remote command. See [NOTICE](NOTICE) and the ported files' headers. It talks to Leapmotor's unofficial
+API, which may stop working at any time.
+
 This project is not affiliated with, endorsed by or sponsored by Leapmotor, Google, Neusoft, Open
 Headunit or any other company or project. Leapmotor, C10, Android Auto and QDLink are trademarks of
 their respective owners and are mentioned here only to describe what the app works with.
