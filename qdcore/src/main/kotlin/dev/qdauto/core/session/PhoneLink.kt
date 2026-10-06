@@ -342,12 +342,28 @@ class PhoneLink(
             }
         }
         if (!reused) return on(port)
-        return try {
-            on(port)
-        } catch (e: IOException) {
-            log.w(TAG, "no se pudo reutilizar el puerto $port (${e.message}); uso uno aleatorio")
-            on(MirrorServer.RANDOM_PORT)
+        // El servidor de la sesión que acaba de caer puede tardar unos milisegundos en soltar el puerto (en casa,
+        // 2026-10-06: «bind failed: EADDRINUSE» 2 ms después del WATCHDOG): se reintenta un momento antes de rendirse.
+        val t0 = System.nanoTime()
+        var last: IOException? = null
+        for (i in 0 until REUSE_TRIES) {
+            try {
+                val s = on(port)
+                if (i > 0) log.i(TAG, "puerto $port libre otra vez tras ${(System.nanoTime() - t0) / 1_000_000} ms")
+                return s
+            } catch (e: IOException) {
+                last = e
+                if (e.message?.contains("in use", ignoreCase = true) != true) break
+                try {
+                    Thread.sleep(REUSE_RETRY_MS)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    break
+                }
+            }
         }
+        log.w(TAG, "no se pudo reutilizar el puerto $port (${last?.message}); uso uno aleatorio")
+        return on(MirrorServer.RANDOM_PORT)
     }
 
     /** Cierra la sesión o el intento en curso; con [PhoneLinkConfig.reconnect] se volverá a conectar. */
@@ -961,6 +977,12 @@ class PhoneLink(
     }
 
     private companion object {
+
+        /** hql: reintentos para volver a escuchar en el puerto de la sesión anterior (10 × 150 ms). */
+
+        private const val REUSE_TRIES = 10
+
+        private const val REUSE_RETRY_MS = 150L
         const val TAG = "QD/Link"
 
         /** Reintento de abrir el UDP tras una reapertura fallida. */
