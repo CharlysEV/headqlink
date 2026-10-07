@@ -275,6 +275,41 @@ O que muda, e porque é que o automático continua a ser o **recomendado**:
 > instalador por sessões do Android e, no Android 13 e 14, a acessibilidade costuma poder ativar-se à primeira. No
 > Android 15 ou superior não é garantido.
 
+### Versões do Android Auto
+
+Desde a 17.4, o HeadQLink arranca o Android Auto através do «servidor da unidade principal» de programador, e cada
+versão nova do Android Auto pode mudá-lo (os textos do menu ⋮ ou a forma como atende a ligação). Com que versões foi
+testado:
+
+| Android Auto | Estado |
+|---|---|
+| 17.7.x | **Testada** com o HeadQLink (outubro de 2026) |
+| 17.8, 17.9 e posteriores | **Ainda não testadas.** Outros projetos (Open Headunit) relatam problemas: com a 17.8 a ligação corta-se ao fim de 1-2 s; com a 17.9, o arranque automático do servidor deixa de funcionar |
+
+A «Verificação» mostra-o na linha «Android Auto 17.x» (testada / ainda não testada), e o registo anota-o ao arrancar
+(`androidAuto=…`) e em cada sessão (coluna `aa_version` de `sessions.csv`).
+
+**Recomendado: desative a atualização automática do Android Auto.** Play Store › procure «Android Auto» › ⋮ (em cima à
+direita) › desmarque «Ativar atualização automática». Assim uma versão nova não deixa o carro sem imagem de um dia para o
+outro; atualize à mão quando tiver sido testada.
+
+Se uma versão nova deixar de funcionar:
+
+1. **«O HeadQLink não encontra o botão do servidor»**: o Android Auto mudou o menu. Toque em «Abrir AA» e inicie-o à mão
+   (⋮ › «Iniciar servidor da unidade principal», ou como se chamar agora), ou toque em «Arranque manual» para não
+   depender da acessibilidade (ver [Sem acessibilidade](#sem-acessibilidade-arranque-manual-do-servidor-do-android-auto)).
+2. **«O Android Auto liga-se e corta ao fim de poucos segundos»** (dois cortes seguidos em menos de 10 s): limpe a cache
+   do Android Auto (Definições › Aplicações › Android Auto › Armazenamento › **Limpar cache**; não é preciso limpar os
+   dados) e pare e inicie o servidor (⋮). O HeadQLink tenta de novo sozinho, no máximo a cada 10 s.
+3. Se continuar, **exporte o registo** (secção 8) e envie-o: leva a versão do Android Auto e, uma vez, o que o HeadQLink
+   viu no menu (os textos do menu, sem dados pessoais), que é o que faz falta para o adaptar.
+
+> [!WARNING]
+> **Voltar a uma versão anterior do Android Auto não é «Desinstalar atualizações».** Em muitos telemóveis a cópia de
+> fábrica do Android Auto é só um esqueleto (1.x) que não serve para o HeadQLink: é preciso instalar à mão o APK da
+> versão testada (17.7.x) que corresponda ao seu telemóvel (arquitetura e versão do Android) e depois desativar a
+> atualização automática, ou a Play Store volta a atualizá-lo.
+
 ---
 
 ## 4. Utilização no carro
@@ -695,6 +730,8 @@ Comece sempre pelo menu ⚙ › «Verificação»: cada linha a vermelho tem o s
 | A imagem congela uns 10 s e depois volta a ligar | Em versões anteriores, uma imagem completa de mais de ~512 KB bloqueava o recetor do carro, que deixava de ler até a ligação cair. **Corrigido**: o HeadQLink já não envia nenhuma tão grande e mantém-nas em cerca de 300 KB no máximo. | Atualize o HeadQLink. Se acontecer com o perfil «Básico» (aí o tamanho é decidido pelo Android Auto), use «Automático» ou «Carro». Se continuar, exporte o registo (secção 8). |
 | Desliga-se muitas vezes | Desligar automático do hotspot, poupança de bateria, QDLink aberto ou a aplicação de espelhamento do carro fechada. | Os cortes curtos voltam a ligar sozinhos («A voltar a ligar…»). Se forem longos ou frequentes: «Sem restrições de bateria», «Samsung: aplicações nunca suspensas», desative o desligar automático e feche o QDLink. Se continuar, exporte o registo (secção 8). |
 | Notificação «Inicie (ou reinicie) o servidor do Android Auto», ou a linha «Auto» diz «À espera do servidor do Android Auto» | Arranque manual e o Android Auto não atende: o servidor está desligado (depois de reiniciar o telemóvel ou atualizar o Android Auto) ou bloqueado: uma ligação cortou-se a meio (algo se ligou e foi embora sem dizer nada, ou uma sessão caiu de repente). | Toque na notificação ou na linha: Android Auto › ⋮ › «Parar servidor» (se aparecer) e ⋮ › «Iniciar servidor da unidade principal». O HeadQLink volta a tentar a cada 5 s e continua sozinho. |
+| Notificação «O HeadQLink não encontra o botão do servidor» | O Android Auto atualizou-se e mudou o menu ⋮ (a automatização procura-o pelo texto). | «Abrir AA» e inicie-o à mão, ou «Arranque manual». Veja [Versões do Android Auto](#versões-do-android-auto) e exporte o registo (secção 8). |
+| Notificação «O Android Auto liga-se e corta ao fim de poucos segundos» | Sintoma conhecido de algumas versões novas do Android Auto (17.8). | Limpe a cache do Android Auto (Definições › Aplicações › Android Auto › Armazenamento › Limpar cache), pare e inicie o servidor, ou volte a uma versão testada ([Versões do Android Auto](#versões-do-android-auto)). |
 | A acessibilidade desativa-se sozinha | O Android desativa-a ao atualizar a aplicação, ou se a aplicação fechou de repente. Alguns fabricantes também. | «Verificação» › «Ativar». Se disser «Ativada mas sem funcionar», desative-a e volte a ativá-la. Se disser «Definição restrita», «Permitir definições restritas» (secção 3). Retire as restrições de bateria. |
 | O Android Auto pede no carro que olhe para o telemóvel | É a primeira vez que o Android Auto vê este «ecrã de carro», ou precisa de lhe pedir uma autorização ou confirmação. | Estacione, desbloqueie o telemóvel e aceite o que o Android Auto pedir. Normalmente só acontece uma vez. |
 | O telemóvel aquece muito | Perfil «Muito alto» ou «Alto», sol direto, ecrã ligado, carregamento sem fios. | Secção 6. |

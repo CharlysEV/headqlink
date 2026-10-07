@@ -361,6 +361,28 @@ class AaServeAttemptsTest {
     }
 
     @Test
+    fun aDropWhileFlappingWaitsForTheHoldBeforeTryingAgain() {
+        // AA servido y la sesión usándolo.
+        launch(1)
+        dials++
+        at(now + 20).let { attempts.tick(seen(tcp = true)) }
+        answers++
+        assertEquals(Kind.SERVED, at(now + 20).let { attempts.tick(seen(tcp = true)) }.kind)
+        // Se corta solo a los pocos segundos y AaFlapWatch frena los relanzamientos (como mucho uno cada 10 s).
+        val gone = now + AaServeAttempts.WATCH_MS
+        assertEquals(Kind.NONE, at(gone).let { attempts.tick(seen().hold(9_000)) }.kind)
+        val held = at(gone + AaServeAttempts.DROP_GRACE_MS).let { attempts.tick(seen().hold(6_000)) }
+        assertEquals(Kind.NONE, held.kind)
+        assertTrue(held.reason, held.reason.contains("se corta a los pocos segundos") && held.reason.contains("10 s"))
+        // Se dice una vez; mientras dure la espera, nada.
+        assertNull(at(gone + 5_000).let { attempts.tick(seen().hold(4_000)) }.reason)
+        // Pasada la espera: intento nuevo.
+        val relaunch = at(gone + 9_000).let { attempts.tick(seen().hold(0)) }
+        assertEquals(Kind.LAUNCH, relaunch.kind)
+        assertTrue(relaunch.reason, relaunch.reason.contains("se desconectó con la sesión en marcha"))
+    }
+
+    @Test
     fun theTimingsAreTheOnesTheFixPromises() {
         assertEquals(6_000L, AaServeAttempts.SERVE_TIMEOUT_MS)
         assertEquals(5_000L, AaServeAttempts.RETRY_MS)

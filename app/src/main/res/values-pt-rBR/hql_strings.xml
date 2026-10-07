@@ -635,4 +635,14 @@
     <string name="hql_w_tile_added">Botão adicionado às Configurações rápidas</string>
     <string name="hql_w_tile_already">O botão já está nas Configurações rápidas</string>
     <string name="hql_w_tile_manual">Abra as Configurações rápidas, toque no lápis (editar) e arraste «HeadQLink» para os botões.</string>
+    <!-- Versiones de Android Auto: botón del servidor no encontrado, cortes a los pocos segundos y fila de la Comprobación -->
+    <string name="hql_aa_compat_channel">Compatibilidade com o Android Auto</string>
+    <string name="hql_aa_ui_changed_title">O HeadQLink não encontra o botão do servidor</string>
+    <string name="hql_aa_ui_changed_text">O HeadQLink não encontra o botão do servidor nesta versão do Android Auto (%1$s): inicie-o manualmente (⋮ › Iniciar servidor da unidade principal) ou use o modo Manual.</string>
+    <string name="hql_aa_flap_title">O Android Auto conecta e cai depois de poucos segundos</string>
+    <string name="hql_aa_flap_text">Acontece com algumas versões novas do Android Auto (aqui, %1$s). Tente: limpar o cache do Android Auto (Configurações › Apps › Android Auto › Armazenamento › Limpar cache), parar e iniciar o servidor (⋮) ou voltar a uma versão testada (%2$s). O HeadQLink tenta de novo no máximo a cada 10 s.</string>
+    <string name="hql_req_aa_version">Android Auto %1$s</string>
+    <string name="hql_req_aa_version_ok">Testada com o HeadQLink (%1$s). Para não mudar sem aviso, desative a atualização automática do Android Auto.</string>
+    <string name="hql_req_aa_version_untested">Ainda não testada com o HeadQLink (testadas: %1$s). Se falhar, desative a atualização automática do Android Auto (Play Store › Android Auto › ⋮) e veja «Versões do Android Auto» no manual.</string>
+    <string name="hql_req_aa_version_store">Play Store</string>
 </resources>

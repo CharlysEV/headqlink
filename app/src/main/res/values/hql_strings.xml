@@ -634,4 +634,14 @@
     <string name="hql_w_tile_added">Button added to Quick Settings</string>
     <string name="hql_w_tile_already">The button is already in Quick Settings</string>
     <string name="hql_w_tile_manual">Open Quick Settings, tap the pencil (edit) and drag “HeadQLink” into your buttons.</string>
+    <!-- Versiones de Android Auto: botón del servidor no encontrado, cortes a los pocos segundos y fila de la Comprobación -->
+    <string name="hql_aa_compat_channel">Android Auto compatibility</string>
+    <string name="hql_aa_ui_changed_title">HeadQLink can\'t find the server button</string>
+    <string name="hql_aa_ui_changed_text">HeadQLink can\'t find the server button in this Android Auto version (%1$s): start it by hand (⋮ › Start head unit server) or use Manual mode.</string>
+    <string name="hql_aa_flap_title">Android Auto connects and drops after a few seconds</string>
+    <string name="hql_aa_flap_text">This happens with some new Android Auto versions (here, %1$s). Try: clear Android Auto\'s cache (Settings › Apps › Android Auto › Storage › Clear cache), stop and start its server (⋮), or go back to a tested version (%2$s). HeadQLink retries at most every 10 s.</string>
+    <string name="hql_req_aa_version">Android Auto %1$s</string>
+    <string name="hql_req_aa_version_ok">Tested with HeadQLink (%1$s). So it doesn\'t change without warning, turn off Android Auto auto-update.</string>
+    <string name="hql_req_aa_version_untested">Not tested with HeadQLink yet (tested: %1$s). If it fails, turn off Android Auto auto-update (Play Store › Android Auto › ⋮) and see “Android Auto versions” in the manual.</string>
+    <string name="hql_req_aa_version_store">Play Store</string>
 </resources>

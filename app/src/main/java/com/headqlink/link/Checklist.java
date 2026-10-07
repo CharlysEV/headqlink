@@ -511,6 +511,16 @@ final class Checklist {
                 }
                 return new Row("Android Auto", Str.get(R.string.hql_setup_version, String.valueOf(Ui.aaVersion(act))));
             }
+            case AA_VERSION: {
+                // Informativa: con qué versiones se ha probado HeadQLink y qué hacer si una nueva lo rompe.
+                String v = Ui.aaVersion(act);
+                String date = AaVersions.verifiedDate(v);
+                Row r = new Row(Str.get(R.string.hql_req_aa_version, AaVersions.series(v) != null ? AaVersions.series(v) : String.valueOf(v)),
+                        ok && date != null ? Str.get(R.string.hql_req_aa_version_ok, date)
+                                : Str.get(R.string.hql_req_aa_version_untested, AaVersions.verifiedList()));
+                r.action(Str.get(R.string.hql_req_aa_version_store), () -> openStore(AaServerStarter.AA_PKG));
+                return r;
+            }
             case AA_SERVER: {
                 Row r = new Row(Str.get(R.string.hql_req_aa_server), aaServerText(it.status));
                 r.action(Str.get(R.string.hql_open_aa), this::openAaForServer);
@@ -889,7 +899,7 @@ final class Checklist {
     }
 
     /** Antes de pasar al arranque manual, lo que cambia (y que el automático sigue siendo el recomendado). */
-    private void confirmManual() {
+    void confirmManual() {
         new MaterialAlertDialogBuilder(act)
                 .setTitle(Str.get(R.string.hql_manual_confirm_title))
                 .setMessage(Str.get(R.string.hql_manual_confirm_msg))

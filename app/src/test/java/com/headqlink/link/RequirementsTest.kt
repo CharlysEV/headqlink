@@ -33,10 +33,10 @@ class RequirementsTest {
         val items = eval()
         assertEquals(0, Requirements.missingCount(items))
         assertTrue(Requirements.blocking(items).isEmpty())
-        // Auto ampliado + Wi-Fi Direct con AA 17.6: todo lo suyo, en este orden.
+        // Auto ampliado + Wi-Fi Direct con AA 17.7 (probada): todo lo suyo, en este orden.
         assertEquals(
             listOf(
-                Id.ANDROID_AUTO, Id.ACCESSIBILITY, Id.AA_DEVMODE, Id.NEARBY_WIFI, Id.WIFI_ON, Id.HOTSPOT_OFF,
+                Id.ANDROID_AUTO, Id.AA_VERSION, Id.ACCESSIBILITY, Id.AA_DEVMODE, Id.NEARBY_WIFI, Id.WIFI_ON, Id.HOTSPOT_OFF,
                 Id.NOTIFICATIONS, Id.BATTERY, Id.OVERLAY, Id.MEDIA, Id.BG_LOCATION,
             ),
             ids(items),
@@ -314,7 +314,7 @@ class RequirementsTest {
         val items = eval { manualServer = true; aaServer = Requirements.AaServer.IN_USE; accessibilityRunning = false; accessibilityEnabled = false; restrictedSettings = true; devMode = -1 }
         assertEquals(
             listOf(
-                Id.ANDROID_AUTO, Id.AA_SERVER, Id.ACCESSIBILITY, Id.AA_DEVMODE, Id.NEARBY_WIFI, Id.WIFI_ON, Id.HOTSPOT_OFF,
+                Id.ANDROID_AUTO, Id.AA_VERSION, Id.AA_SERVER, Id.ACCESSIBILITY, Id.AA_DEVMODE, Id.NEARBY_WIFI, Id.WIFI_ON, Id.HOTSPOT_OFF,
                 Id.NOTIFICATIONS, Id.BATTERY, Id.OVERLAY, Id.MEDIA, Id.BG_LOCATION,
             ),
             ids(items),
@@ -428,5 +428,34 @@ class RequirementsTest {
         assertEquals(listOf(Id.ACCESSIBILITY), ids(Requirements.blocking(items)))
         assertNull(Requirements.find(eval(), Id.SERVER_MANUAL_OFFER))
         assertNull(Requirements.find(eval { mode = Config.MODE_APP; accessibilityRunning = false }, Id.SERVER_MANUAL_OFFER))
+    }
+
+    // ---------------------------------------------------------------- versión de Android Auto
+
+    @Test
+    fun androidAutoVersionRowIsInformationalVerifiedOrUntested() {
+        val verified = item(eval { aaVersion = "17.7.663654-release" }, Id.AA_VERSION)
+        assertEquals(Importance.INFO, verified.importance)
+        assertEquals(Status.OK, verified.status)
+
+        // 17.8 / 17.9: sin probar todavía (consejo), nunca cuenta ni bloquea Conectar.
+        for (v in listOf("17.8.661234-release", "17.9.1", "18.0.5")) {
+            val items = eval { aaVersion = v }
+            val row = item(items, Id.AA_VERSION)
+            assertEquals(v, Importance.INFO, row.importance)
+            assertEquals(v, Status.TIP, row.status)
+            assertFalse(v, row.counts())
+            assertFalse(v, row.blocks())
+            assertEquals(v, 0, Requirements.missingCount(items))
+        }
+        // También con un AA viejo (sin servidor de head unit) se dice; sin AA, o desactivado, no.
+        assertEquals(Status.TIP, item(eval { aaVersion = "17.3.651" }, Id.AA_VERSION).status)
+        assertNull(Requirements.find(eval { aaVersion = null }, Id.AA_VERSION))
+        assertNull(Requirements.find(eval { aaEnabled = false }, Id.AA_VERSION))
+        // Fuera de los modos Auto no sale.
+        assertNull(Requirements.find(eval { mode = Config.MODE_APP }, Id.AA_VERSION))
+        // Justo después de «Android Auto».
+        val order = ids(eval { aaVersion = "17.8.1" })
+        assertEquals(order.indexOf(Id.ANDROID_AUTO) + 1, order.indexOf(Id.AA_VERSION))
     }
 }

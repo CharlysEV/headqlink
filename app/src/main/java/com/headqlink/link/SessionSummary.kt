@@ -82,6 +82,8 @@ internal object SessionSummary {
         /** P-frame más grande del encoder propio (bytes; 0 = sin encoder propio) y cuántos pasaron del tope. */
         val pFrameMaxBytes: Long = 0,
         val pFrameOverCap: Int = 0,
+        /** versionName de Android Auto en los modos Auto («17.7.663654-release»; "" = otro modo o no se sabe). */
+        val aaVersion: String = "",
     ) {
         val durationS: Double get() = (endWallMs - startWallMs) / 1000.0
         val fps: Double get() = if (videoSeconds > 0) frames / videoSeconds else 0.0
@@ -120,7 +122,9 @@ internal object SessionSummary {
             if (r.wifiDetail.isNotEmpty()) append(" (").append(r.wifiDetail).append(')')
         }
         append(" · motor ").append(r.engine).append(" · ")
-            .append(r.videoMode).append(if (r.profile.isEmpty()) "" else "/" + r.profile).append(' ').append(r.video).append('\n')
+            .append(r.videoMode).append(if (r.profile.isEmpty()) "" else "/" + r.profile).append(' ').append(r.video)
+        if (r.aaVersion.isNotEmpty()) append(" · Android Auto ").append(r.aaVersion)
+        append('\n')
         append("handshake: CAR_INFO ").append(rel(r.tCarInfoMs)).append(" · VIDEO_CTRL{1} ").append(rel(r.tVideoCtrlMs))
             .append(" · primer frame ").append(rel(r.tFirstFrameMs)).append(" · primer IDR ").append(rel(r.tFirstIdrMs))
             .append(" · KEY_FRAME_REQ ×").append(r.carKeyframeRequests).append('\n')
@@ -165,7 +169,7 @@ internal object SessionSummary {
         "heartbeats_coche", "toques", "max_hueco_coche_ms", "cortes", "max_corte_ms", "retrans", "reconexion_ms",
         "video_reutilizado", "ciclos_foco_aa", "termico_fin", "termico_max", "tope_fps_fin", "tope_fps_min",
         "frame_max_kb", "descartados_grandes", "bitrate_min_kbps", "congestiones", "writes_bloqueados", "banda_wifi",
-        "p_max_kb", "p_sobre_tope",
+        "p_max_kb", "p_sobre_tope", "aa_version",
     ).joinToString(",")
 
     fun csvRow(r: Record): String = listOf(
@@ -179,6 +183,7 @@ internal object SessionSummary {
         r.thermalEnd.toString(), r.thermalMax.toString(), r.fpsCapEnd.toString(), r.fpsCapMin.toString(),
         kb(r.maxMessageBytes).toString(), r.oversizedDrops.toString(), r.bitrateMinKbps.toString(), r.congestionEvents.toString(),
         r.writeStalls.toString(), r.wifiBand.replace(',', '.'), kb(r.pFrameMaxBytes).toString(), r.pFrameOverCap.toString(),
+        r.aaVersion,
     ).joinToString(",") { csv(it) }
 
     private val NUMBER = Regex("-?[0-9]+(\\.[0-9]+)?")

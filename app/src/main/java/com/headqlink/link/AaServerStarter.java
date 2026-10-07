@@ -13,9 +13,11 @@ import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 
 import java.util.ArrayDeque;
-import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,6 +36,12 @@ import java.util.concurrent.locks.ReentrantLock;
  * si después se pide el servidor (arrancarlo, o el coche que vuelve). Con el móvil bloqueado: el apagado queda pendiente
  * hasta desbloquear y el arranque, con el enlace en marcha, se avisa («Desbloquea el móvil para iniciar Android Auto») y se
  * hace solo al desbloquear. Si un apagado no se confirma, una notificación lo dice y permite reintentarlo.
+ *
+ * Lo que se pulsa se busca en todas las ventanas de Android Auto a la vista (también el menú emergente, con getWindows),
+ * por su resource-id cuando lo hay (el botón ⋮ estándar) y si no por su texto en todos los idiomas de HeadQLink y sus
+ * variantes conocidas ({@link AaMenuMatch}); si el menú no cabe, se desplaza. Si una versión nueva de Android Auto cambia
+ * su menú y no se encuentra, el log lleva una vez el volcado de lo que se ve (clase, texto del menú, descripción e id,
+ * sin datos personales) y una notificación ofrece arrancarlo a mano o pasar al arranque manual.
  *
  * Con el «Arranque del servidor de Android Auto» en manual ({@link #manual}) no se automatiza nada: ni arrancar, ni
  * parar, ni la capa, ni el botón de su notificación. Cada entrada lo comprueba; los intentos los lleva
@@ -63,6 +71,16 @@ public final class AaServerStarter {
     private static final String CHANNEL_ALERT = "aa_guard_alert";
     private static final int NOTIF_UNLOCK = 5;
     private static final int NOTIF_SERVER_ON = 6;
+    /** «HeadQLink no encuentra el botón del servidor en esta versión de Android Auto». */
+    private static final int NOTIF_UI_CHANGED = 9;
+    /** Avisos de compatibilidad con versiones de Android Auto (también los de AaFlapWatch). */
+    static final String CHANNEL_COMPAT = "aa_compat";
+    /** Con el menú abierto y sin la opción, cada cuánto se desplaza (y cuántas veces) antes de reabrirlo. */
+    private static final long SCROLL_STEP_MS = 600;
+    private static final int MAX_SCROLLS = 2;
+    /** Volcados de lo que se ve, una vez por proceso: el del menú y el de la pantalla de ajustes. */
+    private static volatile boolean dumpedMenu;
+    private static volatile boolean dumpedScreen;
 
     /** Una sola automatización de los ajustes de AA a la vez (reentrante: el reinicio son dos seguidas). */
     private static final ReentrantLock RUN_LOCK = new ReentrantLock();
@@ -224,6 +242,7 @@ public final class AaServerStarter {
         android.app.PendingIntent pi = stopIntent;
         if (pi == null || manual(ctx)) return false;
         try {
+            AaClose.noteOwnClose();
             pi.send();
             stopIntent = null;
             prefs(ctx).edit().putBoolean(PENDING_STOP, false).apply();
@@ -566,6 +585,8 @@ public final class AaServerStarter {
             L.w("AA server: no se puede automatizar: " + why);
             return false;
         }
+        // Parar el servidor corta a AA: ese corte es nuestro (AaFlapWatch no lo cuenta).
+        if (!wantRunning) AaClose.noteOwnClose();
         RUN_LOCK.lock();
         try {
             AaServerStarter s = new AaServerStarter(wantRunning, closeAfter);
@@ -601,6 +622,7 @@ public final class AaServerStarter {
     }
 
     private int menuRetries;
+    private int menuScrolls;
 
     private void poll() {
         TouchService ts = TouchService.instance;
@@ -608,15 +630,20 @@ public final class AaServerStarter {
             finish(false);
             return;
         }
+        List<AccessibilityNodeInfo> roots = aaRoots(ts);
         if (System.currentTimeMillis() > deadline) {
-            L.w("AA server: tiempo agotado (¿modo desarrollador de AA activado?)");
+            if (!roots.isEmpty() && !menuOpened) {
+                // Android Auto a la vista y su botón ⋮ sin aparecer en 10 s: esta versión ha cambiado su pantalla.
+                reportNotFound(roots, false);
+            } else {
+                L.w("AA server: tiempo agotado (¿modo desarrollador de AA activado?)");
+            }
             back(ts, menuOpened ? 2 : 1);
             finish(false);
             return;
         }
-        AccessibilityNodeInfo root = ts.getRootInActiveWindow();
-        if (root != null && root.getPackageName() != null && AA_PKG.contentEquals(root.getPackageName())) {
-            AccessibilityNodeInfo item = find(root, AaServerStarter::isServerItem);
+        if (!roots.isEmpty()) {
+            AccessibilityNodeInfo item = findIn(roots, AaServerStarter::isServerItem);
             if (item != null && checkOnly) {
                 L.i("AA server: modo desarrollador de AA activo");
                 setDevMode(1);
@@ -625,14 +652,14 @@ public final class AaServerStarter {
                 return;
             }
             if (item != null) {
-                String text = String.valueOf(item.getText()).toLowerCase(Locale.ROOT);
-                // El texto del menú es la acción disponible: "Parar/Detener/Stop" => está encendido.
-                boolean running = text.contains("parar") || text.contains("detener") || text.contains("stop");
+                CharSequence label = item.getText() != null ? item.getText() : item.getContentDescription();
+                // El texto del menú es la acción disponible: «Parar…» / «Stop…» ⇒ está encendido.
+                boolean running = AaMenuMatch.serverItem(item.getText(), item.getContentDescription()) == AaMenuMatch.Kind.STOP;
                 if (running == wantRunning) {
-                    L.i("AA server: ya estaba " + (running ? "iniciado" : "parado") + " (" + item.getText() + ")");
+                    L.i("AA server: ya estaba " + (running ? "iniciado" : "parado") + " (" + label + ")");
                     back(ts, closeAfter ? 2 : 1); // cerrar el menú (y los ajustes)
                 } else {
-                    L.i("AA server: pulsando '" + item.getText() + "'");
+                    L.i("AA server: pulsando '" + label + "'");
                     click(item); // el menú se cierra solo
                     if (closeAfter) back(ts, 1);
                 }
@@ -641,25 +668,41 @@ public final class AaServerStarter {
                 finish(true);
                 return;
             }
+            long open = System.currentTimeMillis() - menuOpenedAt;
             if (!menuOpened) {
-                AccessibilityNodeInfo more = find(root, AaServerStarter::isOverflowButton);
+                AccessibilityNodeInfo more = findIn(roots, AaServerStarter::isOverflowButton);
                 if (more != null) {
-                    L.i("AA server: abriendo menú '" + more.getContentDescription() + "'");
+                    CharSequence d = more.getContentDescription();
+                    L.i("AA server: abriendo menú '" + (d != null ? d : more.getViewIdResourceName()) + "'");
                     click(more);
                     menuOpened = true;
                     menuOpenedAt = System.currentTimeMillis();
                 }
-            } else if (System.currentTimeMillis() - menuOpenedAt > MENU_WAIT_MS && menuRetries < 1) {
+            } else if (open <= MENU_WAIT_MS && menuScrolls < MAX_SCROLLS && open > SCROLL_STEP_MS * (menuScrolls + 1)
+                    && scrollForward(roots)) {
+                // Un menú largo (más opciones de desarrollador en una versión nueva) puede dejarla fuera de la vista.
+                menuScrolls++;
+                L.i("AA server: el menú no muestra la opción del servidor; lo desplazo (" + menuScrolls + ")");
+            } else if (open > MENU_WAIT_MS && menuRetries < 1) {
                 // Menú sin la opción: puede que AA aún esté cerrando una sesión y lo haya pintado a
                 // medias. Se cierra y se vuelve a abrir una vez antes de darlo por perdido.
                 menuRetries++;
+                menuScrolls = 0;
                 L.i("AA server: el menú no muestra la opción del servidor; lo reabro");
                 back(ts, 1);
                 menuOpened = false;
-            } else if (System.currentTimeMillis() - menuOpenedAt > MENU_WAIT_MS) {
-                // Tampoco al reabrirlo: el modo desarrollador de AA no está activado.
-                L.w("AA server: el menú de AA no tiene la opción del servidor; falta activar el modo desarrollador de AA");
-                setDevMode(0);
+            } else if (open > MENU_WAIT_MS) {
+                if (findIn(roots, AaServerStarter::isDeveloperItem) != null) {
+                    // Sí están las otras opciones del modo desarrollador: la del servidor ha cambiado de texto (o de
+                    // sitio) en esta versión de Android Auto. El modo desarrollador está activo.
+                    reportNotFound(roots, true);
+                    setDevMode(1);
+                } else {
+                    // Tampoco al reabrirlo, ni nada del modo desarrollador: no está activado.
+                    L.w("AA server: el menú de AA no tiene la opción del servidor; falta activar el modo desarrollador de AA");
+                    dump(roots, true);
+                    setDevMode(0);
+                }
                 back(ts, 2);
                 finish(false);
                 return;
@@ -669,21 +712,52 @@ public final class AaServerStarter {
     }
 
     private static boolean isOverflowButton(AccessibilityNodeInfo n) {
-        CharSequence d = n.getContentDescription();
-        if (d == null) return false;
-        String s = d.toString().toLowerCase(Locale.ROOT);
-        return s.contains("más opciones") || s.contains("more options") || s.equals("opciones") || s.equals("options");
+        return AaMenuMatch.isOverflow(n.getContentDescription(), n.getViewIdResourceName(), n.getClassName());
     }
 
     private static boolean isServerItem(AccessibilityNodeInfo n) {
-        CharSequence t = n.getText();
-        if (t == null) return false;
-        String s = t.toString().toLowerCase(Locale.ROOT);
-        return s.contains("unidad principal") || s.contains("head unit") || s.contains("headunit");
+        return AaMenuMatch.serverItem(n.getText(), n.getContentDescription()) != AaMenuMatch.Kind.NONE;
+    }
+
+    private static boolean isDeveloperItem(AccessibilityNodeInfo n) {
+        return AaMenuMatch.isDeveloperItem(n.getText()) || AaMenuMatch.isDeveloperItem(n.getContentDescription());
     }
 
     private interface Match {
         boolean test(AccessibilityNodeInfo n);
+    }
+
+    private static boolean isAa(AccessibilityNodeInfo root) {
+        return root != null && root.getPackageName() != null && AA_PKG.contentEquals(root.getPackageName());
+    }
+
+    /**
+     * Las raíces de las ventanas de Android Auto a la vista, la de más arriba primero: su menú emergente (otra ventana)
+     * antes que los ajustes. Con getWindows (flagRetrieveInteractiveWindows) y, por si no da nada, la ventana activa.
+     */
+    private static List<AccessibilityNodeInfo> aaRoots(TouchService ts) {
+        List<AccessibilityNodeInfo> out = new ArrayList<>();
+        try {
+            List<AccessibilityWindowInfo> ws = new ArrayList<>(ts.getWindows());
+            ws.sort((a, b) -> Integer.compare(b.getLayer(), a.getLayer()));
+            for (AccessibilityWindowInfo w : ws) {
+                AccessibilityNodeInfo r = w.getRoot();
+                if (isAa(r)) out.add(r);
+            }
+        } catch (RuntimeException e) {
+            // Sin ventanas (servicio a medio conectar): la activa basta.
+        }
+        AccessibilityNodeInfo active = ts.getRootInActiveWindow();
+        if (isAa(active) && !out.contains(active)) out.add(active);
+        return out;
+    }
+
+    private static AccessibilityNodeInfo findIn(List<AccessibilityNodeInfo> roots, Match m) {
+        for (AccessibilityNodeInfo r : roots) {
+            AccessibilityNodeInfo n = find(r, m);
+            if (n != null) return n;
+        }
+        return null;
     }
 
     private static AccessibilityNodeInfo find(AccessibilityNodeInfo root, Match m) {
@@ -698,6 +772,100 @@ public final class AaServerStarter {
             }
         }
         return null;
+    }
+
+    /** Desplaza hacia delante la primera lista desplazable (la de más arriba primero). */
+    private static boolean scrollForward(List<AccessibilityNodeInfo> roots) {
+        AccessibilityNodeInfo list = findIn(roots, AccessibilityNodeInfo::isScrollable);
+        return list != null && list.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+    }
+
+    /** Lo que se buscaba, para el log: la opción del servidor (con el menú abierto) o el botón ⋮. */
+    private String wanted(boolean menu) {
+        if (!menu) return "⋮ Más opciones";
+        return wantRunning ? AaMenuMatch.KNOWN_START[0] : AaMenuMatch.KNOWN_STOP[0];
+    }
+
+    /**
+     * No se encuentra lo que hay que pulsar (menu: la opción del servidor con el menú abierto; si no, el botón ⋮): una
+     * línea con lo que se buscaba y la versión de Android Auto, el volcado (una vez) y, salvo al parar (de eso avisa
+     * runStop), la notificación con la salida a mano.
+     */
+    private void reportNotFound(List<AccessibilityNodeInfo> roots, boolean menu) {
+        Context ctx = appCtx;
+        String version = ctx != null ? AaVersions.describe(AaVersions.read(ctx), AaVersions.lastCode()) : "?";
+        L.lifeWarn("AA server: no encuentro «" + wanted(menu) + "» en " + (menu ? "el menú ⋮ (sí están las opciones del"
+                + " modo desarrollador)" : "los ajustes") + " de Android Auto " + version + ": ¿lo ha cambiado esta versión?");
+        dump(roots, menu);
+        if (ctx != null && (wantRunning || checkOnly)) notifyServerButtonMissing(ctx);
+    }
+
+    /**
+     * Volcado compacto de lo que se ve, una vez por proceso (menú y pantalla, cada uno): «AA server: no encuentro «…»;
+     * menú visto: [TextView «Configuración de desarrollador» · …]». Texto solo de la ventana de más arriba con el menú
+     * abierto (sus opciones); de la pantalla de ajustes, solo clase, descripción e id. Como mucho 40 nodos.
+     */
+    private void dump(List<AccessibilityNodeInfo> roots, boolean menu) {
+        if (menu ? dumpedMenu : dumpedScreen) return;
+        if (menu) dumpedMenu = true;
+        else dumpedScreen = true;
+        List<String> seen = new ArrayList<>();
+        boolean popup = menu && roots.size() > 1;
+        for (int w = 0; w < roots.size() && seen.size() < 40; w++) {
+            boolean withText = menu && (w == 0 || !popup);
+            ArrayDeque<AccessibilityNodeInfo> q = new ArrayDeque<>();
+            q.add(roots.get(w));
+            while (!q.isEmpty() && seen.size() < 40) {
+                AccessibilityNodeInfo n = q.poll();
+                boolean hasText = withText && n.getText() != null && n.getText().length() > 0;
+                if (hasText || n.getContentDescription() != null || n.getViewIdResourceName() != null) {
+                    seen.add(AaMenuMatch.describe(n.getClassName(), n.getText(), n.getContentDescription(),
+                            n.getViewIdResourceName(), withText));
+                }
+                for (int i = 0; i < n.getChildCount(); i++) {
+                    AccessibilityNodeInfo c = n.getChild(i);
+                    if (c != null) q.add(c);
+                }
+            }
+        }
+        L.w("AA server: no encuentro «" + wanted(menu) + "»; " + (menu ? "menú" : "pantalla") + " visto: ["
+                + String.join(" · ", seen) + "]");
+    }
+
+    /**
+     * «HeadQLink no encuentra el botón del servidor en esta versión de Android Auto (17.x): arráncalo a mano (⋮ ›
+     * Iniciar servidor…) o usa el modo Manual», con «Abrir AA» (sus ajustes) y «Arranque manual» (la Comprobación, con
+     * el diálogo que explica el cambio).
+     */
+    static void notifyServerButtonMissing(Context ctx) {
+        Context app = ctx.getApplicationContext();
+        String version = AaVersions.shortLabel(app);
+        String text = Str.get(R.string.hql_aa_ui_changed_text, version);
+        L.lifeWarn("aviso: «" + Str.get(R.string.hql_aa_ui_changed_title) + "» (Android Auto " + version
+                + "): arrancarlo a mano o pasar al arranque manual");
+        NotificationManager nm = app.getSystemService(NotificationManager.class);
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL_COMPAT, Str.get(R.string.hql_aa_compat_channel),
+                NotificationManager.IMPORTANCE_HIGH));
+        PendingIntent open = PendingIntent.getActivity(app, NOTIF_UI_CHANGED, aaSettingsIntent(app),
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent manual = PendingIntent.getActivity(app, NOTIF_UI_CHANGED + 100,
+                new Intent(app, ChecklistActivity.class).putExtra(ChecklistActivity.EXTRA_OFFER_MANUAL, true)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        nm.notify(NOTIF_UI_CHANGED, new Notification.Builder(app, CHANNEL_COMPAT)
+                .setSmallIcon(android.R.drawable.stat_sys_warning)
+                .setColor(app.getColor(R.color.hql_warn))
+                .setContentTitle(Str.get(R.string.hql_aa_ui_changed_title))
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
+                .setCategory(Notification.CATEGORY_STATUS)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setOnlyAlertOnce(true)
+                .setContentIntent(open)
+                .addAction(new Notification.Action.Builder((android.graphics.drawable.Icon) null, Str.get(R.string.hql_open_aa), open).build())
+                .addAction(new Notification.Action.Builder((android.graphics.drawable.Icon) null, Str.get(R.string.hql_req_manual_use), manual).build())
+                .setAutoCancel(true)
+                .build());
     }
 
     /** Pulsa el nodo o el primer ancestro pulsable. */

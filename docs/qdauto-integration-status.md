@@ -1914,3 +1914,142 @@ Nuevas: `CertPickTest` (11: clasificación por contenido, los dos a la vez, cert
 sustituir una mitad, un .p12 que reemplaza medio par, ficheros que no sirven, «Empezar de nuevo» con borrado, caducidad,
 selección vacía, nombres para el log), `ServiceStopRacePolicyTest` (4) y `ForegroundCheckTest` (3). En el APK de release
 (`dexdump`) están las líneas nuevas del log. Sin probar todavía en el móvil.
+
+---
+
+## 22. Versiones nuevas de Android Auto (17.8 / 17.9): menú, cortes y versión en el log (2026-10-07)
+
+**Por qué.** Desde AA 17.4 el Self-Mode depende del servidor de head unit de desarrollador de AA (127.0.0.1:5277), que
+arranca `AaServerStarter` pulsando su menú ⋮ por el texto, y cada versión nueva de AA puede romper las dos cosas. En
+Open Headunit (de donde viene el Self-Mode):
+
+| Referencia | Qué cuenta |
+|---|---|
+| open-headunit #985 «OHU Self Mode Not Working On AA 17.8» | El Self-Mode conecta y a los 1-2 s se desconecta. Volver a 17.7 lo arregla. El mantenedor no lo reproduce en un S26; sigue abierto |
+| open-headunit #1022 «Self mode not responding on latest android auto» | Se arregló borrando la caché de Android Auto |
+| Comentario de un usuario (AA 17.9) | «the helper doesn't work anymore»: la automatización del menú ya no encuentra lo que pulsa |
+
+El móvil de pruebas tiene AA 17.7.663654 (en español) y la copia del sistema es un esqueleto 1.2: «Desinstalar
+actualizaciones» no vuelve a una versión útil; volver atrás exige instalar el APK.
+
+### 22.1 La automatización del menú (`AaServerStarter`, `AaMenuMatch` nuevo)
+
+- **Texto normalizado y por trozos** (`AaMenuMatch`, puro): minúsculas, sin tildes (NFD), signos y espacios raros a un
+  espacio. La opción del servidor es la que contiene «unidad principal» / «unidade principal» / «head unit» /
+  «headunit» (también «unidad/unidade central»), en el texto o en la descripción; es la de **parar** si tiene una
+  palabra entera de parar (`parar`, `detener`, `stop`, `interromper`, `deter`, `desactivar`, `desativar`, `apagar`,
+  `terminar`, `finalizar`, `encerrar`) y si no la de iniciar (como antes). Variantes conocidas en `KNOWN_START` /
+  `KNOWN_STOP` (es con y sin «de la», «Detener», en, pt-PT, pt-BR).
+- **Botón ⋮ por lo estable primero**: resource-id con `overflow` (o `more_options`, `action_more`), la clase
+  `…OverflowMenuButton` y, si no, la descripción («Más opciones», «More options», «Mais opções», «Outras opções»,
+  «Otras opciones»…, o exactamente «Opciones» / «Options» / «Opções»).
+- **Todas las ventanas de AA**: `getWindows()` (nuevo `flagRetrieveInteractiveWindows` en `hql_touch_service.xml`;
+  Android lo lee al conectar el servicio, no hay que volver a activar la accesibilidad), ordenadas por capa, la de más
+  arriba primero (el menú emergente es otra ventana), y la ventana activa de respaldo. Nuestra capa no cuenta (no es de
+  AA).
+- **Desplazamiento**: con el menú abierto y sin la opción, hasta dos `ACTION_SCROLL_FORWARD` (a los 0,6 y 1,2 s) en la
+  primera lista desplazable; a los 2 s se reabre una vez, como antes.
+- **Al no encontrarlo**:
+  - menú sin la opción **pero con las otras del modo desarrollador** («desarrollador», «developer», «programador»,
+    «desenvolvedor»): AA ha cambiado el texto. Ya no se da por desactivado el modo desarrollador (queda activo), línea
+    `no encuentro … ¿lo ha cambiado esta versión?`, volcado y aviso;
+  - menú sin nada del modo desarrollador: como antes («falta activar el modo desarrollador»), con el volcado;
+  - AA delante y el botón ⋮ sin aparecer en los 10 s: línea, volcado de la pantalla y aviso.
+- **Volcado**, una vez por proceso (uno del menú y otro de la pantalla): `AA server: no encuentro «Iniciar servidor de
+  la unidad principal»; menú visto: [TextView «Configuración de desarrollador» · …]`. Texto solo de la ventana de más
+  arriba con el menú abierto (sus opciones); de la pantalla de ajustes, solo clase, descripción e id. Correos tapados
+  (`…@…`), números de 5 cifras o más como `#`, 40 caracteres por texto y 40 nodos como mucho.
+- **Aviso** (canal nuevo «Compatibilidad con Android Auto», `aa_compat`, id 9): «HeadQLink no encuentra el botón del
+  servidor en esta versión de Android Auto (17.x): arráncalo a mano (⋮ › Iniciar servidor de la unidad principal) o usa
+  el modo Manual», con «Abrir AA» (sus ajustes) y «Arranque manual» (abre la Comprobación con el diálogo de siempre del
+  manual: `ChecklistActivity.EXTRA_OFFER_MANUAL`). Solo al arrancar o comprobar; si falla un apagado ya avisa «El
+  servidor de Android Auto sigue encendido».
+
+### 22.2 La versión de Android Auto (`AaVersions` nuevo)
+
+- Tabla de las probadas: **17.7.x (2026-10)**; lo demás, «sin probar todavía». Para el log, lo que se sabe de fuera de
+  17.8 (#985) y 17.9 (el comentario).
+- `versionName` y `versionCode` (`PackageManager`) al arrancar el servicio, en la cabecera: `servicio iniciado. …
+  servidorAA=automático androidAuto=17.7.663654-release (código …): probada con HeadQLink (2026-10)` (modos Auto).
+- Cada sesión: la segunda línea del bloque acaba en `· Android Auto 17.7.663654-release` y `sessions.csv` lleva la
+  columna nueva **`aa_version`** al final (49 columnas). Un fichero con la cabecera vieja se reescribe con la nueva al
+  añadir la primera fila, como siempre que cambian las columnas.
+- Comprobación: fila **informativa** «Android Auto 17.7 · Probada con HeadQLink (2026-10)…» o «Android Auto 17.8 · Sin
+  probar todavía con HeadQLink (probadas: 17.7.x). Si falla, desactiva la actualización automática de Android Auto…»,
+  justo después de «Android Auto», con «Play Store». `Requirements.Id.AA_VERSION`, `Importance.INFO` (OK / TIP): nunca
+  cuenta en «Faltan N» ni bloquea Conectar.
+
+### 22.3 Cortes a los pocos segundos (#985): `AaFlapDetector` y `AaFlapWatch` nuevos
+
+- `AaFlapWatch` escucha `CommManager.connectionState` (una corrutina por proceso, desde el primer Self-Mode).
+  Conectado = `HandshakeComplete` / `TransportStarted`; corte = `Disconnected` / `Error`.
+- **Los cierres de HeadQLink no cuentan** ni rompen la racha: `AaClose` (cierre o reconexión: los 6 s de espera al
+  handshake más 4 s), el apagado del servidor (automatización o el botón de su notificación) y el enlace parado.
+- `AaFlapDetector` (puro): una sesión que se corta sola en menos de **10 s** es corta; **2 seguidas**: diagnóstico. Una
+  línea en el log cada vez que se llega a la racha y, **solo la primera vez del proceso**, el aviso «Android Auto se
+  conecta y se corta a los pocos segundos» (id 10; al tocarlo, «Info. de la app» de AA para borrar la caché; botón
+  «Abrir AA»). Una sesión de 10 s o más rompe la racha.
+- **Nunca un bucle más rápido que cada 10 s**: con racha, ningún relanzamiento automático antes de 10 s desde el último
+  corte. Automático: `AaPassthroughSource.ensureAaConnected` lo aplaza en su handler (con una línea; se anula en
+  `stop()` y no se hace si el vídeo de AA ya no espera o AA volvió). Manual: `AaServeAttempts` recibe la espera
+  (`Seen.relaunchHoldMs`) y el intento por «AA se desconectó con la sesión en marcha» espera (una línea). `AaFlapWatch`
+  no relanza nada por sí mismo.
+
+### 22.4 Qué buscar en el log
+
+| Línea | Significado |
+|---|---|
+| `servicio iniciado. … androidAuto=17.8.661234-release (código 178661234): sin probar todavía con HeadQLink (probadas: 17.7.x; Open Headunit #985: …)` | La versión, al arrancar |
+| `AA server: abriendo menú 'Más opciones'` (o el resource-id si no hay descripción) | Botón ⋮ encontrado |
+| `AA server: el menú no muestra la opción del servidor; lo desplazo (1)` | Desplazamiento |
+| `W ciclo: AA server: no encuentro «Iniciar servidor de la unidad principal» en el menú ⋮ (sí están las opciones del modo desarrollador) de Android Auto 17.9.… : ¿lo ha cambiado esta versión?` | AA cambió el texto |
+| `W AA server: no encuentro «Iniciar servidor de la unidad principal»; menú visto: [TextView «…» · …]` (`pantalla visto: […]` sin texto) | El volcado (una vez) |
+| `W ciclo: aviso: «HeadQLink no encuentra el botón del servidor» (Android Auto 17.9.…): arrancarlo a mano o pasar al arranque manual` | El aviso |
+| `W ciclo: AA: Android Auto se desconectó solo a los 1,4 s de conectar (corte corto 1 de 2 para el diagnóstico)` | Primer corte corto |
+| `W ciclo: AA: diagnóstico: Android Auto se conecta y se desconecta solo a los pocos segundos (2 veces seguidas; la última, a los 1,2 s). Android Auto 17.8.… Es el síntoma de Open Headunit #985 … Prueba: borrar la caché de Android Auto (Ajustes › Aplicaciones › Android Auto › Almacenamiento › Borrar caché), parar e iniciar su servidor (⋮) o volver a una versión probada (17.7.x); los relanzamientos automáticos esperan al menos 10 s; aviso «…»` | El diagnóstico |
+| `ciclo: AA: Android Auto se ha cortado a los pocos segundos de conectar; lo relanzo en 9 s (como mucho uno cada 10 s)` | Relanzamiento aplazado (automático) |
+| `ciclo: AA server (arranque manual): Android Auto se corta a los pocos segundos de conectar: el intento nuevo espera 7 s (como mucho uno cada 10 s)` | Ídem (manual) |
+
+En `sessions.csv`, la última columna `aa_version`.
+
+### 22.5 Cómo comprobarlo en el móvil
+
+1. «Comprobación» con AA 17.7: fila «Android Auto 17.7 · Probada con HeadQLink (2026-10)» y su «Play Store».
+2. Conectar: `androidAuto=17.7.663654-release (código …): probada…` en la cabecera, `· Android Auto 17.7…` en el bloque
+   de la sesión y la columna `aa_version` en `sessions.csv`.
+3. Automático: la automatización como siempre (`abriendo menú 'Más opciones'`, `pulsando 'Iniciar servidor de la unidad
+   principal'`), también la comprobación del modo desarrollador.
+4. Lo que no encuentra: poner el móvil en un idioma que HeadQLink no conoce (por ejemplo alemán) y conectar: a los 10 s,
+   el volcado de la pantalla y el aviso con «Abrir AA» y «Arranque manual» (este abre la Comprobación con el diálogo).
+   Volver al español.
+5. Los cortes de #985 no salen con AA 17.7: los cubren las pruebas del PC. Si alguien los ve con 17.8, el log dirá
+   `diagnóstico:` y el aviso saldrá una vez.
+
+### 22.6 Pruebas en el PC
+
+`AaMenuMatchTest` (9: los textos conocidos de iniciar y parar; variantes en los cuatro idiomas; mayúsculas, tildes
+compuestas y precompuestas, signos y espacios raros; texto o descripción; las otras opciones del menú no son el
+servidor y «stopwatch» no es parar; opciones del modo desarrollador en cada idioma; botón ⋮ por id, clase o
+descripción, y otros botones no; volcado sin texto de la pantalla y con correos y números tapados). `AaVersionsTest` (4:
+serie de la versión; solo 17.7 probada, 17.6/17.8/17.9/18.x sin probar; los textos del log con #985 en 17.8; la celda
+del CSV). `AaFlapDetectorTest` (5: dos cortas seguidas → diagnóstico con un solo aviso; una larga rompe la racha; los
+cierres nuestros ni cuentan ni la rompen; un corte sin sesión no cuenta y `Error` + `Disconnected` es un solo corte;
+relanzamientos como mucho cada 10 s). `AaServeAttemptsTest` (+1: con la espera, el intento tras el corte espera, lo
+dice una vez y lanza al acabar). `RequirementsTest` (+1: la fila de la versión, informativa, probada o consejo, nunca
+cuenta ni bloquea, solo en los modos Auto con AA instalado y activado, justo después de «Android Auto»; las listas
+completas la incluyen; la foto por defecto es AA 17.7.663654). `SessionSummaryTest` (+1: `aa_version` última columna y
+en el bloque; las posiciones contadas desde el final, una más).
+
+`cmd /c ".\gradlew.bat :app:testGithubDebugUnitTest :app:assembleGithubRelease --console=plain"`: **BUILD
+SUCCESSFUL** (el release con minify y lint vital). App: 3053 pruebas, 0 fallos y 4 saltadas (las de siempre); el
+paquete `com.headqlink.link`, 391.
+
+### 22.7 Limitaciones
+
+- Sin probar en el móvil. Los textos de 17.8 / 17.9 y los del menú en inglés y portugués están escritos sin verlos (no
+  hay un móvil con esas versiones): el volcado está para adaptarlos en cuanto alguien mande un log.
+- La causa de #985 no se conoce (lado de AA): HeadQLink solo lo diagnostica, frena los relanzamientos y explica qué
+  probar.
+- Un corte de verdad en los 10 s siguientes a un cierre nuestro no cuenta para el diagnóstico.
+- El volcado del menú lleva sus textos tal cual (recortados): son las opciones de AA, no datos del usuario; de la
+  pantalla de ajustes, donde podría salir el nombre de un coche, no se vuelca texto.

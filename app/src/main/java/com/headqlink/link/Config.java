@@ -696,7 +696,8 @@ final class Config {
                 + " fluidez=" + fluidity() + " mode=" + mode() + (MODE_APP.equals(mode()) ? " pkg=" + targetPackage() + " dpi=" + dpi() : "")
                 + " link=" + linkMode() + " engine=" + linkEngine() + " pantallaEncendida=" + keepScreenOn() + " termica=" + thermalMode()
                 + " esperarCoche=" + carWaitMin() + "min"
-                + (isAa(mode()) ? " servidorAA=" + (aaServerManual() ? "manual" : "automático") : "")
+                + (isAa(mode()) ? " servidorAA=" + (aaServerManual() ? "manual" : "automático")
+                + " androidAuto=" + AaVersions.readAndDescribe(app) : "")
                 + (isQdEngine() ? " keepVideo=" + qdKeepVideo() + " supersede=" + qdSupersede() + " " + qdRecoverySummary()
                 + " phoneInfo=" + qdPhoneInfo() + (qdUsbOverTcp() ? " tramaUsbPorWifi" : "")
                 + " carGone=" + carGoneMs() / 1000 + "s" + (peerStrict() ? " strict" : "") : "")

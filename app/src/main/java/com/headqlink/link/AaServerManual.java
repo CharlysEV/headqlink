@@ -189,6 +189,7 @@ public final class AaServerManual {
         }
         s.dials = DIALS.get();
         s.refusals = REFUSALS.get();
+        s.relaunchHoldMs = AaFlapWatch.relaunchHoldMs();
         return s;
     }
 
@@ -220,6 +221,8 @@ public final class AaServerManual {
     }
 
     private static void launchSelfMode(Context app) {
+        // Vigila las sesiones con AA que se cortan solas a los pocos segundos (Open Headunit #985, AA 17.8).
+        AaFlapWatch.ensure(app);
         L.i("AA: lanzando Self-Mode");
         AaPassthroughSource.AA_LAUNCHES.incrementAndGet();
         AaClose.noteLaunch();

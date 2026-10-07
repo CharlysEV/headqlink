@@ -103,6 +103,11 @@ final class AaServeAttempts {
         long dials;
         /** Marcaciones rechazadas (solo crece). */
         long refusals;
+        /**
+         * AA se corta solo a los pocos segundos de conectar (AaFlapWatch): lo que debe esperar aún un intento nuevo tras
+         * un corte en marcha (0: ya puede). Así nunca hay un bucle de relanzamientos más rápido que cada 10 s.
+         */
+        long relaunchHoldMs;
 
         Seen wants(boolean v) {
             sessionWantsAa = v;
@@ -136,6 +141,11 @@ final class AaServeAttempts {
 
         Seen refusals(long v) {
             refusals = v;
+            return this;
+        }
+
+        Seen hold(long v) {
+            relaunchHoldMs = v;
             return this;
         }
     }
@@ -196,6 +206,8 @@ final class AaServeAttempts {
     /** REPOSO con AA servido y una sesión que lo usa: se mira cada {@link #WATCH_MS} que siga conectado. */
     private boolean watching;
     private long lostSince = -1;
+    /** Ya se dijo en el log que el intento nuevo espera por los cortes cortos ({@link Seen#relaunchHoldMs}). */
+    private boolean holdNoted;
 
     AaServeAttempts(Clock clock) {
         this.clock = clock;
@@ -325,6 +337,12 @@ final class AaServeAttempts {
         }
         if (lostSince < 0) lostSince = now;
         if (now - lostSince < DROP_GRACE_MS) return QUIET;
+        if (s.relaunchHoldMs > 0) {
+            if (holdNoted) return QUIET;
+            holdNoted = true;
+            return none("Android Auto se corta a los pocos segundos de conectar: el intento nuevo espera "
+                    + secs(s.relaunchHoldMs) + " (como mucho uno cada " + AaFlapDetector.MIN_RELAUNCH_GAP_MS / 1000 + " s)");
+        }
         return launch(now, s, "Android Auto se desconectó con la sesión en marcha");
     }
 
@@ -342,6 +360,7 @@ final class AaServeAttempts {
     }
 
     private Step launch(long now, Seen s, String why) {
+        holdNoted = false;
         phase = Phase.ATTEMPT;
         attempt++;
         launchedAt = now;
@@ -403,6 +422,7 @@ final class AaServeAttempts {
         waiting = false;
         watching = false;
         lostSince = -1;
+        holdNoted = false;
         launchedAt = -1;
         tcpAt = -1;
         retryAt = -1;

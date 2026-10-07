@@ -21,6 +21,8 @@ import java.util.List;
  *   iniciarlo): dice lo que se sabe sin tocarlo (en uso por HeadQLink, esperando a que lo arranques, o cómo arrancarlo).
  *   Con el automático y la accesibilidad sin activar, un consejo ofrece el arranque manual. Nada de esto bloquea
  *   «Conectar»: si el servidor no atiende, el enlace avisa y reintenta hasta que lo arranque (o lo reinicie) el usuario.
+ * - Versión de Android Auto (modos Auto, instalado y activado): fila informativa «probada / sin probar todavía con
+ *   HeadQLink» según {@link AaVersions} (si una versión nueva falla, desactivar su actualización automática).
  * - Modo App: la app elegida, la accesibilidad (toques) y «Mostrar sobre otras apps» (abrirla en segundo plano).
  * - Wi-Fi Direct: «Dispositivos Wi-Fi cercanos» (ubicación antes de Android 13), el Wi-Fi activado y la zona Wi-Fi
  *   apagada (en Samsung no conviven). Zona Wi-Fi: que esté activa, y el consejo de la banda de 5 GHz (no se puede leer).
@@ -37,7 +39,7 @@ import java.util.List;
  */
 final class Requirements {
     enum Id {
-        ANDROID_AUTO, AA_SERVER, ACCESSIBILITY, SERVER_MANUAL_OFFER, AA_DEVMODE, TARGET_APP,
+        ANDROID_AUTO, AA_VERSION, AA_SERVER, ACCESSIBILITY, SERVER_MANUAL_OFFER, AA_DEVMODE, TARGET_APP,
         NEARBY_WIFI, WIFI_ON, HOTSPOT_OFF, HOTSPOT_ON, HOTSPOT_BAND, USB_CABLE,
         QDLINK, NOTIFICATIONS, BLUETOOTH, BATTERY, BATTERY_OEM, OVERLAY, MEDIA, BG_LOCATION
     }
@@ -115,7 +117,7 @@ final class Requirements {
         boolean restrictedSettings;
 
         /** versionName de Android Auto, o null si no está instalado. */
-        String aaVersion = "17.6.1";
+        String aaVersion = "17.7.663654-release";
         boolean aaEnabled = true;
         /** 1 activo, 0 falta, -1 sin comprobar (AaServerStarter.devModeState). */
         int devMode = 1;
@@ -197,6 +199,11 @@ final class Requirements {
             Status st = s.aaVersion == null || !s.aaEnabled ? Status.MISSING : Status.OK;
             Hint h = s.aaVersion == null ? Hint.NOT_INSTALLED : !s.aaEnabled ? Hint.DISABLED : Hint.NONE;
             out.add(new Item(Id.ANDROID_AUTO, Importance.REQUIRED, st, h));
+            if (st == Status.OK) {
+                // Informativa: probada con HeadQLink (OK) o sin probar todavía (consejo). Nunca cuenta ni bloquea.
+                boolean verified = AaVersions.state(s.aaVersion) == AaVersions.State.VERIFIED;
+                out.add(new Item(Id.AA_VERSION, Importance.INFO, verified ? Status.OK : Status.TIP, Hint.NONE));
+            }
         }
         if (manual) {
             // Informativa: nunca bloquea (si no atiende, el enlace avisa y reintenta hasta que lo arranques).

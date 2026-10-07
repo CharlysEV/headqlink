@@ -44,6 +44,10 @@ final class AaClose {
 
     /** Cuándo se pidió el último Self-Mode (SystemClock.elapsedRealtime), o -1. */
     private static volatile long lastLaunchMs = -1;
+    /** Cuándo cerró (o pidió cerrar) HeadQLink su conexión con AA o paró su servidor (elapsedRealtime), o -1. */
+    private static volatile long lastOwnCloseMs = -1;
+    /** Tras pedir un cierre, lo que tarda como mucho en verse el corte (espera del handshake incluida). */
+    static final long OWN_CLOSE_WINDOW_MS = HANDSHAKE_WAIT_MS + 4_000;
     /** Sube con cada cierre y con cada anulación: un cierre en espera que la ve cambiada ya no se hace. */
     private static final java.util.concurrent.atomic.AtomicLong generation = new java.util.concurrent.atomic.AtomicLong();
 
@@ -53,6 +57,17 @@ final class AaClose {
     /** Se acaba de pedir un Self-Mode (ACTION_START_SELF_MODE): durante un momento, un cierre lo deja marcar antes. */
     static void noteLaunch() {
         lastLaunchMs = SystemClock.elapsedRealtime();
+    }
+
+    /** HeadQLink cierra su conexión con AA o para su servidor: el corte que siga es nuestro (no cuenta en AaFlapWatch). */
+    static void noteOwnClose() {
+        lastOwnCloseMs = SystemClock.elapsedRealtime();
+    }
+
+    /** ¿Pidió HeadQLink un cierre hace poco ({@link #OWN_CLOSE_WINDOW_MS})? */
+    static boolean ownCloseRecent() {
+        long at = lastOwnCloseMs;
+        return at >= 0 && SystemClock.elapsedRealtime() - at < OWN_CLOSE_WINDOW_MS;
     }
 
     /**
@@ -111,6 +126,7 @@ final class AaClose {
 
     private static void close(Context ctx, String why, String... actions) {
         Context app = ctx.getApplicationContext();
+        noteOwnClose();
         long gen = generation.incrementAndGet();
         if (!mustWait(link(app), launchRecent(), 0)) {
             pending = false;
@@ -146,6 +162,7 @@ final class AaClose {
     }
 
     private static void deliver(Context ctx, String why, String... actions) {
+        noteOwnClose();
         for (String a : actions) {
             try {
                 ctx.startService(new Intent(ctx, AapService.class).setAction(a));

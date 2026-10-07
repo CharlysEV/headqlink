@@ -281,6 +281,8 @@ final class AaPassthroughSource implements VideoSource {
      */
     private void ensureAaConnected() {
         configureAa();
+        // Vigila las sesiones con AA que se cortan solas a los pocos segundos (Open Headunit #985, AA 17.8).
+        AaFlapWatch.ensure(ctx);
         boolean manual = AaServerManual.applies(ctx);
         if (comm().isConnected()) {
             L.i("AA: ya conectado");
@@ -292,12 +294,32 @@ final class AaPassthroughSource implements VideoSource {
             AaServerManual.sessionNeedsAa(ctx, "la sesión con el coche necesita Android Auto");
             return;
         }
+        long hold = AaFlapWatch.relaunchHoldMs();
+        if (hold > 0) {
+            // AA se corta a los pocos segundos de conectar: nunca un relanzamiento más rápido que cada 10 s.
+            if (!relaunchHeld) {
+                relaunchHeld = true;
+                L.life("AA: Android Auto se ha cortado a los pocos segundos de conectar; lo relanzo en "
+                        + (hold + 999) / 1000 + " s (como mucho uno cada " + AaFlapDetector.MIN_RELAUNCH_GAP_MS / 1000 + " s)");
+                main.postDelayed(heldRelaunch, hold);
+            }
+            return;
+        }
         L.i("AA: lanzando Self-Mode");
         AA_LAUNCHES.incrementAndGet();
         AaClose.noteLaunch();
         Intent i = new Intent(ctx, AapService.class).setAction(AapService.ACTION_START_SELF_MODE);
         ctx.startForegroundService(i);
     }
+
+    /** Un relanzamiento aplazado por {@link AaFlapWatch#relaunchHoldMs} está pendiente. */
+    private volatile boolean relaunchHeld;
+    /** El relanzamiento aplazado: solo si el vídeo de AA sigue esperando (su grifo puesto) y AA no ha vuelto. */
+    private final Runnable heldRelaunch = () -> {
+        relaunchHeld = false;
+        if (VideoTap.getSink() == null || aaAlive()) return;
+        ensureAaConnected();
+    };
 
     /** Geometría y ajustes de Open Headunit para el coche (antes de conectar AA). */
     private void configureAa() {
@@ -609,6 +631,8 @@ final class AaPassthroughSource implements VideoSource {
 
     @Override
     public void stop() {
+        main.removeCallbacks(heldRelaunch);
+        relaunchHeld = false;
         HeadlessDriver.stop();
         App.Companion.provide(ctx).getSettings().setNightMode(Settings.NightMode.AUTO);
         VideoTap.setSink(null);

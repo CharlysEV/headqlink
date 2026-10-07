@@ -584,6 +584,7 @@ internal class QdSessionBridge(
                 writeStalls = st.writeStalls,
                 wifiBand = if (isHotspotLink()) HotspotRadio.summaryBand() else "",
                 wifiDetail = if (isHotspotLink()) HotspotRadio.summaryDetail() else "",
+                aaVersion = if (Config.isAa(cfg.mode())) AaVersions.csvValue(AaVersions.lastName() ?: AaVersions.read(ctx)) else "",
             )
             val block = SessionSummary.block(record)
             QdTrace.block("HQL/Resumen", block)

@@ -257,6 +257,40 @@ What changes, and why automatic is still the **recommended** mode:
 > session installer and, on Android 13 and 14, accessibility can then usually be turned on straight away. On Android 15
 > or later it isn't guaranteed.
 
+### Android Auto versions
+
+Since 17.4, HeadQLink starts Android Auto through its developer "head unit server", and every new Android Auto version
+can change it (the texts of its ⋮ menu or how it handles the connection). Versions it has been tested with:
+
+| Android Auto | Status |
+|---|---|
+| 17.7.x | **Tested** with HeadQLink (October 2026) |
+| 17.8, 17.9 and later | **Not tested yet.** Other projects (Open Headunit) report problems: with 17.8 the connection drops after 1-2 s; with 17.9 the automatic server start stops working |
+
+The "Checklist" shows it in the "Android Auto 17.x" row (tested / not tested yet), and the log records it at start-up
+(`androidAuto=…`) and for every session (`aa_version` column of `sessions.csv`).
+
+**Recommended: turn off Android Auto auto-update.** Play Store › search "Android Auto" › ⋮ (top right) › untick "Enable
+auto update". That way a new version won't leave the car without a picture overnight; update by hand once it has been
+tested.
+
+If a new version stops working:
+
+1. **"HeadQLink can't find the server button"**: Android Auto has changed its menu. Tap "Open AA" and start it by hand
+   (⋮ › "Start head unit server", or whatever it is called now), or tap "Manual start" so you don't depend on
+   accessibility (see [Without accessibility](#without-accessibility-manual-start-of-the-android-auto-server)).
+2. **"Android Auto connects and drops after a few seconds"** (two drops in a row within 10 s): clear Android Auto's
+   cache (Settings › Apps › Android Auto › Storage › **Clear cache**; no need to clear its data) and stop and start its
+   server (⋮). HeadQLink retries by itself, at most every 10 s.
+3. If it persists, **export the log** (section 8) and send it: it contains the Android Auto version and, once, what
+   HeadQLink saw in its menu (the menu texts, no personal data), which is what's needed to adapt it.
+
+> [!WARNING]
+> **Going back to an older Android Auto is not "Uninstall updates".** On many phones the factory copy of Android Auto is
+> just a stub (1.x) that's useless for HeadQLink: you have to install by hand the APK of the tested version (17.7.x)
+> that matches your phone (architecture and Android version) and then turn off auto-update, or the Play Store will
+> upgrade it again.
+
 ---
 
 ## 4. Using it in the car
@@ -672,6 +706,8 @@ Always start with the ⚙ menu › "Requirements check": every red row has its o
 | The picture freezes for about 10 s and then reconnects | In earlier versions, a full frame larger than ~512 KB hung the car's receiver, which stopped reading until the connection dropped. **Fixed**: HeadQLink no longer sends any that large and keeps them at about 300 KB at most. | Update HeadQLink. If it happens with the "Basic" profile (there Android Auto decides the size), use "Automatic" or "Car". If it continues, export the log (section 8). |
 | It disconnects often | Hotspot auto-off, battery saving, QDLink open, or the car's mirroring app closed. | Short dropouts reconnect by themselves ("Reconnecting…"). If they're long or frequent: "No battery restrictions", "Samsung: never sleeping apps", turn off the hotspot's auto-off and close QDLink. If it continues, export the log (section 8). |
 | "Start (or restart) the Android Auto server" notification, or the "Auto" row says "Waiting for the Android Auto server" | Manual start, and Android Auto doesn't answer: its server is off (after restarting the phone or updating Android Auto) or blocked: a connection was cut halfway (something connected and left without a word, or a session dropped abruptly). | Tap the notification or the row: Android Auto › ⋮ › "Stop head unit server" (if shown) and ⋮ › "Start head unit server". HeadQLink retries every 5 s and carries on by itself. |
+| "HeadQLink can't find the server button" notification | Android Auto has updated and changed its ⋮ menu (the automation looks for it by its text). | "Open AA" and start it by hand, or "Manual start". See [Android Auto versions](#android-auto-versions) and export the log (section 8). |
+| "Android Auto connects and drops after a few seconds" notification | A known symptom of some new Android Auto versions (17.8). | Clear Android Auto's cache (Settings › Apps › Android Auto › Storage › Clear cache), stop and start its server, or go back to a tested version ([Android Auto versions](#android-auto-versions)). |
 | Accessibility turns itself off | Android turns it off when the app is updated, or if the app crashed. Some manufacturers do too. | "Requirements check" › "Turn on". If it says "On but not running", turn it off and on. If it says "Restricted setting", use "Allow restricted settings" (section 3). Remove the battery restrictions. |
 | Android Auto asks you to check the phone | It's the first time Android Auto sees this "car screen", or it needs you to grant a permission or confirm something. | Park, unlock the phone and accept what Android Auto asks. It usually happens only once. |
 | The phone gets very hot | "Very high" or "High" profile, direct sun, screen on, wireless charging. | Section 6. |

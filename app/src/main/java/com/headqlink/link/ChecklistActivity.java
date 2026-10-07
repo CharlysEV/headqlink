@@ -17,6 +17,11 @@ import com.google.android.material.button.MaterialButton;
  */
 public class ChecklistActivity extends Activity {
     static final String EXTRA_GATE = "gate";
+    /**
+     * Desde el aviso «HeadQLink no encuentra el botón del servidor…» (AaServerStarter): abre el diálogo que explica el
+     * arranque manual y lo pone si el usuario acepta.
+     */
+    static final String EXTRA_OFFER_MANUAL = "offer_manual";
 
     private Checklist checklist;
     private Config cfg;
@@ -55,6 +60,10 @@ public class ChecklistActivity extends Activity {
             finish();
         });
         checklist = new Checklist(this, this::render);
+        if (b == null && getIntent().getBooleanExtra(EXTRA_OFFER_MANUAL, false) && !cfg.aaServerManual()) {
+            L.i("requisitos: ofrezco el arranque manual (aviso «no encuentro el botón del servidor»)");
+            checklist.confirmManual();
+        }
     }
 
     @Override
