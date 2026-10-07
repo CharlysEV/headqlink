@@ -594,7 +594,8 @@ apagado, da lo último que supo) o «estimado».
 **Cómo se configura** (⚙ › «Datos del coche (cuenta Leapmotor)», Android 6 o superior):
 
 1. **Certificado de cliente.** Es el mismo que pide la app LMB10; HeadQLink no lo incluye ni lo proporciona. Pulsa
-   «Importar certificado…» y elige en el selector de archivos **los dos a la vez** (app.crt y app.key), un .pem con
+   «Importar certificado…» y elige en el selector de archivos app.crt y app.key: los dos a la vez (pulsación larga para
+   marcar dos) o **uno detrás de otro** (dice cuál falta; «Empezar de nuevo» olvida lo elegido a medias), un .pem con
    los dos bloques o un .p12/.pfx (si tiene contraseña, la pide).
 2. **Cuenta.** Tu correo y tu contraseña de Leapmotor, y «Entrar». La contraseña no se guarda.
 3. **Coche.** Si la cuenta tiene uno, queda elegido; si tiene varios, elige el tuyo.

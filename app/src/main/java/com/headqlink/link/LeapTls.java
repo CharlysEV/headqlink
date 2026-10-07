@@ -282,7 +282,7 @@ final class LeapTls {
         return c;
     }
 
-    private static X509Certificate tryCert(byte[] der) {
+    static X509Certificate tryCert(byte[] der) {
         if (der.length < 2 || der[0] != 0x30) return null;
         try {
             return (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(der));

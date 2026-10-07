@@ -585,7 +585,7 @@
             android:exported="false"
             android:label="@string/hql_cloud_menu"
             android:theme="@style/Theme.HeadQLink"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize|stateHidden" />
 
         <!--
             headqlink: vista previa del modo extendido con datos de demostración (desde Diagnóstico) y capturas PNG con

@@ -585,8 +585,9 @@ the car off, gives the last it knew) or "estimated".
 **How to set it up** (⚙ › "Car data (Leapmotor account)", Android 6 or later):
 
 1. **Client certificate.** The same one the LMB10 app asks for; HeadQLink neither includes nor provides it. Tap "Import
-   certificate…" and pick **both at once** in the file picker (app.crt and app.key), a .pem with both blocks or a
-   .p12/.pfx (it asks for the password if it has one).
+   certificate…" and pick app.crt and app.key in the file picker: both at once (long-press to select two) or **one
+   after the other** (it says which one is still missing; "Start over" forgets a half pick), a .pem with both blocks or
+   a .p12/.pfx (it asks for the password if it has one).
 2. **Account.** Your Leapmotor email and password, then "Sign in". The password is not stored.
 3. **Car.** If the account has one, it is chosen; with several, pick yours.
 4. **Battery.** The cloud does not report the variant: "C10 Life · 69.9 kWh", "C10 ProMax · 81.9 kWh" or "Other" (kWh

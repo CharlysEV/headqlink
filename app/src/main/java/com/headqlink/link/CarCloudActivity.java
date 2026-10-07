@@ -45,15 +45,29 @@ import java.util.concurrent.Executors;
 public class CarCloudActivity extends Activity {
     private static final int REQ_CERT = 41;
 
+    /**
+     * El .crt o el .key elegido a medias, esperando al otro: en memoria del proceso (sobrevive a que Android rehaga la
+     * pantalla mientras el selector está abierto), nunca en disco.
+     */
+    private static final CertPick PENDING = new CertPick();
+
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    /** Leer y guardar el certificado: aparte de la red, para que una lectura de la nube en curso no lo retrase. */
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
     private CarCloudStore store;
     private boolean busy;
     private boolean rendering;
+    /** Leyendo o guardando el certificado elegido (desde importingSince, SystemClock.elapsedRealtime). */
+    private boolean importing;
+    private long importingSince;
+    /** Una lectura que tarda más (un fichero en la nube sin red) ya no bloquea el botón: se puede volver a elegir. */
+    private static final long IMPORT_STUCK_MS = 30_000;
 
     private MaterialSwitch enabled;
     private TextView certState;
     private MaterialButton certImport;
+    private TextView certRestart;
     private View loginBox;
     private View sessionBox;
     private TextView session;
@@ -85,6 +99,7 @@ public class CarCloudActivity extends Activity {
         enabled = findViewById(R.id.hql_cloud_enabled);
         certState = findViewById(R.id.hql_cloud_cert_state);
         certImport = findViewById(R.id.hql_cloud_cert_import);
+        certRestart = findViewById(R.id.hql_cloud_cert_restart);
         loginBox = findViewById(R.id.hql_cloud_login_box);
         sessionBox = findViewById(R.id.hql_cloud_session_box);
         session = findViewById(R.id.hql_cloud_session);
@@ -108,6 +123,7 @@ public class CarCloudActivity extends Activity {
             CarCloud.settingsChanged();
         });
         certImport.setOnClickListener(v -> pickCertificate());
+        certRestart.setOnClickListener(v -> restartPick());
         login.setOnClickListener(v -> doLogin());
         logout.setOnClickListener(v -> run(R.string.hql_cloud_test_failed, () -> CarCloudSession.logout(this), this::render));
         chooseCar.setOnClickListener(v -> chooseCar());
@@ -135,6 +151,7 @@ public class CarCloudActivity extends Activity {
     @Override
     protected void onDestroy() {
         worker.shutdownNow();
+        io.shutdown();
         super.onDestroy();
     }
 
@@ -159,7 +176,13 @@ public class CarCloudActivity extends Activity {
             }
         }
         certState.setText(certText);
-        certImport.setText(hasCert ? R.string.hql_cloud_cert_replace : R.string.hql_cloud_cert_import);
+        // Con medio par elegido, el botón dice qué falta; el siguiente toque abre el selector para eso.
+        CertPick.Step half = PENDING.state(SystemClock.elapsedRealtime());
+        certImport.setText(half.kind == CertPick.Step.Kind.NEED_KEY ? R.string.hql_cloud_cert_pick_key
+                : half.kind == CertPick.Step.Kind.NEED_CERT ? R.string.hql_cloud_cert_pick_cert
+                : hasCert ? R.string.hql_cloud_cert_replace : R.string.hql_cloud_cert_import);
+        certRestart.setVisibility(half.kind == CertPick.Step.Kind.NEED_KEY || half.kind == CertPick.Step.Kind.NEED_CERT
+                ? View.VISIBLE : View.GONE);
         loginBox.setVisibility(hasSession ? View.GONE : View.VISIBLE);
         sessionBox.setVisibility(hasSession ? View.VISIBLE : View.GONE);
         session.setText(Str.get(R.string.hql_cloud_logged_in, store.maskedEmail()));
@@ -179,7 +202,9 @@ public class CarCloudActivity extends Activity {
                 : Str.get(R.string.hql_cloud_profile_custom_none));
         profileNote.setText(Str.get(R.string.hql_cloud_battery_note) + (p.isEmpty() ? "\n" + Str.get(R.string.hql_cloud_profile_unset) : ""));
         login.setEnabled(!busy);
-        certImport.setEnabled(!busy);
+        // Siempre activo: este estilo no cambia de aspecto al desactivarlo, y un botón «muerto» que parece vivo no dice
+        // nada. Si está leyendo, el toque lo avisa (pickCertificate).
+        certImport.setEnabled(true);
         test.setEnabled(hasCert && hasSession && !busy);
         test.setText(busy ? R.string.hql_cloud_working : R.string.hql_cloud_test);
         wipe.setEnabled(!busy && (hasCert || hasSession));
@@ -205,7 +230,11 @@ public class CarCloudActivity extends Activity {
      * con failRes («No se pudo entrar: …», «No se pudo leer: …»).
      */
     private void run(int failRes, Job job, Runnable done) {
-        if (busy) return;
+        if (busy) {
+            L.i("nube Leapmotor (móvil): pulsado con otra petición en curso; espera");
+            ToastUtils.showToast(this, R.string.hql_cloud_working, Toast.LENGTH_SHORT, true);
+            return;
+        }
         busy = true;
         render();
         worker.execute(() -> {
@@ -257,44 +286,156 @@ public class CarCloudActivity extends Activity {
 
     // ------------------------------------------------------------------ certificado
 
+    /**
+     * Tipos para el selector: todo (los .crt/.key no tienen un tipo fijo y cada gestor de ficheros les pone uno) y, por
+     * si algún selector filtra, los que se suelen ver para certificados y claves.
+     */
+    static final String[] CERT_MIME_TYPES = {"*/*", "application/x-pem-file", "application/x-x509-ca-cert",
+            "application/pkcs8", "application/x-pkcs12", "application/octet-stream", "text/plain"};
+
     private void pickCertificate() {
+        if (importing) {
+            long waited = SystemClock.elapsedRealtime() - importingSince;
+            if (waited < IMPORT_STUCK_MS) {
+                L.i("nube Leapmotor: importar certificado: pulsado mientras leo lo anterior; espera");
+                ToastUtils.showToast(this, R.string.hql_cloud_cert_reading, Toast.LENGTH_SHORT, true);
+                return;
+            }
+            L.w("nube Leapmotor: importar certificado: la lectura anterior no termina (" + waited / 1000
+                    + " s); abro el selector igualmente");
+        }
+        CertPick.Step st = PENDING.state(SystemClock.elapsedRealtime());
+        L.i("nube Leapmotor: importar certificado: abro el selector" + (st.kind == CertPick.Step.Kind.NOTHING ? ""
+                : " (" + st + ")"));
         Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
+                .putExtra(Intent.EXTRA_MIME_TYPES, CERT_MIME_TYPES)
                 .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         try {
             startActivityForResult(i, REQ_CERT);
         } catch (android.content.ActivityNotFoundException e) {
-            ToastUtils.showToast(this, R.string.hql_cloud_cert_err_unreadable, Toast.LENGTH_LONG, true);
+            L.w("nube Leapmotor: importar certificado: no hay selector de ficheros");
+            importFailed(Str.get(R.string.hql_cloud_cert_err_no_picker));
+        } catch (RuntimeException e) {
+            L.w("nube Leapmotor: importar certificado: no se pudo abrir el selector (" + e.getClass().getSimpleName() + ")");
+            importFailed(Str.get(R.string.hql_cloud_cert_err_no_picker));
         }
     }
 
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
-        if (req != REQ_CERT || res != RESULT_OK || data == null) return;
+        if (req != REQ_CERT) return;
         List<Uri> uris = new ArrayList<>();
-        if (data.getClipData() != null) {
-            for (int i = 0; i < data.getClipData().getItemCount(); i++) uris.add(data.getClipData().getItemAt(i).getUri());
-        } else if (data.getData() != null) {
+        if (data != null && data.getClipData() != null) {
+            for (int i = 0; i < data.getClipData().getItemCount(); i++) {
+                Uri u = data.getClipData().getItemAt(i).getUri();
+                if (u != null) uris.add(u);
+            }
+        } else if (data != null && data.getData() != null) {
             uris.add(data.getData());
         }
-        if (uris.isEmpty()) return;
-        List<LeapTls.Picked> files = new ArrayList<>();
-        worker.execute(() -> {
-            try {
-                for (Uri u : uris) files.add(new LeapTls.Picked(displayName(u), readUri(u)));
-                main.post(() -> importCertificate(files, null));
-            } catch (IOException e) {
-                main.post(() -> showResult(Str.get(R.string.hql_cloud_cert_err_unreadable), true));
+        L.i("nube Leapmotor: importar certificado: el selector devuelve " + (res == RESULT_OK ? "OK" : res == RESULT_CANCELED
+                ? "cancelado" : "código " + res) + ", " + uris.size() + " fichero(s)");
+        if (res != RESULT_OK || uris.isEmpty() || store == null) return;
+        importing = true;
+        importingSince = SystemClock.elapsedRealtime();
+        render();
+        // Se lee ya (el permiso del selector dura lo que esta pantalla) y en su propio hilo: un fichero que tarda (en la
+        // nube) no deja colgado el resto de la pantalla.
+        io.execute(() -> {
+            List<LeapTls.Picked> files = new ArrayList<>();
+            List<String> failed = new ArrayList<>();
+            for (Uri u : uris) {
+                String name = displayName(u);
+                try {
+                    files.add(new LeapTls.Picked(name, readUri(u)));
+                } catch (IOException | RuntimeException e) {
+                    // SecurityException (sin permiso), FileNotFoundException, IllegalArgumentException…: solo el tipo.
+                    failed.add(name);
+                    L.w("nube Leapmotor: importar certificado: no se pudo leer «" + name + "» (" + e.getClass().getSimpleName() + ")");
+                }
             }
+            L.i("nube Leapmotor: importar certificado: leídos " + files.size() + " de " + uris.size()
+                    + (files.isEmpty() ? "" : ": " + CertPick.names(files)));
+            main.post(() -> {
+                importing = false;
+                if (gone()) {
+                    CertPick.wipe(files);
+                    return;
+                }
+                onPicked(files, failed);
+            });
         });
     }
 
+    /** Lo leído del selector: se junta con lo elegido antes (el .crt y el .key pueden llegar por separado). */
+    private void onPicked(List<LeapTls.Picked> files, List<String> failed) {
+        if (files.isEmpty()) {
+            importFailed(Str.get(R.string.hql_cloud_cert_err_read, failed.isEmpty() ? "?" : failed.get(0)));
+            render();
+            return;
+        }
+        CertPick.Step step = PENDING.add(files, SystemClock.elapsedRealtime());
+        L.i("nube Leapmotor: importar certificado: " + step + (step.unknown.isEmpty() || step.kind == CertPick.Step.Kind.UNREADABLE
+                ? "" : " (no sirven: " + step.unknown + ")"));
+        switch (step.kind) {
+            case READY:
+                importCertificate(step.files, null);
+                break;
+            case NEED_KEY:
+                partialPicked(Str.get(R.string.hql_cloud_cert_have_cert, step.have));
+                break;
+            case NEED_CERT:
+                partialPicked(Str.get(R.string.hql_cloud_cert_have_key, step.have));
+                break;
+            case UNREADABLE:
+                importFailed(Str.get(R.string.hql_cloud_cert_err_unknown, step.unknown.isEmpty() ? "?" : step.unknown.get(0)));
+                break;
+            default:
+                break;
+        }
+        render();
+    }
+
+    /** Medio par elegido: se dice qué falta y el siguiente toque en el botón abre el selector para eso. */
+    private void partialPicked(String text) {
+        showResult(text, false);
+        ToastUtils.showToast(this, text, Toast.LENGTH_LONG, true);
+    }
+
+    /** Un error del certificado: en el recuadro de resultados y en un aviso (por si el recuadro queda fuera de la vista). */
+    private void importFailed(String text) {
+        showResult(text, true);
+        ToastUtils.showToast(this, text, Toast.LENGTH_LONG, true);
+    }
+
+    /** «Empezar de nuevo»: se olvida el .crt o el .key elegido a medias. */
+    private void restartPick() {
+        PENDING.clear();
+        L.i("nube Leapmotor: importar certificado: empiezo de nuevo (descarto lo elegido a medias)");
+        result.setVisibility(View.GONE);
+        render();
+    }
+
+    private boolean gone() {
+        return isFinishing() || (android.os.Build.VERSION.SDK_INT >= 17 && isDestroyed());
+    }
+
+    /** El nombre que enseña el selector (Mis archivos de Samsung, Archivos de Google, Descargas…), o el final del URI. */
     private String displayName(Uri u) {
         try (Cursor c = getContentResolver().query(u, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
-            if (c != null && c.moveToFirst()) return c.getString(0);
+            if (c != null && c.moveToFirst()) {
+                int col = c.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                String n = col >= 0 && !c.isNull(col) ? c.getString(col) : null;
+                if (n != null && !n.trim().isEmpty()) return n.trim();
+            }
         } catch (RuntimeException ignored) {
+            // Algún proveedor no admite la consulta: queda el URI.
         }
-        return "";
+        String last = u.getLastPathSegment();
+        if (last == null) return "";
+        int cut = Math.max(last.lastIndexOf('/'), last.lastIndexOf(':'));
+        return cut >= 0 && cut < last.length() - 1 ? last.substring(cut + 1) : last;
     }
 
     private byte[] readUri(Uri u) throws IOException {
@@ -313,37 +454,61 @@ public class CarCloudActivity extends Activity {
 
     /** Lee y guarda el certificado; si tiene contraseña, la pide y vuelve a probar. */
     private void importCertificate(List<LeapTls.Picked> files, char[] pw) {
-        final LeapTls.Identity[] got = new LeapTls.Identity[1];
-        final LeapTls.ImportException[] failed = new LeapTls.ImportException[1];
-        run(R.string.hql_cloud_test_failed, () -> {
+        importing = true;
+        importingSince = SystemClock.elapsedRealtime();
+        render();
+        io.execute(() -> {
+            LeapTls.Identity got = null;
+            LeapTls.ImportException.Kind kind = null;
+            Exception other = null;
             try {
-                got[0] = LeapTls.parse(files, pw);
+                got = LeapTls.parse(files, pw);
+                store.saveIdentity(got);
             } catch (LeapTls.ImportException e) {
-                failed[0] = e;
-                return;
+                kind = e.kind;
+            } catch (Exception e) {
+                other = e;
             } finally {
                 if (pw != null) java.util.Arrays.fill(pw, '\0');
             }
-            store.saveIdentity(got[0]);
-            CarCloud.settingsChanged();
-            L.i("nube Leapmotor: certificado de cliente importado (" + got[0].key.getAlgorithm() + ", " + files.size()
-                    + " fichero(s))");
-        }, () -> {
-            if (failed[0] != null) {
-                LeapTls.ImportException.Kind k = failed[0].kind;
-                if (k == LeapTls.ImportException.Kind.NEEDS_PASSWORD || k == LeapTls.ImportException.Kind.WRONG_PASSWORD) {
+            boolean ok = got != null && other == null;
+            if (ok) {
+                CarCloud.settingsChanged();
+                L.i("nube Leapmotor: certificado de cliente importado (" + got.key.getAlgorithm() + ", " + files.size()
+                        + " fichero(s))");
+            } else if (kind != null) {
+                L.w("nube Leapmotor: importar certificado: no válido (" + kind + "; " + CertPick.names(files) + ")");
+            } else if (other != null) {
+                L.w("nube Leapmotor: importar certificado: no se pudo guardar (" + CarCloud.safeError(other) + ")");
+            }
+            LeapTls.ImportException.Kind k = kind;
+            Exception fe = other;
+            main.post(() -> {
+                importing = false;
+                if (gone()) {
+                    CertPick.wipe(files);
+                    return;
+                }
+                if (ok) {
+                    CertPick.wipe(files);
+                    PENDING.clear();
+                    ToastUtils.showToast(this, R.string.hql_cloud_cert_saved, Toast.LENGTH_SHORT, true);
+                    result.setVisibility(View.GONE);
+                } else if (k == LeapTls.ImportException.Kind.NEEDS_PASSWORD || k == LeapTls.ImportException.Kind.WRONG_PASSWORD) {
                     askPassword(files, k == LeapTls.ImportException.Kind.WRONG_PASSWORD);
                 } else {
-                    showResult(importError(k), true);
+                    CertPick.wipe(files);
+                    PENDING.clear();
+                    importFailed(k != null ? importError(k)
+                            : Str.get(R.string.hql_cloud_cert_err_save, fe != null ? fe.getClass().getSimpleName() : "?"));
                 }
-                return;
-            }
-            ToastUtils.showToast(this, R.string.hql_cloud_cert_saved, Toast.LENGTH_SHORT, true);
-            result.setVisibility(View.GONE);
+                render();
+            });
         });
     }
 
     private void askPassword(List<LeapTls.Picked> files, boolean wrong) {
+        L.i("nube Leapmotor: importar certificado: " + (wrong ? "contraseña incorrecta; la pido otra vez" : "tiene contraseña; la pido"));
         EditText in = new EditText(this);
         in.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         in.setHint(R.string.hql_cloud_cert_password_hint);
@@ -361,7 +526,10 @@ public class CarCloudActivity extends Activity {
                     in.setText("");
                     importCertificate(files, pw);
                 })
-                .setNegativeButton(R.string.hql_cancel, null)
+                .setNegativeButton(R.string.hql_cancel, (d, w) -> {
+                    L.i("nube Leapmotor: importar certificado: contraseña cancelada");
+                    CertPick.wipe(files);
+                })
                 .show();
     }
 
@@ -546,6 +714,7 @@ public class CarCloudActivity extends Activity {
                 .setPositiveButton(R.string.hql_cloud_wipe, (d, w) -> run(R.string.hql_cloud_test_failed, () -> CarCloudSession.wipe(this), () -> {
                     email.setText("");
                     password.setText("");
+                    PENDING.clear();
                     result.setVisibility(View.GONE);
                     ToastUtils.showToast(this, R.string.hql_cloud_wiped, Toast.LENGTH_SHORT, true);
                 }))
