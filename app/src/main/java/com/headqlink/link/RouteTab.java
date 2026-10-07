@@ -597,7 +597,7 @@ final class RouteTab implements CarScreen {
         if (have) {
             updateChargePlan();
             int key = ((System.identityHashCode(plan) * 31 + plan.progress / 10) * 31 + chargerMinKw * 7 + chargerNets.hashCode()) * 31
-                    + System.identityHashCode(chargePlan);
+                    + System.identityHashCode(chargePlan) + plan.chargerVersion * 131;
             if (key != shownChargersFor) {
                 shownChargersFor = key;
                 fillChargers(plan);

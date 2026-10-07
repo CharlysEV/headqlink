@@ -63,9 +63,14 @@ final class RoutePlanner {
         double destWind = Double.NaN;
         double destRain = Double.NaN;
         int destCode = -1;
-        final List<Charger> chargers = new ArrayList<>();
-        /** Tramos [km desde, km hasta] sin datos de cargadores (OpenStreetMap no respondió). */
-        final List<double[]> chargerGaps = new ArrayList<>();
+        /** Cargadores junto a la ruta, por km. Se sustituye entera cuando llegan más (chargerVersion sube). */
+        volatile List<Charger> chargers = new ArrayList<>();
+        /** Tramos [km desde, km hasta] sin datos de cargadores (OpenStreetMap no respondió): se reintentan. */
+        volatile List<double[]> chargerGaps = new ArrayList<>();
+        /** Cuadrículas de la caché de cargadores que cubren la ruta, y las que aún faltan. */
+        List<String> routeTiles = new ArrayList<>();
+        volatile List<String> missingTiles = new ArrayList<>();
+        volatile int chargerVersion;
         /** Índice del punto de la ruta más cercano a la posición actual. */
         volatile int progress;
         /** Hora (de pared) a la que se calculó. */
@@ -331,6 +336,11 @@ final class RoutePlanner {
         Plan p = plan;
         if (p != null && origin == null && !Double.isNaN(s.lat)) p.progress = nearest(p, s.lat, s.lon, p.progress);
         if (p != null) compareOnArrival(p, s);
+        if (p != null && !p.missingTiles.isEmpty() && SystemClock.elapsedRealtime() - lastChargerRetryMs > CHARGER_RETRY_MS) {
+            lastChargerRetryMs = SystemClock.elapsedRealtime();
+            L.i("ruta: reintento los cargadores que faltan (" + p.missingTiles.size() + " zonas)");
+            refreshChargers(p, false);
+        }
         if (p != null) followCharge(p);
         // Destino: el de AA si lo manda; si no, el elegido aquí.
         Place m = manual;
@@ -443,7 +453,7 @@ final class RoutePlanner {
             int minKw = c.chargerMinKw();
             String nets = c.chargerNetworks();
             String settings = minKw + "/" + nets + "/" + c.planArrivePct() + "/" + c.planMaxPct() + "/" + Math.round(capKwh * 10)
-                    + (realSoc ? "/real" : "/indicado");
+                    + (realSoc ? "/real" : "/indicado") + "/c" + pl.chargerVersion;
             int prog = Math.min(pl.progress, pl.n - 1);
             double f = demo ? DemoMode.planTrend() : trend.factor();
             String key = settings + "/" + prog + "/" + Math.round(soc * 2) + "/" + Math.round(f * 100) + "/" + charging;
@@ -776,11 +786,7 @@ final class RoutePlanner {
         }
 
         // 6. Cargadores a menos de 2,5 km de la ruta (OpenStreetMap).
-        try {
-            findChargers(p);
-        } catch (Exception e) {
-            L.w("ruta: sin cargadores: " + Http.safeError(e));
-        }
+        findChargers(p);
         p.progress = nearest(p, lat0, lon0, -1);
         return p;
     }
@@ -837,25 +843,68 @@ final class RoutePlanner {
     /** Recuadros por consulta (unos 240 km de ruta). */
     static final int BOXES_PER_QUERY = 12;
 
-    private void findChargers(Plan p) throws Exception {
-        List<double[]> boxes = routeBoxes(p.lat, p.lon, p.km, ROUTE_BOX_KM, CHARGER_RADIUS_KM);
-        java.util.Set<String> seen = new java.util.HashSet<>();
-        Exception last = null;
-        int done = 0;
-        for (int from = 0; from < boxes.size(); from += BOXES_PER_QUERY) {
-            List<double[]> part = boxes.subList(from, Math.min(boxes.size(), from + BOXES_PER_QUERY));
+    /** Cuadrículas por consulta a Overpass. */
+    static final int TILES_PER_QUERY = 10;
+    /** Con cuadrículas sin datos, se reintentan cada tanto mientras dure la ruta. */
+    static final long CHARGER_RETRY_MS = 45_000;
+    private long lastChargerRetryMs;
+
+    private void findChargers(Plan p) {
+        p.routeTiles = ChargerCache.tilesFor(routeBoxes(p.lat, p.lon, p.km, ROUTE_BOX_KM, CHARGER_RADIUS_KM));
+        refreshChargers(p, true);
+    }
+
+    /**
+     * Pide a Overpass las cuadrículas de la ruta que no están en la caché (all: todas las tandas; si no, hasta el
+     * primer fallo) y rehace la lista de cargadores de la ruta desde la caché.
+     */
+    private void refreshChargers(Plan p, boolean all) {
+        long now = System.currentTimeMillis();
+        List<String> missing = new ArrayList<>();
+        for (String t : p.routeTiles) if (ChargerCache.get(ctx, t, now) == null) missing.add(t);
+        int cached = p.routeTiles.size() - missing.size();
+        int fetched = 0;
+        for (int i = 0; i < missing.size(); i += TILES_PER_QUERY) {
+            List<String> part = missing.subList(i, Math.min(missing.size(), i + TILES_PER_QUERY));
             try {
-                findChargers(p, part, seen);
-                done++;
+                fetchTiles(part, now);
+                fetched += part.size();
             } catch (Exception e) {
-                last = e;
-                double[] gap = {part.get(0)[4], part.get(part.size() - 1)[5]};
-                p.chargerGaps.add(gap);
-                L.w(String.format(Locale.US, "ruta: cargadores del km %.0f al %.0f: %s", gap[0], gap[1], Http.safeError(e)));
+                L.w("ruta: cargadores: " + part.size() + " zonas sin respuesta de OpenStreetMap (" + Http.safeError(e) + ")");
+                if (!all) break;
             }
         }
-        if (done == 0 && last != null) throw last;
-        java.util.Collections.sort(p.chargers, (a, b) -> Double.compare(a.kmAlong, b.kmAlong));
+        rebuildChargers(p);
+        L.i(String.format(Locale.US, "ruta: cargadores: %d zonas de la caché, %d pedidas ahora, %d sin datos · %d junto a la ruta",
+                cached, fetched, p.missingTiles.size(), p.chargers.size()));
+    }
+
+    /** La lista de cargadores de la ruta (a menos de CHARGER_RADIUS_KM) con lo que haya en la caché, y los huecos. */
+    private void rebuildChargers(Plan p) {
+        long now = System.currentTimeMillis();
+        List<Charger> list = new ArrayList<>();
+        java.util.Set<String> missing = new java.util.LinkedHashSet<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (String t : p.routeTiles) {
+            List<ChargerCache.Item> items = ChargerCache.get(ctx, t, now);
+            if (items == null) {
+                missing.add(t);
+                continue;
+            }
+            for (ChargerCache.Item it : items) {
+                if (!it.id.isEmpty() && !seen.add(it.id)) continue;
+                int idx = nearest(p, it.lat, it.lon, -1);
+                if (distToRouteKm(p.lat, p.lon, idx, it.lat, it.lon) > CHARGER_RADIUS_KM) continue;
+                Charger c = it.toCharger();
+                c.kmAlong = p.km[idx];
+                list.add(c);
+            }
+        }
+        java.util.Collections.sort(list, (a, b) -> Double.compare(a.kmAlong, b.kmAlong));
+        p.chargers = list;
+        p.missingTiles = new ArrayList<>(missing);
+        p.chargerGaps = ChargerCache.gaps(p.lat, p.lon, p.km, missing);
+        p.chargerVersion++;
     }
 
     /** Recuadros [sur, oeste, norte, este, km desde, km hasta] que cubren la ruta a tramos de segKm, con padKm de margen. */
@@ -908,46 +957,55 @@ final class RoutePlanner {
         return Math.sqrt(px * px + py * py);
     }
 
-    private void findChargers(Plan p, List<double[]> boxes, java.util.Set<String> seen) throws Exception {
+    /** Una tanda de cuadrículas a Overpass; se guardan todas (también las que no tienen cargadores). */
+    private void fetchTiles(List<String> keys, long nowMs) throws Exception {
         StringBuilder q = new StringBuilder("[out:json][timeout:50];(");
-        for (double[] b : boxes) {
+        java.util.Map<String, List<ChargerCache.Item>> got = new java.util.HashMap<>();
+        for (String k : keys) {
+            double[] b = ChargerCache.tileBox(k);
             q.append(String.format(Locale.US, "nwr[\"amenity\"=\"charging_station\"](%.4f,%.4f,%.4f,%.4f);", b[0], b[1], b[2], b[3]));
+            got.put(k, new ArrayList<>());
         }
         // Nodos y también áreas (algunas estaciones están dibujadas como superficie): de esas, su centro.
         q.append(");out center tags;");
         JSONArray els = new JSONObject(Http.overpass(q.toString())).getJSONArray("elements");
         for (int i = 0; i < els.length(); i++) {
-            JSONObject e = els.getJSONObject(i);
-            if (!seen.add(e.optString("type") + e.optLong("id"))) continue;
-            JSONObject tags = e.optJSONObject("tags");
-            if (tags == null) continue;
-            Charger c = new Charger();
-            JSONObject center = e.optJSONObject("center");
-            c.lat = center != null ? center.optDouble("lat") : e.optDouble("lat");
-            c.lon = center != null ? center.optDouble("lon") : e.optDouble("lon");
-            if (Double.isNaN(c.lat) || Double.isNaN(c.lon)) continue;
-            c.network = ChargerFilter.classify(tags.optString("brand"), tags.optString("network"), tags.optString("operator"),
-                    tags.optString("name"));
-            c.name = firstNonEmpty(tags.optString("name"), tags.optString("operator"), tags.optString("brand"), Str.get(R.string.hql_charge_point));
-            StringBuilder sockets = new StringBuilder();
-            java.util.Iterator<String> it = tags.keys();
-            while (it.hasNext()) {
-                String key = it.next();
-                String val = tags.optString(key);
-                if (key.matches("socket:[a-z0-9_]+") && !val.equals("no")) {
-                    String name = key.substring(7).replace("type2_combo", "CCS").replace("type2", Str.get(R.string.hql_type2))
-                            .replace("chademo", "CHAdeMO").replace("schuko", "Schuko");
-                    if (sockets.indexOf(name) < 0) sockets.append(sockets.length() > 0 ? " · " : "").append(name);
-                }
-                if (key.endsWith(":output") || key.equals("maxpower")) c.maxKw = Math.max(c.maxKw, parseKw(val));
-            }
-            String op = tags.optString("operator");
-            c.detail = sockets + (op.isEmpty() || op.equals(c.name) ? "" : (sockets.length() > 0 ? " · " : "") + op);
-            int idx = nearest(p, c.lat, c.lon, -1);
-            if (distToRouteKm(p.lat, p.lon, idx, c.lat, c.lon) > CHARGER_RADIUS_KM) continue;
-            c.kmAlong = p.km[idx];
-            p.chargers.add(c);
+            ChargerCache.Item it = parseItem(els.getJSONObject(i));
+            if (it == null) continue;
+            List<ChargerCache.Item> l = got.get(ChargerCache.tileOf(it.lat, it.lon));
+            if (l != null) l.add(it);
         }
+        ChargerCache.put(ctx, got, nowMs);
+    }
+
+    /** Un elemento de OpenStreetMap (amenity=charging_station) como cargador guardado, o null si no sirve. */
+    static ChargerCache.Item parseItem(JSONObject e) {
+        JSONObject tags = e.optJSONObject("tags");
+        if (tags == null) return null;
+        ChargerCache.Item c = new ChargerCache.Item();
+        c.id = e.optString("type") + e.optLong("id");
+        JSONObject center = e.optJSONObject("center");
+        c.lat = center != null ? center.optDouble("lat") : e.optDouble("lat");
+        c.lon = center != null ? center.optDouble("lon") : e.optDouble("lon");
+        if (Double.isNaN(c.lat) || Double.isNaN(c.lon)) return null;
+        c.network = ChargerFilter.classify(tags.optString("brand"), tags.optString("network"), tags.optString("operator"),
+                tags.optString("name"));
+        c.name = firstNonEmpty(tags.optString("name"), tags.optString("operator"), tags.optString("brand"), Str.get(R.string.hql_charge_point));
+        StringBuilder sockets = new StringBuilder();
+        java.util.Iterator<String> it = tags.keys();
+        while (it.hasNext()) {
+            String key = it.next();
+            String val = tags.optString(key);
+            if (key.matches("socket:[a-z0-9_]+") && !val.equals("no")) {
+                String name = key.substring(7).replace("type2_combo", "CCS").replace("type2", Str.get(R.string.hql_type2))
+                        .replace("chademo", "CHAdeMO").replace("schuko", "Schuko");
+                if (sockets.indexOf(name) < 0) sockets.append(sockets.length() > 0 ? " · " : "").append(name);
+            }
+            if (key.endsWith(":output") || key.equals("maxpower")) c.kw = Math.max(c.kw, parseKw(val));
+        }
+        String op = tags.optString("operator");
+        c.detail = sockets + (op.isEmpty() || op.equals(c.name) ? "" : (sockets.length() > 0 ? " · " : "") + op);
+        return c;
     }
 
     private static double parseKw(String v) {
