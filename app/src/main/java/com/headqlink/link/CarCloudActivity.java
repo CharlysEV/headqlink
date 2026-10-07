@@ -282,6 +282,15 @@ public class CarCloudActivity extends Activity {
         result.setVisibility(View.VISIBLE);
         result.setText(text);
         result.setTextColor(androidx.core.content.ContextCompat.getColor(this, error ? R.color.hql_warn : R.color.hql_text));
+        // El recuadro está al final de la pantalla: un error (p. ej. «Incorrect account or password» del login) no se veía.
+        if (error) {
+            ToastUtils.showToast(this, text, Toast.LENGTH_LONG, true);
+            result.post(() -> {
+                android.view.ViewParent v = result.getParent();
+                while (v != null && !(v instanceof android.widget.ScrollView)) v = v.getParent();
+                if (v != null) ((android.widget.ScrollView) v).smoothScrollTo(0, Math.max(0, result.getBottom()));
+            });
+        }
     }
 
     // ------------------------------------------------------------------ certificado
