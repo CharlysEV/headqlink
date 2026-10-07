@@ -1,7 +1,6 @@
 package com.headqlink.link;
 
 import android.content.Context;
-import android.net.Uri;
 import android.os.SystemClock;
 
 import org.json.JSONArray;
@@ -137,7 +136,7 @@ final class RoadInfo {
 
     private void updateLimit(CarSensors.Snapshot s) throws Exception {
         String q = String.format(Locale.US, "[out:json][timeout:10];way(around:25,%.6f,%.6f)[\"highway\"];out tags geom;", s.lat, s.lon);
-        JSONArray els = new JSONObject(Http.post("https://overpass-api.de/api/interpreter", "data=" + Uri.encode(q)))
+        JSONArray els = new JSONObject(Http.overpass(q))
                 .getJSONArray("elements");
         JSONObject best = null;
         double bestScore = Double.MAX_VALUE;
@@ -182,7 +181,7 @@ final class RoadInfo {
 
     private void loadCameras(double lat, double lon) throws Exception {
         String q = String.format(Locale.US, "[out:json][timeout:20];node[\"highway\"=\"speed_camera\"](around:15000,%.5f,%.5f);out body;", lat, lon);
-        JSONArray els = new JSONObject(Http.post("https://overpass-api.de/api/interpreter", "data=" + Uri.encode(q)))
+        JSONArray els = new JSONObject(Http.overpass(q))
                 .getJSONArray("elements");
         List<double[]> list = new ArrayList<>();
         for (int i = 0; i < els.length(); i++) {

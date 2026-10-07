@@ -64,6 +64,8 @@ final class RoutePlanner {
         double destRain = Double.NaN;
         int destCode = -1;
         final List<Charger> chargers = new ArrayList<>();
+        /** Tramos [km desde, km hasta] sin datos de cargadores (OpenStreetMap no respondió). */
+        final List<double[]> chargerGaps = new ArrayList<>();
         /** Índice del punto de la ruta más cercano a la posición actual. */
         volatile int progress;
         /** Hora (de pared) a la que se calculó. */
@@ -824,42 +826,96 @@ final class RoutePlanner {
         return out;
     }
 
-    /** Tramo de ruta por consulta a Overpass (km): en rutas largas, varias consultas en vez de una enorme. */
-    static final double CHARGER_CHUNK_KM = 150;
+    /**
+     * Cargadores junto a la ruta: recuadros pequeños a lo largo de ella (ROUTE_BOX_KM, con CHARGER_RADIUS_KM de margen),
+     * varios por consulta, y luego solo los que están de verdad a menos de CHARGER_RADIUS_KM de la carretera. La
+     * consulta «alrededor de la línea» (around con la polilínea) es de las más pesadas de Overpass: en rutas largas
+     * los servidores públicos la cortaban (504/500) y se perdían tramos enteros de cargadores.
+     */
+    static final double ROUTE_BOX_KM = 20;
+    static final double CHARGER_RADIUS_KM = 2.5;
+    /** Recuadros por consulta (unos 240 km de ruta). */
+    static final int BOXES_PER_QUERY = 12;
 
     private void findChargers(Plan p) throws Exception {
+        List<double[]> boxes = routeBoxes(p.lat, p.lon, p.km, ROUTE_BOX_KM, CHARGER_RADIUS_KM);
         java.util.Set<String> seen = new java.util.HashSet<>();
         Exception last = null;
         int done = 0;
-        for (double from = 0; from < p.totalKm; from += CHARGER_CHUNK_KM) {
+        for (int from = 0; from < boxes.size(); from += BOXES_PER_QUERY) {
+            List<double[]> part = boxes.subList(from, Math.min(boxes.size(), from + BOXES_PER_QUERY));
             try {
-                findChargers(p, from, Math.min(p.totalKm, from + CHARGER_CHUNK_KM), seen);
+                findChargers(p, part, seen);
                 done++;
             } catch (Exception e) {
                 last = e;
-                L.w(String.format(Locale.US, "ruta: cargadores del km %.0f al %.0f: %s", from, from + CHARGER_CHUNK_KM, Http.safeError(e)));
+                double[] gap = {part.get(0)[4], part.get(part.size() - 1)[5]};
+                p.chargerGaps.add(gap);
+                L.w(String.format(Locale.US, "ruta: cargadores del km %.0f al %.0f: %s", gap[0], gap[1], Http.safeError(e)));
             }
         }
         if (done == 0 && last != null) throw last;
         java.util.Collections.sort(p.chargers, (a, b) -> Double.compare(a.kmAlong, b.kmAlong));
     }
 
-    private void findChargers(Plan p, double fromKm, double toKm, java.util.Set<String> seen) throws Exception {
-        StringBuilder poly = new StringBuilder();
-        double lastKm = -10;
-        int count = 0;
-        for (int i = 0; i < p.n; i++) {
-            if (p.km[i] < fromKm - 1 || p.km[i] > toKm + 1) continue;
-            if (p.km[i] - lastKm < 3 && i != p.n - 1) continue;
-            if (count++ > 0) poly.append(',');
-            poly.append(String.format(Locale.US, "%.4f,%.4f", p.lat[i], p.lon[i]));
-            lastKm = p.km[i];
+    /** Recuadros [sur, oeste, norte, este, km desde, km hasta] que cubren la ruta a tramos de segKm, con padKm de margen. */
+    static List<double[]> routeBoxes(double[] lat, double[] lon, double[] km, double segKm, double padKm) {
+        List<double[]> out = new ArrayList<>();
+        int n = lat.length;
+        int start = 0;
+        while (start < n - 1) {
+            double s = lat[start], w = lon[start], no = lat[start], e = lon[start];
+            int i = start;
+            while (i < n - 1 && km[i + 1] - km[start] <= segKm) {
+                i++;
+                s = Math.min(s, lat[i]);
+                no = Math.max(no, lat[i]);
+                w = Math.min(w, lon[i]);
+                e = Math.max(e, lon[i]);
+            }
+            if (i == start) i++; // un tramo más largo que segKm: al menos hasta el punto siguiente
+            s = Math.min(s, lat[i]);
+            no = Math.max(no, lat[i]);
+            w = Math.min(w, lon[i]);
+            e = Math.max(e, lon[i]);
+            double dLat = padKm / 111.32;
+            double dLon = padKm / (111.32 * Math.max(0.2, Math.cos(Math.toRadians((s + no) / 2))));
+            out.add(new double[]{s - dLat, w - dLon, no + dLat, e + dLon, km[start], km[i]});
+            start = i;
         }
-        if (count < 2) return;
+        return out;
+    }
+
+    /** Distancia (km) de un punto a la ruta junto al punto i (los tramos i-1..i e i..i+1). */
+    static double distToRouteKm(double[] lat, double[] lon, int i, double la, double lo) {
+        double best = Double.MAX_VALUE;
+        for (int k = Math.max(0, i - 1); k <= Math.min(lat.length - 2, i); k++) {
+            best = Math.min(best, segmentKm(lat[k], lon[k], lat[k + 1], lon[k + 1], la, lo));
+        }
+        if (lat.length == 1) best = segmentKm(lat[0], lon[0], lat[0], lon[0], la, lo);
+        return best;
+    }
+
+    /** Distancia (km) del punto (la, lo) al tramo a-b, en plano local (vale para unos pocos km). */
+    private static double segmentKm(double laA, double loA, double laB, double loB, double la, double lo) {
+        double cos = Math.cos(Math.toRadians(la));
+        double ax = (loA - lo) * cos * 111.32, ay = (laA - la) * 111.32;
+        double bx = (loB - lo) * cos * 111.32, by = (laB - la) * 111.32;
+        double dx = bx - ax, dy = by - ay;
+        double len2 = dx * dx + dy * dy;
+        double t = len2 <= 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2));
+        double px = ax + t * dx, py = ay + t * dy;
+        return Math.sqrt(px * px + py * py);
+    }
+
+    private void findChargers(Plan p, List<double[]> boxes, java.util.Set<String> seen) throws Exception {
+        StringBuilder q = new StringBuilder("[out:json][timeout:50];(");
+        for (double[] b : boxes) {
+            q.append(String.format(Locale.US, "nwr[\"amenity\"=\"charging_station\"](%.4f,%.4f,%.4f,%.4f);", b[0], b[1], b[2], b[3]));
+        }
         // Nodos y también áreas (algunas estaciones están dibujadas como superficie): de esas, su centro.
-        String q = "[out:json][timeout:40];nwr[\"amenity\"=\"charging_station\"](around:2500," + poly + ");out center body 600;";
-        JSONArray els = new JSONObject(Http.post("https://overpass-api.de/api/interpreter", "data=" + Uri.encode(q)))
-                .getJSONArray("elements");
+        q.append(");out center tags;");
+        JSONArray els = new JSONObject(Http.overpass(q.toString())).getJSONArray("elements");
         for (int i = 0; i < els.length(); i++) {
             JSONObject e = els.getJSONObject(i);
             if (!seen.add(e.optString("type") + e.optLong("id"))) continue;
@@ -888,6 +944,7 @@ final class RoutePlanner {
             String op = tags.optString("operator");
             c.detail = sockets + (op.isEmpty() || op.equals(c.name) ? "" : (sockets.length() > 0 ? " · " : "") + op);
             int idx = nearest(p, c.lat, c.lon, -1);
+            if (distToRouteKm(p.lat, p.lon, idx, c.lat, c.lon) > CHARGER_RADIUS_KM) continue;
             c.kmAlong = p.km[idx];
             p.chargers.add(c);
         }

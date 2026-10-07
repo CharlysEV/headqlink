@@ -719,4 +719,6 @@
     <string name="hql_route_origin_gps">A minha localização (GPS)</string>
     <string name="hql_route_origin_hint">De onde parte?</string>
     <string name="hql_route_test_soc">bateria de teste</string>
+    <string name="hql_plan_summary_stuck">Paragens: %1$d · %2$s a carregar · depois do km %3$.0f nenhum carregador é alcançável</string>
+    <string name="hql_route_charger_gap">Sem dados de carregadores do km %1$.0f ao %2$.0f (o OpenStreetMap não respondeu): o plano pode não ser o melhor. Volte a escolher o destino para tentar de novo.</string>
 </resources>

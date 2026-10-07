@@ -718,4 +718,6 @@
     <string name="hql_route_origin_gps">My location (GPS)</string>
     <string name="hql_route_origin_hint">Where do you start from?</string>
     <string name="hql_route_test_soc">test battery</string>
+    <string name="hql_plan_summary_stuck">Stops: %1$d · %2$s charging · after km %3$.0f no charger is reachable</string>
+    <string name="hql_route_charger_gap">No charger data for km %1$.0f–%2$.0f (OpenStreetMap did not answer): the plan may not be the best. Pick the destination again to retry.</string>
 </resources>

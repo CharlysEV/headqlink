@@ -718,4 +718,6 @@
     <string name="hql_route_origin_gps">Mijn locatie (gps)</string>
     <string name="hql_route_origin_hint">Waar vertrek je?</string>
     <string name="hql_route_test_soc">testbatterij</string>
+    <string name="hql_plan_summary_stuck">Stops: %1$d · %2$s laden · na km %3$.0f is geen laadpaal bereikbaar</string>
+    <string name="hql_route_charger_gap">Geen laadpaalgegevens van km %1$.0f tot %2$.0f (OpenStreetMap antwoordde niet): het plan is misschien niet het beste. Kies de bestemming opnieuw om het nog eens te proberen.</string>
 </resources>

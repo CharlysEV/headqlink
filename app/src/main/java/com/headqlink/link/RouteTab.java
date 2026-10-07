@@ -819,9 +819,12 @@ final class RouteTab implements CarScreen {
         title.setLetterSpacing(0.1f);
         title.setPadding(0, 10, 0, 2);
         chargers.addView(title);
-        String sum = cp.stops.size() == 1
-                ? Str.get(R.string.hql_plan_summary_one, DriveTab.duration(Math.round(cp.chargeMinutes * 60)), cp.arrivalPct)
-                : Str.get(R.string.hql_plan_summary_many, cp.stops.size(), DriveTab.duration(Math.round(cp.chargeMinutes * 60)), cp.arrivalPct);
+        String dur = DriveTab.duration(Math.round(cp.chargeMinutes * 60));
+        // Sin cargador alcanzable tras la última parada: dónde se queda, no un «llegas con -130 %».
+        String sum = cp.outcome == ChargePlanner.Outcome.NO_CHARGER
+                ? Str.get(R.string.hql_plan_summary_stuck, cp.stops.size(), dur, cp.stops.get(cp.stops.size() - 1).km)
+                : cp.stops.size() == 1 ? Str.get(R.string.hql_plan_summary_one, dur, cp.arrivalPct)
+                : Str.get(R.string.hql_plan_summary_many, cp.stops.size(), dur, cp.arrivalPct);
         TextView s = CarStyle.text(ctx, sum, 22, cp.outcome == ChargePlanner.Outcome.PLANNED ? CarKit.TEXT : CarKit.AMBER);
         chargers.addView(s);
         addReplanNote(cp);
@@ -888,6 +891,12 @@ final class RouteTab implements CarScreen {
 
     private void fillChargers(RoutePlanner.Plan p) {
         chargers.removeAllViews();
+        // Tramos sin datos de cargadores (OpenStreetMap no respondió): el plan puede no ser el mejor.
+        for (double[] g : p.chargerGaps) {
+            TextView t = hint(Str.get(R.string.hql_route_charger_gap, g[0], g[1]));
+            t.setTextColor(CarKit.AMBER);
+            chargers.addView(t);
+        }
         addPlan(p);
         java.util.Set<RoutePlanner.Charger> inPlan = new java.util.HashSet<>();
         if (chargePlan != null) for (ChargePlanner.Stop st : chargePlan.stops) inPlan.add(st.charger);
@@ -1285,7 +1294,8 @@ final class RouteTab implements CarScreen {
             double last = soc;
             boolean hold = reev();
             ChargePlanner.Result cp = chargePlan;
-            boolean planned = cp != null && cp.outcome == ChargePlanner.Outcome.PLANNED;
+            // Con paradas (aunque después no se llegue): la línea sube en cada una.
+            boolean planned = cp != null && !cp.stops.isEmpty();
             int stop = 0;
             double[] kc = cp != null ? cp.kwhCum : pl.kwhCum;
             for (int i = prog; i < pl.n; i++) {

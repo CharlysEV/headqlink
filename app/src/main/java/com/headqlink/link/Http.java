@@ -33,6 +33,43 @@ final class Http {
         return request(url, null);
     }
 
+    /**
+     * Servidores públicos de Overpass (OpenStreetMap): el principal y dos espejos. El principal se satura a ratos (504,
+     * 429) y algún espejo cae (500): entonces se repite la consulta en el siguiente.
+     */
+    static final String[] OVERPASS = {
+            "https://overpass-api.de/api/interpreter",
+            "https://overpass.private.coffee/api/interpreter",
+            "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    };
+
+    /** Consulta a Overpass, probando los espejos si uno falla. */
+    static String overpass(String query) throws Exception {
+        Exception last = null;
+        String data = "data=" + android.net.Uri.encode(query);
+        for (int s = 0; s < OVERPASS.length; s++) {
+            // El principal, si está ocupado (429: cupo por conexión; 504: cola llena), se espera y se repite.
+            int tries = s == 0 ? 3 : 1;
+            for (int t = 0; t < tries; t++) {
+                try {
+                    return post(OVERPASS[s], data);
+                } catch (Exception e) {
+                    last = e;
+                    String m = String.valueOf(e.getMessage());
+                    boolean busy = m.contains("HTTP 429") || m.contains("HTTP 504");
+                    if (busy && t < tries - 1) {
+                        L.w("Overpass: " + safeError(e) + "; espero y repito");
+                        android.os.SystemClock.sleep(4000L * (t + 1));
+                        continue;
+                    }
+                    L.w("Overpass: " + safeError(e) + "; pruebo otro servidor");
+                    break;
+                }
+            }
+        }
+        throw last;
+    }
+
     /** POST con cuerpo de formulario (Overpass: data=…). */
     static String post(String url, String formBody) throws Exception {
         return request(url, formBody);
