@@ -553,8 +553,11 @@ final class RoutePlanner {
             if (wp.length() > 0) wp.append('|');
             wp.append(String.format(Locale.US, "%.6f,%.6f", st.charger.lat, st.charger.lon));
         }
-        String url = String.format(Locale.US, "https://www.google.com/maps/dir/?api=1&destination=%.6f,%.6f&travelmode=driving"
-                + "&dir_action=navigate", p.destLat, p.destLon) + (wp.length() > 0 ? "&waypoints=" + Uri.encode(wp.toString()) : "");
+        // Coche virtual con otra salida: desde ella (Maps enseña la ruta; navegar solo se puede desde donde se está).
+        Place o = testOrigin();
+        String url = String.format(Locale.US, "https://www.google.com/maps/dir/?api=1&destination=%.6f,%.6f&travelmode=driving",
+                p.destLat, p.destLon) + (o == null ? "&dir_action=navigate" : String.format(Locale.US, "&origin=%.6f,%.6f", o.lat, o.lon))
+                + (wp.length() > 0 ? "&waypoints=" + Uri.encode(wp.toString()) : "");
         try {
             android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
                     .setPackage("com.google.android.apps.maps").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);

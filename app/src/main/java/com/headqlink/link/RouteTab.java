@@ -583,7 +583,7 @@ final class RouteTab implements CarScreen {
         nav = DemoMode.navInfo();
         boolean have = plan != null && plan.n >= 2;
         boolean test = RoutePlanner.testMode();
-        goMaps.setVisibility(manual && have && !test ? View.VISIBLE : View.GONE);
+        goMaps.setVisibility(manual && have ? View.VISIBLE : View.GONE);
         if (test) {
             RoutePlanner.Place o = RoutePlanner.testOrigin();
             originPill.setText(Str.get(R.string.hql_route_from, o == null ? Str.get(R.string.hql_route_gps) : o.name));
@@ -976,8 +976,13 @@ final class RouteTab implements CarScreen {
 
     /** Abre la navegación de Google Maps en el móvil; Android Auto la muestra en el coche. */
     private void navigateTo(double lat, double lon) {
+        // Coche virtual con otra salida (un Sevilla-Barcelona desde casa): la ruta en Maps desde esa salida.
+        RoutePlanner.Place o = RoutePlanner.testOrigin();
+        String uri = o == null ? String.format(Locale.US, "google.navigation:q=%.6f,%.6f&mode=d", lat, lon)
+                : String.format(Locale.US, "https://www.google.com/maps/dir/?api=1&origin=%.6f,%.6f&destination=%.6f,%.6f&travelmode=driving",
+                o.lat, o.lon, lat, lon);
         try {
-            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(String.format(Locale.US, "google.navigation:q=%.6f,%.6f&mode=d", lat, lon)))
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(uri))
                     .setPackage("com.google.android.apps.maps")
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             ctx.getApplicationContext().startActivity(i);
