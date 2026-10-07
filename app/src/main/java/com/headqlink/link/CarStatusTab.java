@@ -303,6 +303,12 @@ final class CarStatusTab implements CarScreen {
             });
         }
 
+        /** Se eligió otro color en la página: se guarda (y se vuelve a mandar al abrir la pestaña). */
+        @android.webkit.JavascriptInterface
+        public void color(String hex) {
+            emptyCard.post(() -> new Config(ctx).setCarColor(hex));
+        }
+
         @android.webkit.JavascriptInterface
         public void failed(String why) {
             emptyCard.post(() -> {
@@ -339,6 +345,8 @@ final class CarStatusTab implements CarScreen {
             d.put("doors", doors);
             d.put("boot", Boolean.TRUE.equals(s.bootOpen));
             d.put("hint", Str.get(R.string.hql_cloud_3d_hint));
+            String color = new Config(ctx).carColor();
+            if (!color.isEmpty()) d.put("color", color);
             String js = d.toString();
             if (js.equals(sent3d)) return;
             sent3d = js;

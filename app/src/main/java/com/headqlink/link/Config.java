@@ -419,6 +419,16 @@ final class Config {
         sp.edit().putString("charger_networks", keys == null ? "" : keys).apply();
     }
 
+    /** Color del C10 en 3D (#rrggbb), elegido en la pestaña Estado; "" = el de serie (verde). */
+    String carColor() {
+        String c = sp.getString("car_color", "");
+        return c.matches("#[0-9a-f]{6}") ? c : "";
+    }
+
+    void setCarColor(String hex) {
+        if (hex != null && hex.matches("#[0-9a-fA-F]{6}")) sp.edit().putString("car_color", hex.toLowerCase(java.util.Locale.ROOT)).apply();
+    }
+
     /** Últimos destinos elegidos en el coche (JSON, del más reciente al más antiguo). Solo en el móvil. */
     String recentPlaces() {
         return sp.getString("recent_places", "");

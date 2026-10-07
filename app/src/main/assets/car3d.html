@@ -18,14 +18,19 @@
   .tyre small { font-size: 20px; color: #A3B3C2; margin-left: 5px; font-weight: 500; }
   .tyre.warn { color: #FFB547; }
   .tyre .tag { display: block; font-size: 17px; font-weight: 600; color: #FFB547; margin-top: 4px; text-align: center; }
-  .hint { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font-size: 17px; color: #8296A9;
+  .hint { position: absolute; left: 0; right: 0; top: 4px; text-align: center; font-size: 14px; color: #8296A9;
     pointer-events: none; }
   #lines { position: absolute; left: 0; top: 0; pointer-events: none; }
+  #colors { position: absolute; left: 50%; transform: translateX(-50%); bottom: 3px; display: flex; gap: 9px; }
+  #colors div { width: 21px; height: 21px; border-radius: 50%; border: 2px solid rgba(234,242,247,.35);
+    box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+  #colors div.on { border-color: #00E5C7; transform: scale(1.18); }
 </style>
 </head>
 <body>
 <div id="view"></div>
 <canvas id="lines"></canvas>
+<div id="colors"></div>
 <div id="labels"></div>
 <div class="hint" id="hint"></div>
 <script src="three/three.min.js"></script>
@@ -44,6 +49,7 @@
   var FX = 1.44, RX = FX - WB;            // ejes delantero y trasero (el morro mira a +x)
   var TRACK = 1.62, WR = 0.37;            // vía y radio de la rueda (235/55 R19)
   var BEVEL = 0.09;
+  var OUT = BEVEL * 0.9;                  // lo que el redondeo agranda el perfil
 
   var view = document.getElementById('view');
   var renderer;
@@ -58,7 +64,7 @@
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
 
-  scene.add(new THREE.HemisphereLight(0xdfe8f0, 0x1a1f26, 0.9));
+  scene.add(new THREE.HemisphereLight(0xdfe8f0, 0x1a1f26, 0.72));
   var key = new THREE.DirectionalLight(0xffffff, 1.15);
   key.position.set(4, 7, 5);
   scene.add(key);
@@ -69,11 +75,13 @@
   var car = new THREE.Group();
   scene.add(car);
 
-  var paint = new THREE.MeshPhysicalMaterial({ color: 0xc9d2da, metalness: 0.35, roughness: 0.38, clearcoat: 0.7, clearcoatRoughness: 0.2 });
+  var paint = new THREE.MeshPhysicalMaterial({ color: 0x08261c, metalness: 0.6, roughness: 0.34, clearcoat: 1.0, clearcoatRoughness: 0.15 });
+  var gloss = new THREE.MeshPhysicalMaterial({ color: 0x0b0d10, metalness: 0.3, roughness: 0.25, clearcoat: 1.0,
+    side: THREE.DoubleSide });
   var glass = new THREE.MeshStandardMaterial({ color: 0x10161d, metalness: 0.6, roughness: 0.15 });
   var black = new THREE.MeshStandardMaterial({ color: 0x15191f, metalness: 0.2, roughness: 0.7 });
   var tyreMat = new THREE.MeshStandardMaterial({ color: 0x0c0e11, roughness: 0.9 });
-  var rimMat = new THREE.MeshStandardMaterial({ color: 0x9aa4ae, metalness: 0.8, roughness: 0.35 });
+  var rimMat = new THREE.MeshStandardMaterial({ color: 0x2b3138, metalness: 0.7, roughness: 0.35 });
   var amber = new THREE.MeshStandardMaterial({ color: 0xffb547, emissive: 0x7a4a00, roughness: 0.5 });
 
   // ---------------------------------------------------------------- carrocería: el perfil del C10 extruido a lo ancho
@@ -132,22 +140,63 @@
     m.material.side = THREE.DoubleSide;
     return m;
   }
-  car.add(quad([1.27, 1.125], [0.33, 1.615], W / 2 - 0.16, glass));          // parabrisas
-  car.add(quad([-L / 2 + 0.10, 1.11], [-L / 2 + 0.34, 1.565], W / 2 - 0.2, glass)); // luneta
+  car.add(quad([1.31, 1.20], [0.37, 1.69], W / 2 - 0.16, glass));            // parabrisas (fuera del redondeo)
+  car.add(quad([-L / 2 + 0.025, 1.15], [-L / 2 + 0.265, 1.605], W / 2 - 0.2, glass)); // luneta
+
+  // ---------------------------------------------------------------- techo negro, alerón y barras
+  var roof = new THREE.Shape();
+  roof.moveTo(0.30, 1.625);
+  roof.quadraticCurveTo(-0.8, H + 0.045, -L / 2 + 0.36, 1.585);
+  roof.lineTo(-L / 2 + 0.40, 1.55);
+  roof.quadraticCurveTo(-0.8, H - 0.005, 0.24, 1.59);
+  roof.lineTo(0.30, 1.625);
+  var roofGeo = new THREE.ExtrudeGeometry(roof, { depth: W - 0.34, bevelEnabled: false, curveSegments: 20 });
+  // Por encima del redondeo de la carrocería (el bisel la agranda ~8 cm).
+  roofGeo.translate(0, OUT + 0.012, -(W - 0.34) / 2);
+  car.add(new THREE.Mesh(roofGeo, gloss));
+  var spoiler = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.05, W - 0.30), gloss);
+  spoiler.position.set(-L / 2 + 0.26, 1.60 + OUT, 0);
+  spoiler.rotation.z = 0.12;
+  car.add(spoiler);
+  [1, -1].forEach(function (sz) {
+    var rail = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.035, 0.05), gloss);
+    rail.position.set(-0.78, 1.66 + OUT + 0.05, sz * (W / 2 - 0.28));
+    car.add(rail);
+  });
+  // Aletines de los pasos de rueda y paragolpes inferiores en negro.
+  [FX, RX].forEach(function (ax) {
+    [1, -1].forEach(function (sz) {
+      var flare = new THREE.Mesh(new THREE.TorusGeometry(archR + 0.02, 0.045, 8, 24, Math.PI), black);
+      flare.position.set(ax, archY, sz * (W / 2 - 0.02));
+      car.add(flare);
+    });
+  });
+  var fBump = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.20, W - 0.22), black);
+  fBump.position.set(L / 2 + OUT - 0.03, 0.44, 0);
+  car.add(fBump);
+  var rBump = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.20, W - 0.22), black);
+  rBump.position.set(-L / 2 - OUT + 0.03, 0.44, 0);
+  car.add(rBump);
 
   // ---------------------------------------------------------------- luces (la barra de luz de delante y la de atrás)
   var front = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.035, W - 0.32),
     new THREE.MeshBasicMaterial({ color: 0xdffcff }));
-  front.position.set(L / 2 - 0.005, 0.84, 0);
+  front.position.set(L / 2 + OUT + 0.005, 0.84, 0);
   car.add(front);
   var rear = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.05, W - 0.22),
     new THREE.MeshBasicMaterial({ color: 0xff3045 }));
-  rear.position.set(-L / 2 - 0.005, 1.0, 0);
+  rear.position.set(-L / 2 - OUT - 0.005, 1.0, 0);
   car.add(rear);
+  // Faros (bajo la barra de luz, en las esquinas del morro).
+  [1, -1].forEach(function (sz) {
+    var lamp = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.07, 0.30), new THREE.MeshBasicMaterial({ color: 0xeefbff }));
+    lamp.position.set(L / 2 + OUT + 0.025, 0.70, sz * (W / 2 - 0.30));
+    car.add(lamp);
+  });
 
   // Retrovisores.
   [1, -1].forEach(function (sz) {
-    var m = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.12), paint);
+    var m = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.12), gloss);
     m.position.set(0.98, 1.17, sz * (W / 2 + 0.08));
     car.add(m);
   });
@@ -159,14 +208,17 @@
     var t = new THREE.Mesh(new THREE.CylinderGeometry(WR, WR, 0.25, 40), tyreMat);
     t.rotation.x = Math.PI / 2;
     g.add(t);
-    var r = new THREE.Mesh(new THREE.CylinderGeometry(WR * 0.66, WR * 0.66, 0.255, 28), rimMat);
+    var r = new THREE.Mesh(new THREE.CylinderGeometry(WR * 0.68, WR * 0.68, 0.252, 28), black);
     r.rotation.x = Math.PI / 2;
     g.add(r);
-    for (var i = 0; i < 5; i++) {
-      var sp = new THREE.Mesh(new THREE.BoxGeometry(0.05, WR * 1.2, 0.262), black);
-      sp.rotation.z = i * Math.PI * 2 / 5;
+    for (var i = 0; i < 10; i++) {
+      var sp = new THREE.Mesh(new THREE.BoxGeometry(0.028, WR * 1.25, 0.262), rimMat);
+      sp.rotation.z = i * Math.PI * 2 / 10;
       g.add(sp);
     }
+    var hub = new THREE.Mesh(new THREE.CylinderGeometry(WR * 0.16, WR * 0.16, 0.27, 16), black);
+    hub.rotation.x = Math.PI / 2;
+    g.add(hub);
     g.position.set(p[0], WR, p[1]);
     car.add(g);
     return g;
@@ -385,6 +437,26 @@
   }
   window.addEventListener('resize', resize);
 
+  // ---------------------------------------------------------------- color de la carrocería
+  var COLORS = ['#08261c', '#e6eaee', '#8b949a', '#15181c', '#1d3a5c', '#c3ccd3'];
+  var colorBox = document.getElementById('colors');
+  function setColor(hex, save) {
+    paint.color.set(hex);
+    for (var i = 0; i < colorBox.children.length; i++) {
+      colorBox.children[i].className = colorBox.children[i].dataset.hex === hex ? 'on' : '';
+    }
+    if (save) { try { if (window.HQL) HQL.color(hex); } catch (e) { } }
+    kick();
+  }
+  COLORS.forEach(function (hex) {
+    var d = document.createElement('div');
+    d.style.background = hex;
+    d.dataset.hex = hex;
+    d.addEventListener('pointerdown', function (e) { e.stopPropagation(); setColor(hex, true); });
+    colorBox.appendChild(d);
+  });
+  setColor(COLORS[0], false);
+
   // ---------------------------------------------------------------- datos (desde Android)
   // d = {tyres:[{text, unit, warn, tag}×4 en FL, FR, RL, RR], doors:[4 bool], boot:bool, hint:texto, color:"#rrggbb"}
   window.update = function (d) {
@@ -412,7 +484,7 @@
     }
     if (d.doors) for (var j = 0; j < 4; j++) doors[j].userData.target = d.doors[j] ? 0.95 : 0;
     bootPivot.userData.target = d.boot ? 1 : 0;
-    if (d.color) paint.color.set(d.color);
+    if (d.color && /^#[0-9a-fA-F]{6}$/.test(d.color)) setColor(d.color.toLowerCase(), false);
     if (typeof d.hint === 'string') document.getElementById('hint').textContent = d.hint;
     kick();
   };
