@@ -26,6 +26,10 @@ final class AaMenuMatch {
             "Start head unit server",
             "Iniciar servidor da unidade principal",
             "Iniciar o servidor da unidade principal",
+            "Avvia server unità principale",
+            "Démarrer le serveur de l'unité principale",
+            "Haupteinheit-Server starten",
+            "Hoofdunit-server starten",
     };
     static final String[] KNOWN_STOP = {
             "Parar servidor unidad principal",
@@ -35,25 +39,37 @@ final class AaMenuMatch {
             "Parar servidor da unidade principal",
             "Parar o servidor da unidade principal",
             "Interromper servidor da unidade principal",
+            "Arresta server unità principale",
+            "Arrêter le serveur de l'unité principale",
+            "Haupteinheit-Server stoppen",
+            "Hoofdunit-server stoppen",
     };
 
     /** «Unidad principal» en cada idioma (normalizado): sin esto no es la opción del servidor. */
     private static final String[] HEAD_UNIT = {
             "unidad principal", "unidade principal", "head unit", "headunit", "unidad central", "unidade central",
+            "unita principale", "unite principale", "haupteinheit", "hoofdunit",
     };
     /** Verbos de parar (palabras enteras, normalizadas). */
     private static final String[] STOP_WORDS = {
             "parar", "detener", "stop", "interromper", "deter", "desactivar", "desativar", "apagar", "terminar",
             "finalizar", "encerrar",
+            "arresta", "arrestare", "ferma", "arreter", "stoppen", "anhalten", "beenden",
     };
     /** Descripción del botón ⋮ (normalizada; trozos). */
     private static final String[] OVERFLOW_DESC = {
             "mas opciones", "more options", "mais opcoes", "outras opcoes", "otras opciones", "opciones adicionales",
+            "altre opzioni", "plus d options", "weitere optionen", "meer opties",
     };
     /** Descripción del botón ⋮ (normalizada; entera). */
-    private static final String[] OVERFLOW_DESC_EXACT = {"opciones", "options", "opcoes", "more", "mas", "mais"};
+    private static final String[] OVERFLOW_DESC_EXACT = {
+            "opciones", "options", "opcoes", "more", "mas", "mais", "opzioni", "altro", "mehr", "meer",
+    };
     /** Las otras opciones del menú de desarrollador de AA: si salen y la del servidor no, AA ha cambiado el texto. */
-    private static final String[] DEVELOPER = {"desarrollador", "developer", "programador", "desenvolvedor"};
+    private static final String[] DEVELOPER = {
+            "desarrollador", "developer", "programador", "desenvolvedor",
+            "sviluppatore", "developpeur", "entwickler", "ontwikkelaar",
+    };
 
     private static final Pattern MARKS = Pattern.compile("\\p{M}+");
     private static final Pattern NON_WORD = Pattern.compile("[^\\p{L}\\p{Nd}]+");
