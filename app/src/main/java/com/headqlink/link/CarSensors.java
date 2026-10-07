@@ -1,6 +1,9 @@
 package com.headqlink.link;
 
+import com.andrerinas.openheadunit.R;
+
 import android.annotation.SuppressLint;
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
@@ -36,6 +39,12 @@ import java.util.Locale;
  *
  * Con el modo demostración activo (DemoMode, solo la vista previa) no se usa ningún sensor ni la red: el trayecto
  * de DemoDrive entra por el mismo camino que el GPS ({@link #fix}), con un reloj simulado.
+ *
+ * GPS parado (GpsWatch): con más de 5 s sin posición, {@link Snapshot#gpsState} lo dice y los paneles enseñan «—» y el
+ * motivo ({@link #gpsNote}) en vez de la última velocidad. Con el móvil bloqueado y la ubicación solo «mientras se usa»,
+ * Android puede cortar el GPS a la app (ver LocationAccess). Al volver, el hueco se suma al viaje en línea recta
+ * ({@link #bridgeGap}) en vez de contar como si el coche hubiera estado parado. Una vez por sesión, el log dice si con el
+ * móvil bloqueado siguen llegando posiciones.
  */
 final class CarSensors implements SensorEventListener, LocationListener {
     /** Estado para los paneles (copia; unidades SI salvo que se indique). */
@@ -79,6 +88,16 @@ final class CarSensors implements SensorEventListener, LocationListener {
         int smoothRecent = -1;
         /** Reloj de los sensores (ms), para la edad de la estela de fuerzas G. */
         long clockMs;
+        /** GPS al día, esperando la primera posición, en pausa con el móvil bloqueado o sin posiciones (GpsWatch). */
+        GpsWatch.State gpsState = GpsWatch.State.WAITING;
+        /** Huecos del GPS (más de 5 s sin posición) de esta sesión y su duración total (s). */
+        int gpsGaps;
+        long gpsGapSec;
+
+        /** Las posiciones están al día: la velocidad, el rumbo y lo que sale de ellos son de ahora. */
+        boolean gpsLive() {
+            return gpsState == GpsWatch.State.OK;
+        }
     }
 
     /** Segundos de historia de la potencia (una muestra por segundo). */
@@ -145,6 +164,21 @@ final class CarSensors implements SensorEventListener, LocationListener {
     private double tripKmStart;
     private double emaKwh;
     private double emaKm;
+    // GPS parado (GpsWatch): reloj de la última posición (de fix, ns; y real, ms de elapsedRealtime), bloqueo y permisos.
+    private long lastFixNs;
+    private volatile long lastFixMs = -1;
+    /** El hueco que termina con la posición en curso pasó (en parte) con el móvil bloqueado. */
+    private boolean gapLocked;
+    private volatile long lastLockedMs = -1;
+    private volatile boolean locked;
+    private volatile boolean fineLoc;
+    private volatile boolean bgLoc;
+    private long permCheckedMs = -1;
+    private int gaps;
+    private long gapMsTotal;
+    private GpsWatch.State loggedState = GpsWatch.State.WAITING;
+    private final GpsWatch.LockProbe probe = new GpsWatch.LockProbe();
+    private final Runnable watchTick = this::watchTick;
 
     private CarSensors(Context ctx) {
         this.ctx = ctx.getApplicationContext();
@@ -208,7 +242,34 @@ final class CarSensors implements SensorEventListener, LocationListener {
         c.smoothScore = smooth.score();
         c.smoothRecent = smooth.recentScore();
         c.clockMs = nowMs();
+        if (demo != null) {
+            c.gpsState = s.gps ? GpsWatch.State.OK : GpsWatch.State.WAITING;
+        } else if (!fineLoc) {
+            c.gpsState = GpsWatch.State.WAITING;
+        } else {
+            long lf = lastFixMs;
+            c.gpsState = GpsWatch.state(lf >= 0, lf >= 0 ? SystemClock.elapsedRealtime() - lf : -1, locked, bgLoc);
+        }
+        c.gpsGaps = gaps;
+        c.gpsGapSec = gapMsTotal / 1000;
         return c;
+    }
+
+    /**
+     * Lo que enseñan los paneles en lugar de los datos del GPS cuando no están al día («GPS en pausa · móvil
+     * bloqueado…», «sin GPS» o «Esperando al GPS del móvil…»), o null si lo están.
+     */
+    static String gpsNote(Snapshot s) {
+        switch (s.gpsState) {
+            case OK:
+                return null;
+            case PAUSED_LOCKED:
+                return Str.get(R.string.hql_gps_paused_locked);
+            case LOST:
+                return Str.get(R.string.hql_gps_lost);
+            default:
+                return Str.get(R.string.hql_waiting_phone_gps);
+        }
     }
 
     /** Copia la potencia de los últimos segundos (de la más antigua a la más reciente) y devuelve cuántas hay. */
@@ -283,7 +344,10 @@ final class CarSensors implements SensorEventListener, LocationListener {
         } else {
             L.w("sensores: sin permiso de ubicación (velocidad, pendiente y viento no disponibles)");
         }
-        L.i("sensores: en marcha (barómetro " + (s.baro ? "sí" : "no") + ")");
+        fineLoc = LocationAccess.fine(ctx);
+        bgLoc = LocationAccess.background(ctx);
+        L.i("sensores: en marcha (barómetro " + (s.baro ? "sí" : "no") + " · ubicación todo el tiempo " + (bgLoc ? "sí" : "no") + ")");
+        h.post(watchTick);
     }
 
     private boolean register(int type, int delay) {
@@ -299,13 +363,104 @@ final class CarSensors implements SensorEventListener, LocationListener {
             L.i("sensores: parados (demostración)");
             return;
         }
+        h.removeCallbacks(watchTick);
         sm.unregisterListener(this);
         try {
             ctx.getSystemService(LocationManager.class).removeUpdates(this);
         } catch (RuntimeException ignored) {
         }
         thread.quitSafely();
+        if (fineLoc && probe.result() == GpsWatch.LockProbe.Result.PENDING) {
+            L.i("GPS: ubicación todo el tiempo " + (bgLoc ? "sí" : "no")
+                    + " · con el móvil bloqueado: sin comprobar (no se bloqueó con el GPS en marcha)");
+        }
+        synchronized (this) {
+            if (gaps > 0) L.i(String.format(Locale.US, "GPS: %d huecos sin posiciones en la sesión, %d s en total", gaps, gapMsTotal / 1000));
+        }
         L.i("sensores: parados");
+    }
+
+    // ------------------------------------------------------------------ GPS parado
+
+    /** Cada segundo (hilo de sensores): bloqueo, permisos, cambios de estado del GPS y la sonda del bloqueo. */
+    private void watchTick() {
+        long now = SystemClock.elapsedRealtime();
+        boolean lk = false;
+        try {
+            KeyguardManager km = ctx.getSystemService(KeyguardManager.class);
+            lk = km != null && km.isKeyguardLocked();
+        } catch (RuntimeException ignored) {
+        }
+        locked = lk;
+        if (lk) lastLockedMs = now;
+        if (permCheckedMs < 0 || now - permCheckedMs >= 10_000) {
+            permCheckedMs = now;
+            fineLoc = LocationAccess.fine(ctx);
+            bgLoc = LocationAccess.background(ctx);
+        }
+        if (fineLoc) {
+            long lf = lastFixMs;
+            GpsWatch.State st = GpsWatch.state(lf >= 0, lf >= 0 ? now - lf : -1, lk, bgLoc);
+            if (st != loggedState) logState(st, lf >= 0 ? (now - lf) / 1000 : -1, lk);
+            loggedState = st;
+            GpsWatch.LockProbe.Result r = probe.tick(now, lk, lf);
+            if (r != null) {
+                boolean arrives = r == GpsWatch.LockProbe.Result.ARRIVES;
+                L.i("GPS: ubicación todo el tiempo " + (bgLoc ? "sí" : "no") + " · con el móvil bloqueado "
+                        + (arrives ? "llega" : "no llega (" + GpsWatch.LockProbe.DECIDE_MS / 1000 + " s bloqueado sin posiciones)")
+                        + " · acceso a la ubicación ahora: " + LocationAccess.allowedNowText(ctx)
+                        + (arrives || bgLoc ? "" : ". Arreglo: Ajustes › Aplicaciones › HeadQLink › Permisos › Ubicación ›"
+                        + " «Permitir todo el tiempo» (o Comprobación › «Ubicación todo el tiempo»)"));
+            }
+        }
+        h.postDelayed(watchTick, 1000);
+    }
+
+    private void logState(GpsWatch.State st, long ageSec, boolean lk) {
+        switch (st) {
+            case OK:
+                if (loggedState != GpsWatch.State.WAITING) L.i("GPS: vuelven las posiciones");
+                break;
+            case PAUSED_LOCKED:
+                L.w("GPS: en pausa con el móvil bloqueado (" + (ageSec >= 0 ? ageSec + " s sin posiciones" : "sin posiciones aún")
+                        + "; ubicación solo «mientras se usa» · acceso a la ubicación ahora: " + LocationAccess.allowedNowText(ctx) + ")");
+                break;
+            case LOST:
+                L.w("GPS: sin posiciones desde hace " + ageSec + " s" + (lk ? " con el móvil bloqueado" : ""));
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * Vuelven las posiciones tras un hueco (más de 5 s): la línea recta entre la última y la nueva (lo mínimo recorrido)
+     * cuenta para el viaje y, a la velocidad media del hueco, para la energía. Así el viaje y el consumo no quedan como
+     * si el coche hubiera estado parado. Con una media imposible (un salto de la posición) no se suma nada.
+     */
+    private void bridgeGap(double distM, long gapMs) {
+        gaps++;
+        gapMsTotal += gapMs;
+        double km = GpsWatch.bridgeKm(distM, gapMs);
+        double kmh = GpsWatch.bridgeKmh(km, gapMs);
+        String what;
+        if (km > 0) {
+            s.tripKm += km;
+            if (kmh > 2) {
+                double hours = gapMs / 3.6e6;
+                double kw = model.compute(kmh, 0, s.headwindKmh, s.tempC, 0);
+                s.kwhTotal += kw * hours;
+                s.kmTotal += km;
+                tripEnergy.add(model, hours);
+            }
+            what = String.format(Locale.US, "%.2f km en línea recta sumados al viaje (media %.0f km/h; energía estimada a esa media)", km, kmh);
+        } else if (distM > 0) {
+            what = String.format(Locale.US, "%.0f m en %d s no es creíble: no se suman", distM, gapMs / 1000);
+        } else {
+            what = "nada que sumar";
+        }
+        L.i(String.format(Locale.US, "GPS: hueco de %d s sin posiciones%s: %s", gapMs / 1000,
+                gapLocked ? " con el móvil bloqueado" : "", what));
     }
 
     // ------------------------------------------------------------------ sensores
@@ -348,6 +503,9 @@ final class CarSensors implements SensorEventListener, LocationListener {
 
     @Override
     public synchronized void onLocationChanged(Location loc) {
+        long prevFix = lastFixMs;
+        gapLocked = prevFix >= 0 && lastLockedMs >= prevFix;
+        lastFixMs = SystemClock.elapsedRealtime();
         double step = lastLoc != null ? lastLoc.distanceTo(loc) : 0;
         lastLoc = loc;
         boolean altGood = loc.hasAltitude() && loc.hasVerticalAccuracy() && loc.getVerticalAccuracyMeters() < 15;
@@ -362,6 +520,10 @@ final class CarSensors implements SensorEventListener, LocationListener {
      */
     private void fix(long now, double v, boolean hasBearing, double bearing, double lat, double lon, double step,
                      double gpsAlt, boolean altGood) {
+        // Hueco del GPS (más de 5 s sin posición, p. ej. con el móvil bloqueado): se suma aparte (bridgeGap).
+        long gapMs = lastFixNs != 0 ? (now - lastFixNs) / 1_000_000 : 0;
+        boolean gap = lastFixNs != 0 && GpsWatch.isGap(gapMs);
+        lastFixNs = now;
         s.gps = true;
         s.speedKmh = v * 3.6;
         if (s.speedKmh > s.maxSpeedKmh) s.maxSpeedKmh = s.speedKmh;
@@ -382,8 +544,13 @@ final class CarSensors implements SensorEventListener, LocationListener {
         lastSpeedNs = now;
         launchTimer(s.speedKmh, now / 1_000_000);
 
-        // Distancia del viaje.
-        if (step > 0 && step < 200) s.tripKm += step / 1000;
+        // Distancia del viaje (la de un hueco, en bridgeGap).
+        if (!gap && step > 0 && step < 200) s.tripKm += step / 1000;
+        if (gap) {
+            // La pendiente se vuelve a medir desde aquí.
+            gradeRefAlt = Double.NaN;
+            gradeDist = 0;
+        }
 
         // Altitud: barómetro anclado al GPS (el GPS da el nivel; el barómetro, los cambios finos).
         double alt;
@@ -420,10 +587,11 @@ final class CarSensors implements SensorEventListener, LocationListener {
         s.lat = lat;
         s.lon = lon;
         // Energía estimada acumulada (para el % de batería y los viajes) y su reparto.
+        if (gap) bridgeGap(step, gapMs);
         boolean moving = s.speedKmh > 2;
         s.powerKw = moving ? model.compute(s.speedKmh, s.gradePct, s.headwindKmh, s.tempC, s.longG)
                 : EnergyModel.AUX_KW + EnergyModel.hvac(Double.isNaN(s.tempC) ? 15 : s.tempC);
-        if (lastEnergyNs != 0) {
+        if (lastEnergyNs != 0 && !gap) {
             double dtH = (now - lastEnergyNs) / 3.6e12;
             if (dtH > 0 && dtH < 0.01 && moving) {
                 s.kwhTotal += s.powerKw * dtH;
@@ -526,6 +694,9 @@ final class CarSensors implements SensorEventListener, LocationListener {
         launchArmed = false;
         lastTimer = "";
         lastEnergyNs = 0;
+        lastFixNs = 0;
+        gaps = 0;
+        gapMsTotal = 0;
         demoK = -1;
         demoNs = 0;
         tripStartMs = 0;

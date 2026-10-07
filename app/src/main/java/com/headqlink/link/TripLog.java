@@ -108,7 +108,7 @@ final class TripLog {
                 startClimb = s.climbM;
                 startDescent = s.descentM;
             }
-            maxKmh = Math.max(maxKmh, s.speedKmh);
+            if (s.gpsLive()) maxKmh = Math.max(maxKmh, s.speedKmh);
             noteCloud(CarCloud.snapshot());
             if (!Double.isNaN(s.lat)) {
                 synchronized (track) {
@@ -176,6 +176,8 @@ final class TripLog {
             o.put("climb", s.climbM - startClimb);
             o.put("descent", s.descentM - startDescent);
             o.put("maxKmh", maxKmh);
+            // Tiempo sin GPS (p. ej. con el móvil bloqueado): esos tramos cuentan en línea recta (CarSensors.bridgeGap).
+            if (s.gpsGapSec > 0) o.put("gpsGapSec", s.gpsGapSec);
             JSONArray t = new JSONArray();
             synchronized (track) {
                 for (double[] p : track) t.put(new JSONArray().put(round(p[0])).put(round(p[1])));
@@ -202,7 +204,8 @@ final class TripLog {
             dir.mkdirs();
             String name = "trip-" + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date(startMs)) + ".json";
             Files.write(new File(dir, name).toPath(), o.toString().getBytes(StandardCharsets.UTF_8));
-            L.i(String.format(Locale.US, "viaje guardado: %.1f km, %.1f kWh estimados", km, s.kwhTotal - startKwh));
+            L.i(String.format(Locale.US, "viaje guardado: %.1f km, %.1f kWh estimados%s", km, s.kwhTotal - startKwh,
+                    s.gpsGapSec > 0 ? String.format(Locale.US, " (%d s sin GPS en %d huecos, sumados en línea recta)", s.gpsGapSec, s.gpsGaps) : ""));
         } catch (Exception e) {
             L.w("viaje: no se pudo guardar: " + e);
         }

@@ -80,7 +80,8 @@ final class InstrumentsScreen implements CarScreen {
         s = sensors.snapshot();
         limit = road.state().limitKmh;
         trailN = sensors.gTrail(trailLat, trailLong, trailMs);
-        float target = (float) Math.min(1, s.speedKmh / MAX_KMH);
+        // Sin posiciones al día, la aguja baja a cero (el número dice «—» y el motivo).
+        float target = s.gpsLive() ? (float) Math.min(1, s.speedKmh / MAX_KMH) : 0;
         speedFrac += (target - speedFrac) * 0.6f;
         speedCard.invalidate();
         gCard.invalidate();
@@ -140,14 +141,22 @@ final class InstrumentsScreen implements CarScreen {
         // Límite de la vía (marca blanca) y máxima del viaje (marca roja), por fuera del arco.
         if (limit > 0) tick(cv, cx, cy, rad + stroke / 2 + 4, limit, 0xFFFFFFFF, p);
         if (s.maxSpeedKmh > 1) tick(cv, cx, cy, rad + stroke / 2 + 4, (float) s.maxSpeedKmh, CarKit.RED, p);
-        int color = limit > 0 && s.speedKmh > limit * 1.1 + 2 ? CarKit.RED : limit > 0 && s.speedKmh > limit + 2 ? CarKit.AMBER : CarKit.TEXT;
-        CarKit.text(cv, String.format(Locale.getDefault(), "%.0f", s.speedKmh), cx, cy + 46, 136, color, CarKit.REGULAR, p, Paint.Align.CENTER);
+        String gpsNote = CarSensors.gpsNote(s);
+        int color = gpsNote != null ? CarKit.MUTED : limit > 0 && s.speedKmh > limit * 1.1 + 2 ? CarKit.RED
+                : limit > 0 && s.speedKmh > limit + 2 ? CarKit.AMBER : CarKit.TEXT;
+        CarKit.text(cv, gpsNote != null ? "—" : String.format(Locale.getDefault(), "%.0f", s.speedKmh), cx, cy + 46, 136, color,
+                CarKit.REGULAR, p, Paint.Align.CENTER);
         CarKit.text(cv, "km/h", cx, cy + 92, 28, CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.CENTER);
         String[] t = timer(s.timer);
         if (!t[1].equals("—")) {
             CarKit.text(cv, Str.get(R.string.hql_timer_line, t[0], t[1]), cx, cy + rad * 0.71f + 64, 25, CarKit.ACCENT, CarKit.MEDIUM, p, Paint.Align.CENTER);
         }
-        if (!s.gps) CarKit.text(cv, Str.get(R.string.hql_waiting_phone_gps), cx, cy + rad * 0.86f, 22, CarKit.RED, CarKit.REGULAR, p, Paint.Align.CENTER);
+        if (gpsNote != null) {
+            p.setTypeface(CarKit.REGULAR);
+            p.setTextSize(22);
+            CarKit.text(cv, CarKit.ellipsize(gpsNote, rad * 1.9f, p), cx, cy + rad * 0.86f, 22, CarKit.RED, CarKit.REGULAR, p,
+                    Paint.Align.CENTER);
+        }
         // Fichas del viaje: distancia (y tiempo), media y máxima.
         double avg = s.tripSec > 60 ? s.tripKm / (s.tripSec / 3600.0) : Double.NaN;
         float first = r.width() * 0.36f;

@@ -37,7 +37,7 @@ class RequirementsTest {
         assertEquals(
             listOf(
                 Id.ANDROID_AUTO, Id.ACCESSIBILITY, Id.AA_DEVMODE, Id.NEARBY_WIFI, Id.WIFI_ON, Id.HOTSPOT_OFF,
-                Id.NOTIFICATIONS, Id.BATTERY, Id.OVERLAY, Id.MEDIA,
+                Id.NOTIFICATIONS, Id.BATTERY, Id.OVERLAY, Id.MEDIA, Id.BG_LOCATION,
             ),
             ids(items),
         )
@@ -315,7 +315,7 @@ class RequirementsTest {
         assertEquals(
             listOf(
                 Id.ANDROID_AUTO, Id.AA_SERVER, Id.ACCESSIBILITY, Id.AA_DEVMODE, Id.NEARBY_WIFI, Id.WIFI_ON, Id.HOTSPOT_OFF,
-                Id.NOTIFICATIONS, Id.BATTERY, Id.OVERLAY, Id.MEDIA,
+                Id.NOTIFICATIONS, Id.BATTERY, Id.OVERLAY, Id.MEDIA, Id.BG_LOCATION,
             ),
             ids(items),
         )
@@ -377,6 +377,43 @@ class RequirementsTest {
         assertNull(Requirements.find(old, Id.ACCESSIBILITY))
         assertFalse(Requirements.usesHeadUnitServer("17.3.1"))
         assertTrue(Requirements.usesHeadUnitServer("17.7.0"))
+    }
+
+    // ---------------------------------------------------------------- ubicación todo el tiempo (Auto ampliado)
+
+    @Test
+    fun backgroundLocationIsRecommendedOnlyInExtendedAuto() {
+        val ok = item(eval(), Id.BG_LOCATION)
+        assertEquals(Importance.RECOMMENDED, ok.importance)
+        assertEquals(Status.OK, ok.status)
+        // Sin ampliar (ni en el modo App ni en la prueba) no hay paneles con GPS: no sale.
+        assertNull(Requirements.find(eval { mode = Config.MODE_AA; bgLocation = Perm.ASK }, Id.BG_LOCATION))
+        assertNull(Requirements.find(eval { mode = Config.MODE_APP; bgLocation = Perm.ASK }, Id.BG_LOCATION))
+        assertNull(Requirements.find(eval { mode = Config.MODE_PATTERN; bgLocation = Perm.ASK }, Id.BG_LOCATION))
+    }
+
+    @Test
+    fun missingBackgroundLocationCountsButNeverBlocksConnect() {
+        val items = eval { bgLocation = Perm.ASK }
+        val bg = item(items, Id.BG_LOCATION)
+        assertEquals(Status.MISSING, bg.status)
+        assertEquals(Hint.NONE, bg.hint)
+        assertTrue(bg.counts())
+        assertFalse(bg.blocks())
+        assertEquals(1, Requirements.missingCount(items))
+        assertTrue(Requirements.blocking(items).isEmpty())
+    }
+
+    @Test
+    fun backgroundLocationNeedsTheNormalLocationFirstOrSettingsIfDenied() {
+        // Sin la ubicación «mientras se usa», primero esa (Android exige el orden).
+        val noFine = item(eval { fineLocation = false; bgLocation = Perm.ASK; media = Perm.ASK }, Id.BG_LOCATION)
+        assertEquals(Hint.NEEDS_FINE, noFine.hint)
+        assertEquals(Status.MISSING, noFine.status)
+        // Denegada para siempre: solo desde Ajustes.
+        assertEquals(Hint.BLOCKED, item(eval { bgLocation = Perm.BLOCKED }, Id.BG_LOCATION).hint)
+        // Sin la normal, lo primero es pedirla aunque «todo el tiempo» se viera denegada.
+        assertEquals(Hint.NEEDS_FINE, item(eval { fineLocation = false; bgLocation = Perm.BLOCKED }, Id.BG_LOCATION).hint)
     }
 
     @Test

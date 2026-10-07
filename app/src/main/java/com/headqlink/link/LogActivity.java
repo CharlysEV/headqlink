@@ -97,7 +97,7 @@ public class LogActivity extends Activity {
         }
         L.i("prueba con patrón: " + (on ? "SÍ" : "no") + " (modo " + cfg.mode() + ")");
         if (LinkState.running) {
-            startForegroundService(new android.content.Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY));
+            startForegroundService(LinkService.fromApp(new android.content.Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY)));
         }
     }
 

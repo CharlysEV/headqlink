@@ -150,7 +150,9 @@ final class LinkControl {
     /** El servicio en primer plano. Si Android no lo deja (la app ya no está delante), se registra en vez de cerrar la app. */
     private static void launch(Context app, Intent link, String from) {
         try {
-            ContextCompat.startForegroundService(app, link);
+            // Si HeadQLink ya no está delante (la automatización de Android Auto la tapó), Android no le da al servicio
+            // la ubicación «mientras se usa»: el servicio la recupera en cuanto vuelva a verse (LinkService.appShown).
+            ContextCompat.startForegroundService(app, LinkService.fromApp(link));
         } catch (RuntimeException e) {
             // ForegroundServiceStartNotAllowedException (Android 12+) u otra restricción.
             L.w("conectar (" + from + "): Android no deja arrancar el servicio ahora (" + e.getClass().getSimpleName()

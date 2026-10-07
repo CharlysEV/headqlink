@@ -99,7 +99,7 @@ final class TripsTab implements CarScreen {
         s = sensors.snapshot();
         liveReal = TripLog.liveReal(CarCloud.snapshot());
         // El viaje en curso, solo si ya se ha movido el coche.
-        live.setVisibility(s.tripKm >= 0.1 || s.speedKmh > 3 ? View.VISIBLE : View.GONE);
+        live.setVisibility(s.tripKm >= 0.1 || (s.gpsLive() && s.speedKmh > 3) ? View.VISIBLE : View.GONE);
         live.invalidate();
         live.postDelayed(this::tick, 1000);
     }
@@ -136,6 +136,15 @@ final class TripsTab implements CarScreen {
                 CarKit.REGULAR, p, Paint.Align.LEFT);
         String sub = DriveTab.duration(s.tripSec) + (Double.isNaN(avg) ? "" : " · " + Str.get(R.string.hql_avg_kmh, avg));
         CarKit.text(cv, sub, r.left + w + 30, r.bottom - 12, 27, CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        // GPS parado: los km y el consumo no avanzan hasta que vuelva (entonces se suma el hueco en línea recta).
+        String gpsNote = s.gpsState == GpsWatch.State.WAITING ? null : CarSensors.gpsNote(s);
+        if (gpsNote != null) {
+            p.setTypeface(CarKit.MEDIUM);
+            p.setTextSize(21);
+            // En la línea del título, a la izquierda del punto verde.
+            CarKit.text(cv, CarKit.ellipsize(gpsNote, r.width() * 0.62f, p), r.right - 34, r.top - 24, 21, CarKit.RED, CarKit.MEDIUM, p,
+                    Paint.Align.RIGHT);
+        }
         stat(cv, r.right - 200, r.bottom - 12, Double.isNaN(per100) ? "—" : String.format(Locale.getDefault(), "%.1f", per100), "kWh/100",
                 useColor(per100), p);
         if (real) realTag(cv, r.right - 214, r.bottom - 16, Paint.Align.RIGHT, p);

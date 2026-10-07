@@ -52,7 +52,14 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     static final String ACTION_SET_LINK = "com.headqlink.link.SET_LINK";
     /** Quién lo pide, para el log (widget…). */
     static final String EXTRA_FROM = "from";
+    /**
+     * HeadQLink estaba a la vista al pedirlo ({@link #fromApp}): Android evalúa la ubicación «mientras se usa» del
+     * servicio en ese momento, que no siempre es el mismo en que llega aquí (la actividad puente ya se cerró).
+     */
+    static final String EXTRA_CALLER_VISIBLE = "caller_visible";
     private static final String CHANNEL = "link";
+    /** El servicio en marcha (hilo principal), para {@link #appShown}. */
+    private static volatile LinkService current;
 
     static volatile String status = "parado";
 
@@ -102,6 +109,24 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     private SystemMonitor sysMonitor;
     /** Adaptación térmica del vídeo y temperatura de la batería cada minuto. */
     private ThermalGuard thermal;
+    /** Ya pasó a primer plano (no se llama a stopForeground: lo sigue hasta onDestroy). */
+    private boolean inForeground;
+    /**
+     * El servicio de tipo «ubicación» pasó a primer plano con HeadQLink a la vista: Android le da la ubicación «mientras
+     * se usa» también con el móvil bloqueado. Si no (o una orden llegó desde segundo plano), se vuelve a pasar a primer
+     * plano en cuanto HeadQLink se vea ({@link #relatchLocation}).
+     */
+    private boolean fgLocLatched;
+    private boolean fgLocLogged;
+    /** Lo dijo quien pidió la orden en curso (EXTRA_CALLER_VISIBLE), o null. */
+    private Boolean callerVisible;
+    private final Runnable relatchTick = new Runnable() {
+        @Override
+        public void run() {
+            relatchLocation("HeadQLink a la vista");
+            if (!stopping) main.postDelayed(this, 20_000);
+        }
+    };
     /** Pantalla encendida/apagada/desbloqueada: con la pantalla encendida Android escanea WiFi cada 10 s. */
     private final android.content.BroadcastReceiver screenReceiver = new android.content.BroadcastReceiver() {
         @Override
@@ -111,6 +136,10 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             PerfTrace.event(what, 0);
             CarTrace.note("PANTALLA", what);
             QdTrace.i("HQL/Sistema", "pantalla: " + what + " · " + PhoneScreen.describe(c));
+            if (Intent.ACTION_USER_PRESENT.equals(a)) {
+                // Desbloqueado: la pantalla del coche (o la app) vuelve a estar delante en un momento.
+                main.postDelayed(() -> relatchLocation("móvil desbloqueado"), 1500);
+            }
         }
     };
     private final android.content.BroadcastReceiver scanReceiver = new android.content.BroadcastReceiver() {
@@ -244,6 +273,21 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         screen.addAction(Intent.ACTION_USER_PRESENT);
         registerReceiver(screenReceiver, screen, Context.RECEIVER_NOT_EXPORTED);
         cfg = new Config(this);
+        current = this;
+    }
+
+    /**
+     * Para quien arranca o avisa al servicio: marca si HeadQLink está a la vista ahora (lo que Android usa para darle la
+     * ubicación «mientras se usa»; ver {@link LocationAccess}).
+     */
+    static Intent fromApp(Intent i) {
+        return i.putExtra(EXTRA_CALLER_VISIBLE, LocationAccess.appVisible());
+    }
+
+    /** Una pantalla de HeadQLink está delante (onResume): si el servicio no conserva la ubicación, la recupera ya. */
+    static void appShown(String why) {
+        LinkService s = current;
+        if (s != null) s.main.post(() -> s.relatchLocation(why));
     }
 
     @Override
@@ -255,6 +299,12 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             L.w("servicio relanzado por el sistema sin orden: me detengo");
             stopSelf(startId);
             return START_NOT_STICKY;
+        }
+        callerVisible = intent.hasExtra(EXTRA_CALLER_VISIBLE) ? intent.getBooleanExtra(EXTRA_CALLER_VISIBLE, false) : null;
+        if (inForeground && fgLocLatched && !Boolean.TRUE.equals(callerVisible) && !LocationAccess.appVisible()) {
+            // Una orden desde segundo plano (Bluetooth, widget, cable…): Android 15+ puede volver a evaluar con ella la
+            // ubicación «mientras se usa» del servicio. Por si acaso, se recupera en cuanto HeadQLink se vea.
+            fgLocLatched = false;
         }
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             // Desconectar a mano: el usuario está mirando el móvil, se apaga también el servidor de AA.
@@ -418,6 +468,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         if (!transportStarted) {
             transportStarted = true;
             L.i("servicio iniciado. " + cfg.summary());
+            main.removeCallbacks(relatchTick);
+            main.postDelayed(relatchTick, 20_000);
             SessionSummary.INSTANCE.startTrip(System.currentTimeMillis(), AaPassthroughSource.AA_LAUNCHES.get());
             acquireLocks();
             startTransport();
@@ -765,11 +817,25 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     /** Pasa a primer plano; si Android no lo permite, el servicio se detiene sin tumbar la app. */
     private boolean goForeground(String text) {
         Notification n = buildNotification(text);
-        // Con permiso de ubicación, también tipo "ubicación": el GPS de Instrumentos/Eficiencia sigue
-        // con la pantalla apagada. Si Android no lo admite ahora, solo "dispositivo conectado".
-        if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        boolean fine = LocationAccess.fine(this);
+        boolean visibleNow = LocationAccess.appVisible();
+        if (inForeground && fine && !visibleNow) {
+            // Ya en primer plano y HeadQLink no se ve: otro startForeground ahora haría que Android volviera a evaluar la
+            // ubicación «mientras se usa» del servicio con la app en segundo plano, y la perdería (el GPS de los paneles se
+            // para al bloquear el móvil). Si ya está en primer plano, Android no lo exige ni con startForegroundService:
+            // solo se actualiza el aviso.
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null) nm.notify(1, n);
+            return true;
+        }
+        // Con permiso de ubicación, también tipo "ubicación": el GPS de los paneles del coche sigue con la pantalla
+        // apagada. Si Android no lo admite ahora, solo "dispositivo conectado".
+        if (fine) {
             try {
                 startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE | ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                // La primera vez cuenta cómo estaba la app al pedirlo (startForegroundService), que es lo que mira Android.
+                boolean visible = visibleNow || (!inForeground && Boolean.TRUE.equals(callerVisible));
+                onForeground(true, visible);
                 return true;
             } catch (RuntimeException e) {
                 L.w("primer plano sin ubicación: " + e.getMessage());
@@ -777,11 +843,61 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         }
         try {
             startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+            onForeground(false, visibleNow);
             return true;
         } catch (RuntimeException e) {
             L.e("Android no deja pasar a primer plano ahora; me detengo", e);
             stopSelf();
             return false;
+        }
+    }
+
+    /** Tras un startForeground: con el tipo «ubicación» o sin él, y si HeadQLink se veía (ubicación «mientras se usa»). */
+    private void onForeground(boolean locType, boolean visible) {
+        inForeground = true;
+        fgLocLatched = locType && visible;
+        if (fgLocLogged) return;
+        fgLocLogged = true;
+        String verdict;
+        if (!locType) {
+            // Con la ubicación solo «mientras se usa», Android 14+ no deja el tipo «ubicación» con la app en segundo plano.
+            verdict = !LocationAccess.fine(this) ? "no (sin permiso de ubicación: el servicio va sin el tipo «ubicación»)"
+                    : "no (Android no dejó el tipo «ubicación» con HeadQLink en segundo plano; se recupera al ver HeadQLink"
+                    + " o la pantalla del coche con el móvil desbloqueado. Para no depender de eso: Ubicación › «Permitir"
+                    + " todo el tiempo»)";
+        } else if (LocationAccess.background(this)) {
+            verdict = "sí (ubicación «todo el tiempo»)";
+        } else if (visible) {
+            verdict = "sí (ubicación «mientras se usa»: pasó a primer plano con HeadQLink a la vista)";
+        } else {
+            verdict = "no (ubicación «mientras se usa» y pasó a primer plano con HeadQLink en segundo plano ("
+                    + LocationAccess.importanceName(LocationAccess.importance()) + "): Android no le deja el GPS al"
+                    + " bloquear; se recupera al ver HeadQLink o la pantalla del coche con el móvil desbloqueado. Para no"
+                    + " depender de eso: Ubicación › «Permitir todo el tiempo»)";
+        }
+        L.i("primer plano: ubicación con el móvil bloqueado: " + verdict + " · acceso a la ubicación ahora: "
+                + LocationAccess.allowedNowText(this));
+    }
+
+    /**
+     * Hilo principal. HeadQLink (o la pantalla del coche, con el móvil desbloqueado) está delante: si el servicio pasó a
+     * primer plano sin ella, vuelve a pasar ahora. Android evalúa la ubicación «mientras se usa» al llamar a
+     * startForeground; con la app delante se la da, y el servicio la conserva al bloquear el móvil. Con «todo el
+     * tiempo» no hace falta.
+     */
+    private void relatchLocation(String why) {
+        if (stopping || !inForeground || fgLocLatched) return;
+        if (!LocationAccess.fine(this) || LocationAccess.background(this)) return;
+        int imp = LocationAccess.importance();
+        if (imp > android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) return;
+        try {
+            startForeground(1, buildNotification(status),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE | ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            fgLocLatched = true;
+            L.i("primer plano: ubicación con el móvil bloqueado: sí (recuperada: " + why + ", vuelvo a pasar a primer"
+                    + " plano con HeadQLink delante)");
+        } catch (RuntimeException e) {
+            L.w("primer plano: no pude recuperar la ubicación (" + why + "): " + e.getMessage());
         }
     }
 
@@ -975,6 +1091,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     @Override
     public void onDestroy() {
         stopping = true;
+        if (current == this) current = null;
+        main.removeCallbacks(relatchTick);
         life.close();
         main.removeCallbacks(lifeTimer);
         // Cerrado sin pasar por shutdownAll (p. ej. sin poder pasar a primer plano) con AA en pausa: que no quede

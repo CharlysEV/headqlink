@@ -178,6 +178,7 @@ menú ⚙ › «Comprobación».
 | «Bluetooth (dispositivos cercanos)» (Obligatorio si activas la conexión automática) | Para reconocer el Bluetooth del coche y conectar sola. | «Permitir». |
 | «Mostrar sobre otras apps» (Opcional) | Para abrir Android Auto con el móvil en segundo plano. | «Permitir». |
 | «Fotos, vídeos y ubicación» (Opcional, «Auto extendido») | Para la galería y los paneles de conducción del coche. | «Permitir». |
+| «Ubicación todo el tiempo» (Recomendado, «Auto extendido») | Para que los datos del coche sigan con el móvil bloqueado (ver [Qué ves y cómo se maneja](#qué-ves-y-cómo-se-maneja)). | «Abrir»: explica el porqué y abre la página de Android; elige «Permitir todo el tiempo». Si aún no tiene la ubicación, la pide antes. |
 
 > [!IMPORTANT]
 > **«Ajuste restringido» al activar la accesibilidad.** En Android 13 o superior, a las apps instaladas desde un APK
@@ -358,6 +359,19 @@ admite.
     medio, en qué se va la energía, el coste del viaje, el CO₂ que no ha salido por un tubo de escape y un consejo.
   - «Estado» (con la cuenta de Leapmotor): la batería, la autonomía, la carga, las presiones, las puertas y el
     cuentakilómetros reales del coche, con la edad del dato. Sin cuenta, dice cómo configurarla.
+  - **Con el móvil bloqueado: «Ubicación todo el tiempo».** Ruta, Conducción, Viajes, Instrumentos y Eficiencia usan el
+    GPS del móvil. Si la ubicación de HeadQLink es solo «Permitir mientras se usa la app», Android solo le da el GPS
+    con HeadQLink a la vista o si el enlace pasó a primer plano con HeadQLink delante. Cuando arranca sin ella (la
+    conexión automática por Bluetooth, el widget, el arranque de Android Auto…), al bloquear el móvil la pantalla del
+    coche sigue y los sensores de movimiento también, pero la velocidad, la ruta, el viaje y el consumo se paran hasta
+    desbloquear. HeadQLink lo recupera solo en cuanto lo ves con el móvil desbloqueado, pero para no depender de eso la
+    «Comprobación» recomienda en «Auto extendido» **«Ubicación todo el tiempo»**: «Abrir» › «Permitir todo el tiempo»
+    (o Ajustes › Aplicaciones › HeadQLink › Permisos › Ubicación). En «Auto» no hace falta. HeadQLink solo usa el GPS
+    con el enlace en marcha o las pantallas «Coche» abiertas.
+  - **Sin GPS, sin números congelados.** Con más de 5 s sin posiciones, la velocidad dice «—» y los paneles dicen «GPS
+    en pausa · móvil bloqueado (activa la ubicación «todo el tiempo»)» (o «sin GPS», por ejemplo en un túnel). Cuando
+    vuelve, el tramo sin posiciones se suma al viaje en línea recta, a su velocidad media, en vez de contar como si el
+    coche hubiera estado parado.
 - **Pantalla táctil:** funciona como en Android Auto, con **multitáctil** de hasta 3 dedos (por ejemplo, pellizcar para
   hacer zoom en el mapa).
 - **Botones del volante:** reproducir/pausa, siguiente y anterior funcionan a través del **Bluetooth del coche**, sin
@@ -672,6 +686,7 @@ Empieza siempre por el menú ⚙ › «Comprobación»: cada fila en rojo tiene 
 | Notificación «Servidor de Android Auto abierto · Desbloquea el móvil para cerrarlo» | La sesión terminó con el móvil bloqueado y el servidor de Android Auto sigue abierto. | Desbloquea el móvil: HeadQLink lo cierra. |
 | Tras una parada tarda mucho en volver, o hay que cerrar y abrir la app | La parada duró más que «Esperar al coche» y HeadQLink lo cerró todo; al desbloquear, primero cierra Android Auto («Cerrando Auto…») y después hay que arrancarlo otra vez. | Sube «Esperar al coche» a «15 min» (Ajustes de imagen › Avanzado) y activa la conexión automática por Bluetooth: al volver, Android Auto sale al instante sin desbloquear. Si ves «Desbloquea el móvil para iniciar Android Auto», desbloquéalo y espera: arranca solo, sin abrir la app. |
 | «Cerrando Auto…» o «Arrancando Auto…» no se quita, o la notificación «El servidor de Android Auto sigue encendido · Tocar para apagarlo» | La automatización de los ajustes de Android Auto no terminó (por ejemplo, el móvil se bloqueó a mitad). | La capa se quita sola a los 15 s. Toca la notificación con el móvil desbloqueado para apagar el servidor. Si se repite, exporta el log (sección 8): las líneas «ciclo:» cuentan cada paso. |
+| Los datos del coche se congelan al bloquear el móvil (velocidad, ruta, viaje, consumo; vuelven al desbloquear) | La ubicación de HeadQLink es solo «mientras se usa la app» y Android le corta el GPS con el móvil bloqueado. La pantalla del coche y los sensores de movimiento siguen; el GPS no. | «Comprobación» › «Ubicación todo el tiempo» › «Abrir» › «Permitir todo el tiempo». En el log, «GPS: ubicación todo el tiempo sí · con el móvil bloqueado llega» confirma que ya va. |
 | La conexión automática no arranca | El nombre Bluetooth no coincide, o Android no la deja arrancar en segundo plano. | Revisa el texto del aviso «Conexión automática», quita las restricciones de batería o toca la notificación «Toca para conectar HeadQLink». |
 | No se instala o no se actualiza | Play Protect, Bloqueador automático de Samsung o una versión con otra firma. | Sección 2. |
 
@@ -724,6 +739,7 @@ Puedes pedir ayuda en la página del proyecto en GitHub: [CharlysEV/headqlink](h
 | Batería sin restricciones | Seguir funcionando con la pantalla apagada. | Recomendado |
 | Mostrar sobre otras apps | Abrir Android Auto con el móvil en segundo plano. | Opcional |
 | Fotos, vídeos y ubicación | Galería y paneles de conducción. | Opcional, «Auto extendido» |
+| Ubicación todo el tiempo | Que los paneles de «Coche» sigan con el móvil bloqueado. Solo se usa con el enlace en marcha o las pantallas «Coche» abiertas. | Recomendado, «Auto extendido» |
 | Internet | Servicios de «Auto extendido» (OpenStreetMap, OSRM, Open-Meteo, radio-browser.info), tus listas de TV y radio y, si la configuras, la nube de Leapmotor (datos reales del coche, solo lectura). | Solo esas funciones |
 
 - HeadQLink **no envía telemetría** ni tiene anuncios.

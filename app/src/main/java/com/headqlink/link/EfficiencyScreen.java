@@ -125,10 +125,21 @@ final class EfficiencyScreen implements CarScreen {
     private void paintPower(Canvas cv, RectF r, Paint p) {
         boolean moving = s.speedKmh > 2;
         double kw = s.powerKw;
-        int color = kw < -0.3 ? CarKit.GREEN : kw > 45 ? CarKit.AMBER : CarKit.TEXT;
-        CarKit.number(cv, String.format(Locale.getDefault(), "%+.1f", kw).replace("+", ""), "kW", r.left, r.top + 66, 80, color, CarKit.REGULAR, p, Paint.Align.LEFT);
-        int state = !moving ? R.string.hql_stopped_cap : kw < -0.3 ? R.string.hql_regenerating : R.string.hql_consuming;
-        CarKit.text(cv, Str.get(state), r.right, r.top + 30, 25, kw < -0.3 && moving ? CarKit.GREEN : CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.RIGHT);
+        // La potencia estimada sale de la velocidad del GPS: sin posiciones al día, «—» y el motivo.
+        String gpsNote = CarSensors.gpsNote(s);
+        int color = gpsNote != null ? CarKit.MUTED : kw < -0.3 ? CarKit.GREEN : kw > 45 ? CarKit.AMBER : CarKit.TEXT;
+        CarKit.number(cv, gpsNote != null ? "—" : String.format(Locale.getDefault(), "%+.1f", kw).replace("+", ""), "kW", r.left, r.top + 66, 80,
+                color, CarKit.REGULAR, p, Paint.Align.LEFT);
+        if (gpsNote != null) {
+            p.setTypeface(CarKit.MEDIUM);
+            p.setTextSize(22);
+            CarKit.text(cv, CarKit.ellipsize(gpsNote, r.width() * 0.62f, p), r.right, r.top + 30, 22, CarKit.RED, CarKit.MEDIUM, p,
+                    Paint.Align.RIGHT);
+        } else {
+            int state = !moving ? R.string.hql_stopped_cap : kw < -0.3 ? R.string.hql_regenerating : R.string.hql_consuming;
+            CarKit.text(cv, Str.get(state), r.right, r.top + 30, 25, kw < -0.3 && moving ? CarKit.GREEN : CarKit.DIM, CarKit.MEDIUM, p,
+                    Paint.Align.RIGHT);
+        }
         // La potencia real de la batería (nube de Leapmotor), si el dato es reciente.
         double realKw = cloud.hasData() && cloud.ageMs(nowMs) <= CarCloud.POWER_MAX_AGE_MS ? cloud.status.powerKw() : Double.NaN;
         if (!Double.isNaN(realKw)) {
@@ -357,7 +368,8 @@ final class EfficiencyScreen implements CarScreen {
     }
 
     private void paintTip(Canvas cv, RectF r, Paint p) {
-        EcoTip tip = EcoTip.pick(s.speedKmh, s.headwindKmh, s.tempC, trip);
+        // Sin GPS al día, la velocidad es vieja: el consejo no la usa.
+        EcoTip tip = EcoTip.pick(s.gpsLive() ? s.speedKmh : 0, s.headwindKmh, s.tempC, trip);
         String t;
         switch (tip.kind) {
             case EcoTip.SLOWER:

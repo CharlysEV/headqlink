@@ -405,6 +405,15 @@
     <string name="hql_req_dev_unchecked">Ainda não verificado: o HeadQLink abre o Android Auto por um momento</string>
     <string name="hql_req_notif">Notificações</string>
     <string name="hql_req_notif_why">Para ver o estado da ligação e os avisos</string>
+    <string name="hql_req_bgloc">Localização sempre</string>
+    <string name="hql_req_bgloc_why">Para que os dados do carro continuem com o telemóvel bloqueado</string>
+    <string name="hql_req_bgloc_needs_fine">Para que os dados do carro continuem com o telemóvel bloqueado. Primeiro a localização durante a utilização da app e depois «Permitir sempre»</string>
+    <string name="hql_req_bgloc_blocked">Definições › Apps › HeadQLink › Autorizações › Localização › Permitir sempre</string>
+    <string name="hql_req_bgloc_ok">Permitida sempre</string>
+    <string name="hql_bgloc_title">Localização sempre</string>
+    <string name="hql_bgloc_msg">Com o telemóvel bloqueado, o Android pode deixar sem GPS as apps que só têm a localização «durante a utilização da app»: a velocidade, a viagem, a rota e o consumo no ecrã do carro ficam congelados até o desbloquear.\n\nNa página que se abre, escolha «Permitir sempre». O HeadQLink só usa o GPS enquanto está ligado ao carro (ou com os ecrãs Carro abertos).</string>
+    <string name="hql_gps_paused_locked">GPS em pausa · telemóvel bloqueado (ative a localização «sempre»)</string>
+    <string name="hql_gps_lost">sem GPS</string>
     <string name="hql_req_notif_blocked">Desativadas: ative-as nas Definições</string>
     <string name="hql_req_blocked">Recusada: permita-a em Info. da aplicação › Autorizações</string>
     <string name="hql_req_nearby">Dispositivos Wi-Fi próximos</string>

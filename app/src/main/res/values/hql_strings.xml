@@ -404,6 +404,15 @@
     <string name="hql_req_dev_unchecked">Not checked yet: HeadQLink opens Android Auto for a moment</string>
     <string name="hql_req_notif">Notifications</string>
     <string name="hql_req_notif_why">To see the connection status and warnings</string>
+    <string name="hql_req_bgloc">Location all the time</string>
+    <string name="hql_req_bgloc_why">So the car data keeps going with the phone locked</string>
+    <string name="hql_req_bgloc_needs_fine">So the car data keeps going with the phone locked. First the location while using the app, then “Allow all the time”</string>
+    <string name="hql_req_bgloc_blocked">Settings › Apps › HeadQLink › Permissions › Location › Allow all the time</string>
+    <string name="hql_req_bgloc_ok">Allowed all the time</string>
+    <string name="hql_bgloc_title">Location all the time</string>
+    <string name="hql_bgloc_msg">With the phone locked, Android can cut the GPS of apps that only have the location “while using the app”: speed, trip, route and consumption on the car screen freeze until you unlock it.\n\nOn the page that opens, choose “Allow all the time”. HeadQLink only uses the GPS while it is connected to the car (or with the Car screens open).</string>
+    <string name="hql_gps_paused_locked">GPS paused · phone locked (allow location “all the time”)</string>
+    <string name="hql_gps_lost">no GPS</string>
     <string name="hql_req_notif_blocked">Turned off: turn them on in Settings</string>
     <string name="hql_req_blocked">Denied: allow it in App info › Permissions</string>
     <string name="hql_req_nearby">Nearby Wi-Fi devices</string>

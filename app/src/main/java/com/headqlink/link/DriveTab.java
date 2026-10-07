@@ -251,10 +251,14 @@ final class DriveTab implements CarScreen {
     private void paintSpeed(Canvas cv, RectF r, Paint p) {
         int limit = rs.limitKmh;
         double v = s.speedKmh;
+        // Sin posiciones al día (móvil bloqueado, túnel…): «—» y el motivo, nunca la última velocidad congelada.
+        String gpsNote = CarSensors.gpsNote(s);
         int color = CarKit.TEXT;
-        if (limit > 0 && v > limit * 1.1 + 2) color = CarKit.RED;
+        if (gpsNote != null) color = CarKit.MUTED;
+        else if (limit > 0 && v > limit * 1.1 + 2) color = CarKit.RED;
         else if (limit > 0 && v > limit + 2) color = CarKit.AMBER;
-        CarKit.number(cv, String.format(Locale.getDefault(), "%.0f", v), "km/h", r.left, r.top + 150, 156, color, CarKit.REGULAR, p, Paint.Align.LEFT);
+        CarKit.number(cv, gpsNote != null ? "—" : String.format(Locale.getDefault(), "%.0f", v), "km/h", r.left, r.top + 150, 156, color,
+                CarKit.REGULAR, p, Paint.Align.LEFT);
         if (limit > 0) {
             float cx = r.right - 82;
             float cy = r.top + 78;
@@ -268,11 +272,11 @@ final class DriveTab implements CarScreen {
             CarKit.text(cv, String.valueOf(limit), cx, cy + 24, limit >= 100 ? 60 : 68, 0xFF15181C, CarKit.MEDIUM, p, Paint.Align.CENTER);
             if (rs.limitEstimated) CarKit.label(cv, Str.get(R.string.hql_estimated), cx, cy + 112, CarKit.FAINT, p, Paint.Align.CENTER);
         }
-        String line = !s.gps ? Str.get(R.string.hql_waiting_phone_gps) : rs.roadName;
+        String line = gpsNote != null ? gpsNote : rs.roadName;
         p.setTypeface(CarKit.REGULAR);
         p.setTextSize(27);
         CarKit.text(cv, CarKit.ellipsize(line, r.width() - (limit > 0 ? 190 : 0), p), r.left, r.bottom - 6, 27,
-                s.gps ? CarKit.DIM : CarKit.RED, CarKit.REGULAR, p, Paint.Align.LEFT);
+                gpsNote == null ? CarKit.DIM : CarKit.RED, CarKit.REGULAR, p, Paint.Align.LEFT);
     }
 
     // ------------------------------------------------------------------ rumbo

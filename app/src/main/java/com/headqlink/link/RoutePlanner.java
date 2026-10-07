@@ -132,6 +132,11 @@ final class RoutePlanner {
         return out;
     }
 
+    /** Los sensores que mueven la ruta (para saber si el GPS está al día). */
+    CarSensors.Snapshot sensorSnapshot() {
+        return sensors.snapshot();
+    }
+
     /** Última posición conocida del móvil (NaN si no hay). */
     double[] position() {
         CarSensors.Snapshot s = sensors.snapshot();

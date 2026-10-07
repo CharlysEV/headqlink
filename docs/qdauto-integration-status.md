@@ -550,6 +550,7 @@ de Ajustes o pide el permiso.
 | Gestor de energía del fabricante | Honor, Xiaomi, Oppo… (`PowerHelper`) | Consejo | su pantalla |
 | Mostrar sobre otras apps | modo App (obligatorio) y modos Auto (opcional: AA lo arranca la accesibilidad) | ver columna «Cuándo sale» | `MANAGE_OVERLAY_PERMISSION` |
 | Fotos, vídeos y ubicación | Auto ampliado | Opcional | el permiso o Info. de la app |
+| Ubicación todo el tiempo (`ACCESS_BACKGROUND_LOCATION`, §20) | Auto ampliado | Recomendado | diálogo con el porqué y el permiso (Android 11+: su página de Ajustes); sin la ubicación, primero esa; denegada, Info. de la app |
 
 «Faltan N» cuenta lo obligatorio y lo recomendado que falta o falla. No cuentan lo opcional, los consejos, el aviso
 de QDLink ni lo que no se pudo comprobar (zona Wi-Fi desconocida). «Denegado para siempre» se distingue de «se puede
@@ -1689,3 +1690,112 @@ una congestión, sin claves de QP, encoder que no hace caso, QP rechazado, sesi�
 `LinkRateControllerTest` (`congestedNow` durante la espera entre pasos) y una en `SessionSummaryTest` (P-frame máximo
 en el bloque, el CSV y el viaje). En `qdauto`: `:core:test :carsim:test :carsim:installDist` en verde. Sin probar
 todavía en el móvil ni en el coche.
+
+---
+
+## 20. GPS con el móvil bloqueado: ubicación del servicio y datos del coche honestos (2026-10-07)
+
+**Informe (S25 Ultra, Android 16).** En «Auto extendido», con el móvil **bloqueado**, la pantalla del coche sigue (el
+reloj avanza) y los sensores de movimiento también (`dumpsys sensorservice`: «has sensor access: true»), pero todo lo
+que sale del GPS se congela: velocidad, avance de la ruta, viaje, consumo. Al desbloquear vuelve al instante. Medido
+con `dumpsys activity processes` bloqueado: `curProcState=4 curCapability=---NFU-TI`, **sin la capacidad de ubicación
+(`L`)**, aunque `LinkService` está en primer plano con los tipos `0x18` (`connectedDevice|location`). La ubicación
+precisa está concedida solo «mientras se usa» (appops `FINE_LOCATION: foreground`). Las dos peticiones `HIGH_ACCURACY`
+siguen registradas (`dumpsys location`), pero sin la capacidad Android no entrega nada. Desbloqueado, la `Presentation`
+de la pantalla virtual pone el proceso delante (TOP) y con eso hay `L` y GPS.
+
+### 20.1 Causa
+
+Con la ubicación «mientras se usa», un servicio en primer plano de tipo `location` solo tiene la capacidad `L` si
+Android le concedió el «while-in-use» (`mAllowWhileInUsePermissionInFgs`), y eso se decide **al arrancarlo**
+(`startForegroundService`/`startService`) y **en cada `startForeground` posterior** (Android 12+: «the second or later
+time startForeground() is called … check for app state again»), mirando si la app está delante en ese momento. En
+HeadQLink el servicio pasa a primer plano muchas veces sin la app delante:
+
+- **Conectar con el arranque automático de Android Auto** (`LinkControl.start`): el servicio se arranca *después* de la
+  automatización, con los ajustes de AA delante y HeadQLink detrás.
+- **Conexión automática por Bluetooth** (`CarBtReceiver`, un receptor en segundo plano, normalmente con el móvil
+  bloqueado en el bolsillo), el widget (`ACTION_SET_LINK`, `ACTION_APPLY`), el cable (`ACTION_USB_ATTACHED` con la
+  actividad puente ya cerrada) y el aviso «servidor encendido».
+- **Cada orden al servicio en marcha** acababa en `goForeground`, que volvía a llamar a `startForeground` aunque ya
+  estuviera en primer plano: desde segundo plano, Android lo reevalúa y le quita el «while-in-use».
+
+- Además, Android 14+ no deja ni poner el tipo `location` desde segundo plano con la ubicación solo «mientras se usa»
+  (`SecurityException`): `goForeground` caía a `connectedDevice` solo y el log decía «primer plano sin ubicación».
+
+Desbloqueado no se notaba (la `Presentation` pone la app delante y el proceso tiene `L` por estar TOP), pero el
+servicio no la conservaba al bloquear, y nada volvía a pasarlo a primer plano con la app delante.
+
+### 20.2 Qué cambia
+
+**El servicio conserva la ubicación (`LinkService`, `LocationAccess`).**
+- `goForeground`: si el servicio ya está en primer plano y HeadQLink no se ve, **no** vuelve a llamar a
+  `startForeground` (Android no lo exige ni con `startForegroundService` si ya lo está: «Service already foreground; no
+  new timeout»); solo actualiza el aviso. Así una orden desde segundo plano no le quita la ubicación.
+- Quien arranca el servicio desde una pantalla (`LinkControl`, `HomeActivity`, `LogActivity`, `SettingsScreen`,
+  `UsbAccessoryActivity`) marca si HeadQLink estaba delante al pedirlo (`LinkService.fromApp`,
+  `EXTRA_CALLER_VISIBLE`): es lo que mira Android y no siempre coincide con cuando llega la orden.
+- **Recuperación** (`relatchLocation`): si el servicio pasó a primer plano sin la app delante (o llegó una orden desde
+  segundo plano), vuelve a llamar a `startForeground` con el tipo `location` en cuanto el proceso está delante
+  (`RunningAppProcessInfo.IMPORTANCE_FOREGROUND`): al desbloquear (`USER_PRESENT` + 1,5 s, con la pantalla del coche
+  delante), al volver a la pantalla principal (`LinkService.appShown`) y cada 20 s con el enlace en marcha. Con la
+  app delante Android le da el «while-in-use» y el servicio lo conserva al bloquear.
+- Log, una vez por servicio: `primer plano: ubicación con el móvil bloqueado: sí/no (motivo) · acceso a la ubicación
+  ahora: permitido/denegado` (lo segundo, con `AppOpsManager.unsafeCheckOpNoThrow(OPSTR_FINE_LOCATION)`, que evalúa
+  el modo `foreground` con el estado del proceso; sin privilegios). Al recuperarla: `… sí (recuperada: móvil
+  desbloqueado, …)`.
+
+**La solución robusta: «Ubicación todo el tiempo» (solo «Auto extendido»).** `ACCESS_BACKGROUND_LOCATION` en el
+manifiesto (la build es de GitHub; la política de Google Play no aplica). Fila nueva de la Comprobación
+**«Ubicación todo el tiempo» · Recomendado** («Para que los datos del coche sigan con el móvil bloqueado»), botón
+«Abrir»: un diálogo con el porqué y luego `requestPermissions(ACCESS_BACKGROUND_LOCATION)`, que en Android 11+ abre la
+página de Ajustes (Ubicación › «Permitir todo el tiempo»). Sin la ubicación normal, primero la pide y, al contestar,
+encadena la de «todo el tiempo» (Android exige ese orden). Denegada para siempre: Info. de la app. En «Auto» no sale.
+Cuenta en «Faltan N» y nunca bloquea «Conectar». `Requirements.bgLocation` (`Id.BG_LOCATION`, `Hint.NEEDS_FINE`).
+
+**Datos del coche honestos (`GpsWatch`, `CarSensors`).**
+- Con más de 5 s sin posición, `Snapshot.gpsState` pasa a `PAUSED_LOCKED` (bloqueado y sin «todo el tiempo») o
+  `LOST` (túnel, garaje…); `WAITING` antes de la primera. `CarSensors.gpsNote` da el texto: «GPS en pausa · móvil
+  bloqueado (activa la ubicación «todo el tiempo»)» o «sin GPS».
+- Conducción e Instrumentos: velocidad «—» (la aguja a cero) y el motivo en rojo; Eficiencia: potencia «—» y el motivo
+  en vez de «Consumiendo»; Viajes: el motivo en la línea del viaje en curso; Ruta: el motivo bajo las fichas (el avance
+  está parado). Estado no cambia: son datos de la nube de Leapmotor, ya con su edad, no del GPS.
+- **Huecos** (`CarSensors.bridgeGap`): cuando vuelven las posiciones tras más de 5 s, la línea recta entre la última y
+  la nueva se suma al viaje y, a la media del hueco, a la energía estimada (si la media pasa de 200 km/h o el hueco de
+  3 h, no se suma). Antes el paso de > 200 m se descartaba y la energía de huecos > 36 s no se integraba: el viaje y el
+  consumo quedaban como si el coche hubiera estado parado. Log: `GPS: hueco de 63 s sin posiciones con el móvil
+  bloqueado: 1.05 km en línea recta sumados al viaje (media 60 km/h; energía estimada a esa media)`. El viaje guardado
+  lleva `gpsGapSec` y su línea del log, cuántos huecos.
+- **Una vez por sesión** (sonda `GpsWatch.LockProbe`, tras el primer bloqueo con el GPS al día; lo que llega en los
+  primeros 8 s no cuenta): `GPS: ubicación todo el tiempo sí/no · con el móvil bloqueado llega` o `… no llega (25 s
+  bloqueado sin posiciones) · acceso a la ubicación ahora: denegado. Arreglo: …`. Si no hubo bloqueo: `… sin
+  comprobar`. Además, en cada cambio: `GPS: en pausa con el móvil bloqueado (…)`, `GPS: sin posiciones desde hace N s`,
+  `GPS: vuelven las posiciones`.
+
+Manuales (es/pt/en): fila de la Comprobación, el porqué en «Qué ves y cómo se maneja» (sección Coche), fila de
+problemas «Los datos del coche se congelan al bloquear el móvil» y el permiso en la tabla de privacidad. Textos en
+`values`, `values-es`, `values-pt-rPT` y `values-pt-rBR`.
+
+### 20.3 Cómo comprobarlo en el móvil
+
+1. Sin «todo el tiempo», conectar con el arranque automático (o por Bluetooth con el móvil bloqueado). En el log:
+   `primer plano: ubicación con el móvil bloqueado: no (… segundo plano …)`. Desbloquear con la pantalla del coche
+   delante: `… sí (recuperada: móvil desbloqueado …)`. Bloquear y conducir: los datos siguen; a los ~25 s, `GPS:
+   ubicación todo el tiempo no · con el móvil bloqueado llega`.
+2. Comprobar a mano, bloqueado:
+   `adb shell "dumpsys activity processes | grep -A40 'ProcessRecord{.*com.headqlink.app' | grep -E 'curProcState|curCapability'"`
+   → con el móvil bloqueado debe salir `L` (`curCapability=L…`, antes `---NFU-TI`). `adb shell dumpsys location | findstr
+   headqlink` sigue con sus 2 peticiones.
+3. Comprobación › «Ubicación todo el tiempo» › «Abrir» › «Permitir todo el tiempo» (`adb shell appops get
+   com.headqlink.app FINE_LOCATION` pasa a `allow`, y `dumpsys package com.headqlink.app | findstr BACKGROUND_LOCATION`
+   a `granted=true`). Repetir 1 sin desbloquear: `GPS: ubicación todo el tiempo sí · con el móvil bloqueado llega`.
+4. Honestidad: con «mientras se usa», arrancar por Bluetooth con el móvil bloqueado y no desbloquear: Conducción e
+   Instrumentos dicen «—» y «GPS en pausa · móvil bloqueado …»; al desbloquear, `GPS: hueco de N s … sumados al viaje`.
+
+### 20.4 Resultados en el PC
+
+`:app:testGithubDebugUnitTest :app:assembleGithubDebug`: **BUILD SUCCESSFUL**. App: 3014 pruebas, 0 fallos y 4
+saltadas. Nueva `GpsWatchTest` (10: estado con y sin bloqueo y con «todo el tiempo», umbral de 5 s, huecos creíbles e
+imposibles, sonda que llega, que no llega, desbloqueo antes de decidir y bloqueo sin GPS al día). `RequirementsTest`
+(+3: solo en «Auto extendido» y recomendada, cuenta sin bloquear, primero la ubicación normal o Ajustes si se denegó).
+Sin probar todavía en el móvil.

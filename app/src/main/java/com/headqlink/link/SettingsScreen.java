@@ -260,7 +260,7 @@ final class SettingsScreen implements CarScreen {
         apply.setText(Str.get(R.string.hql_reconnecting_short));
         apply.setEnabled(false);
         // La sesión se cierra (y con ella esta pantalla); el coche vuelve a conectar solo.
-        host.post(() -> c.startForegroundService(new Intent(c, LinkService.class).setAction(LinkService.ACTION_APPLY)
-                .putExtra(LinkService.EXTRA_AA_RENEGOTIATE, renegotiate)));
+        host.post(() -> c.startForegroundService(LinkService.fromApp(new Intent(c, LinkService.class)
+                .setAction(LinkService.ACTION_APPLY).putExtra(LinkService.EXTRA_AA_RENEGOTIATE, renegotiate))));
     }
 }

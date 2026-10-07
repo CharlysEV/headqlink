@@ -133,6 +133,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         WidgetUpdater.poke();
         // De vuelta (quizá de los ajustes de AA) esperando al servidor del arranque manual: el reintento, ya (sin sondear).
         AaServerManual.checkSoon(this);
+        // Con HeadQLink delante, el servicio recupera la ubicación «mientras se usa» si pasó a primer plano sin ella.
+        LinkService.appShown("pantalla principal");
         if (hotspotNow()) {
             // Estado de la zona Wi-Fi también sin conectar (fuera del hilo principal: escanea interfaces).
             new Thread(() -> {
@@ -688,8 +690,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                         // negocian al conectar).
                         VideoProfile after = cfg.videoProfile();
                         boolean renegotiate = !before.id.equals(after.id) || before.fps != after.fps;
-                        startForegroundService(new Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY)
-                                .putExtra(LinkService.EXTRA_AA_RENEGOTIATE, renegotiate));
+                        startForegroundService(LinkService.fromApp(new Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY)
+                                .putExtra(LinkService.EXTRA_AA_RENEGOTIATE, renegotiate)));
                     }
                 })
                 .setNegativeButton(Str.get(R.string.hql_cancel), null)

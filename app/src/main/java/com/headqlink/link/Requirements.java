@@ -30,12 +30,16 @@ import java.util.List;
  * - Notificaciones (recomendado), Bluetooth (solo con la conexión automática), batería sin restricciones
  *   (recomendado) y el consejo del gestor de energía del fabricante.
  * - «Mostrar sobre otras apps» es opcional en los modos Auto; fotos, vídeos y ubicación, opcionales en Auto ampliado.
+ * - Auto ampliado: la ubicación «todo el tiempo», recomendada. Con la ubicación solo «mientras se usa», Android puede
+ *   cortar el GPS a HeadQLink al bloquear el móvil y los datos del coche (velocidad, viaje, ruta, consumo) se paran hasta
+ *   desbloquear (ver LocationAccess). Se pide después de la ubicación normal (Android lo exige así). En Auto sin
+ *   ampliar no hay paneles con GPS: no sale.
  */
 final class Requirements {
     enum Id {
         ANDROID_AUTO, AA_SERVER, ACCESSIBILITY, SERVER_MANUAL_OFFER, AA_DEVMODE, TARGET_APP,
         NEARBY_WIFI, WIFI_ON, HOTSPOT_OFF, HOTSPOT_ON, HOTSPOT_BAND, USB_CABLE,
-        QDLINK, NOTIFICATIONS, BLUETOOTH, BATTERY, BATTERY_OEM, OVERLAY, MEDIA
+        QDLINK, NOTIFICATIONS, BLUETOOTH, BATTERY, BATTERY_OEM, OVERLAY, MEDIA, BG_LOCATION
     }
 
     /** INFO: solo informa (nunca cuenta en «Faltan N» ni bloquea). */
@@ -72,7 +76,9 @@ final class Requirements {
         /** Batería: la necesita la conexión automática por Bluetooth. */
         BT_AUTO,
         SAMSUNG,
-        OEM
+        OEM,
+        /** Ubicación «todo el tiempo»: antes hay que permitir la ubicación (mientras se usa la app). */
+        NEEDS_FINE
     }
 
     /** Permiso en tiempo de ejecución: concedido, se puede pedir, o solo desde Ajustes. */
@@ -122,6 +128,10 @@ final class Requirements {
         Perm nearby = Perm.GRANTED;
         Perm bluetooth = Perm.GRANTED;
         Perm media = Perm.GRANTED;
+        /** Ubicación precisa (mientras se usa la app). */
+        boolean fineLocation = true;
+        /** ACCESS_BACKGROUND_LOCATION («Permitir todo el tiempo»; antes de Android 10, la ubicación sin más). */
+        Perm bgLocation = Perm.GRANTED;
         boolean overlay = true;
 
         boolean wifiOn = true;
@@ -261,7 +271,10 @@ final class Requirements {
             out.add(new Item(Id.OVERLAY, app ? Importance.REQUIRED : Importance.OPTIONAL,
                     s.overlay ? Status.OK : Status.MISSING, Hint.NONE));
         }
-        if (Config.MODE_AA_EXT.equals(s.mode)) out.add(perm(Id.MEDIA, Importance.OPTIONAL, s.media));
+        if (Config.MODE_AA_EXT.equals(s.mode)) {
+            out.add(perm(Id.MEDIA, Importance.OPTIONAL, s.media));
+            out.add(bgLocation(s));
+        }
         return Collections.unmodifiableList(out);
     }
 
@@ -278,6 +291,16 @@ final class Requirements {
             default:
                 return Status.TIP;
         }
+    }
+
+    /**
+     * Ubicación «todo el tiempo» (Auto ampliado): para que los datos del coche sigan con el móvil bloqueado. Sin la
+     * ubicación normal, primero esa (NEEDS_FINE); denegada para siempre, solo desde Ajustes (BLOCKED).
+     */
+    static Item bgLocation(Snapshot s) {
+        if (s.bgLocation == Perm.GRANTED) return new Item(Id.BG_LOCATION, Importance.RECOMMENDED, Status.OK, Hint.NONE);
+        Hint h = !s.fineLocation ? Hint.NEEDS_FINE : s.bgLocation == Perm.BLOCKED ? Hint.BLOCKED : Hint.NONE;
+        return new Item(Id.BG_LOCATION, Importance.RECOMMENDED, Status.MISSING, h);
     }
 
     private static Status hotspotStatus(Hotspot h, boolean wantOn) {

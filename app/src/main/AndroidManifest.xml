@@ -78,6 +78,10 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- headqlink: «Permitir todo el tiempo» (recomendado en Auto extendido). Con la ubicación solo «mientras se usa»,
+         Android corta el GPS al bloquear el móvil si el servicio pasó a primer plano con la app en segundo plano: los
+         datos del coche (velocidad, viaje, ruta, consumo) se paran hasta desbloquear. Se pide desde la Comprobación. -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission
         android:name="android.permission.NEARBY_WIFI_DEVICES"
         android:usesPermissionFlags="neverForLocation"

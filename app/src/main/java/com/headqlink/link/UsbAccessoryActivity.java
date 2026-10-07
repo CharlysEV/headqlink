@@ -47,7 +47,7 @@ public final class UsbAccessoryActivity extends Activity {
                 .setAction(LinkService.ACTION_USB_ATTACHED)
                 .putExtra(UsbManager.EXTRA_ACCESSORY, acc);
         try {
-            androidx.core.content.ContextCompat.startForegroundService(this, svc);
+            androidx.core.content.ContextCompat.startForegroundService(this, LinkService.fromApp(svc));
             UsbProbe.step("accesorio " + UsbProbe.shortName(acc) + " conectado: " + (LinkState.running
                     ? "se lo paso al enlace en marcha (el cable tiene prioridad)" : "arranco el enlace por cable"));
         } catch (RuntimeException e) {

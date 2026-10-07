@@ -62,6 +62,8 @@ final class RouteTab implements CarScreen {
     private CarCloud.Snapshot cloud = CarCloud.Snapshot.of(CarCloud.State.NO_ACCOUNT);
     private LinearLayout socControls;
     private String status = "";
+    /** El GPS no está al día (móvil bloqueado, sin cobertura): el avance de la ruta está parado. null si lo está. */
+    private String gpsNote;
     private NavTap.Info nav = new NavTap.Info();
     private final Runnable tickTask = this::tick;
     private final RectF tmp = new RectF();
@@ -278,6 +280,8 @@ final class RouteTab implements CarScreen {
         capKwh = realSoc ? cloud.capacityKwh : EnergyModel.USABLE_KWH;
         socControls.setVisibility(realSoc ? View.GONE : View.VISIBLE);
         status = planner.status();
+        CarSensors.Snapshot gps = planner.sensorSnapshot();
+        gpsNote = gps.gpsState == GpsWatch.State.WAITING ? null : CarSensors.gpsNote(gps);
         nav = DemoMode.navInfo();
         boolean have = plan != null && plan.n >= 2;
         goMaps.setVisibility(manual && have ? View.VISIBLE : View.GONE);
@@ -449,6 +453,12 @@ final class RouteTab implements CarScreen {
         tmp.offset(cw + 14, 0);
         CarKit.chip(cv, tmp, Str.get(R.string.hql_expected_use), Double.isNaN(per100) ? "—" : String.format(Locale.getDefault(), "%.1f", per100),
                 "kWh/100", CarKit.TEXT, p);
+        if (gpsNote != null) {
+            // Sin GPS al día, el avance por la ruta (y lo que falta) se queda donde estaba: se dice.
+            p.setTypeface(CarKit.MEDIUM);
+            p.setTextSize(21);
+            CarKit.text(cv, CarKit.ellipsize(gpsNote, r.width(), p), x0, cy0 + 114, 21, CarKit.RED, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        }
         // Perfil, viento, tramos y leyenda.
         float gx0 = x0 + 74;
         RectF chart = chartRect;

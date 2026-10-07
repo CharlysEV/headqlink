@@ -177,6 +177,7 @@ This is the **requirements check**: a list of everything your setup needs. It's 
 | "Bluetooth (nearby devices)" (Required if you turn on the automatic connection) | To recognise the car's Bluetooth and connect by itself. | "Allow". |
 | "Display over other apps" (Optional) | To open Android Auto with the phone in the background. | "Allow". |
 | "Photos, videos and location" (Optional, "Auto extended") | For the gallery and the driving panels in the car. | "Allow". |
+| "Location all the time" (Recommended, "Auto extended") | So the car data keeps going with the phone locked (see [What you see and how to use it](#what-you-see-and-how-to-use-it)). | "Open": explains why and opens Android's page; choose "Allow all the time". If it doesn't have the location yet, it asks for it first. |
 
 > [!IMPORTANT]
 > **"Restricted setting" when turning accessibility on.** On Android 13 or later, Android doesn't let apps installed
@@ -352,6 +353,19 @@ version). That tells us whether the C10 supports it.
     average, where the energy goes, the trip cost, the CO₂ that did not come out of a tailpipe and a tip.
   - "Status" (with the Leapmotor account): the car's real battery, range, charging, tyre pressures, doors and odometer,
     with the age of the data. Without an account, it explains how to set one up.
+  - **With the phone locked: "Location all the time".** Route, Driving, Trips, Gauges and Efficiency use the phone's
+    GPS. If HeadQLink's location is only "Allow only while using the app", Android only gives it the GPS while
+    HeadQLink is on screen or if the link went to the foreground with HeadQLink in front. When it starts without it
+    (the Bluetooth automatic connection, the widget, the Android Auto start…), locking the phone keeps the car screen and
+    the motion sensors going, but speed, route, trip and consumption stop until you unlock. HeadQLink gets it back by
+    itself as soon as you see it with the phone unlocked, but so as not to depend on that the "Requirements check"
+    recommends **"Location all the time"** in "Auto extended": "Open" › "Allow all the time" (or Settings › Apps ›
+    HeadQLink › Permissions › Location). Not needed in "Auto". HeadQLink only uses the GPS with the link running or
+    the "Car" screens open.
+  - **No GPS, no frozen numbers.** With more than 5 s without positions, the speed shows "—" and the panels say "GPS
+    paused · phone locked (allow location “all the time”)" (or "no GPS", for example in a tunnel). When it comes back,
+    the stretch without positions is added to the trip in a straight line, at its average speed, instead of counting
+    as if the car had been stopped.
 - **Touchscreen:** works as in Android Auto, with **multi-touch** up to 3 fingers (for example, pinch to zoom the map).
 - **Steering wheel buttons:** play/pause, next and previous work through the **car's Bluetooth**, with no extra pairing.
 - **Sound:** music and directions come out of the phone over the **car's Bluetooth**, so the phone must be connected to
@@ -663,6 +677,7 @@ Always start with the ⚙ menu › "Requirements check": every red row has its o
 | "Android Auto server open · Unlock the phone to close it" notification | The session ended with the phone locked and the Android Auto server is still open. | Unlock the phone: HeadQLink closes it. |
 | After a stop it takes a long time to come back, or you have to close and reopen the app | The stop lasted longer than "Wait for the car" and HeadQLink closed everything; when you unlock, it first closes Android Auto ("Closing Auto…") and then it has to be started again. | Raise "Wait for the car" to "15 min" (Picture settings › Advanced) and turn on the Bluetooth automatic connection: when you're back, Android Auto returns instantly without unlocking. If you see "Unlock the phone to start Android Auto", unlock it and wait: it starts by itself, without opening the app. |
 | "Closing Auto…" or "Starting Auto…" doesn't go away, or the "The Android Auto server is still on · Tap to turn it off" notification | The automation of the Android Auto settings didn't finish (for example, the phone locked halfway). | The overlay goes away by itself after 15 s. Tap the notification with the phone unlocked to switch the server off. If it keeps happening, export the log (section 8): the "ciclo:" lines record every step. |
+| The car data freezes when you lock the phone (speed, route, trip, consumption; it comes back when you unlock) | HeadQLink's location is only "while using the app" and Android cuts its GPS with the phone locked. The car screen and the motion sensors keep going; the GPS doesn't. | "Requirements check" › "Location all the time" › "Open" › "Allow all the time". In the log, "GPS: ubicación todo el tiempo sí · con el móvil bloqueado llega" confirms it works. |
 | The automatic connection doesn't start | The Bluetooth name doesn't match, or Android won't let it start in the background. | Check the text in the "Automatic connection" prompt, remove the battery restrictions, or tap the "Tap to connect HeadQLink" notification. |
 | It won't install or update | Play Protect, Samsung Auto Blocker, or a version with a different signature. | Section 2. |
 
@@ -715,6 +730,7 @@ You can ask for help on the project's GitHub page: [CharlysEV/headqlink](https:/
 | No battery restrictions | Keeping it running with the screen off. | Recommended |
 | Display over other apps | Opening Android Auto with the phone in the background. | Optional |
 | Photos, videos and location | Gallery and driving panels. | Optional, "Auto extended" |
+| Location all the time | Keeping the "Car" panels going with the phone locked. Only used with the link running or the "Car" screens open. | Recommended, "Auto extended" |
 | Internet | "Auto extended" services (OpenStreetMap, OSRM, Open-Meteo, radio-browser.info), your TV and radio lists and, if you set it up, the Leapmotor cloud (real car data, read-only). | Only those features |
 
 - HeadQLink **sends no telemetry** and has no ads.

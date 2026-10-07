@@ -52,6 +52,8 @@ final class Checklist {
     private static final String KEY_NEARBY = "nearby";
     static final String KEY_BT = "bt";
     private static final String KEY_MEDIA = "media";
+    private static final String KEY_LOC = "loc";
+    private static final String KEY_BGLOC = "bgloc";
 
     private final Activity act;
     private final Config cfg;
@@ -71,6 +73,8 @@ final class Checklist {
     /** El usuario fue a los ajustes de AA a activar el modo desarrollador: comprobar al volver. */
     private boolean awaitingDevMode;
     private boolean checkingDevMode;
+    /** Se pidió la ubicación para poder pedir después «todo el tiempo» (Android exige ese orden). */
+    private boolean pendingBgLocation;
     private List<Requirements.Item> items = Collections.emptyList();
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -167,6 +171,14 @@ final class Checklist {
     }
 
     void onPermissionsResult() {
+        if (pendingBgLocation) {
+            pendingBgLocation = false;
+            if (Build.VERSION.SDK_INT >= 29 && LocationAccess.fine(act) && !LocationAccess.background(act)) {
+                // Ya con la ubicación «mientras se usa»: ahora «todo el tiempo» (Android 11+ abre su página de Ajustes).
+                request(KEY_BGLOC, Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+                return;
+            }
+        }
         refresh();
     }
 
@@ -301,6 +313,9 @@ final class Checklist {
         s.nearby = perm(a, cfg, KEY_NEARBY, nearbyPerms());
         s.bluetooth = sdk >= 31 ? perm(a, cfg, KEY_BT, Manifest.permission.BLUETOOTH_CONNECT) : Requirements.Perm.GRANTED;
         s.media = perm(a, cfg, KEY_MEDIA, mediaPerms());
+        s.fineLocation = LocationAccess.fine(a);
+        s.bgLocation = sdk >= 29 ? perm(a, cfg, KEY_BGLOC, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                : perm(a, cfg, KEY_LOC, Manifest.permission.ACCESS_FINE_LOCATION);
         s.overlay = sdk < 23 || Settings.canDrawOverlays(a);
 
         WifiManager wm = (WifiManager) a.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
@@ -629,6 +644,12 @@ final class Checklist {
                 }
                 return r;
             }
+            case BG_LOCATION: {
+                Row r = new Row(Str.get(R.string.hql_req_bgloc), ok ? Str.get(R.string.hql_req_bgloc_ok)
+                        : it.hint == Requirements.Hint.NEEDS_FINE ? Str.get(R.string.hql_req_bgloc_needs_fine)
+                        : blocked ? Str.get(R.string.hql_req_bgloc_blocked) : Str.get(R.string.hql_req_bgloc_why));
+                return ok ? r : r.action(Str.get(R.string.hql_open), () -> askBackgroundLocation(blocked));
+            }
             default: { // MEDIA
                 Row r = new Row(Str.get(R.string.hql_setup_media),
                         ok ? Str.get(R.string.hql_allowed) : blocked ? Str.get(R.string.hql_req_blocked) : Str.get(R.string.hql_setup_media_why));
@@ -760,6 +781,33 @@ final class Checklist {
     }
 
     // ---------------------------------------------------------------- acciones
+
+    /** «Ubicación todo el tiempo»: primero el porqué; luego el permiso (o Ajustes, si se denegó para siempre). */
+    private void askBackgroundLocation(boolean blocked) {
+        new MaterialAlertDialogBuilder(act)
+                .setTitle(Str.get(R.string.hql_bgloc_title))
+                .setMessage(Str.get(R.string.hql_bgloc_msg))
+                .setPositiveButton(Str.get(R.string.hql_open), (d, w) -> requestBackgroundLocation(blocked))
+                .setNegativeButton(Str.get(R.string.hql_cancel), null)
+                .show();
+    }
+
+    private void requestBackgroundLocation(boolean blocked) {
+        if (blocked) {
+            L.i("requisitos: ubicación todo el tiempo denegada para siempre: abro Info. de la app (Permisos › Ubicación)");
+            PowerHelper.openAppDetails(act, act.getPackageName());
+            return;
+        }
+        if (Build.VERSION.SDK_INT < 29 || !LocationAccess.fine(act)) {
+            // Android exige primero la ubicación «mientras se usa»; al contestar, se pide «todo el tiempo».
+            pendingBgLocation = Build.VERSION.SDK_INT >= 29;
+            L.i("requisitos: pido la ubicación (después, «todo el tiempo»)");
+            request(KEY_LOC, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION);
+            return;
+        }
+        L.i("requisitos: pido la ubicación todo el tiempo");
+        request(KEY_BGLOC, Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+    }
 
     private void request(String key, String... perms) {
         markAsked(act, key);
