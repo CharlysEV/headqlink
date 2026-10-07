@@ -389,6 +389,9 @@ version). That tells us whether the C10 supports it.
     - **Filter chargers:** "Filter" picks the minimum power (any, 22, 50, 100 or 150 kW) and the networks (Tesla, Zunder,
       Ionity, Iberdrola, Endesa X, Repsol, Wenea…, those on the route, with how many chargers each has). It is saved,
       and the bolts on the profile follow it too. The data comes from OpenStreetMap: power or network may be missing.
+    - **Navigate with Google Maps or Waze:** in "Filter" → "Navigate with" (if Waze is installed). The guide button
+      and the "Go" buttons open the chosen one. Waze has no intermediate stops: "Go with the stops" takes you to the
+      next one.
     - **Charging plan (free, like ABRP):** if you won't arrive with the margin, Route says **where to stop and how far
       to charge** among the filtered chargers: the best fast charger in the last stretch you can reach and only what is
       needed (the C10 charges more slowly above 50 %: two short stops beat one long one to 100 %). Each stop shows the
@@ -677,7 +680,10 @@ data" turns it off without deleting anything.
 
 **Privacy and security.**
 
-- Read-only: HeadQLink **never sends commands to the car** (no lock, climate, charging, nothing).
+- Read-only, with one optional exception: **sentry mode** (on and off, in "Car data" → "5 · Sentry mode"), and
+  only if you save your car PIN there (the one in the Leapmotor app; stored encrypted on the phone and never logged).
+  Without a PIN, HeadQLink **never sends commands to the car**, and no other command exists (no lock, climate,
+  charging). Every command is confirmed before it is sent; "Forget PIN" deletes it.
 - Your data only goes **to Leapmotor's servers**. The car's location is neither read nor stored.
 - The certificate, the session and the trip history are stored **encrypted** with an Android Keystore key, outside
   backups. The password

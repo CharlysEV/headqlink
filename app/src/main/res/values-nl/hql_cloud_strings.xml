@@ -51,7 +51,7 @@
     <string name="hql_cloud_read">Opgehaald</string>
     <string name="hql_cloud_source">Bron</string>
     <string name="hql_cloud_source_value">Leapmotor-account · %1$s</string>
-    <string name="hql_cloud_readonly_note">Niet officieel en alleen-lezen: HeadQLink stuurt nooit iets naar de auto.</string>
+    <string name="hql_cloud_readonly_note">Onofficieel. Alleen-lezen, behalve de schildwachtmodus als je de pincode van de auto opslaat.</string>
     <string name="hql_cloud_retry_in">Geen verbinding met de cloud: nieuwe poging over %1$d min.</string>
     <string name="hql_cloud_expired_short">Leapmotor-sessie verlopen: log opnieuw in op de telefoon.</string>
     <string name="hql_cloud_server_key_short">Nieuw servercertificaat: controleer het op de telefoon.</string>
@@ -157,4 +157,22 @@
     <string name="hql_cloud_trips_car_total">Volgens de auto: %1$d ritten · %2$.0f km · %3$.1f kWh/100</string>
     <string name="hql_cloud_trips_car_total_fuel">Volgens de auto: %1$d ritten · %3$.1f kWh/100 · %4$.1f L/100</string>
     <string name="hql_cloud_3d_hint">Sleep om te draaien</string>
+    <string name="hql_cloud_step_sentry">5 · Schildwachtmodus</string>
+    <string name="hql_cloud_sentry_note">Optioneel. Dit is de enige opdracht die HeadQLink naar de auto stuurt, en alleen als je hier de pincode van de auto opslaat (versleuteld op de telefoon). Zonder pincode blijft alles alleen-lezen.</string>
+    <string name="hql_cloud_pin_hint">Pincode van de auto (die van de Leapmotor-app)</string>
+    <string name="hql_cloud_pin_save">Opslaan</string>
+    <string name="hql_cloud_pin_forget">Pincode vergeten</string>
+    <string name="hql_cloud_pin_invalid">4 tot 12 cijfers</string>
+    <string name="hql_cloud_sentry_on">Aanzetten</string>
+    <string name="hql_cloud_sentry_off">Uitzetten</string>
+    <string name="hql_cloud_sentry_state_on">Aan</string>
+    <string name="hql_cloud_sentry_state_off">Uit</string>
+    <string name="hql_cloud_sentry_unknown">Nog geen gegevens (lees de status)</string>
+    <string name="hql_cloud_sentry_confirm_on">Schildwachtmodus aanzetten?</string>
+    <string name="hql_cloud_sentry_confirm_off">Schildwachtmodus uitzetten?</string>
+    <string name="hql_cloud_sentry_confirm_text">De opdracht gaat via de Leapmotor-cloud met je pincode naar de auto. Dat kan een paar seconden duren (langer als de auto slaapt).</string>
+    <string name="hql_cloud_sentry_done_on">Schildwachtmodus aan (bevestigd door de auto).</string>
+    <string name="hql_cloud_sentry_done_off">Schildwachtmodus uit (bevestigd door de auto).</string>
+    <string name="hql_cloud_sentry_sent">Opdracht verstuurd; de auto heeft hem nog niet bevestigd (misschien slaapt hij).</string>
+    <string name="hql_cloud_sentry_failed">Kon de opdracht niet versturen: %1$s</string>
 </resources>

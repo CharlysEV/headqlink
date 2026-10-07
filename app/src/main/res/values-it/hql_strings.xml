@@ -721,4 +721,6 @@
     <string name="hql_route_test_soc">batteria di prova</string>
     <string name="hql_plan_summary_stuck">Soste: %1$d · %2$s di ricarica · dopo il km %3$.0f nessuna colonnina raggiungibile</string>
     <string name="hql_route_charger_gap">Nessun dato sulle colonnine dal km %1$.0f al %2$.0f (OpenStreetMap non ha risposto): il piano potrebbe non essere il migliore. Scegli di nuovo la destinazione per riprovare.</string>
+    <string name="hql_route_guide_waze">Naviga con Waze</string>
+    <string name="hql_nav_app">Navigare con</string>
 </resources>

@@ -398,6 +398,8 @@ admite.
       Zunder, Ionity, Iberdrola, Endesa X, Repsol, Wenea…, las que haya en la ruta, con cuántos cargadores tiene cada
       una). Se guarda, y los rayos del perfil también lo siguen. Los datos son de OpenStreetMap: la potencia o la red
       pueden faltar.
+    - **Navegar con Google Maps o Waze:** en «Filtrar» → «Navegar con» (si Waze está instalado). El botón de guiar y
+      los «Ir» abren el elegido. Waze no admite paradas intermedias: «Ir con las paradas» te lleva a la siguiente.
     - **Plan de carga (gratis, como ABRP):** si no llegas con el margen, la Ruta dice **dónde parar y hasta cuánto
       cargar** entre los cargadores del filtro: el mejor cargador rápido del último tramo al que llegas y solo lo que
       hace falta (el C10 carga más despacio por encima del 50 %: mejor dos paradas cortas que una larga hasta el 100 %).
@@ -687,7 +689,10 @@ del coche» lo apaga sin borrar nada.
 
 **Privacidad y seguridad.**
 
-- Solo lectura: HeadQLink **nunca manda órdenes al coche** (ni cerrar, ni clima, ni carga, nada).
+- Solo lectura, con una excepción opcional: el **modo centinela** (encender y apagar, en «Datos del coche» →
+  «5 · Modo centinela»), y solo si guardas allí el PIN del coche (el de la app de Leapmotor; se guarda cifrado en el
+  móvil y nunca va al log). Sin PIN, HeadQLink **nunca manda órdenes al coche**, y ninguna otra orden existe (ni
+  cerrar, ni clima, ni carga). Cada orden se confirma antes de mandarla; «Olvidar PIN» lo borra.
 - Tus datos van **solo a los servidores de Leapmotor**. No se lee ni se guarda la posición del coche.
 - El certificado, la sesión y el historial de viajes se guardan **cifrados** con una clave del Android Keystore, fuera
   de las copias de seguridad. La contraseña no se guarda: si la sesión caduca, «Estado» lo dice y se vuelve a entrar en el móvil.

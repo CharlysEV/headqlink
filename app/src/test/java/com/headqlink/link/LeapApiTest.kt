@@ -253,10 +253,76 @@ class LeapApiTest {
             LeapApi.PATH_STATUS,
             null,
         )) assertFalse(p ?: "null", LeapApi.allowed(p))
-        // Ningún método del cliente manda órdenes (ni existen: solo login, refresco, lista y estado).
+        // Las rutas de las órdenes no son de lectura (solo se permiten dentro de remote(), y solo para el centinela).
+        for (p in LeapApi.REMOTE_PATHS) assertFalse(p, LeapApi.allowed(p))
+        // Ninguna otra orden existe: ni cerrar, ni abrir, ni clima, ni ventanillas, ni carga.
         val names = LeapApi::class.java.declaredMethods.map { it.name.lowercase() }
-        for (bad in listOf("lock", "unlock", "remote", "ctl", "climate", "window", "trunk", "sentry", "pin", "operate", "command"))
+        for (bad in listOf("lock", "unlock", "ctl", "climate", "window", "trunk", "command", "charge"))
             assertFalse(bad, names.any { it.contains(bad) })
+    }
+
+    @Test
+    fun theCarPinIsEncryptedWithTheTokenAsLeapmotorExpects() {
+        // Vectores calculados aparte con openssl (AES-128-CBC, PKCS#7): token corto (clave e IV por defecto) y largo.
+        assertEquals("Tj1VKU3DPN2l6MHy8wjrjA==", LeapCrypto.operatePassword("1234", "corto"))
+        val t = "abcdefghijklmnopqrstuvwxyz012345ABCDEFGHIJKLMNOPQRSTUVWXYZ6789__extra"
+        assertEquals("X8Jc0iWRZgGrUiTOfVL6UQ==", LeapCrypto.operatePassword("1234", t))
+    }
+
+    @Test
+    fun sentryGoesCertificatePinOrderAndResultSignedAndWithoutThePinInClear() {
+        var polls = 0
+        val (a, fake) = loggedIn { c ->
+            when (c.path) {
+                LeapApi.PATH_REMOTE_CTL -> ok("""{"remoteCtlId":"rc-9","queryRemoteCtlResultTimeout":6000,"queryInterval":2000}""")
+                LeapApi.PATH_REMOTE_RESULT -> {
+                    polls++
+                    ok(if (polls < 2) "0" else "1")
+                }
+                else -> ok("{}")
+            }
+        }
+        a.sleeper = LeapApi.Sleeper { }
+        assertTrue(a.remote("VIN000000000000A1", LeapApi.CMD_SENTRY, LeapApi.sentryContent(true), "1234"))
+        assertEquals(listOf(LeapApi.PATH_CERT_SYNC, LeapApi.PATH_OPER_VERIFY, LeapApi.PATH_REMOTE_CTL, LeapApi.PATH_REMOTE_RESULT,
+            LeapApi.PATH_REMOTE_RESULT), fake.calls.map { it.path })
+        val op = LeapCrypto.operatePassword("1234", token1)
+        // El certificado se sincroniza con el del cliente; el PIN, la orden y el resultado van con el de la cuenta.
+        assertTrue(fake.calls[0].identity === clientId)
+        for (c in fake.calls.drop(1)) assertFalse(c.identity === clientId)
+        val verify = fake.calls[1]
+        assertEquals("operatePassword=" + LeapCrypto.encodeComponent(op) + "&vin=VIN000000000000A1", verify.body)
+        assertSigned(verify, mapOf("vin" to "VIN000000000000A1", "operatePassword" to op))
+        val ctl = fake.calls[2]
+        assertTrue(ctl.body, ctl.body.contains("&cmdId=220&"))
+        assertSigned(ctl, mapOf("vin" to "VIN000000000000A1", "cmdContent" to """{"value":"1"}""", "cmdId" to "220", "operatePassword" to op))
+        assertSigned(fake.calls[3], mapOf("remoteCtlId" to "rc-9"))
+        for (c in fake.calls) assertFalse(c.body, c.body.contains("1234"))
+        // La siguiente orden ya no vuelve a sincronizar el certificado.
+        fake.calls.clear()
+        a.remote("VIN000000000000A1", LeapApi.CMD_SENTRY, LeapApi.sentryContent(false), "1234")
+        assertEquals(LeapApi.PATH_OPER_VERIFY, fake.calls.first().path)
+        assertTrue(fake.calls[1].body.contains(LeapCrypto.encodeComponent("""{"value":"0"}""")))
+    }
+
+    @Test
+    fun noOtherOrderAndNoOrderWithoutPin() {
+        val (a, fake) = loggedIn { ok("{}") }
+        for (cmd in listOf("1", "100", "193", "320", "")) {
+            try {
+                a.remote("VIN000000000000A1", cmd, "{}", "1234")
+                fail("orden $cmd")
+            } catch (e: java.io.IOException) {
+                // bien
+            }
+        }
+        try {
+            a.remote("VIN000000000000A1", LeapApi.CMD_SENTRY, LeapApi.sentryContent(true), "")
+            fail("sin PIN")
+        } catch (e: java.io.IOException) {
+            // bien
+        }
+        assertTrue(fake.calls.isEmpty())
     }
 
     @Test

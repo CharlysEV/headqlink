@@ -262,6 +262,28 @@ final class LeapCrypto {
     private static final char[] HEX_LO = "0123456789abcdef".toCharArray();
     private static final char[] HEX_UP = "0123456789ABCDEF".toCharArray();
 
+    /** Clave e IV por defecto del cifrado del PIN (si el token es corto), de leapmotor-api (markoceri, AGPL-3.0). */
+    static final String OPERPWD_KEY = "f1cf0c025baec0e2";
+    static final String OPERPWD_IV = "6b6a1fe94e133fd7";
+
+    /**
+     * El PIN del coche como lo piden operPwd/verify y remote/ctl: AES-128-CBC (PKCS#7) con clave e IV de 16 caracteres
+     * sacados del token (el MD5 en hexadecimal de sus 32 primeros y de los 32 siguientes, del carácter 8 al 24), en
+     * Base64.
+     */
+    static String operatePassword(String pin, String token) throws java.security.GeneralSecurityException {
+        String key = OPERPWD_KEY;
+        String iv = OPERPWD_IV;
+        if (token != null && token.length() >= 64) {
+            key = hex(digest("MD5", token.substring(0, 32).getBytes(StandardCharsets.UTF_8))).substring(8, 24);
+            iv = hex(digest("MD5", token.substring(32, 64).getBytes(StandardCharsets.UTF_8))).substring(8, 24);
+        }
+        javax.crypto.Cipher c = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");
+        c.init(javax.crypto.Cipher.ENCRYPT_MODE, new javax.crypto.spec.SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "AES"),
+                new javax.crypto.spec.IvParameterSpec(iv.getBytes(StandardCharsets.UTF_8)));
+        return Base64.encodeToString(c.doFinal(pin.getBytes(StandardCharsets.UTF_8)), Base64.NO_WRAP);
+    }
+
     static String hex(byte[] b) {
         char[] out = new char[b.length * 2];
         for (int i = 0; i < b.length; i++) {

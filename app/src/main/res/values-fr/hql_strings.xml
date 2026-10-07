@@ -721,4 +721,6 @@
     <string name="hql_route_test_soc">batterie d\'essai</string>
     <string name="hql_plan_summary_stuck">Arrêts : %1$d · %2$s de recharge · après le km %3$.0f aucune borne accessible</string>
     <string name="hql_route_charger_gap">Pas de données de bornes du km %1$.0f au %2$.0f (OpenStreetMap n\'a pas répondu) : le plan n\'est peut-être pas le meilleur. Choisissez à nouveau la destination pour réessayer.</string>
+    <string name="hql_route_guide_waze">Waze</string>
+    <string name="hql_nav_app">Naviguer avec</string>
 </resources>

@@ -545,28 +545,7 @@ final class RoutePlanner {
      * las 3 primeras y se replanifica allí).
      */
     static void navigateWithStops(Context ctx, Plan p, ChargePlanner.Result cp) {
-        StringBuilder wp = new StringBuilder();
-        int n = 0;
-        for (ChargePlanner.Stop st : cp.stops) {
-            if (st.km <= cp.fromKm + ChargePlanner.HERE_KM) continue;
-            if (n++ >= 3) break;
-            if (wp.length() > 0) wp.append('|');
-            wp.append(String.format(Locale.US, "%.6f,%.6f", st.charger.lat, st.charger.lon));
-        }
-        // Coche virtual con otra salida: desde ella (Maps enseña la ruta; navegar solo se puede desde donde se está).
-        Place o = testOrigin();
-        String url = String.format(Locale.US, "https://www.google.com/maps/dir/?api=1&destination=%.6f,%.6f&travelmode=driving",
-                p.destLat, p.destLon) + (o == null ? "&dir_action=navigate" : String.format(Locale.US, "&origin=%.6f,%.6f", o.lat, o.lon))
-                + (wp.length() > 0 ? "&waypoints=" + Uri.encode(wp.toString()) : "");
-        try {
-            android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
-                    .setPackage("com.google.android.apps.maps").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-            ctx.getApplicationContext().startActivity(i);
-            L.i("ruta: Google Maps con " + Math.min(3, n) + " paradas de carga");
-            CarUi.switchToAa();
-        } catch (RuntimeException e) {
-            L.w("ruta: no se pudo abrir Google Maps con las paradas: " + e.getClass().getSimpleName());
-        }
+        NavApps.goWithStops(ctx, p, cp);
     }
 
     /** Distancia al destino por debajo de la cual se da por llegado (km). */

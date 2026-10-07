@@ -1,7 +1,7 @@
 HeadQLink is licensed under the GNU Affero General Public License v3.0 (see LICENSE). Its base,
 Open Headunit, and the other projects it builds on are credited in README.md.
 
-Leapmotor cloud client (read-only real car data, optional):
+Leapmotor cloud client (real car data, optional):
   This product includes code ported from LMB10 (https://github.com/txurtxil/LPB10) by txurtxil,
   licensed under the GNU General Public License v3.0 and combined with HeadQLink under section 13
   of both licenses. Only the read-only part of the protocol was ported (login, session refresh,
@@ -18,6 +18,9 @@ Range-extender (REEV) signals and the Leapmotor cloud trip history:
   consumption endpoint follows leapmotor-api (https://github.com/markoceri/leapmotor-api) by markoceri.
   Both are licensed under the GNU Affero General Public License v3.0. No code was copied; HeadQLink
   reimplements the read-only requests in LeapApi.java, LeapStatus.java and CloudHistory.java.
+  The only command to the car, sentry mode on/off (opt-in: sent only with the car PIN the user saves),
+  follows leapmotor-api's flow (certificate sync, AES-encrypted PIN verify, remote/ctl cmdId 220, result
+  query; sentry status signal 3636), reimplemented in LeapApi.remote() and LeapCrypto.operatePassword().
 
 three.js (3D car in the Status tab):
   app/src/main/assets/three/three.min.js is three.js r149 (https://threejs.org), Copyright 2010-2023

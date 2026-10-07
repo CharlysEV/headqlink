@@ -5,9 +5,12 @@
  * _baseHeaders, _signedHeaders, _parseBody, getVehicleList, getVehicleStatus y Vehicle.statusPath), de txurtxil:
  * https://github.com/txurtxil/LPB10 (GPL-3.0). HeadQLink (AGPL-3.0) lo incorpora según la sección 13 de ambas licencias.
  *
- * SOLO LECTURA: de LMB10 se ha portado únicamente el login, la sesión, la lista de coches y el estado. Ninguna orden al
- * coche (cerrar, abrir, clima, ventanillas, carga, centinela, PIN…): esas funciones no existen aquí y, además, la capa
- * de transporte se niega a pedir cualquier ruta que no sea de las de lectura (ALLOWED_PATHS).
+ * SOLO LECTURA salvo una orden opcional: de LMB10 se ha portado únicamente el login, la sesión, la lista de coches y el
+ * estado, y la capa de transporte se niega a pedir cualquier ruta que no sea de las de lectura (ALLOWED_PATHS). La única
+ * orden al coche es el modo centinela (encender y apagar), y solo si el usuario ha guardado a propósito el PIN del
+ * coche: entonces, y solo dentro de remote(), se permiten las cuatro rutas de REMOTE_PATHS. Nada más (cerrar, abrir,
+ * clima, ventanillas, carga…) existe aquí. El flujo (certificado, PIN cifrado, orden y confirmación) sigue
+ * leapmotor-api (markoceri, AGPL-3.0).
  *
  * El historial de viajes (mileage/daily/detail/page, con los kWh y los litros de cada viaje según el coche) y el consumo
  * semanal (getLastNweeks100kmECAndRank) siguen lo documentado por leapmotor-mate (ProtossBlaster) y leapmotor-api
@@ -48,6 +51,21 @@ final class LeapApi {
     /** Las únicas rutas que se piden. Todas leen; ninguna manda nada al coche. */
     static final List<String> ALLOWED_PATHS = Collections.unmodifiableList(java.util.Arrays.asList(
             PATH_LOGIN, PATH_REFRESH, PATH_VEHICLES, PATH_STATUS, PATH_TRIPS, PATH_WEEKLY_EC));
+
+    // Órdenes (opcionales, con el PIN del coche): sincronizar el certificado, comprobar el PIN, la orden y su resultado.
+    static final String PATH_CERT_SYNC = "/carownerservice/oversea/vehicle/v1/cert/sync";
+    static final String PATH_OPER_VERIFY = "/carownerservice/oversea/vehicle/v1/operPwd/verify";
+    static final String PATH_REMOTE_CTL = "/carownerservice/oversea/vehicle/v1/app/remote/ctl";
+    static final String PATH_REMOTE_RESULT = "/carownerservice/oversea/vehicle/v1/app/remote/ctl/result/query";
+    static final List<String> REMOTE_PATHS = Collections.unmodifiableList(java.util.Arrays.asList(
+            PATH_CERT_SYNC, PATH_OPER_VERIFY, PATH_REMOTE_CTL, PATH_REMOTE_RESULT));
+    /** La única orden que se manda: modo centinela (cmdId 220, {"value":"1"} encendido, {"value":"0"} apagado). */
+    static final String CMD_SENTRY = "220";
+
+    /** El cuerpo de la orden del centinela. */
+    static String sentryContent(boolean on) {
+        return on ? "{\"value\":\"1\"}" : "{\"value\":\"0\"}";
+    }
 
     /** true si la ruta es una de las de lectura (el estado, con el modelo detrás: /status/get/c10). */
     static boolean allowed(String path) {
@@ -198,6 +216,15 @@ final class LeapApi {
     private byte[] signKey;
     private LeapTls.Identity accountIdentity;
     private String deviceId;
+    /** Solo dentro de remote(): se permiten las rutas de REMOTE_PATHS. */
+    private boolean remoteCall;
+    private boolean certSynced;
+    /** Espera entre consultas del resultado de una orden (en las pruebas, ninguna). */
+    interface Sleeper {
+        void sleep(long ms) throws InterruptedException;
+    }
+
+    Sleeper sleeper = Thread::sleep;
     /** Sube cada vez que cambia la sesión (login o refresco): quien la guarda sabe si tiene que volver a hacerlo. */
     private int sessionVersion;
 
@@ -393,13 +420,80 @@ final class LeapApi {
         }
     }
 
+    /**
+     * Manda una orden al coche (solo CMD_SENTRY) con el PIN: certificado (una vez), PIN, orden y su resultado. true si el
+     * coche la confirma; false si no contesta a tiempo (puede aplicarse igualmente). El PIN no se guarda aquí ni va al
+     * log.
+     */
+    boolean remote(String vin, String cmdId, String cmdContent, String pin) throws IOException {
+        if (!CMD_SENTRY.equals(cmdId)) throw new IOException("orden no permitida");
+        if (pin == null || pin.isEmpty()) throw new IOException("sin PIN del coche");
+        remoteCall = true;
+        try {
+            return withTokenRetry(() -> {
+                Session s = requireSession();
+                String op;
+                try {
+                    op = LeapCrypto.operatePassword(pin, s.token);
+                } catch (GeneralSecurityException e) {
+                    throw new IOException("no se pudo cifrar el PIN");
+                }
+                if (!certSynced) {
+                    Map<String, String> h = signedHeaders(null, null);
+                    h.putAll(authHeaders(s));
+                    parse(call(clientIdentity, PATH_CERT_SYNC, h, ""), "cert sync");
+                    certSynced = true;
+                }
+                Map<String, String> p = new LinkedHashMap<>();
+                p.put("operatePassword", op);
+                Map<String, String> h = signedHeaders(vin, p);
+                h.putAll(authHeaders(s));
+                parse(call(accountIdentity, PATH_OPER_VERIFY, h, "operatePassword=" + LeapCrypto.encodeComponent(op) + "&vin="
+                        + LeapCrypto.encodeComponent(vin)), "PIN");
+                p = new LinkedHashMap<>();
+                p.put("cmdContent", cmdContent);
+                p.put("cmdId", cmdId);
+                p.put("operatePassword", op);
+                h = signedHeaders(vin, p);
+                h.putAll(authHeaders(s));
+                JSONObject res = parse(call(accountIdentity, PATH_REMOTE_CTL, h, "cmdContent=" + LeapCrypto.encodeComponent(cmdContent)
+                        + "&vin=" + LeapCrypto.encodeComponent(vin) + "&cmdId=" + LeapCrypto.encodeComponent(cmdId)
+                        + "&operatePassword=" + LeapCrypto.encodeComponent(op)), "remote");
+                JSONObject d = res.optJSONObject("data");
+                String id = d == null ? "" : d.optString("remoteCtlId");
+                if (id.isEmpty()) return true;
+                long timeout = Math.max(1000, d.optLong("queryRemoteCtlResultTimeout", 30_000));
+                long interval = Math.max(250, d.optLong("queryInterval", 2000));
+                for (long waited = 0; waited <= timeout; waited += interval) {
+                    p = new LinkedHashMap<>();
+                    p.put("remoteCtlId", id);
+                    h = signedHeaders(null, p);
+                    h.putAll(authHeaders(s));
+                    JSONObject r = parse(call(accountIdentity, PATH_REMOTE_RESULT, h, "remoteCtlId=" + LeapCrypto.encodeComponent(id)),
+                            "remote result");
+                    Object v = r.opt("data");
+                    if (v instanceof Number && ((Number) v).intValue() == 1) return true;
+                    try {
+                        sleeper.sleep(interval);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return false;
+                    }
+                }
+                return false;
+            });
+        } finally {
+            remoteCall = false;
+        }
+    }
+
     private Session requireSession() throws IOException {
         if (session == null || accountIdentity == null) throw new SessionExpiredException("sin sesión");
         return session;
     }
 
     private Response call(LeapTls.Identity id, String path, Map<String, String> headers, String body) throws IOException {
-        if (!allowed(path)) throw new IOException("ruta no permitida (solo lectura)");
+        if (!allowed(path) && !(remoteCall && REMOTE_PATHS.contains(path))) throw new IOException("ruta no permitida (solo lectura)");
         return http.post(id, path, headers, body);
     }
 

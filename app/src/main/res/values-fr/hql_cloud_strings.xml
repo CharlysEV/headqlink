@@ -51,7 +51,7 @@
     <string name="hql_cloud_read">Lecture</string>
     <string name="hql_cloud_source">Source</string>
     <string name="hql_cloud_source_value">Compte Leapmotor · %1$s</string>
-    <string name="hql_cloud_readonly_note">Non officiel et en lecture seule : HeadQLink n\'envoie jamais rien à la voiture.</string>
+    <string name="hql_cloud_readonly_note">Non officiel. Lecture seule, sauf le mode sentinelle si vous enregistrez le code PIN de la voiture.</string>
     <string name="hql_cloud_retry_in">Pas de connexion au cloud : nouvel essai dans %1$d min.</string>
     <string name="hql_cloud_expired_short">Session Leapmotor expirée : reconnectez-vous sur le téléphone.</string>
     <string name="hql_cloud_server_key_short">Nouveau certificat du serveur : vérifiez-le sur le téléphone.</string>
@@ -157,4 +157,22 @@
     <string name="hql_cloud_trips_car_total">Données voiture : %1$d trajets · %2$.0f km · %3$.1f kWh/100</string>
     <string name="hql_cloud_trips_car_total_fuel">Données voiture : %1$d trajets · %3$.1f kWh/100 · %4$.1f L/100</string>
     <string name="hql_cloud_3d_hint">Glissez pour faire pivoter</string>
+    <string name="hql_cloud_step_sentry">5 · Mode sentinelle</string>
+    <string name="hql_cloud_sentry_note">Facultatif. C\'est la seule commande que HeadQLink envoie à la voiture, et seulement si vous enregistrez ici le code PIN de la voiture (chiffré sur le téléphone). Sans code PIN, tout reste en lecture seule.</string>
+    <string name="hql_cloud_pin_hint">Code PIN de la voiture (celui de l\'app Leapmotor)</string>
+    <string name="hql_cloud_pin_save">Enregistrer</string>
+    <string name="hql_cloud_pin_forget">Oublier le PIN</string>
+    <string name="hql_cloud_pin_invalid">De 4 à 12 chiffres</string>
+    <string name="hql_cloud_sentry_on">Activer</string>
+    <string name="hql_cloud_sentry_off">Désactiver</string>
+    <string name="hql_cloud_sentry_state_on">Activé</string>
+    <string name="hql_cloud_sentry_state_off">Désactivé</string>
+    <string name="hql_cloud_sentry_unknown">Pas encore de donnée (lisez l\'état)</string>
+    <string name="hql_cloud_sentry_confirm_on">Activer le mode sentinelle ?</string>
+    <string name="hql_cloud_sentry_confirm_off">Désactiver le mode sentinelle ?</string>
+    <string name="hql_cloud_sentry_confirm_text">La commande passe par le cloud Leapmotor avec votre code PIN. Cela peut prendre quelques secondes (plus si la voiture est en veille).</string>
+    <string name="hql_cloud_sentry_done_on">Mode sentinelle activé (confirmé par la voiture).</string>
+    <string name="hql_cloud_sentry_done_off">Mode sentinelle désactivé (confirmé par la voiture).</string>
+    <string name="hql_cloud_sentry_sent">Commande envoyée ; la voiture ne l\'a pas encore confirmée (elle est peut-être en veille).</string>
+    <string name="hql_cloud_sentry_failed">Impossible d\'envoyer la commande : %1$s</string>
 </resources>

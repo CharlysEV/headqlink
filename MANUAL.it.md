@@ -398,6 +398,9 @@ supporta.
       (Tesla, Zunder, Ionity, Iberdrola, Endesa X, Repsol, Wenea…, quelli presenti sul percorso, con quante colonnine ha
       ciascuno). La scelta viene salvata, e la seguono anche le icone a fulmine sul profilo. I dati vengono da
       OpenStreetMap: potenza o operatore possono mancare.
+    - **Navigare con Google Maps o Waze:** in «Filtra» → «Navigare con» (se Waze è installato). Il pulsante per
+      guidare e i «Vai» aprono quello scelto. Waze non ammette soste intermedie: «Vai con le soste» ti porta alla
+      prossima.
     - **Piano di ricarica (gratis, come ABRP):** se non arrivi con il margine, Percorso dice **dove fermarti e fino a
       quanto ricaricare** tra le colonnine del filtro: la migliore colonnina rapida dell'ultimo tratto che raggiungi e
       solo quello che serve (la C10 ricarica più lentamente sopra il 50 %: meglio due soste brevi che una lunga fino al
@@ -700,7 +703,11 @@ cancellare nulla.
 
 **Privacy e sicurezza.**
 
-- Sola lettura: HeadQLink **non invia mai comandi all'auto** (niente chiusura, clima, ricarica, nulla).
+- Sola lettura, con un'eccezione facoltativa: la **modalità sentinella** (attivarla e disattivarla, in «Dati
+  dell'auto» → «5 · Modalità sentinella»), e solo se salvi lì il PIN dell'auto (quello dell'app Leapmotor; resta
+  cifrato sul telefono e non finisce mai nel registro). Senza PIN, HeadQLink **non invia mai comandi all'auto**, e
+  nessun altro comando esiste (niente chiusura, clima, ricarica). Ogni comando va confermato prima dell'invio;
+  «Dimentica PIN» lo cancella.
 - I tuoi dati vanno **solo ai server di Leapmotor**. La posizione dell'auto non viene né letta né salvata.
 - Il certificato, la sessione e lo storico dei viaggi vengono salvati **cifrati** con una chiave dell'Android Keystore,
   fuori dai backup. La password non viene salvata: se la sessione scade, «Stato» te lo dice e accedi di nuovo dal

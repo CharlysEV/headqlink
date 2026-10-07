@@ -584,6 +584,8 @@ final class RouteTab implements CarScreen {
         boolean have = plan != null && plan.n >= 2;
         boolean test = RoutePlanner.testMode();
         goMaps.setVisibility(manual && have ? View.VISIBLE : View.GONE);
+        String guide = Str.get(NavApps.useWaze(ctx) ? R.string.hql_route_guide_waze : R.string.hql_route_guide_maps);
+        if (!guide.contentEquals(goMaps.getText())) goMaps.setText(guide);
         if (test) {
             RoutePlanner.Place o = RoutePlanner.testOrigin();
             originPill.setText(Str.get(R.string.hql_route_from, o == null ? Str.get(R.string.hql_route_gps) : o.name));
@@ -716,6 +718,22 @@ final class RouteTab implements CarScreen {
                 build[0].run();
             }), chipParams());
             body.addView(vo);
+            // Navegador para «Guiar», los «Ir» y las paradas (Waze, si está instalado).
+            if (NavApps.wazeInstalled(ctx)) {
+                body.addView(section(Str.get(R.string.hql_nav_app)));
+                LinearLayout na = CarKit.row(ctx);
+                na.addView(chip("Google Maps", !NavApps.useWaze(ctx), () -> {
+                    pc.setNavApp(Config.NAV_MAPS);
+                    build[0].run();
+                    tick();
+                }), chipParams());
+                na.addView(chip("Waze", NavApps.useWaze(ctx), () -> {
+                    pc.setNavApp(Config.NAV_WAZE);
+                    build[0].run();
+                    tick();
+                }), chipParams());
+                body.addView(na);
+            }
             body.addView(section(Str.get(R.string.hql_charger_networks)));
             java.util.List<String> keys = new java.util.ArrayList<>();
             RoutePlanner.Plan pl = plan;
@@ -976,21 +994,7 @@ final class RouteTab implements CarScreen {
 
     /** Abre la navegación de Google Maps en el móvil; Android Auto la muestra en el coche. */
     private void navigateTo(double lat, double lon) {
-        // Coche virtual con otra salida (un Sevilla-Barcelona desde casa): la ruta en Maps desde esa salida.
-        RoutePlanner.Place o = RoutePlanner.testOrigin();
-        String uri = o == null ? String.format(Locale.US, "google.navigation:q=%.6f,%.6f&mode=d", lat, lon)
-                : String.format(Locale.US, "https://www.google.com/maps/dir/?api=1&origin=%.6f,%.6f&destination=%.6f,%.6f&travelmode=driving",
-                o.lat, o.lon, lat, lon);
-        try {
-            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(uri))
-                    .setPackage("com.google.android.apps.maps")
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            ctx.getApplicationContext().startActivity(i);
-            CarUi.switchToAa();
-        } catch (RuntimeException e) {
-            // Solo el tipo: el mensaje lleva el Intent, con las coordenadas del destino.
-            L.w("ruta: no se pudo abrir Google Maps: " + e.getClass().getSimpleName());
-        }
+        NavApps.go(ctx, lat, lon);
     }
 
     @Override

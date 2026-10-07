@@ -721,4 +721,6 @@
     <string name="hql_route_test_soc">batería de prueba</string>
     <string name="hql_plan_summary_stuck">Paradas: %1$d · %2$s cargando · después del km %3$.0f no llegas a ningún cargador</string>
     <string name="hql_route_charger_gap">Sin datos de cargadores del km %1$.0f al %2$.0f (OpenStreetMap no ha respondido): el plan puede no ser el mejor. Vuelve a elegir el destino para reintentarlo.</string>
+    <string name="hql_route_guide_waze">Guiar con Waze</string>
+    <string name="hql_nav_app">Navegar con</string>
 </resources>

@@ -720,4 +720,6 @@
     <string name="hql_route_test_soc">Test-Akku</string>
     <string name="hql_plan_summary_stuck">Stopps: %1$d · %2$s laden · nach km %3$.0f ist keine Ladestation erreichbar</string>
     <string name="hql_route_charger_gap">Keine Ladestationsdaten von km %1$.0f bis %2$.0f (OpenStreetMap hat nicht geantwortet): Der Plan ist vielleicht nicht der beste. Wähle das Ziel erneut, um es noch einmal zu versuchen.</string>
+    <string name="hql_route_guide_waze">Mit Waze navigieren</string>
+    <string name="hql_nav_app">Navigieren mit</string>
 </resources>

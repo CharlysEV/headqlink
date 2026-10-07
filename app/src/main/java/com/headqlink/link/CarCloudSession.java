@@ -144,6 +144,29 @@ final class CarCloudSession {
         return out;
     }
 
+    /**
+     * Modo centinela encendido o apagado (la única orden; con el PIN guardado). true si el coche lo confirma; false si no
+     * contesta a tiempo.
+     */
+    static synchronized boolean setSentry(Context ctx, boolean on) throws IOException, GeneralSecurityException {
+        CarCloudStore st = new CarCloudStore(ctx);
+        ensure(st);
+        if (saved.vin.isEmpty()) throw new NotConfiguredException("sin coche elegido");
+        String pin = st.pin();
+        if (pin == null || pin.isEmpty()) throw new NotConfiguredException("sin PIN del coche");
+        int v0 = api.sessionVersion();
+        try {
+            boolean ok = api.remote(saved.vin, LeapApi.CMD_SENTRY, LeapApi.sentryContent(on), pin);
+            L.i("nube Leapmotor: modo centinela " + (on ? "encendido" : "apagado") + (ok ? " (confirmado por el coche)" : " (sin confirmar)"));
+            return ok;
+        } catch (LeapApi.SessionExpiredException e) {
+            api = null;
+            throw e;
+        } finally {
+            if (api != null && api.sessionVersion() != v0) persist(st);
+        }
+    }
+
     /** Consumo medio de las últimas semanas según el coche, o null si la nube no da cifras. */
     static synchronized CloudHistory.Weekly readWeekly(Context ctx) throws IOException, GeneralSecurityException {
         CarCloudStore st = new CarCloudStore(ctx);

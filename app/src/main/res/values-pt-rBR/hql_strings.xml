@@ -721,4 +721,6 @@
     <string name="hql_route_test_soc">bateria de teste</string>
     <string name="hql_plan_summary_stuck">Paradas: %1$d · %2$s carregando · depois do km %3$.0f nenhum carregador é alcançável</string>
     <string name="hql_route_charger_gap">Sem dados de carregadores do km %1$.0f ao %2$.0f (o OpenStreetMap não respondeu): o plano pode não ser o melhor. Escolha o destino de novo para tentar outra vez.</string>
+    <string name="hql_route_guide_waze">Navegar com o Waze</string>
+    <string name="hql_nav_app">Navegar com</string>
 </resources>

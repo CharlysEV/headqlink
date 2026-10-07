@@ -51,7 +51,7 @@
     <string name="hql_cloud_read">Read</string>
     <string name="hql_cloud_source">Source</string>
     <string name="hql_cloud_source_value">Leapmotor account · %1$s</string>
-    <string name="hql_cloud_readonly_note">Unofficial and read-only: HeadQLink never sends anything to the car.</string>
+    <string name="hql_cloud_readonly_note">Unofficial. Read-only, except sentry mode if you save your car PIN.</string>
     <string name="hql_cloud_retry_in">No connection to the cloud: retrying in %1$d min.</string>
     <string name="hql_cloud_expired_short">Leapmotor session expired: sign in again on the phone.</string>
     <string name="hql_cloud_server_key_short">New server certificate: review it on the phone.</string>
@@ -157,4 +157,22 @@
     <string name="hql_cloud_trips_car_total">Car data: %1$d trips · %2$.0f km · %3$.1f kWh/100</string>
     <string name="hql_cloud_trips_car_total_fuel">Car data: %1$d trips · %3$.1f kWh/100 · %4$.1f L/100</string>
     <string name="hql_cloud_3d_hint">Drag to rotate</string>
+    <string name="hql_cloud_step_sentry">5 · Sentry mode</string>
+    <string name="hql_cloud_sentry_note">Optional. It is the only command HeadQLink sends to the car, and only if you save your car PIN here (encrypted on the phone). Without a PIN everything stays read-only.</string>
+    <string name="hql_cloud_pin_hint">Car PIN (the one in the Leapmotor app)</string>
+    <string name="hql_cloud_pin_save">Save PIN</string>
+    <string name="hql_cloud_pin_forget">Forget PIN</string>
+    <string name="hql_cloud_pin_invalid">4 to 12 digits</string>
+    <string name="hql_cloud_sentry_on">Turn on</string>
+    <string name="hql_cloud_sentry_off">Turn off</string>
+    <string name="hql_cloud_sentry_state_on">On</string>
+    <string name="hql_cloud_sentry_state_off">Off</string>
+    <string name="hql_cloud_sentry_unknown">No data yet (read the status)</string>
+    <string name="hql_cloud_sentry_confirm_on">Turn sentry mode on?</string>
+    <string name="hql_cloud_sentry_confirm_off">Turn sentry mode off?</string>
+    <string name="hql_cloud_sentry_confirm_text">The order goes to the car through the Leapmotor cloud with your PIN. It may take a few seconds (longer if the car is asleep).</string>
+    <string name="hql_cloud_sentry_done_on">Sentry mode on (confirmed by the car).</string>
+    <string name="hql_cloud_sentry_done_off">Sentry mode off (confirmed by the car).</string>
+    <string name="hql_cloud_sentry_sent">Order sent; the car has not confirmed it yet (it may be asleep).</string>
+    <string name="hql_cloud_sentry_failed">Could not send the order: %1$s</string>
 </resources>

@@ -446,6 +446,18 @@ final class Config {
         sp.edit().putInt("plan_max_pct", pct).apply();
     }
 
+    static final String NAV_MAPS = "maps";
+    static final String NAV_WAZE = "waze";
+
+    /** Navegador para guiar desde la Ruta: NAV_MAPS o NAV_WAZE. */
+    String navApp() {
+        return NAV_WAZE.equals(sp.getString("nav_app", NAV_MAPS)) ? NAV_WAZE : NAV_MAPS;
+    }
+
+    void setNavApp(String app) {
+        sp.edit().putString("nav_app", NAV_WAZE.equals(app) ? NAV_WAZE : NAV_MAPS).apply();
+    }
+
     /** Avisar por voz si el plan de carga cambia durante el viaje. */
     boolean planVoice() {
         return sp.getBoolean("plan_voice", true);

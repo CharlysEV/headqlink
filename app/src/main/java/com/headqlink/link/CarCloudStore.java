@@ -51,6 +51,8 @@ final class CarCloudStore {
     private static final String F_SESSION = "session.bin";
     /** Historial de la nube (viajes con sus kWh y litros, consumo semanal): cifrado como lo demás. */
     private static final String F_HISTORY = "history.bin";
+    /** PIN del coche (solo si el usuario lo guarda, para el modo centinela). Cifrado como la sesión. */
+    private static final String F_PIN = "pin.bin";
     private static final String K_ENABLED = "enabled";
     private static final String K_PROFILE = "profile";
     private static final String K_CUSTOM_KWH = "custom_kwh";
@@ -241,10 +243,34 @@ final class CarCloudStore {
         writeSealed(F_HISTORY, o.toString().getBytes(StandardCharsets.UTF_8));
     }
 
+    /** El PIN del coche guardado, o null. */
+    String pin() {
+        try {
+            byte[] b = readSealed(F_PIN);
+            return b == null ? null : new String(b, StandardCharsets.UTF_8);
+        } catch (IOException | GeneralSecurityException e) {
+            return null;
+        }
+    }
+
+    boolean hasPin() {
+        String p = pin();
+        return p != null && !p.isEmpty();
+    }
+
+    void savePin(String pin) throws IOException, GeneralSecurityException {
+        writeSealed(F_PIN, pin.getBytes(StandardCharsets.UTF_8));
+    }
+
+    void deletePin() {
+        wipeFile(F_PIN);
+    }
+
     /** Cerrar sesión: fuera la sesión (y el coche y el correo). El certificado se queda. */
     void deleteSession() {
         wipeFile(F_SESSION);
         wipeFile(F_HISTORY);
+        wipeFile(F_PIN);
         sp.edit().remove(K_CAR_TYPE).remove(K_EMAIL_MASKED).apply();
     }
 
@@ -253,6 +279,7 @@ final class CarCloudStore {
         wipeFile(F_IDENTITY);
         wipeFile(F_SESSION);
         wipeFile(F_HISTORY);
+        wipeFile(F_PIN);
         sp.edit().clear().apply();
         box.destroy();
     }

@@ -129,11 +129,12 @@ are preserved, including [Michael Reid's](COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt
 is an independent project with no relationship to Open Headunit or its authors.** It is not
 endorsed, supported or affiliated with them in any way.
 
-The optional, read-only "real car data" feature (Leapmotor account: battery, range, charging, tyre
+The optional "real car data" feature (Leapmotor account: battery, range, charging, tyre
 pressures, doors and odometer in the extended mode) uses a client ported from
 [LMB10](https://github.com/txurtxil/LPB10) by **txurtxil** (GPL-3.0), combined here under section 13 of
-the GPL-3.0/AGPL-3.0: login, session refresh, request signing, vehicle list and status only, never any
-remote command. See [NOTICE](NOTICE) and the ported files' headers. It talks to Leapmotor's unofficial
+the GPL-3.0/AGPL-3.0: login, session refresh, request signing, vehicle list and status. It is read-only except
+for one opt-in command, sentry mode on/off, sent only if the user saves the car PIN (flow as in
+[leapmotor-api](https://github.com/markoceri/leapmotor-api) by **markoceri**, AGPL-3.0); no other remote command exists. See [NOTICE](NOTICE) and the ported files' headers. It talks to Leapmotor's unofficial
 API, which may stop working at any time. The range-extender (REEV) tank signals and the per-trip history
 fields follow [leapmotor-mate](https://github.com/ProtossBlaster/leapmotor-mate) (ProtossBlaster), and the
 weekly consumption endpoint follows [leapmotor-api](https://github.com/markoceri/leapmotor-api) (markoceri),
