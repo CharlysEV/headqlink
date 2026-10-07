@@ -94,9 +94,25 @@ class SendQueueTest {
         q.startStream()
         assertEquals(FrameOffer.DROPPED_WAITING_IDR, q.offerFrame(delta(1)) { cfg(9) })
         assertEquals(FrameOffer.ACCEPTED, q.offerFrame(key(1)) { cfg(9) })
+        assertEquals(listOf("C9", "I1"), q.drain())
+    }
+
+    /**
+     * hql: `KEY_FRAME_REQ` reenvía SPS/PPS pegado al IDR forzado. El IDR tarda ~100 ms en salir del encoder y los P
+     * que llegan mientras van sin SPS/PPS delante: el C10 reinicia el decodificador con cada SPS/PPS y un P detrás
+     * sale con artefactos (qdsim `sps_repetido`, 2026-10-07).
+     */
+    @Test
+    fun configResendGoesRightBeforeTheNextIdrNotBeforeADelta() {
+        val q = SendQueue(backlogFrames = 10, backlogBytes = 1_000_000, hardLimitBytes = 10_000_000, resendConfigAfterDrop = true)
+        q.startStream()
+        assertEquals(FrameOffer.ACCEPTED, q.offerFrame(key(1)) { cfg(9) })
         q.requestConfigResend()
         assertEquals(FrameOffer.ACCEPTED, q.offerFrame(delta(2)) { cfg(10) })
-        assertEquals(listOf("C9", "I1", "C10", "P2"), q.drain())
+        assertEquals(FrameOffer.ACCEPTED, q.offerFrame(delta(3)) { cfg(11) })
+        assertEquals(FrameOffer.ACCEPTED, q.offerFrame(key(4)) { cfg(12) })
+        assertEquals(FrameOffer.ACCEPTED, q.offerFrame(delta(5)) { cfg(13) })
+        assertEquals(listOf("C9", "I1", "P2", "P3", "C12", "I4", "P5"), q.drain())
     }
 
     /** hql: write bloqueado con el coche hablando: todo el vídeo encolado fuera, y se reanuda en un IDR con SPS/PPS. */

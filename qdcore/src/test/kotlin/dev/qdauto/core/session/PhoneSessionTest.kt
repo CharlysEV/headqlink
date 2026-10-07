@@ -110,12 +110,15 @@ class PhoneSessionTest {
         assertContentEquals(VideoMessage.build(ext, idr), r.car.nextFrame().wireBytes())
         assertContentEquals(pFrame, r.car.nextFrame().payload())
 
-        // KEY_FRAME_REQ → IDR pedido y SPS/PPS reenviado antes del siguiente frame.
+        // KEY_FRAME_REQ → IDR pedido y SPS/PPS reenviado pegado a ese IDR (hql: nunca delante de un P, que el C10
+        // reinicia el decodificador con cada SPS/PPS).
         r.car.send(CarMessages.keyFrameReq())
         assertTrue(TestSupport.waitUntil(2_000) { KeyframeReason.CAR_REQUEST in r.listener.keyframeReasons })
         assertTrue(r.session.sendFrame(pFrame, false, 4))
-        assertContentEquals(sps + pps, r.car.nextFrame().payload())
+        assertTrue(r.session.sendFrame(idr, true, 5))
         assertContentEquals(pFrame, r.car.nextFrame().payload())
+        assertContentEquals(sps + pps, r.car.nextFrame().payload())
+        assertContentEquals(idr, r.car.nextFrame().payload())
 
         // LAND_MODE_REQ → LAND_MODE_RSP con eco de la orientación.
         r.car.send(CarMessages.landModeReq(2))
@@ -127,9 +130,9 @@ class PhoneSessionTest {
         assertEquals(1, echo.block.ret)
 
         val stats = r.session.stats()
-        assertEquals(3, stats.videoFramesSent)
+        assertEquals(4, stats.videoFramesSent)
         assertEquals(2, stats.codecConfigsSent)
-        assertEquals(1, stats.keyframesSent)
+        assertEquals(2, stats.keyframesSent)
         assertEquals(1, stats.videoFramesDropped)
 
         // Cierre local: el coche ve EOF, onClosed llega el último y todos los hilos terminan.
@@ -314,12 +317,14 @@ class PhoneSessionTest {
         r.car.send(CarMessages.videoCtrl(1))
         assertTrue(TestSupport.waitUntil(2_000) { r.listener.keyframeReasons.count { it == KeyframeReason.STREAM_START } == 2 })
         assertTrue(r.session.sendFrame(pFrame, false, 2)) // no se corta: el coche ya tenía el flujo
-        val video = generateSequence { r.car.nextFrame() }.filter { it.header.msgType == MsgType.VIDEO }.take(5).map { it.payload() }.toList()
+        assertTrue(r.session.sendFrame(idr, true, 3))
+        val video = generateSequence { r.car.nextFrame() }.filter { it.header.msgType == MsgType.VIDEO }.take(6).map { it.payload() }.toList()
         assertContentEquals(sps + pps, video[0])
         assertContentEquals(idr, video[1])
         assertContentEquals(pFrame, video[2])
-        assertContentEquals(sps + pps, video[3])
-        assertContentEquals(pFrame, video[4])
+        assertContentEquals(pFrame, video[3]) // hql: el SPS/PPS reenviado espera al IDR pedido
+        assertContentEquals(sps + pps, video[4])
+        assertContentEquals(idr, video[5])
         assertEquals(listOf(true, true), r.listener.playEvents.toList())
         assertEquals(SessionState.STREAMING, r.session.state)
     }

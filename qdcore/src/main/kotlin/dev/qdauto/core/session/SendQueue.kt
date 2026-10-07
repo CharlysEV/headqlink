@@ -102,7 +102,8 @@ internal sealed class Polled {
  * - `MAX_LAG`: al sacar, una cabeza P con más de [maxLagNanos] en cola vacía todo el vídeo y se espera un IDR;
  * - hql: con cualquier política, un frame (IDR o P) de más de [maxMessageBytes] (mensaje entero) no entra nunca: se
  *   descarta y se espera al siguiente IDR, porque los P que vengan detrás dependen de él ([rejectOversized]);
- * - antes del primer frame aceptado tras [requestConfigResend] o [startStream] se reenvía SPS/PPS.
+ * - antes del primer IDR aceptado tras [requestConfigResend] o [startStream] se reenvía SPS/PPS (hql: nunca delante
+ *   de un P-frame).
  *
  * hql (C2): los elementos que se quitan (descartes, cierre) se devuelven a quien llama, que avisa a su
  * [FrameCompletion] **después** de soltar el candado. Contadores espejo `@Volatile` para consultas sin candado.
@@ -216,7 +217,10 @@ internal class SendQueue(
             }
         }
         if (isKey) setWaiting(false)
-        if (pendingConfig) {
+        // hql: el SPS/PPS pendiente va pegado al IDR, nunca delante de un P: el C10 reinicia el decodificador con cada
+        // SPS/PPS y un P sin su IDR sale con artefactos. Con KEY_FRAME_REQ el IDR tarda ~100 ms en salir del encoder y,
+        // en casa (2026-10-07), se colaban P-frames entre el SPS/PPS reenviado y el IDR.
+        if (pendingConfig && isKey) {
             configFactory()?.let {
                 addVideo(it)
                 pendingConfig = false
@@ -252,7 +256,7 @@ internal class SendQueue(
         return FrameOffer.DROPPED_OVERSIZED
     }
 
-    /** `KEY_FRAME_REQ`: SPS/PPS delante del siguiente frame aceptado. */
+    /** `KEY_FRAME_REQ`: SPS/PPS delante del siguiente IDR aceptado (no de un P). */
     fun requestConfigResend() = lock.withLock { pendingConfig = true }
 
     /**
