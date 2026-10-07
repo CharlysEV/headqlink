@@ -1435,7 +1435,7 @@ cadena). LMB10 acepta cualquier certificado; aquí se fija la clave pública del
 SHA-256 del certificado vigente de 2026-07 a 2027-08), además de la comprobación de nombre de Android. Si la clave
 cambia, la conexión se para (`SERVER_KEY`) y el móvil enseña la huella para aceptarla o no (`acceptPin`); nunca sola.
 
-**Certificado de cliente** (`LeapTls.parse`): el par PEM `.crt` + `.key` (los dos a la vez en el selector), un PEM con
+**Certificado de cliente** (`LeapTls.parse`): el par PEM `.crt` + `.key` (a la vez o uno detrás de otro: §21.1), un PEM con
 los dos bloques (también con texto alrededor y con la cadena), claves PKCS#8, PKCS#1 (`RSA PRIVATE KEY`), SEC1
 (`EC PRIVATE KEY`) y PKCS#8 cifrada (si el Android conoce el algoritmo), certificados y claves en DER, y `.p12`/`.pfx`
 con contraseña (la pide si falta o es mala). Comprueba que la clave es la del certificado con una firma de prueba.
@@ -1480,7 +1480,7 @@ leen `CarCloud.snapshot()`, una foto inmutable con la hora del dato del coche y 
 
 **Cómo comprobarlo en el móvil.**
 
-1. ⚙ › «Datos del coche»: importar el par (los dos ficheros a la vez), entrar y elegir la variante.
+1. ⚙ › «Datos del coche»: importar el par (a la vez o uno detrás de otro), entrar y elegir la variante.
 2. «Leer estado ahora»: el % y los km tienen que coincidir con los de la app de Leapmotor.
 3. Diagnóstico › «Vista previa del modo extendido» › Coche › Estado: los datos reales con «real · hace …» (sin cuenta,
    los inventados).
@@ -1799,3 +1799,118 @@ saltadas. Nueva `GpsWatchTest` (10: estado con y sin bloqueo y con «todo el tie
 imposibles, sonda que llega, que no llega, desbloqueo antes de decidir y bloqueo sin GPS al día). `RequirementsTest`
 (+3: solo en «Auto extendido» y recomendada, cuenta sin bloquear, primero la ubicación normal o Ajustes si se denegó).
 Sin probar todavía en el móvil.
+
+## 21. Certificado de la nube, Android Auto al parar su servidor y un servicio que se paraba con un arranque en cola (2026-10-07)
+
+### 21.1 «Importar certificado…» no abría el selector (S25 Ultra, Android 16, 0.2.6)
+
+**Informe.** En «Datos del coche», tocar «IMPORTAR CERTIFICADO…» a veces no hacía nada (ni `START` en el logcat ni
+línea de HeadQLink); al final la pantalla decía «Falta el certificado: elige el .crt y el .key a la vez». El selector
+del sistema funciona (`am start -a android.intent.action.OPEN_DOCUMENT …` abre `PickActivity`).
+
+**Causas** (comprobado en el PC; en el móvil queda confirmarlo con el log nuevo):
+
+- **El selector sí se abrió al menos una vez, y la pantalla exigía los dos ficheros a la vez.** «Falta el certificado»
+  solo sale de `LeapTls.parse` con una clave y sin certificado: se eligió solo `app.key`. En el selector de Android
+  tocar un fichero lo devuelve en el acto; marcar dos pide una pulsación larga que casi nadie conoce. Elegir de uno en
+  uno no podía funcionar.
+- **Toques que no llegaban o que no hacían nada sin decirlo.** Al abrir la pantalla el foco iba al «Correo» (el primer
+  campo enfocable): teclado y sugerencias de autorrelleno, que con el teclado de Samsung salen como una ventana encima
+  del campo, justo donde está el botón del certificado. Y el botón se desactivaba con `busy`, pero su estilo
+  (`HQL.Button.Outline`, colores fijos) no cambia de aspecto: desactivado parece activo. `run()` también descartaba sin
+  decir nada un toque con otra petición en curso, y la lectura del fichero iba en el mismo hilo que la red (un fichero
+  lento dejaba la pantalla «ocupada» con el botón muerto).
+- **No era R8**: en el APK de release (minify) `CarCloudActivity` conserva el `startActivityForResult(OPEN_DOCUMENT,
+  41)` y su `onActivityResult` (comprobado con `dexdump`).
+
+**Qué cambia** (`CarCloudActivity`, `CertPick` nuevo, layout, manifiesto y textos en los cuatro idiomas):
+
+- **De uno en uno** (`CertPick`, puro): si llega solo el certificado o solo la clave, se guarda en memoria (no en disco;
+  sobrevive a que Android rehaga la pantalla, caduca a los 15 min), el recuadro y un aviso dicen «Certificado leído
+  (app.crt). Ahora elige la clave (app.key)» (o al revés), el botón pasa a «Elegir la clave…» y el siguiente toque abre
+  el selector. Con los dos se importan juntos. Volver a elegir la misma mitad la sustituye; un .pem con los dos o un
+  .p12 vale solo; los ficheros que no son ni certificado ni clave se apartan y se dice cuál. «Empezar de nuevo» olvida
+  lo elegido a medias. Lo descartado se sobrescribe con ceros. Se clasifica por el contenido, no por el nombre.
+- **Selector**: `ACTION_OPEN_DOCUMENT` con `*/*` y `EXTRA_MIME_TYPES` (`*/*`, `application/x-pem-file`,
+  `application/x-x509-ca-cert`, `application/pkcs8`, `application/x-pkcs12`, `application/octet-stream`, `text/plain`)
+  y varios a la vez. La pantalla es una `Activity` (no `ComponentActivity`): sigue con `startActivityForResult`.
+- **Lectura** en su propio hilo (aparte de la red), en el acto (el permiso del selector dura lo que la pantalla). Nombre
+  con `OpenableColumns.DISPLAY_NAME` y, si el proveedor no lo da, el final del URI (Mis archivos de Samsung, Archivos de
+  Google, Descargas). Cada error de lectura (`SecurityException`, `FileNotFoundException`…) se dice con el nombre.
+- **Botón siempre activo**; si está leyendo, el toque lo dice («Leyendo el certificado…»). `run()` avisa en vez de
+  callar. Errores en el recuadro **y** en un aviso. Al abrir, el foco va al contenedor (`stateHidden`): ni teclado ni
+  autorrelleno tapando el botón.
+
+**Qué buscar en el log** (solo nombres de fichero y tipos de error; nunca el contenido):
+
+| Línea | Significado |
+|---|---|
+| `nube Leapmotor: importar certificado: abro el selector` (`… (certificado «app.crt»; falta la clave)`) | Toque en el botón |
+| `nube Leapmotor: importar certificado: el selector devuelve OK, 1 fichero(s)` (`cancelado`, `código N`) | Vuelta del selector |
+| `nube Leapmotor: importar certificado: leídos 1 de 1: app.crt` | Leído |
+| `W nube Leapmotor: importar certificado: no se pudo leer «x» (SecurityException)` | El proveedor no lo deja leer |
+| `nube Leapmotor: importar certificado: certificado «app.crt»; falta la clave` / `listo (2 fichero(s))` / `no sirve: [x]` | Qué hay |
+| `nube Leapmotor: certificado de cliente importado (RSA, 2 fichero(s))` | Guardado |
+| `W nube Leapmotor: importar certificado: no válido (MISMATCH; app.crt, otra.key)` | Error de formato (tipo) |
+| `nube Leapmotor: importar certificado: pulsado mientras leo lo anterior; espera` | Toque durante la lectura |
+
+### 21.2 «FATAL EXCEPTION: Thread-2 … ServerSocket.isClosed() on a null object reference»
+
+**No es de HeadQLink.** En los logcat guardados (`trips/20261005-coche3/logcat_buffer.txt`) el proceso es
+`com.google.android.projection.gearhead:projection` (Android Auto) y la pila `wxl.run(SourceFile:676)`, código suyo
+ofuscado. Las horas coinciden con nuestra automatización pulsando «Parar servidor unidad principal» (p. ej.
+`09:08:37.199 AA server: pulsando 'Parar servidor unidad principal'` y el fallo a las 09:08:37): el hilo de escucha de su
+servidor de head unit mira el `ServerSocket` que su propio apagado acaba de poner a `null`. El servidor queda parado
+igual. Comprobado también que el único `ServerSocket.isClosed()` del APK es el de `MirrorServer`, con el campo `final`
+asignado en el constructor (no puede ser null), y que sus hilos se llaman `qd-link-*`, no `Thread-N`.
+
+**Qué cambia.** Una línea en el log (una vez por proceso) al parar el servidor, para no buscarlo en HeadQLink:
+`AA server: parado. Si el logcat enseña un FATAL EXCEPTION de com.google.android.projection.gearhead:projection …`.
+De paso, `WirelessServer.serverSocket` (Open Headunit) pasa a `@Volatile`: se asigna en la corrutina y lo cierra
+`stopServer()` desde otro hilo; sin eso podía no verlo, no cerrarlo y dejar el 5288 escuchando.
+
+### 21.3 `ForegroundServiceDidNotStartInTimeException` al pulsar «Desconectar» (AapService)
+
+**Informe** (`qd-20261006-212222.log`, 09:19:43): «Desconectar (widget)» → cierre → a los 150 ms
+`ForegroundServiceDidNotStartInTimeException … ServiceRecord{… AapService}` y la app se cierra.
+
+**Causa (la más probable; el log de Open Headunit de ese momento no está guardado).** No son los 5 s de un arranque olvidado (`AapService` llama a `startForeground` al principio de `onCreate` y
+de cada `onStartCommand`), sino un **paro con un arranque en cola**: si un servicio se para (`stopSelf()`/`stopService`)
+mientras un `startForegroundService()` suyo aún no ha llegado a `onStartCommand`, Android cierra la app en el acto con
+esa excepción. La orden de parar (`ACTION_STOP_SERVICE`) quita el primer plano (`stopForeground`) y llamaba a
+`stopSelf()` sin número, que para aunque haya otra orden detrás; y `onTaskRemoved` (al quitarse una tarea de la app)
+relanza el servicio con `startForegroundService` aunque se esté parando a petición
+del usuario: justo el arranque en cola con el que muere.
+
+**Qué cambia.**
+
+- `AapService`: para con `stopSelf(startId)` (o con el de la última orden tras la espera del Wi-Fi), que Android no
+  hace si hay otra orden en cola; esa orden llama a `startForeground` (como siempre, lo primero) y, como ya se aceptó
+  un paro, termina de parar ella (`ServiceStopRacePolicy`, pura y con prueba: `STOP_NOW`, o se lo deja a la espera del
+  Wi-Fi si sigue). Una segunda orden de parar ya no repite el cierre. `onTaskRemoved` no relanza si se está parando.
+- `LinkService.goForeground`: solo se salta el `startForeground` (para no perder la ubicación «mientras se usa», d1b50206)
+  si **el sistema** lo tiene en primer plano (`getForegroundServiceType() != 0`, `ForegroundCheck`), no solo si esta
+  instancia lo cree.
+- `AaGuardService`: igual, `stopSelf(lastStartId)`; un `park()` que llega mientras se libera el anterior sigue vigilando.
+
+Líneas del log de Open Headunit (`AppLog`): `AapService: … after the stop: foreground kept, stopping now`,
+`AapService: … during the stop teardown: it stops the service` y `AapService: onTaskRemoved while stopping — no
+restart`.
+
+### 21.4 Cómo comprobarlo en el móvil
+
+1. Con un certificado de usar y tirar: ⚙ › «Datos del coche» › «Importar certificado…» › tocar solo `app.crt`. Debe
+   salir «Certificado leído (app.crt). Ahora elige la clave (app.key)», el botón «Elegir la clave…» y «Empezar de
+   nuevo». Tocar el botón › `app.key` › «Certificado guardado cifrado en este móvil». Repetir al revés, con los dos a la
+   vez (pulsación larga), con un .pem y con un fichero que no sirve (aviso y recuadro).
+2. En el log, las líneas de 21.1 en cada paso. Si un toque no deja ni `abro el selector`, el toque no llega al botón.
+3. «Desconectar» desde el widget con Android Auto en marcha, varias veces: sin cierre de la app.
+
+### 21.5 Resultados en el PC
+
+`cmd /c ".\gradlew.bat :qdcore:test :app:testGithubDebugUnitTest :app:assembleGithubRelease --console=plain"`:
+**BUILD SUCCESSFUL** (el release con minify incluido). App: 3032 pruebas, 0 fallos y 4 saltadas; qdcore: 162, 0 fallos.
+Nuevas: `CertPickTest` (11: clasificación por contenido, los dos a la vez, certificado y luego clave y al revés,
+sustituir una mitad, un .p12 que reemplaza medio par, ficheros que no sirven, «Empezar de nuevo» con borrado, caducidad,
+selección vacía, nombres para el log), `ServiceStopRacePolicyTest` (4) y `ForegroundCheckTest` (3). En el APK de release
+(`dexdump`) están las líneas nuevas del log. Sin probar todavía en el móvil.

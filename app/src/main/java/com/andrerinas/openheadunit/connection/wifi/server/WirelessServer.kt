@@ -44,7 +44,10 @@ class WirelessServer(
         private const val BIND_RETRY_DELAY_MS = 700L
     }
 
-    private var serverSocket: ServerSocket? = null
+    // headqlink: volatile. Assigned on the IO coroutine after the bind and closed from stopServer()
+    // on another thread; without it stopServer() could see null, skip the close and leave accept()
+    // blocking on 5288 (the next bind then fails).
+    @Volatile private var serverSocket: ServerSocket? = null
     private var nsdManager: NsdManager? = null
     private var registrationListener: NsdManager.RegistrationListener? = null
     private var job: Job? = null

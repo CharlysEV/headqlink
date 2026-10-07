@@ -317,11 +317,29 @@ public final class AaServerStarter {
                 L.lifeWarn("AA server: el apagado (" + why + ") no se confirmó; puede seguir encendido: aviso al usuario");
                 notifyServerStillOn(ctx);
             }
+            if (ok) noteAaOwnStopCrash();
             // Servidor apagado sin enlace: nuestra head unit cae con él; fuera la pausa (si el guardián no estaba).
             if (ok && !LinkState.running && !AaGuardService.active) AaPark.release("servidor apagado");
         } finally {
             RUN_LOCK.unlock();
         }
+    }
+
+    private static volatile boolean aaStopCrashNoted;
+
+    /**
+     * Al parar su servidor de head unit, Android Auto suele caerse en su propio proceso
+     * (com.google.android.projection.gearhead:projection, hilo «Thread-N»): «NullPointerException: … ServerSocket.isClosed()
+     * on a null object reference». Es un fallo de Android Auto (su hilo de escucha mira el socket que su propio apagado
+     * acaba de poner a null), no de HeadQLink, y no tiene arreglo desde aquí: el servidor queda parado igual. Se dice una vez
+     * por proceso en el log, para no buscarlo en HeadQLink.
+     */
+    private static void noteAaOwnStopCrash() {
+        if (aaStopCrashNoted) return;
+        aaStopCrashNoted = true;
+        L.i("AA server: parado. Si el logcat enseña un FATAL EXCEPTION de com.google.android.projection.gearhead:projection"
+                + " (NullPointerException en ServerSocket.isClosed()), es Android Auto cayéndose al cerrar su propio servidor:"
+                + " no es de HeadQLink y el servidor queda parado igual");
     }
 
     /** Apaga y vuelve a encender el servidor (recupera un servidor que acepta TCP pero no responde). */
