@@ -257,7 +257,8 @@ class LinkRateControllerTest {
     fun fluidity60StartsAt8MbitAndDropsTo24Fps() {
         val c = LinkRateController(8_000_000, 60)
         assertEquals(60, c.fpsCap())
-        val fpsStep = c.queuedUntil(0, 6_000).firstOrNull { it.fpsChanged() }
+        // Hasta 5 s: a los 5,1 s (3 s más de congestión en el suelo y a 24 fps) bajaría del suelo normal (emergencia).
+        val fpsStep = c.queuedUntil(0, 5_000).firstOrNull { it.fpsChanged() }
         assertNotNull(fpsStep)
         assertEquals(24, fpsStep!!.fpsAfter)
         // Suelo: la mitad de 8 Mbit/s.
@@ -322,5 +323,143 @@ class LinkRateControllerTest {
         assertEquals(3, s.linkWaits)
         assertEquals(2L, s.lateFlushes)
         assertEquals(-1L, LinkRateController.Sample(100, 1, 1, 1, 1).queueLagMs)
+    }
+
+    // ---------------------------------------------------------------- emergencia (viaje del 2026-10-07)
+
+    @Test
+    fun threeMoreSecondsCongestedAtTheFloorAnd24FpsGoBelowTheFloorTo1_2MbitThen20Fps() {
+        val c = LinkRateController(car, 30)
+        // Hasta 4 s, como siempre: suelo normal, 24 fps (a los 2 s) y «no hay más que bajar» (2,5 s).
+        assertEquals(5, c.queuedUntil(0, 4_000).size)
+        assertEquals(floor, c.bitrate())
+        assertFalse(c.inEmergency())
+        // La congestión en el suelo y a 24 fps empezó a contar a los 2,1 s: a los 5,1 s baja del suelo normal.
+        assertTrue(c.queuedUntil(4_100, 5_000).isEmpty())
+        val first = c.onSample(queued(5_100))
+        assertNotNull(first)
+        assertTrue(first!!.emergency)
+        assertTrue(first.congestion)
+        assertEquals(floor, first.bitrateBefore)
+        assertEquals(1_905_120, first.bitrateAfter)
+        assertTrue(
+            first.text,
+            first.text.startsWith("enlace muy congestionado: bajo del suelo normal (2.5 Mbit/s) tras 3.0 s de congestión en él a 24 fps (outq 96 KB"),
+        )
+        assertTrue(first.text, first.text.endsWith("→ bitrate 1.9 Mbit/s"))
+        assertTrue(c.inEmergency())
+        // Un paso cada 500 ms: 1,43 → 1,2 (suelo de emergencia) → 20 fps → «no hay más que bajar» → silencio.
+        val rest = c.queuedUntil(5_200, 9_000)
+        assertTrue(rest.all { it.emergency && it.congestion })
+        assertEquals(listOf(1_428_840, 1_200_000), rest.filter { it.bitrateChanged() }.map { it.bitrateAfter })
+        assertTrue(rest[1].text, rest[1].text.endsWith("(suelo de emergencia)"))
+        val fps = rest.single { it.fpsChanged() }
+        assertEquals(24, fps.fpsBefore)
+        assertEquals(20, fps.fpsAfter)
+        assertTrue(fps.text, fps.text.contains("con el bitrate en el suelo de emergencia (1.2 Mbit/s) → 20 fps"))
+        assertTrue(rest.last().text, rest.last().text.endsWith("y 20 fps: no hay más que bajar"))
+        assertEquals(4, rest.size)
+        assertEquals(1_200_000, c.minBitrate())
+        assertEquals(20, c.fpsCap())
+        assertEquals(1, c.emergencies())
+        assertEquals(10, c.congestionEvents())
+        assertTrue(c.statsLine(), c.statsLine().contains("· 20 fps") && c.statsLine().endsWith("· emergencia (suelo normal 2.5 Mbit/s)"))
+    }
+
+    @Test
+    fun shortCleanGapsKeepCountingButARecoveryRestartsTheThreeSeconds() {
+        // Huecos limpios de menos de 3 s (como entre los cortes de S26) no reinician la cuenta.
+        val gaps = LinkRateController(car, 30)
+        gaps.queuedUntil(0, 4_000)
+        assertTrue(gaps.cleanUntil(4_100, 4_400).isEmpty())
+        val st = gaps.queuedUntil(4_500, 5_500).single()
+        assertTrue(st.text, st.emergency && st.text.startsWith("enlace muy congestionado: bajo del suelo normal"))
+        // Con 3 s limpios vuelven los 30 fps: la próxima congestión en el suelo vuelve a pasar por 24 fps y espera 3 s más.
+        val c = LinkRateController(car, 30)
+        c.queuedUntil(0, 4_000)
+        assertEquals(30, c.cleanUntil(4_100, 7_100).single().fpsAfter)
+        val again = c.queuedUntil(7_200, 10_700)
+        assertTrue(again.none { it.emergency })
+        assertEquals(24, again.first().fpsAfter)
+        assertEquals(floor, c.bitrate())
+        // 24 fps a los 7,7 s; la cuenta empieza a los 7,8 s y llega a los 10,8 s.
+        assertTrue(c.onSample(queued(10_800))!!.emergency)
+    }
+
+    @Test
+    fun aRadioCutIsCongestionAtOnce() {
+        val c = LinkRateController(car, 30)
+        assertNull(c.onSample(clean(0)))
+        val st = c.onSample(clean(100).withRadioCut())
+        assertNotNull(st)
+        assertTrue(st!!.text, st.text.startsWith("congestión (corte de radio) → bitrate 3.8 Mbit/s"))
+        assertEquals(3_810_240, c.bitrate())
+        // Otro corte dentro de los 500 ms no baja otra vez, pero reinicia la calma.
+        assertNull(c.onSample(clean(300).withRadioCut()))
+        assertTrue(c.cleanUntil(400, 3_300).isEmpty())
+        assertNotNull(c.onSample(clean(3_400)))
+        // Por el cable (sin NetStat) se llama «corte del cable»; `with` conserva la marca.
+        val usb = LinkRateController(car, 30)
+        val s = LinkRateController.Sample(0, -1, -1, -1, -1, 0, 0, 10).withRadioCut().with(0, 0)
+        assertTrue(s.radioCut)
+        assertTrue(usb.onSample(s)!!.text.contains("corte del cable"))
+        assertFalse(LinkRateController.Sample(0, 1, 1, 1, 1).radioCut)
+    }
+
+    @Test
+    fun emergencyRearmsOnlyAfter30sCleanAtOrAboveTheNormalFloor() {
+        val c = LinkRateController(car, 30)
+        c.queuedUntil(0, 8_000)
+        assertEquals(1_200_000, c.bitrate())
+        assertEquals(20, c.fpsCap())
+        // Limpio: primero los fps, luego +25 % cada 3 s; al pasar del suelo normal sale de la emergencia.
+        val up = c.cleanUntil(8_100, 30_000)
+        assertEquals(30, up[0].fpsAfter)
+        assertEquals(listOf(1_500_000, 1_875_000, 2_343_750, 2_929_688, 3_662_110, 4_577_638), up.drop(1).map { it.bitrateAfter })
+        assertTrue(up[4].text, up[4].text.endsWith("· fuera de la emergencia (suelo normal 2.5 Mbit/s)"))
+        assertFalse(c.inEmergency())
+        // Congestión antes de 30 s limpios en el suelo normal: baja como siempre (suelo, 24 fps) y no pasa de ahí.
+        val down = c.queuedUntil(30_100, 40_000)
+        assertTrue(down.none { it.emergency })
+        assertEquals(floor, c.bitrate())
+        assertEquals(24, c.fpsCap())
+        assertEquals(1, c.emergencies())
+        // 30 s limpios en el suelo normal o por encima: rearmada (una línea, o al final de la subida si coincide).
+        val back = c.cleanUntil(40_100, 70_000)
+        assertTrue(back.none { it.text.contains("rearmada") })
+        assertEquals(car, c.bitrate())
+        val rearm = c.onSample(clean(70_100))
+        assertNotNull(rearm)
+        assertFalse(rearm!!.bitrateChanged() || rearm.fpsChanged() || rearm.congestion)
+        assertEquals("emergencia rearmada (30 s limpio con 5.1 Mbit/s)", rearm.text)
+        // Y vuelve a servir.
+        val again = c.queuedUntil(70_200, 76_000)
+        assertTrue(again.any { it.emergency && it.text.startsWith("enlace muy congestionado: bajo del suelo normal") })
+        assertEquals(2, c.emergencies())
+    }
+
+    @Test
+    fun aCongestedSampleRestartsThe30sRearmCount() {
+        val c = LinkRateController(car, 30)
+        c.queuedUntil(0, 8_000)
+        c.cleanUntil(8_100, 23_100)
+        assertFalse(c.inEmergency())
+        // Limpio desde los 23,2 s, un vaciado suelto a los 50 s y otros 30 s: la línea llega a los 80,1 s, no a los 53,2.
+        c.cleanUntil(23_200, 49_900)
+        assertNotNull(c.onSample(LinkRateController.Sample(50_000, 4 * kb, 2, 10, 12, 0, 1)))
+        assertTrue(c.cleanUntil(50_100, 80_000).none { it.text.contains("rearmada") })
+        assertTrue(c.cleanUntil(80_100, 80_200).single().text.contains("emergencia rearmada"))
+    }
+
+    @Test
+    fun aNewSessionRearmsTheEmergency() {
+        val c = LinkRateController(car, 30)
+        c.queuedUntil(0, 8_000)
+        assertTrue(c.inEmergency())
+        c.beginSession()
+        assertFalse(c.inEmergency())
+        assertEquals(0, c.emergencies())
+        assertEquals(car, c.bitrate())
+        assertTrue(c.queuedUntil(10_000, 18_000).any { it.emergency })
     }
 }

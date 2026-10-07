@@ -479,16 +479,24 @@ internal class QdSessionBridge(
             carWindow = net?.get(11) ?: -1,
             context = stallContext(),
         )
-        for (ev in stalls.onSample(sample)) emitStall(ev)
-        // Bitrate según el enlace (LinkRateController, en hql-video): la misma muestra, más los vaciados por retraso.
+        var radioCut = false
+        for (ev in stalls.onSample(sample)) {
+            emitStall(ev)
+            if (ev.phase == StallDetector.Phase.START && ev.kind == StallDetector.Kind.RADIO) radioCut = true
+        }
+        // Bitrate según el enlace (LinkRateController, en hql-video): la misma muestra, más los vaciados por retraso y el
+        // inicio de un corte de radio (congestión en el acto).
         hub.onLinkSample(
             port,
             LinkRateController.Sample(
                 SystemClock.elapsedRealtime(), sample.outq, sample.unacked, sample.retrans, sample.rttMs, 0, session.videoFlushes(),
-                io.videoQueueLagMs,
+                io.videoQueueLagMs, radioCut,
             ),
         )
     }
+
+    /** Sesión por la zona Wi-Fi del móvil (no por Wi-Fi Direct ni por el cable). */
+    private fun isHotspotLink(): Boolean = !host.isUsb && host.linkMode == Config.LINK_HOTSPOT
 
     private fun stallContext(): String {
         val sb = StringBuilder()
@@ -572,6 +580,8 @@ internal class QdSessionBridge(
                 bitrateMinKbps = if (s.frames > 0) hub.linkMinKbps(port) else 0,
                 congestionEvents = if (s.frames > 0) hub.linkCongestionEvents(port) else 0,
                 writeStalls = st.writeStalls,
+                wifiBand = if (isHotspotLink()) HotspotRadio.summaryBand() else "",
+                wifiDetail = if (isHotspotLink()) HotspotRadio.summaryDetail() else "",
             )
             val block = SessionSummary.block(record)
             QdTrace.block("HQL/Resumen", block)
@@ -615,6 +625,8 @@ internal class QdSessionBridge(
     private fun logStats(force: Boolean) {
         val w = port.stats.takeWindow(session.videoFlushes(), force) ?: return
         sampleThermal()
+        // Radio de la zona Wi-Fi (banda y clientes), al empezar y cada 30 s, si Android la deja leer.
+        if (!force && isHotspotLink()) HotspotRadio.onSessionTick(sid, SystemClock.elapsedRealtime())
         if (force && w.fps == 0.0 && w.dropped == 0) return
         val line = w.line()
         L.i(line)

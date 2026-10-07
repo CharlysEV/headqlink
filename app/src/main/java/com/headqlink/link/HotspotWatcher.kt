@@ -24,6 +24,7 @@ import com.andrerinas.openheadunit.utils.SoftApStateReader
  * `ON` si cualquiera lo dice; `OFF` si (1) dice 11/14, o (2) dice que no y (3) no encuentra nada; si no, `UNKNOWN`.
  * Cada cambio se publica en [LinkState] (fila «Red»), en el log unificado y en el diario del coche, y se avisa a
  * [listener] en el hilo principal. Android no deja a una app normal encender la zona Wi-Fi: lo hace el usuario.
+ * Además, [HotspotRadio] registra la banda, el canal y los clientes cuando Android lo deja leer.
  */
 internal class HotspotWatcher(private val ctx: Context, private val listener: Listener) {
     enum class State { ON, OFF, UNKNOWN }
@@ -54,6 +55,7 @@ internal class HotspotWatcher(private val ctx: Context, private val listener: Li
 
     private var lastIfaces: List<NetIfaces.Iface> = emptyList()
     private var started = false
+    private var radio: HotspotRadio? = null
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
@@ -87,6 +89,9 @@ internal class HotspotWatcher(private val ctx: Context, private val listener: Li
             L.w("zona Wi-Fi: sin aviso del sistema (${e.message}); se usa solo el escaneo")
         }
         h.post(scan)
+        val r = HotspotRadio(app, h)
+        radio = r
+        h.post { r.start() }
     }
 
     /** Vuelve a publicar el estado actual (p. ej. tras un error que ocupó la fila «Red»). */
@@ -100,6 +105,8 @@ internal class HotspotWatcher(private val ctx: Context, private val listener: Li
     fun stop() {
         if (!started) return
         started = false
+        radio?.stop()
+        radio = null
         handler?.removeCallbacksAndMessages(null)
         try {
             app.unregisterReceiver(receiver)

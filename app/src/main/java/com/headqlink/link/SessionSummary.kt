@@ -76,6 +76,9 @@ internal object SessionSummary {
         val congestionEvents: Int = 0,
         /** Writes bloqueados más de 10 s con el coche hablando (la sesión aguantó hasta 20 s). */
         val writeStalls: Long = 0,
+        /** Banda de la zona Wi-Fi («5 GHz», «2,4 GHz», «desconocida»; "" = no es la zona Wi-Fi) y su detalle (canal, ancho). */
+        val wifiBand: String = "",
+        val wifiDetail: String = "",
     ) {
         val durationS: Double get() = (endWallMs - startWallMs) / 1000.0
         val fps: Double get() = if (videoSeconds > 0) frames / videoSeconds else 0.0
@@ -108,7 +111,12 @@ internal object SessionSummary {
         if (r.closeDetail.isNotEmpty()) append(": ").append(r.closeDetail)
         append('\n')
         append("coche ").append(r.carIp).append(':').append(r.carPort).append(" «").append(r.carName).append("» · local ")
-            .append(r.local).append(' ').append(r.iface).append(" · motor ").append(r.engine).append(" · ")
+            .append(r.local).append(' ').append(r.iface)
+        if (r.wifiBand.isNotEmpty()) {
+            append(" · banda Wi-Fi ").append(r.wifiBand)
+            if (r.wifiDetail.isNotEmpty()) append(" (").append(r.wifiDetail).append(')')
+        }
+        append(" · motor ").append(r.engine).append(" · ")
             .append(r.videoMode).append(if (r.profile.isEmpty()) "" else "/" + r.profile).append(' ').append(r.video).append('\n')
         append("handshake: CAR_INFO ").append(rel(r.tCarInfoMs)).append(" · VIDEO_CTRL{1} ").append(rel(r.tVideoCtrlMs))
             .append(" · primer frame ").append(rel(r.tFirstFrameMs)).append(" · primer IDR ").append(rel(r.tFirstIdrMs))
@@ -149,7 +157,7 @@ internal object SessionSummary {
         "frames", "fps", "kbps", "idr", "keyframe_req_coche", "descartados", "vaciados", "max_write_ms", "max_cola_ms",
         "heartbeats_coche", "toques", "max_hueco_coche_ms", "cortes", "max_corte_ms", "retrans", "reconexion_ms",
         "video_reutilizado", "ciclos_foco_aa", "termico_fin", "termico_max", "tope_fps_fin", "tope_fps_min",
-        "frame_max_kb", "descartados_grandes", "bitrate_min_kbps", "congestiones", "writes_bloqueados",
+        "frame_max_kb", "descartados_grandes", "bitrate_min_kbps", "congestiones", "writes_bloqueados", "banda_wifi",
     ).joinToString(",")
 
     fun csvRow(r: Record): String = listOf(
@@ -162,7 +170,7 @@ internal object SessionSummary {
         r.retrans.toString(), r.reconnectMs.toString(), if (r.videoVerdict == "REUTILIZADO") "1" else "0", r.aaCycles.toString(),
         r.thermalEnd.toString(), r.thermalMax.toString(), r.fpsCapEnd.toString(), r.fpsCapMin.toString(),
         kb(r.maxMessageBytes).toString(), r.oversizedDrops.toString(), r.bitrateMinKbps.toString(), r.congestionEvents.toString(),
-        r.writeStalls.toString(),
+        r.writeStalls.toString(), r.wifiBand.replace(',', '.'),
     ).joinToString(",") { csv(it) }
 
     private val NUMBER = Regex("-?[0-9]+(\\.[0-9]+)?")
@@ -264,6 +272,10 @@ internal object SessionSummary {
         if (congestions > 0) {
             append("enlace: ").append(congestions).append(" congestiones · bitrate mín. ")
                 .append(f1((trip.filter { it.bitrateMinKbps > 0 }.minOfOrNull { it.bitrateMinKbps } ?: 0) / 1000.0)).append(" Mbit/s\n")
+        }
+        val bands = trip.filter { it.wifiBand.isNotEmpty() }.groupingBy { it.wifiBand }.eachCount()
+        if (bands.isNotEmpty()) {
+            append("banda Wi-Fi: ").append(bands.entries.joinToString(" · ") { "${it.key} ${it.value}" }).append('\n')
         }
         val stalls = trip.sumOf { it.writeStalls }
         if (stalls > 0) append("writes bloqueados más de 10 s con el coche hablando: ").append(stalls).append('\n')

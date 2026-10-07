@@ -1506,3 +1506,79 @@ servidor, hay que aceptarla una vez en el móvil.
 **Resultados en el PC.** `cmd /c ".\gradlew.bat :app:testGithubDebugUnitTest :app:assembleGithubDebug --console=plain"`:
 **BUILD SUCCESSFUL**. App: 2978 pruebas, 0 fallos y 4 saltadas (la de `sh` y las tres de dibujo, que piden
 `-Ppreview`); el paquete `com.headqlink.link`, 320 (60 nuevas).
+
+## 18. Radio saturada: suelo de emergencia y diagnóstico de la zona Wi-Fi (2026-10-07)
+
+**Informe (C10, 2026-10-07, 08:51-09:13, zona Wi-Fi).** El peor viaje por Wi-Fi hasta ahora, con el estado térmico a 0
+todo el rato: 7 sesiones, 127 cortes de radio («Corte … RADIO»: TX atascado más de 400 ms con el coche hablando, rtt de
+100-200 ms, cwnd hasta 1), 9-20 fps y cientos de frames descartados. En S26 (perfil Coche) el control del enlace (§12.1)
+estaba en su suelo (`bitrate_min_kbps` 2540 = 50 % de los 5,08 Mbit/s del coche, 22 congestiones) y a 24 fps, y aun así
+hubo 45 cortes y 10,5 fps: tras «no hay más que bajar» no hacía nada más. El suelo del 50 % (viaje 6) evita pixelar en
+un enlace bueno, pero en uno malo sigue saturando la radio. Además, en S26 salen P-frames de 250-270 KB a 2,5 Mbit/s
+(cada uno ocupa casi un segundo de enlace): queda pendiente mirar por qué el VBR los produce.
+
+### 18.1 Suelo de emergencia (`LinkRateController`)
+
+| Regla | Detalle |
+|---|---|
+| **Suelo normal** | Sin cambios: max(1,5 Mbit/s, 50 % del bitrate del coche); 24 fps si en él sigue la congestión. |
+| **Entrar** | Ya en el suelo normal y a ≤ 24 fps, con congestión durante ≥ **3 s** (`EMERGENCY_AFTER_MS`) y al menos **3** muestras congestionadas separadas 500 ms (`EMERGENCY_SAMPLES`; un golpe suelto no basta). Los huecos limpios de menos de 3 s no reinician la cuenta; una recuperación (3 s limpios: vuelven los fps) sí. |
+| **Bajar** | ×0,75 cada 500 ms hasta **1,2 Mbit/s** (`EMERGENCY_FLOOR_BPS`), luego **20 fps** (`EMERGENCY_FPS`), luego una línea «no hay más que bajar» y silencio. |
+| **Volver** | Como siempre: 3 s limpios → los fps de la sesión; luego +25 % cada 3 s. Al pasar del suelo normal, «fuera de la emergencia». |
+| **Rearmar** | Una sola vez por episodio: solo tras **30 s** limpios seguidos con el bitrate en el suelo normal o por encima (`EMERGENCY_REARM_MS`; cualquier muestra congestionada reinicia la cuenta), y en cada sesión nueva. |
+| **Enlace bueno** | Nunca llega: desde el techo hacen falta unos 5,5 s de congestión sostenida. Las pruebas de siempre pasan sin cambios salvo «Fluidez 60», que ahora mira el suelo normal a los 5 s (a los 5,1 s entraría la emergencia). |
+
+Interpretación del «≥ 3 s (o ≥ 3 muestras separadas STEP_HOLD_MS)»: se exigen las dos cosas. Con solo la segunda, la
+emergencia entraría 1 s después del suelo (3 muestras a 500 ms), y la de 3 s nunca contaría.
+
+**Cortes de radio al controlador.** Antes no llegaban: `QdSessionBridge.checkStalls` mandaba a `VideoHub.onLinkSample`
+solo NetStat y los vaciados. Ahora el INICIO de un corte RADIO del `StallDetector` marca la muestra
+(`Sample.radioCut`, `withRadioCut()`; `with()` la conserva) y cuenta como congestión en el acto («corte de radio»; por
+el cable, «corte del cable»), con la misma espera de 500 ms entre pasos.
+
+### 18.2 Radio de la zona Wi-Fi (`HotspotRadio`)
+
+Con la conexión «Zona Wi-Fi», `HotspotWatcher` arranca `HotspotRadio` en su hilo `hql-net`, que escucha
+`WifiManager.SoftApCallback` (Android 11+) y registra una vez por cambio: frecuencia → banda y canal, ancho de canal,
+estándar Wi-Fi (Android 12+), clientes (Android 12+, por instancia y con la MAC recortada a los dos últimos bytes) y
+desconexiones (Android 13+, con el motivo 802.11 en Android 14+). Con 2,4 GHz, un aviso.
+
+**No hay API pública:** `SoftApCallback`, `SoftApInfo` y `WifiClient` son API de sistema (no están en el `android.jar`
+del SDK 36), así que va por reflexión y un `Proxy`, protegido por SDK y con todo en `try`. En un móvil normal lo más
+probable es que Android lo niegue (`SecurityException`: pide NETWORK_SETTINGS, que solo tienen Ajustes y el sistema; o
+el método oculto bloqueado): se dice una vez y la banda queda «desconocida». El RSSI y la velocidad del coche como
+cliente no se pueden leer sin permisos de sistema: también se dice una vez; cada 30 s de sesión se registra lo que se
+sepa (banda y clientes). El TCP con el coche (rtt, cwnd, retrans) sigue en las estadísticas de 5 s.
+
+**Resumen y `sessions.csv`.** En la línea `coche … · local … swlan0 (zona Wi-Fi)` del bloque, `· banda Wi-Fi 5 GHz
+(canal 36 · 80 MHz · Wi-Fi 6 (802.11ax))` (o `desconocida`; nada con Wi-Fi Direct o cable). Columna nueva al final:
+**`banda_wifi`** (`5 GHz`, `2.4 GHz`, `6 GHz`, `desconocida`, vacía si no es la zona Wi-Fi). En el resumen del viaje,
+`banda Wi-Fi: 5 GHz 3 · desconocida 1`.
+
+### 18.3 Qué buscar en el log
+
+| Línea | Significado |
+|---|---|
+| `VIDEO bitrate adaptable al enlace 2.5 Mbit/s-5.1 Mbit/s (… 24 fps si en el suelo sigue; 3 s más así: emergencia hasta 1.2 Mbit/s y 20 fps)` | Controlador activo |
+| `W enlace: congestión (corte de radio) → bitrate 3.8 Mbit/s` | Un corte de radio baja el bitrate en el acto |
+| `W enlace muy congestionado: bajo del suelo normal (2.5 Mbit/s) tras 3.0 s de congestión en él a 24 fps (outq 96 KB 5100 ms) → bitrate 1.9 Mbit/s` | Entra la emergencia |
+| `W enlace muy congestionado (rtt 210 ms (mín. 14) 600 ms) → bitrate 1.2 Mbit/s (suelo de emergencia)` / `… con el bitrate en el suelo de emergencia (1.2 Mbit/s) → 20 fps` / `… y 20 fps: no hay más que bajar` | Pasos de la emergencia |
+| `enlace: enlace limpio 3 s → bitrate 2.9 Mbit/s · fuera de la emergencia (suelo normal 2.5 Mbit/s)` | Vuelve al suelo normal |
+| `enlace: emergencia rearmada (30 s limpio con 5.1 Mbit/s)` | Se puede volver a usar |
+| `enlace: bitrate 1.2 Mbit/s (mín. 1.2 Mbit/s, techo 5.1 Mbit/s) · 20 fps · congestiones 10 (bajadas 6, subidas 0) · emergencia (suelo normal 2.5 Mbit/s)` | Estadísticas de 5 s (`· emergencias N` cuando ya salió) |
+| `HQL/Red: radio de la zona Wi-Fi: escuchando los cambios (banda, canal, ancho, estándar y clientes)` | Android deja leerla |
+| `HQL/Red: radio de la zona Wi-Fi: no se puede leer (Android pide un permiso de sistema: …): ni banda, ni canal, ni clientes, ni la señal del coche. Compruébala en Ajustes › Zona Wi-Fi › Banda (mejor 5 GHz)` | No deja (una vez por arranque de la zona Wi-Fi) |
+| `HQL/Red: radio de la zona Wi-Fi: 5 GHz canal 36 (5180 MHz) · 80 MHz · Wi-Fi 6 (802.11ax)` | Banda y canal (en cada cambio) |
+| `HQL/Red: radio de la zona Wi-Fi: 1 cliente (…:3f:a1 en 5 GHz canal 36)` / `… cliente …:3f:a1 desconectado de 5 GHz canal 36 (5180 MHz) (motivo 802.11 3)` | Clientes |
+| `W la zona Wi-Fi va en 2,4 GHz: más lenta y con más cortes; ponla en 5 GHz (Ajustes › Zona Wi-Fi › Banda)` | Aviso |
+| `HQL/Red: radio del coche S27: zona Wi-Fi 5 GHz canal 36 (5180 MHz) · 80 MHz · Wi-Fi 6 (802.11ax) · 1 cliente` | Al empezar la sesión y cada 30 s (solo si se puede leer) |
+| `HQL/Red: radio del coche: Android no da a una app el RSSI ni la velocidad de cada cliente de la zona Wi-Fi …` | Una vez |
+
+### 18.4 Resultados en el PC
+
+`cmd /c ".\gradlew.bat :app:testGithubDebugUnitTest :app:assembleGithubDebug --console=plain"`: **BUILD SUCCESSFUL**.
+App: 2989 pruebas, 0 fallos y 4 saltadas. Nuevas: 6 en `LinkRateControllerTest` (emergencia hasta 1,2 Mbit/s y 20 fps;
+huecos cortos frente a recuperación; corte de radio como congestión; rearme solo tras 30 s limpios en el suelo normal;
+una congestión reinicia los 30 s; sesión nueva rearma), `HotspotRadioTest` (4: banda y canal en 2,4/5/6/60 GHz, textos,
+bandas a la vez y MAC recortada, sin zona Wi-Fi no hay banda) y una en `SessionSummaryTest` (banda en el bloque, el CSV
+y el viaje). Sin probar todavía en el móvil ni en el coche.

@@ -25,6 +25,14 @@ import java.util.Locale;
  * - **Subir**: tras RECOVER_MS seguidos sin congestión, primero vuelven los fps de la sesión; después, bitrate
  *   × STEP_UP cada RECOVER_MS limpios, hasta el techo.
  * - **Techo**: el bitrate de partida o, con calor, el tope térmico (el menor); bajarlo recorta el bitrate en el acto.
+ * - **Emergencia** (viaje del 2026-10-07: 127 cortes de radio en 22 min; S26 en el suelo de 2,54 Mbit/s y a 24 fps
+ *   con 45 cortes y 10,5 fps): si ya está en el suelo normal y a LOW_FPS y la congestión sigue EMERGENCY_AFTER_MS (con
+ *   al menos EMERGENCY_SAMPLES muestras congestionadas separadas STEP_HOLD_MS), se baja del suelo normal hasta
+ *   EMERGENCY_FLOOR_BPS y después a EMERGENCY_FPS. Una vez: se rearma tras EMERGENCY_REARM_MS limpios con el bitrate en
+ *   el suelo normal o por encima (y en cada sesión nueva). En un enlace bueno nunca se llega: desde el techo hacen falta
+ *   unos 5,5 s de congestión sostenida.
+ * - **Cortes de radio**: el inicio de un corte del detector (TX atascado más de 400 ms, `StallDetector` RADIO) llega
+ *   en la muestra ({@link Sample#radioCut}) y cuenta como congestión en el acto.
  * - **Sin cola del kernel** (cable USB: no hay socket ni NetStat, outq y rtt a -1): la «cola alta» es el vídeo más viejo
  *   aún sin salir de la cola de la sesión (o escribiéndose) con ≥ QUEUE_LAG_HIGH_MS durante OUTQ_HIGH_MS; además siguen
  *   los vaciados por retraso. Con NetStat, el retraso de la cola no cuenta (ya lo dicen la cola del kernel y el rtt).
@@ -53,6 +61,15 @@ final class LinkRateController {
     static final long QUEUE_LAG_HIGH_MS = 66;
     static final long RECOVER_MS = 3_000;
     static final int LOW_FPS = 24;
+    /** Suelo de emergencia: por debajo del normal, solo con la radio saturada en el suelo (se pixela, pero se mueve). */
+    static final int EMERGENCY_FLOOR_BPS = 1_200_000;
+    static final int EMERGENCY_FPS = 20;
+    /** Congestión sostenida en el suelo normal y a LOW_FPS antes de bajar de él. */
+    static final long EMERGENCY_AFTER_MS = 3_000;
+    /** Y al menos estas muestras congestionadas (separadas STEP_HOLD_MS) en ese rato: no basta un golpe suelto. */
+    static final int EMERGENCY_SAMPLES = 3;
+    /** Limpio este rato con el bitrate en el suelo normal o por encima: la emergencia se puede volver a usar. */
+    static final long EMERGENCY_REARM_MS = 30_000;
 
     /** Una muestra (cada ~100 ms). Las cifras de NetStat a -1 si no se pueden leer; las demás, acumuladas. */
     static final class Sample {
@@ -67,12 +84,19 @@ final class LinkRateController {
         final long lateFlushes;
         /** Antigüedad del vídeo más viejo aún sin salir de la cola de la sesión (ms; -1 = no se sabe). */
         final long queueLagMs;
+        /** En esta muestra empezó un corte de radio (StallDetector, RADIO): congestión en el acto. */
+        final boolean radioCut;
 
         Sample(long nowMs, int outq, int unacked, int retrans, int rttMs, int linkWaits, long lateFlushes) {
             this(nowMs, outq, unacked, retrans, rttMs, linkWaits, lateFlushes, -1);
         }
 
         Sample(long nowMs, int outq, int unacked, int retrans, int rttMs, int linkWaits, long lateFlushes, long queueLagMs) {
+            this(nowMs, outq, unacked, retrans, rttMs, linkWaits, lateFlushes, queueLagMs, false);
+        }
+
+        Sample(long nowMs, int outq, int unacked, int retrans, int rttMs, int linkWaits, long lateFlushes, long queueLagMs,
+                boolean radioCut) {
             this.nowMs = nowMs;
             this.outq = outq;
             this.unacked = unacked;
@@ -81,6 +105,7 @@ final class LinkRateController {
             this.linkWaits = linkWaits;
             this.lateFlushes = lateFlushes;
             this.queueLagMs = queueLagMs;
+            this.radioCut = radioCut;
         }
 
         /** Sin las esperas de la puerta ni los vaciados (los añade quien los conoce con {@link #with}). */
@@ -89,7 +114,12 @@ final class LinkRateController {
         }
 
         Sample with(int linkWaits, long lateFlushes) {
-            return new Sample(nowMs, outq, unacked, retrans, rttMs, linkWaits, lateFlushes, queueLagMs);
+            return new Sample(nowMs, outq, unacked, retrans, rttMs, linkWaits, lateFlushes, queueLagMs, radioCut);
+        }
+
+        /** La misma muestra, con el inicio de un corte de radio. */
+        Sample withRadioCut() {
+            return new Sample(nowMs, outq, unacked, retrans, rttMs, linkWaits, lateFlushes, queueLagMs, true);
         }
     }
 
@@ -100,14 +130,21 @@ final class LinkRateController {
         final int fpsBefore;
         final int fpsAfter;
         final boolean congestion;
+        /** Paso por debajo del suelo normal: el texto ya empieza por «enlace muy congestionado». */
+        final boolean emergency;
         final String text;
 
         Step(int bitrateBefore, int bitrateAfter, int fpsBefore, int fpsAfter, boolean congestion, String text) {
+            this(bitrateBefore, bitrateAfter, fpsBefore, fpsAfter, congestion, false, text);
+        }
+
+        Step(int bitrateBefore, int bitrateAfter, int fpsBefore, int fpsAfter, boolean congestion, boolean emergency, String text) {
             this.bitrateBefore = bitrateBefore;
             this.bitrateAfter = bitrateAfter;
             this.fpsBefore = fpsBefore;
             this.fpsAfter = fpsAfter;
             this.congestion = congestion;
+            this.emergency = emergency;
             this.text = text;
         }
 
@@ -140,11 +177,23 @@ final class LinkRateController {
     private long lastFlushes;
     private boolean floorNoted;
 
+    /** Emergencia: por debajo del suelo normal (hasta que la subida vuelva a él). */
+    private boolean emergency;
+    /** Se puede entrar en emergencia (al empezar la sesión y tras EMERGENCY_REARM_MS limpios en el suelo normal o más). */
+    private boolean emergencyArmed;
+    /** Congestión en el suelo normal y a LOW_FPS: desde cuándo, cuántas muestras (separadas STEP_HOLD_MS) y la última. */
+    private long floorCongestedSinceMs = -1;
+    private int floorCongestedSamples;
+    private long floorCongestedLastMs = -1;
+    /** Limpio desde (para rearmar la emergencia); -1 = no. */
+    private long rearmCleanSinceMs = -1;
+
     // Estadísticas de la sesión (resumen).
     private int minBitrate;
     private int congestionEvents;
     private int stepsDown;
     private int stepsUp;
+    private int emergencies;
 
     /** profileBps: bitrate de partida (el que pide el coche); sessionFps: los de la sesión (30 o 60). */
     LinkRateController(int profileBps, int sessionFps) {
@@ -169,6 +218,13 @@ final class LinkRateController {
         lastFlushes = -1;
         rttHighSinceMs = -1;
         floorNoted = false;
+        emergency = false;
+        emergencyArmed = true;
+        emergencies = 0;
+        floorCongestedSinceMs = -1;
+        floorCongestedSamples = 0;
+        floorCongestedLastMs = -1;
+        rearmCleanSinceMs = -1;
     }
 
     /**
@@ -229,26 +285,76 @@ final class LinkRateController {
         if (lastFlushes >= 0 && s.lateFlushes > lastFlushes) add(why, "vaciados por retraso +" + (s.lateFlushes - lastFlushes));
         lastFlushes = s.lateFlushes;
 
+        // Inicio de un corte (TX atascado más de 400 ms): congestión en el acto.
+        if (s.radioCut) add(why, s.outq >= 0 || s.rttMs >= 0 ? "corte de radio" : "corte del cable");
+
         boolean congested = why.length() > 0;
         if (congested) {
             cleanSinceMs = -1;
+            rearmCleanSinceMs = -1;
+            int floor = floor();
+            // Emergencia: cuenta cada muestra congestionada en el suelo normal y a LOW_FPS (antes de la espera entre pasos).
+            boolean emergencyDue = false;
+            if (!emergency) {
+                if (emergencyArmed && bitrate <= floor && fpsCap <= LOW_FPS) {
+                    if (floorCongestedSinceMs < 0) {
+                        floorCongestedSinceMs = now;
+                        floorCongestedSamples = 0;
+                        floorCongestedLastMs = -1;
+                    }
+                    if (floorCongestedLastMs < 0 || now - floorCongestedLastMs >= STEP_HOLD_MS) {
+                        floorCongestedSamples++;
+                        floorCongestedLastMs = now;
+                    }
+                    emergencyDue = now - floorCongestedSinceMs >= EMERGENCY_AFTER_MS && floorCongestedSamples >= EMERGENCY_SAMPLES;
+                } else {
+                    floorCongestedSinceMs = -1;
+                }
+            }
             if (lastStepMs >= 0 && now - lastStepMs < STEP_HOLD_MS) return null;
             int before = bitrate;
-            int floor = floor();
-            if (bitrate > floor) {
+            if (emergencyDue) {
+                long held = now - floorCongestedSinceMs;
+                emergency = true;
+                emergencyArmed = false;
+                emergencies++;
+                floorNoted = false;
+                floorCongestedSinceMs = -1;
                 lastStepMs = now;
                 congestionEvents++;
                 stepsDown++;
-                bitrate = Math.max(floor, (int) Math.round(bitrate * STEP_DOWN));
+                bitrate = Math.max(EMERGENCY_FLOOR_BPS, (int) Math.round(bitrate * STEP_DOWN));
                 noteBitrate();
+                return new Step(before, bitrate, fpsCap, fpsCap, true, true,
+                        "enlace muy congestionado: bajo del suelo normal (" + mbit(floor) + ") tras "
+                                + String.format(Locale.US, "%.1f", held / 1000.0) + " s de congestión en él a " + fpsCap
+                                + " fps (" + why + ") → bitrate " + mbit(bitrate) + emergencyFloorMark());
+            }
+            int stepFloor = emergency ? EMERGENCY_FLOOR_BPS : floor;
+            int lowFps = emergency ? EMERGENCY_FPS : LOW_FPS;
+            if (bitrate > stepFloor) {
+                lastStepMs = now;
+                congestionEvents++;
+                stepsDown++;
+                bitrate = Math.max(stepFloor, (int) Math.round(bitrate * STEP_DOWN));
+                noteBitrate();
+                if (emergency) {
+                    return new Step(before, bitrate, fpsCap, fpsCap, true, true,
+                            "enlace muy congestionado (" + why + ") → bitrate " + mbit(bitrate) + emergencyFloorMark());
+                }
                 return new Step(before, bitrate, fpsCap, fpsCap, true,
                         "congestión (" + why + ") → bitrate " + mbit(bitrate) + (bitrate == floor ? " (suelo)" : ""));
             }
-            if (fpsCap > LOW_FPS) {
+            if (fpsCap > lowFps) {
                 lastStepMs = now;
                 congestionEvents++;
                 int fpsBefore = fpsCap;
-                fpsCap = LOW_FPS;
+                fpsCap = lowFps;
+                if (emergency) {
+                    return new Step(before, bitrate, fpsBefore, fpsCap, true, true,
+                            "enlace muy congestionado (" + why + ") con el bitrate en el suelo de emergencia (" + mbit(bitrate)
+                                    + ") → " + lowFps + " fps");
+                }
                 return new Step(before, bitrate, fpsBefore, fpsCap, true,
                         "congestión (" + why + ") con el bitrate en el suelo (" + mbit(bitrate) + ") → " + LOW_FPS + " fps");
             }
@@ -256,6 +362,11 @@ final class LinkRateController {
                 floorNoted = true;
                 lastStepMs = now;
                 congestionEvents++;
+                if (emergency) {
+                    return new Step(before, bitrate, fpsCap, fpsCap, true, true,
+                            "enlace muy congestionado (" + why + ") con el bitrate en el suelo de emergencia (" + mbit(bitrate)
+                                    + ") y " + fpsCap + " fps: no hay más que bajar");
+                }
                 return new Step(before, bitrate, fpsCap, fpsCap, true,
                         "congestión (" + why + ") con el bitrate en el suelo (" + mbit(bitrate) + ") y " + fpsCap
                                 + " fps: no hay más que bajar");
@@ -263,28 +374,59 @@ final class LinkRateController {
             return null;
         }
 
-        // Enlace limpio: tras RECOVER_MS seguidos, primero los fps y luego el bitrate (un paso por periodo).
+        // Enlace limpio. La emergencia se rearma tras EMERGENCY_REARM_MS limpios en el suelo normal o por encima.
+        String rearmed = null;
+        if (!emergencyArmed && !emergency && bitrate >= floor()) {
+            if (rearmCleanSinceMs < 0) {
+                rearmCleanSinceMs = now;
+            } else if (now - rearmCleanSinceMs >= EMERGENCY_REARM_MS) {
+                emergencyArmed = true;
+                rearmCleanSinceMs = -1;
+                rearmed = "emergencia rearmada (" + EMERGENCY_REARM_MS / 1000 + " s limpio con " + mbit(bitrate) + ")";
+            }
+        } else {
+            rearmCleanSinceMs = -1;
+        }
+
+        // Tras RECOVER_MS seguidos, primero los fps y luego el bitrate (un paso por periodo).
         if (cleanSinceMs < 0) {
             cleanSinceMs = now;
-            return null;
+            return info(rearmed);
         }
-        if (now - cleanSinceMs < RECOVER_MS) return null;
+        if (now - cleanSinceMs < RECOVER_MS) return info(rearmed);
         cleanSinceMs = now;
         floorNoted = false;
+        floorCongestedSinceMs = -1;
+        String tail = rearmed == null ? "" : " · " + rearmed;
         if (fpsCap < sessionFps) {
             int fpsBefore = fpsCap;
             fpsCap = sessionFps;
             return new Step(bitrate, bitrate, fpsBefore, fpsCap, false,
-                    "enlace limpio " + RECOVER_MS / 1000 + " s → " + fpsCap + " fps (bitrate " + mbit(bitrate) + ")");
+                    "enlace limpio " + RECOVER_MS / 1000 + " s → " + fpsCap + " fps (bitrate " + mbit(bitrate) + ")" + tail);
         }
         if (bitrate < ceiling) {
             int before = bitrate;
             stepsUp++;
             bitrate = Math.min(ceiling, (int) Math.round(bitrate * STEP_UP));
+            String back = "";
+            if (emergency && bitrate >= floor()) {
+                emergency = false;
+                back = " · fuera de la emergencia (suelo normal " + mbit(floor()) + ")";
+            }
             return new Step(before, bitrate, fpsCap, fpsCap, false,
-                    "enlace limpio " + RECOVER_MS / 1000 + " s → bitrate " + mbit(bitrate) + (bitrate == ceiling ? " (techo)" : ""));
+                    "enlace limpio " + RECOVER_MS / 1000 + " s → bitrate " + mbit(bitrate) + (bitrate == ceiling ? " (techo)" : "")
+                            + back + tail);
         }
-        return null;
+        return info(rearmed);
+    }
+
+    /** Un aviso sin cambios (la emergencia rearmada), o null. */
+    private Step info(String text) {
+        return text == null ? null : new Step(bitrate, bitrate, fpsCap, fpsCap, false, text);
+    }
+
+    private String emergencyFloorMark() {
+        return bitrate == EMERGENCY_FLOOR_BPS ? " (suelo de emergencia)" : "";
     }
 
     private void noteBitrate() {
@@ -322,6 +464,16 @@ final class LinkRateController {
         return congestionEvents;
     }
 
+    /** Veces que se bajó del suelo normal (emergencia) en la sesión. */
+    synchronized int emergencies() {
+        return emergencies;
+    }
+
+    /** Por debajo del suelo normal ahora mismo. */
+    synchronized boolean inEmergency() {
+        return emergency;
+    }
+
     /** Hay algo que contar en las estadísticas de 5 s (bitrate por debajo del techo, fps bajados o congestiones). */
     synchronized boolean active() {
         return bitrate < ceiling || fpsCap < sessionFps || congestionEvents > 0;
@@ -329,15 +481,17 @@ final class LinkRateController {
 
     /** Para el log al arrancar. */
     String describe() {
-        return String.format(Locale.US, "bitrate adaptable al enlace %s-%s (baja ×%.2f con retardo sostenido, sube %d %% cada %d s limpio; %d fps si en el suelo sigue)",
-                mbit(floor()), mbit(profileBps), STEP_DOWN, Math.round((STEP_UP - 1) * 100), RECOVER_MS / 1000, LOW_FPS);
+        return String.format(Locale.US, "bitrate adaptable al enlace %s-%s (baja ×%.2f con retardo sostenido o un corte de radio, sube %d %% cada %d s limpio; %d fps si en el suelo sigue; %d s más así: emergencia hasta %s y %d fps)",
+                mbit(floor()), mbit(profileBps), STEP_DOWN, Math.round((STEP_UP - 1) * 100), RECOVER_MS / 1000, LOW_FPS,
+                EMERGENCY_AFTER_MS / 1000, mbit(EMERGENCY_FLOOR_BPS), EMERGENCY_FPS);
     }
 
     /** Línea de las estadísticas de 5 s. */
     synchronized String statsLine() {
         return "enlace: bitrate " + mbit(bitrate) + " (mín. " + mbit(minBitrate) + ", techo " + mbit(ceiling) + ")"
                 + (fpsCap < sessionFps ? " · " + fpsCap + " fps" : "") + " · congestiones " + congestionEvents
-                + " (bajadas " + stepsDown + ", subidas " + stepsUp + ")";
+                + " (bajadas " + stepsDown + ", subidas " + stepsUp + ")"
+                + (emergency ? " · emergencia (suelo normal " + mbit(floor()) + ")" : emergencies > 0 ? " · emergencias " + emergencies : "");
     }
 
     static String mbit(int bps) {

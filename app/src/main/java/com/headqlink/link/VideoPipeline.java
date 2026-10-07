@@ -457,8 +457,10 @@ final class VideoPipeline {
             PerfTrace.event("link_fps", st.fpsAfter);
         }
         if (st.congestion) PerfTrace.event("link_congestion", st.bitrateAfter / 1000);
-        if (st.congestion) L.w("enlace: " + st.text);
-        else L.i("enlace: " + st.text);
+        // Bajo el suelo normal el texto ya dice «enlace muy congestionado: …».
+        String line = st.emergency ? st.text : "enlace: " + st.text;
+        if (st.congestion) L.w(line);
+        else L.i(line);
     }
 
     /** fps máximos: el menor del tope térmico y del enlace, al relay GL (con él) o los de la sesión (patrón, app). */
