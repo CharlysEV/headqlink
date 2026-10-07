@@ -185,6 +185,8 @@ final class RoutePlanner {
             instance = new RoutePlanner(ctx);
             instance.running = true;
             if (!instance.demo) new Thread(instance::loop, "route-planner").start();
+            // Demostración en vivo: el plan de carga también se vigila con la pestaña Ruta cerrada (avisos sobre AA).
+            else if (DemoMode.live()) new Thread(instance::demoLoop, "route-planner-demo").start();
         }
         return instance;
     }
@@ -193,6 +195,7 @@ final class RoutePlanner {
         if (instance == null) return;
         instance.running = false;
         CarSensors.stop();
+        VoiceAlert.shutdown();
         instance = null;
     }
 
@@ -248,6 +251,18 @@ final class RoutePlanner {
         }
     }
 
+    private void demoLoop() {
+        while (running) {
+            try {
+                Plan p = plan();
+                if (p != null) followCharge(p);
+            } catch (RuntimeException e) {
+                L.w("ruta: " + e.getClass().getSimpleName());
+            }
+            SystemClock.sleep(2000);
+        }
+    }
+
     private synchronized void step() {
         CarSensors.Snapshot s = sensors.snapshot();
         trackEnergy(s);
@@ -255,6 +270,7 @@ final class RoutePlanner {
         Plan p = plan;
         if (p != null && !Double.isNaN(s.lat)) p.progress = nearest(p, s.lat, s.lon, p.progress);
         if (p != null) compareOnArrival(p, s);
+        if (p != null) followCharge(p);
         // Destino: el de AA si lo manda; si no, el elegido aquí.
         Place m = manual;
         String dest = nav.active && nav.destination != null ? nav.destination : m != null ? m.name : null;
@@ -286,6 +302,193 @@ final class RoutePlanner {
             failedDestination = dest;
             status = Str.get(R.string.hql_route_failed, e.getMessage());
             L.w("ruta: " + Http.safeError(e));
+        }
+    }
+
+    // ------------------------------------------------------------------ plan de carga vivo
+
+    /** Avisos del plan de carga: el panel del coche se apunta mientras está en pantalla. */
+    interface ChargeAlertListener {
+        void onChargeAlert(String title, String text);
+    }
+
+    static volatile ChargeAlertListener chargeAlerts;
+    /** Entre dos avisos por voz (los cambios seguidos solo actualizan el aviso escrito), salvo si ya no se llega. */
+    static final long VOICE_GAP_MS = 90_000;
+
+    private final Object chargeLock = new Object();
+    private final ChargePlanner.Trend trend = new ChargePlanner.Trend();
+    private ChargePlanner.Result charge;
+    private String chargeKey = "";
+    private String chargeSettings = "";
+    private Plan chargeFor;
+    private int chargeLogged = -1;
+    private long lastVoiceMs = Long.MIN_VALUE / 2;
+    /** El último aviso del plan de esta ruta (la pestaña Ruta lo enseña) y su hora (de pared); null si ninguno. */
+    volatile String lastAlert;
+    volatile long lastAlertAtMs;
+
+    /**
+     * En el bucle (aunque no se vea la pestaña Ruta): cada lectura nueva de la nube alimenta la tendencia del viaje y el
+     * plan se rehace con el % de ahora; si cambia, avisa.
+     */
+    private void followCharge(Plan p) {
+        CarCloud.Snapshot cs = CarCloud.snapshot();
+        boolean data = cs != null && cs.hasData();
+        boolean charging = data && (cs.status.charging() || cs.status.pluggedIn());
+        if (data && !cs.demo) {
+            synchronized (chargeLock) {
+                trend.observe(p, p.km, p.kwhCum, p.km[Math.min(p.progress, p.n - 1)], cs.status.socBest(), cs.status.odometerKm,
+                        cs.capacityKwh, charging, cs.dataTimeMs());
+            }
+        }
+        double[] b = battery(cs);
+        chargePlan(b[0], b[1], b[2] > 0, data && cs.status.reev(), charging);
+    }
+
+    /**
+     * % de batería y capacidad (kWh) para la ruta, y 1 si son los reales del coche (nube, al día) o 0 si es el %
+     * indicado.
+     */
+    double[] battery(CarCloud.Snapshot cs) {
+        double real = cs == null ? Double.NaN : cs.soc(DemoMode.wallClockMs(), CarCloud.SOC_MAX_AGE_MS);
+        if (!Double.isNaN(real)) return new double[]{real, cs.capacityKwh, 1};
+        return new double[]{socNow(), EnergyModel.USABLE_KWH, 0};
+    }
+
+    /**
+     * El plan de carga con el % de ahora (se rehace si cambia algo: el avance, el %, la tendencia del viaje, el filtro o
+     * los márgenes; si no, el mismo). null sin ruta, sin % o en un REEV (el generador pone lo que falte). realSoc: el %
+     * es el del coche (pasar del indicado al real no es un cambio del que avisar).
+     */
+    ChargePlanner.Result chargePlan(double soc, double capKwh, boolean realSoc, boolean reev, boolean charging) {
+        Plan pl = plan();
+        synchronized (chargeLock) {
+            if (pl == null || pl.n < 2 || Double.isNaN(soc) || reev) {
+                charge = null;
+                chargeKey = "";
+                return null;
+            }
+            if (pl != chargeFor) {
+                chargeFor = pl;
+                charge = null;
+                chargeSettings = "";
+                lastAlert = null;
+            }
+            Config c = new Config(ctx);
+            int minKw = c.chargerMinKw();
+            String nets = c.chargerNetworks();
+            String settings = minKw + "/" + nets + "/" + c.planArrivePct() + "/" + c.planMaxPct() + "/" + Math.round(capKwh * 10)
+                    + (realSoc ? "/real" : "/indicado");
+            int prog = Math.min(pl.progress, pl.n - 1);
+            double f = demo ? DemoMode.planTrend() : trend.factor();
+            String key = settings + "/" + prog + "/" + Math.round(soc * 2) + "/" + Math.round(f * 100) + "/" + charging;
+            if (key.equals(chargeKey)) return charge;
+            chargeKey = key;
+            ChargePlanner.Settings s = new ChargePlanner.Settings();
+            s.arriveMinPct = c.planArrivePct();
+            s.maxChargePct = c.planMaxPct();
+            s.capacityKwh = capKwh;
+            java.util.Set<String> want = ChargerFilter.parseNetworks(nets);
+            List<Charger> list = new ArrayList<>();
+            for (Charger ch : pl.chargers) if (ChargerFilter.accepts(ch.maxKw, ch.network, minKw, want)) list.add(ch);
+            // Con los mismos ajustes, las paradas elegidas se mantienen mientras se lleguen (que el plan no baile).
+            boolean same = settings.equals(chargeSettings) && charge != null;
+            List<Charger> keep = new ArrayList<>();
+            if (same) for (ChargePlanner.Stop st : charge.stops) keep.add(st.charger);
+            double from = pl.km[prog];
+            ChargePlanner.Result r = ChargePlanner.plan(pl.km, ChargePlanner.scaled(pl.km, pl.kwhCum, from, f), from, soc, list, s, keep);
+            r.trend = f;
+            // Cargando (en una parada del plan o en otra), el plan cambia sin avisar: lo ha decidido el conductor.
+            ChargePlanner.Change change = same && !charging ? ChargePlanner.change(charge, r) : ChargePlanner.Change.NONE;
+            ChargePlanner.Result before = charge;
+            charge = r;
+            chargeSettings = settings;
+            int sig = r.outcome.ordinal() * 100 + r.stops.size();
+            if (sig != chargeLogged || change != ChargePlanner.Change.NONE) {
+                chargeLogged = sig;
+                L.i(String.format(Locale.US, "ruta: plan de carga%s: %s, %d paradas, %.0f min cargando, llegada %.0f %%, gasto ×%.2f",
+                        change == ChargePlanner.Change.NONE ? "" : " recalculado (" + change.name().toLowerCase(Locale.ROOT) + ")",
+                        r.outcome.name().toLowerCase(Locale.ROOT), r.stops.size(), r.chargeMinutes, r.arrivalPct, f));
+            }
+            if (change != ChargePlanner.Change.NONE) alert(change, before, r);
+            return r;
+        }
+    }
+
+    /** El plan de carga ya calculado (sin rehacerlo), o null. */
+    ChargePlanner.Result lastChargePlan() {
+        synchronized (chargeLock) {
+            return charge;
+        }
+    }
+
+    /** El plan ha cambiado durante el viaje: aviso escrito (panel del coche y pestaña Ruta) y por voz. */
+    private void alert(ChargePlanner.Change change, ChargePlanner.Result before, ChargePlanner.Result now) {
+        String title = Str.get(change == ChargePlanner.Change.NO_CHARGER ? R.string.hql_plan_alert_fail_title : R.string.hql_plan_alert_title);
+        String text = alertText(change, before, now);
+        lastAlert = text;
+        lastAlertAtMs = DemoMode.wallClockMs();
+        ChargeAlertListener l = chargeAlerts;
+        if (l != null) l.onChargeAlert(title, text);
+        long t = SystemClock.elapsedRealtime();
+        boolean voice = new Config(ctx).planVoice() && (!demo || DemoMode.live());
+        if (voice && (change == ChargePlanner.Change.NO_CHARGER || t - lastVoiceMs >= VOICE_GAP_MS)) {
+            lastVoiceMs = t;
+            VoiceAlert.say(ctx, title + ". " + text);
+        }
+    }
+
+    /** «Gastas un 12 % más de lo previsto. Nueva parada: Zunder Écija, en 45 km (llegas con 14 %).» */
+    static String alertText(ChargePlanner.Change change, ChargePlanner.Result before, ChargePlanner.Result now) {
+        StringBuilder b = new StringBuilder();
+        double pct = (now.trend - 1) * 100;
+        if (pct >= 5) b.append(Str.get(R.string.hql_plan_alert_more, pct)).append(' ');
+        else if (pct <= -5) b.append(Str.get(R.string.hql_plan_alert_less, -pct)).append(' ');
+        ChargePlanner.Stop next = now.next();
+        if (change == ChargePlanner.Change.NO_CHARGER) {
+            b.append(Str.get(R.string.hql_plan_alert_fail));
+        } else if (change == ChargePlanner.Change.FEWER) {
+            ChargePlanner.Stop d = ChargePlanner.dropped(before, now);
+            if (next == null) b.append(Str.get(R.string.hql_plan_alert_none, now.arrivalPct));
+            else if (d != null) b.append(Str.get(R.string.hql_plan_alert_fewer, chargerName(d.charger)));
+        } else {
+            ChargePlanner.Stop a = ChargePlanner.added(before, now);
+            if (a == null) a = next;
+            if (a != null) b.append(Str.get(R.string.hql_plan_alert_stop, chargerName(a.charger), a.km - now.fromKm, a.arrivePct));
+        }
+        return b.toString().trim();
+    }
+
+    /** Nombre de un cargador para los avisos: el de OpenStreetMap o, si no tiene, el de su red. */
+    static String chargerName(Charger c) {
+        if (c.name != null && !c.name.trim().isEmpty()) return c.name.trim();
+        return c.network == null || c.network.equals(ChargerFilter.OTHER) ? Str.get(R.string.hql_plan_charger) : ChargerFilter.label(c.network);
+    }
+
+    /**
+     * Google Maps con las paradas del plan como puntos intermedios (Maps admite hasta 3 en el móvil: con más, se va a
+     * las 3 primeras y se replanifica allí).
+     */
+    static void navigateWithStops(Context ctx, Plan p, ChargePlanner.Result cp) {
+        StringBuilder wp = new StringBuilder();
+        int n = 0;
+        for (ChargePlanner.Stop st : cp.stops) {
+            if (st.km <= cp.fromKm + ChargePlanner.HERE_KM) continue;
+            if (n++ >= 3) break;
+            if (wp.length() > 0) wp.append('|');
+            wp.append(String.format(Locale.US, "%.6f,%.6f", st.charger.lat, st.charger.lon));
+        }
+        String url = String.format(Locale.US, "https://www.google.com/maps/dir/?api=1&destination=%.6f,%.6f&travelmode=driving"
+                + "&dir_action=navigate", p.destLat, p.destLon) + (wp.length() > 0 ? "&waypoints=" + Uri.encode(wp.toString()) : "");
+        try {
+            android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
+                    .setPackage("com.google.android.apps.maps").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.getApplicationContext().startActivity(i);
+            L.i("ruta: Google Maps con " + Math.min(3, n) + " paradas de carga");
+            CarUi.switchToAa();
+        } catch (RuntimeException e) {
+            L.w("ruta: no se pudo abrir Google Maps con las paradas: " + e.getClass().getSimpleName());
         }
     }
 

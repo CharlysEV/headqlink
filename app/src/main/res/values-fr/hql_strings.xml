@@ -688,4 +688,27 @@
     <string name="hql_charger_none_filtered">Aucune borne de l\'itinéraire ne correspond à ces filtres.</string>
     <string name="hql_charger_clear_filters">Effacer les filtres</string>
     <string name="hql_key_space">espace</string>
+    <string name="hql_plan_title">Plan de recharge</string>
+    <string name="hql_plan_summary_one">1 arrêt · %1$s de recharge · arrivée à %2$.0f %%</string>
+    <string name="hql_plan_summary_many">%1$d arrêts · %2$s de recharge · arrivée à %3$.0f %%</string>
+    <string name="hql_plan_none">Sans arrêt : arrivée à %1$.0f %%</string>
+    <string name="hql_plan_impossible">Aucune borne accessible avec ces filtres : essayez d\'en retirer.</string>
+    <string name="hql_plan_stop_line">km %1$.0f · arrivée à %2$.0f %% · charge jusqu\'à %3$.0f %% · %4$s</string>
+    <string name="hql_plan_go">Y aller avec les arrêts</string>
+    <string name="hql_plan_other_chargers">Autres bornes sur l\'itinéraire</string>
+    <string name="hql_plan_arrive_min">Arriver avec au moins</string>
+    <string name="hql_plan_max_charge">Charger au maximum jusqu\'à</string>
+    <string name="hql_route_battery_plan">Arrivée avec le plan de recharge (%1$s de recharge)</string>
+    <string name="hql_plan_alert_title">Plan de recharge modifié</string>
+    <string name="hql_plan_alert_fail_title">Le plan ne suffit plus</string>
+    <string name="hql_plan_alert_more">Vous consommez %1$.0f %% de plus que prévu.</string>
+    <string name="hql_plan_alert_less">Vous consommez %1$.0f %% de moins que prévu.</string>
+    <string name="hql_plan_alert_stop">Nouvel arrêt : %1$s, dans %2$.0f km (arrivée à %3$.0f %%).</string>
+    <string name="hql_plan_alert_fewer">Plus besoin de s\'arrêter à %1$s.</string>
+    <string name="hql_plan_alert_none">Plus besoin de s\'arrêter : arrivée à %1$.0f %%.</string>
+    <string name="hql_plan_alert_fail">Avec cette consommation, aucune borne de l\'itinéraire n\'est accessible : cherchez-en une proche ou ralentissez.</string>
+    <string name="hql_plan_charger">une borne</string>
+    <string name="hql_plan_replanned">Recalculé à %1$s :</string>
+    <string name="hql_plan_trend">Ajusté à la consommation de ce trajet : %1$s</string>
+    <string name="hql_plan_voice">Alerte vocale si le plan change</string>
 </resources>

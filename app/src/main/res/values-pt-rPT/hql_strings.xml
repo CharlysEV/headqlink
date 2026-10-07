@@ -688,4 +688,27 @@
     <string name="hql_charger_none_filtered">Nenhum carregador na rota com estes filtros.</string>
     <string name="hql_charger_clear_filters">Limpar filtros</string>
     <string name="hql_key_space">espaço</string>
+    <string name="hql_plan_title">Plano de carregamento</string>
+    <string name="hql_plan_summary_one">1 paragem · %1$s a carregar · chega com %2$.0f %%</string>
+    <string name="hql_plan_summary_many">%1$d paragens · %2$s a carregar · chega com %3$.0f %%</string>
+    <string name="hql_plan_none">Sem paragens: chega com %1$.0f %%</string>
+    <string name="hql_plan_impossible">Nenhum carregador alcançável com estes filtros: experimente retirar algum.</string>
+    <string name="hql_plan_stop_line">km %1$.0f · chega com %2$.0f %% · carrega até %3$.0f %% · %4$s</string>
+    <string name="hql_plan_go">Ir com as paragens</string>
+    <string name="hql_plan_other_chargers">Outros carregadores na rota</string>
+    <string name="hql_plan_arrive_min">Chegar com pelo menos</string>
+    <string name="hql_plan_max_charge">Carregar no máximo até</string>
+    <string name="hql_route_battery_plan">Chega com o plano de carregamento (%1$s a carregar)</string>
+    <string name="hql_plan_alert_title">Plano de carregamento alterado</string>
+    <string name="hql_plan_alert_fail_title">Não chega com o plano</string>
+    <string name="hql_plan_alert_more">Está a gastar mais %1$.0f %% do que o previsto.</string>
+    <string name="hql_plan_alert_less">Está a gastar menos %1$.0f %% do que o previsto.</string>
+    <string name="hql_plan_alert_stop">Nova paragem: %1$s, a %2$.0f km (chega com %3$.0f %%).</string>
+    <string name="hql_plan_alert_fewer">Já não precisa de parar em %1$s.</string>
+    <string name="hql_plan_alert_none">Já não precisa de parar: chega com %1$.0f %%.</string>
+    <string name="hql_plan_alert_fail">Com este consumo nenhum carregador da rota é alcançável: procure um perto ou reduza a velocidade.</string>
+    <string name="hql_plan_charger">um carregador</string>
+    <string name="hql_plan_replanned">Recalculado às %1$s:</string>
+    <string name="hql_plan_trend">Ajustado ao consumo desta viagem: %1$s</string>
+    <string name="hql_plan_voice">Avisar por voz se o plano mudar</string>
 </resources>

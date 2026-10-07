@@ -131,6 +131,9 @@ public class PreviewActivity extends Activity {
             status.setText(Str.get(R.string.hql_preview_busy));
             return;
         }
+        // --es state replan (u otro estado de PreviewShots): la demostración en vivo en ese estado.
+        String state = getIntent().getStringExtra("state");
+        if (state != null) DemoMode.applyState(state);
         interactive = true;
         status.setVisibility(View.GONE);
         TextureView tv = new TextureView(this);

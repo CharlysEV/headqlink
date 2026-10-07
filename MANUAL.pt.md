@@ -409,6 +409,19 @@ admite.
       Zunder, Ionity, Iberdrola, Endesa X, Repsol, Wenea…, as que houver na rota, com quantos carregadores tem cada
       uma). Fica guardado, e os raios do perfil também o seguem. Os dados são do OpenStreetMap: a potência ou a rede
       podem faltar.
+    - **Plano de carregamento (grátis, como o ABRP):** se não chega com a margem, a Rota diz **onde parar e até quanto
+      carregar** entre os carregadores do filtro: o melhor carregador rápido do último troço a que chega e só o que faz
+      falta (o C10 carrega mais devagar acima dos 50 %: melhor duas paragens curtas do que uma longa até aos 100 %).
+      Cada paragem mostra o km, com quanto chega, até quanto carregar e os minutos; a linha da bateria sobe em cada
+      paragem. «Ir com as paragens» abre o Google Maps com elas (até 3). Em «Filtrar» escolhe com quanto chegar
+      (10-30 %) e até quanto carregar no máximo (70-100 %). Num REEV não há plano: o gerador põe o que faltar.
+    - **O plano refaz-se sozinho durante a viagem:** com a conta Leapmotor compara o que a bateria desce de verdade com
+      o previsto para esses km e ajusta o resto («Ajustado ao consumo desta viagem: +12 %»). As paragens escolhidas
+      mantêm-se enquanto lá chegar com margem; se estiver a ficar sem bateria (ou sobrar), o plano muda e **avisa**: um
+      cartão âmbar no painel do carro (também por cima do Android Auto) com «Ir» (Google Maps com as paragens novas) e
+      «Rota», o botão «Carro» em âmbar e **um aviso por voz** («Plano de carregamento alterado. Está a gastar mais 12 %
+      do que o previsto. Nova paragem: …»). A voz desliga-se em «Filtrar» → «Avisar por voz se o plano mudar». Enquanto
+      carrega não avisa (foi decisão sua).
   - «Condução»: a próxima manobra em grande, com uma barra que se esvazia até à viragem, as faixas e a manobra seguinte;
     a velocidade com o sinal do limite, o rumo, a altitude, a inclinação e o sol até ao pôr do sol.
   - «Viagens»: a viagem em curso e as guardadas, com o percurso, consumo, desnível e custo; os km dos últimos 14 dias e

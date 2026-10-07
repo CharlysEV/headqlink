@@ -398,6 +398,20 @@ supporta.
       (Tesla, Zunder, Ionity, Iberdrola, Endesa X, Repsol, Wenea…, quelli presenti sul percorso, con quante colonnine ha
       ciascuno). La scelta viene salvata, e la seguono anche le icone a fulmine sul profilo. I dati vengono da
       OpenStreetMap: potenza o operatore possono mancare.
+    - **Piano di ricarica (gratis, come ABRP):** se non arrivi con il margine, Percorso dice **dove fermarti e fino a
+      quanto ricaricare** tra le colonnine del filtro: la migliore colonnina rapida dell'ultimo tratto che raggiungi e
+      solo quello che serve (la C10 ricarica più lentamente sopra il 50 %: meglio due soste brevi che una lunga fino al
+      100 %). Ogni sosta mostra il km, con quanto arrivi, fino a quanto ricaricare e i minuti; la linea della batteria
+      sale a ogni sosta. «Vai con le soste» apre Google Maps con le soste (fino a 3). In «Filtra» scegli con quanto
+      arrivare (10-30 %) e fino a quanto ricaricare al massimo (70-100 %). Su una REEV non c'è piano: il generatore
+      mette quello che manca.
+    - **Il piano si rifà da solo durante il viaggio:** con l'account Leapmotor confronta quanto scende davvero la
+      batteria con quanto previsto per quei km e adatta il resto («Adattato al consumo di questo viaggio: +12 %»). Le
+      soste scelte restano finché le raggiungi con margine; se stai restando senza batteria (o ne avanza), il piano cambia
+      e **ti avvisa**: una scheda ambra nel pannello dell'auto (anche sopra Android Auto) con «Vai» (Google Maps con le
+      nuove soste) e «Percorso», il pulsante «Veicolo» in ambra e **un avviso vocale** («Piano di ricarica cambiato. Stai
+      consumando il 12 % in più del previsto. Nuova sosta: …»). La voce si disattiva in «Filtra» → «Avviso vocale se il
+      piano cambia». Mentre ricarichi non avvisa (l'hai deciso tu).
   - «Guida»: la prossima manovra in grande, con una barra che si svuota fino alla svolta, le corsie e la manovra
     successiva; la velocità con il cartello del limite, la direzione, l'altitudine, la pendenza e il sole fino al
     tramonto.

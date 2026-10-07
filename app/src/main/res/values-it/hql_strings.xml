@@ -688,4 +688,27 @@
     <string name="hql_charger_none_filtered">Nessuna colonnina sul percorso corrisponde a questi filtri.</string>
     <string name="hql_charger_clear_filters">Rimuovi filtri</string>
     <string name="hql_key_space">spazio</string>
+    <string name="hql_plan_title">Piano di ricarica</string>
+    <string name="hql_plan_summary_one">1 sosta · %1$s di ricarica · arrivi con %2$.0f %%</string>
+    <string name="hql_plan_summary_many">%1$d soste · %2$s di ricarica · arrivi con %3$.0f %%</string>
+    <string name="hql_plan_none">Nessuna sosta: arrivi con %1$.0f %%</string>
+    <string name="hql_plan_impossible">Nessuna colonnina raggiungibile con questi filtri: prova a toglierne qualcuno.</string>
+    <string name="hql_plan_stop_line">km %1$.0f · arrivi con %2$.0f %% · ricarica fino a %3$.0f %% · %4$s</string>
+    <string name="hql_plan_go">Vai con le soste</string>
+    <string name="hql_plan_other_chargers">Altre colonnine lungo il percorso</string>
+    <string name="hql_plan_arrive_min">Arrivare con almeno</string>
+    <string name="hql_plan_max_charge">Ricaricare al massimo fino a</string>
+    <string name="hql_route_battery_plan">Arrivi con il piano di ricarica (%1$s di ricarica)</string>
+    <string name="hql_plan_alert_title">Piano di ricarica cambiato</string>
+    <string name="hql_plan_alert_fail_title">Con il piano non arrivi</string>
+    <string name="hql_plan_alert_more">Stai consumando il %1$.0f %% in più del previsto.</string>
+    <string name="hql_plan_alert_less">Stai consumando il %1$.0f %% in meno del previsto.</string>
+    <string name="hql_plan_alert_stop">Nuova sosta: %1$s, tra %2$.0f km (arrivi con %3$.0f %%).</string>
+    <string name="hql_plan_alert_fewer">Non serve più fermarsi a %1$s.</string>
+    <string name="hql_plan_alert_none">Non serve più fermarsi: arrivi con %1$.0f %%.</string>
+    <string name="hql_plan_alert_fail">Con questo consumo nessuna colonnina sul percorso è raggiungibile: cercane una vicina o rallenta.</string>
+    <string name="hql_plan_charger">una colonnina</string>
+    <string name="hql_plan_replanned">Ricalcolato alle %1$s:</string>
+    <string name="hql_plan_trend">Adattato al consumo di questo viaggio: %1$s</string>
+    <string name="hql_plan_voice">Avviso vocale se il piano cambia</string>
 </resources>

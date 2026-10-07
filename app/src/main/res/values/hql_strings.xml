@@ -687,4 +687,27 @@
     <string name="hql_charger_none_filtered">No chargers on the route match these filters.</string>
     <string name="hql_charger_clear_filters">Clear filters</string>
     <string name="hql_key_space">space</string>
+    <string name="hql_plan_title">Charging plan</string>
+    <string name="hql_plan_summary_one">1 stop · %1$s charging · arrive with %2$.0f %%</string>
+    <string name="hql_plan_summary_many">%1$d stops · %2$s charging · arrive with %3$.0f %%</string>
+    <string name="hql_plan_none">No stops needed: you arrive with %1$.0f %%</string>
+    <string name="hql_plan_impossible">No reachable charger with these filters: try removing some.</string>
+    <string name="hql_plan_stop_line">km %1$.0f · arrive %2$.0f %% · charge to %3$.0f %% · %4$s</string>
+    <string name="hql_plan_go">Go with the stops</string>
+    <string name="hql_plan_other_chargers">Other chargers on the route</string>
+    <string name="hql_plan_arrive_min">Arrive with at least</string>
+    <string name="hql_plan_max_charge">Charge at most to</string>
+    <string name="hql_route_battery_plan">You arrive with the charging plan (%1$s charging)</string>
+    <string name="hql_plan_alert_title">Charging plan changed</string>
+    <string name="hql_plan_alert_fail_title">You won\'t make it with the plan</string>
+    <string name="hql_plan_alert_more">You\'re using %1$.0f %% more than expected.</string>
+    <string name="hql_plan_alert_less">You\'re using %1$.0f %% less than expected.</string>
+    <string name="hql_plan_alert_stop">New stop: %1$s, in %2$.0f km (arrive with %3$.0f %%).</string>
+    <string name="hql_plan_alert_fewer">No need to stop at %1$s any more.</string>
+    <string name="hql_plan_alert_none">No stop needed any more: you arrive with %1$.0f %%.</string>
+    <string name="hql_plan_alert_fail">At this consumption no charger on the route is reachable: look for one nearby or slow down.</string>
+    <string name="hql_plan_charger">a charger</string>
+    <string name="hql_plan_replanned">Recalculated at %1$s:</string>
+    <string name="hql_plan_trend">Adjusted to this trip\'s consumption: %1$s</string>
+    <string name="hql_plan_voice">Voice alert if the plan changes</string>
 </resources>

@@ -398,6 +398,19 @@ admite.
       Zunder, Ionity, Iberdrola, Endesa X, Repsol, Wenea…, las que haya en la ruta, con cuántos cargadores tiene cada
       una). Se guarda, y los rayos del perfil también lo siguen. Los datos son de OpenStreetMap: la potencia o la red
       pueden faltar.
+    - **Plan de carga (gratis, como ABRP):** si no llegas con el margen, la Ruta dice **dónde parar y hasta cuánto
+      cargar** entre los cargadores del filtro: el mejor cargador rápido del último tramo al que llegas y solo lo que
+      hace falta (el C10 carga más despacio por encima del 50 %: mejor dos paradas cortas que una larga hasta el 100 %).
+      Cada parada lleva el km, con cuánto llegas, hasta cuánto cargar y los minutos; la línea de la batería sube en cada
+      parada. «Ir con las paradas» abre Google Maps con ellas (hasta 3). En «Filtrar» eliges con cuánto llegar (10-30 %)
+      y hasta cuánto cargar como mucho (70-100 %). En un REEV no hay plan: el generador pone lo que falte.
+    - **El plan se rehace solo durante el viaje:** con la cuenta de Leapmotor compara lo que baja tu batería de verdad
+      con lo previsto para esos km y ajusta lo que queda («Ajustado a lo que gastas en este viaje: +12 %»). Las paradas
+      elegidas se mantienen mientras llegues a ellas con margen; si te vas quedando sin batería (o te sobra), el plan
+      cambia y **te avisa**: una tarjeta ámbar en el panel del coche (también encima de Android Auto) con «Ir» (Google
+      Maps con las paradas nuevas) y «Ruta», el botón «Coche» en ámbar y **un aviso por voz** («Plan de carga cambiado.
+      Gastas un 12 % más de lo previsto. Nueva parada: …»). La voz se quita en «Filtrar» → «Avisar por voz si cambia el
+      plan». Mientras cargas no avisa (lo has decidido tú).
   - «Conducción»: la próxima maniobra en grande, con una barra que se vacía hasta el giro, los carriles y la maniobra
     de después; la velocidad con la señal del límite, el rumbo, la altitud, la pendiente y el sol hasta la puesta.
   - «Viajes»: el viaje en curso y los guardados, con su recorrido, consumo, desnivel y coste; los km de los últimos 14

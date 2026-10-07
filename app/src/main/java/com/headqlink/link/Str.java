@@ -24,4 +24,12 @@ public final class Str {
     static String get(int id, Object... args) {
         return app.getString(id, args);
     }
+
+    /** Idioma de los textos (para la voz). */
+    static java.util.Locale locale() {
+        Context c = app;
+        if (c == null) return java.util.Locale.getDefault();
+        if (android.os.Build.VERSION.SDK_INT >= 24) return c.getResources().getConfiguration().getLocales().get(0);
+        return c.getResources().getConfiguration().locale;
+    }
 }

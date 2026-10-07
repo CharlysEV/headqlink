@@ -687,4 +687,27 @@
     <string name="hql_charger_none_filtered">Geen laadpalen langs de route die aan deze filters voldoen.</string>
     <string name="hql_charger_clear_filters">Filters wissen</string>
     <string name="hql_key_space">spatie</string>
+    <string name="hql_plan_title">Laadplan</string>
+    <string name="hql_plan_summary_one">1 stop · %1$s laden · aankomst met %2$.0f %%</string>
+    <string name="hql_plan_summary_many">%1$d stops · %2$s laden · aankomst met %3$.0f %%</string>
+    <string name="hql_plan_none">Geen stops nodig: aankomst met %1$.0f %%</string>
+    <string name="hql_plan_impossible">Geen bereikbare laadpaal met deze filters: probeer er een paar weg te halen.</string>
+    <string name="hql_plan_stop_line">km %1$.0f · aankomst %2$.0f %% · laden tot %3$.0f %% · %4$s</string>
+    <string name="hql_plan_go">Navigeren met de stops</string>
+    <string name="hql_plan_other_chargers">Andere laadpalen langs de route</string>
+    <string name="hql_plan_arrive_min">Aankomen met minstens</string>
+    <string name="hql_plan_max_charge">Maximaal laden tot</string>
+    <string name="hql_route_battery_plan">Aankomst met het laadplan (%1$s laden)</string>
+    <string name="hql_plan_alert_title">Laadplan gewijzigd</string>
+    <string name="hql_plan_alert_fail_title">Met het plan red je het niet</string>
+    <string name="hql_plan_alert_more">Je verbruikt %1$.0f %% meer dan verwacht.</string>
+    <string name="hql_plan_alert_less">Je verbruikt %1$.0f %% minder dan verwacht.</string>
+    <string name="hql_plan_alert_stop">Nieuwe stop: %1$s, over %2$.0f km (aankomst met %3$.0f %%).</string>
+    <string name="hql_plan_alert_fewer">Stoppen bij %1$s is niet meer nodig.</string>
+    <string name="hql_plan_alert_none">Geen stop meer nodig: aankomst met %1$.0f %%.</string>
+    <string name="hql_plan_alert_fail">Met dit verbruik is geen laadpaal langs de route bereikbaar: zoek er een in de buurt of rijd langzamer.</string>
+    <string name="hql_plan_charger">een laadpaal</string>
+    <string name="hql_plan_replanned">Herberekend om %1$s:</string>
+    <string name="hql_plan_trend">Aangepast aan het verbruik van deze rit: %1$s</string>
+    <string name="hql_plan_voice">Gesproken melding als het plan verandert</string>
 </resources>

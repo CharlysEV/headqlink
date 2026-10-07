@@ -389,6 +389,19 @@ version). That tells us whether the C10 supports it.
     - **Filter chargers:** "Filter" picks the minimum power (any, 22, 50, 100 or 150 kW) and the networks (Tesla, Zunder,
       Ionity, Iberdrola, Endesa X, Repsol, Wenea…, those on the route, with how many chargers each has). It is saved,
       and the bolts on the profile follow it too. The data comes from OpenStreetMap: power or network may be missing.
+    - **Charging plan (free, like ABRP):** if you won't arrive with the margin, Route says **where to stop and how far
+      to charge** among the filtered chargers: the best fast charger in the last stretch you can reach and only what is
+      needed (the C10 charges more slowly above 50 %: two short stops beat one long one to 100 %). Each stop shows the
+      km, what you arrive with, how far to charge and the minutes; the battery line jumps up at each stop. "Go with the
+      stops" opens Google Maps with them (up to 3). In "Filter" you choose what to arrive with (10-30 %) and the most to
+      charge to (70-100 %). There is no plan on a REEV: the generator covers the rest.
+    - **The plan redoes itself during the trip:** with the Leapmotor account it compares how much your battery really
+      drops with what was expected for those km and adjusts the rest ("Adjusted to this trip's consumption: +12 %").
+      Chosen stops are kept while you reach them with margin; if you are running short (or have extra), the plan changes
+      and **tells you**: an amber card on the car panel (also over Android Auto) with "Go" (Google Maps with the new
+      stops) and "Route", the "Car" button in amber and **a voice alert** ("Charging plan changed. You're using 12 % more
+      than expected. New stop: …"). Turn the voice off in "Filter" → "Voice alert if the plan changes". It does not alert
+      while you are charging (that was your call).
   - "Driving": the next manoeuvre in large, with a bar that empties until the turn, the lanes and the manoeuvre after;
     the speed with the speed-limit sign, heading, altitude, slope and the sun until sunset.
   - "Trips": the current trip and the saved ones, with their route, consumption, climbing and cost; the km of the last

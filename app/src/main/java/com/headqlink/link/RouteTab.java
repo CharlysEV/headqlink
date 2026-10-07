@@ -54,6 +54,8 @@ final class RouteTab implements CarScreen {
     private int chargerMinKw;
     private java.util.Set<String> chargerNets = new java.util.LinkedHashSet<>();
     private TextView filterSummary;
+    /** El plan de carga con el % de ahora (null sin % de batería, sin ruta o en un REEV) y de qué datos salió. */
+    private ChargePlanner.Result chargePlan;
     private TextView search;
     /** Los botones de arriba a la derecha (buscar, Google Maps, quitar): su ancho real recorta el nombre del destino. */
     private LinearLayout actionsRow;
@@ -548,7 +550,9 @@ final class RouteTab implements CarScreen {
         batteryCard.invalidate();
         weatherCard.invalidate();
         if (have) {
-            int key = (System.identityHashCode(plan) * 31 + plan.progress / 10) * 31 + chargerMinKw * 7 + chargerNets.hashCode();
+            updateChargePlan();
+            int key = ((System.identityHashCode(plan) * 31 + plan.progress / 10) * 31 + chargerMinKw * 7 + chargerNets.hashCode()) * 31
+                    + System.identityHashCode(chargePlan);
             if (key != shownChargersFor) {
                 shownChargersFor = key;
                 fillChargers(plan);
@@ -635,6 +639,38 @@ final class RouteTab implements CarScreen {
                 }), chipParams());
             }
             body.addView(kw);
+            body.addView(section(Str.get(R.string.hql_plan_arrive_min)));
+            Config pc = new Config(ctx);
+            LinearLayout arr = CarKit.row(ctx);
+            for (int v : new int[]{10, 15, 20, 25, 30}) {
+                arr.addView(chip(v + " %", pc.planArrivePct() == v, () -> {
+                    pc.setPlanArrivePct(v);
+                    filterChanged();
+                    build[0].run();
+                }), chipParams());
+            }
+            body.addView(arr);
+            body.addView(section(Str.get(R.string.hql_plan_max_charge)));
+            LinearLayout mx = CarKit.row(ctx);
+            for (int v : new int[]{70, 80, 90, 100}) {
+                mx.addView(chip(v + " %", pc.planMaxPct() == v, () -> {
+                    pc.setPlanMaxPct(v);
+                    filterChanged();
+                    build[0].run();
+                }), chipParams());
+            }
+            body.addView(mx);
+            body.addView(section(Str.get(R.string.hql_plan_voice)));
+            LinearLayout vo = CarKit.row(ctx);
+            vo.addView(chip(capital(Str.get(R.string.hql_yes)), pc.planVoice(), () -> {
+                pc.setPlanVoice(true);
+                build[0].run();
+            }), chipParams());
+            vo.addView(chip(capital(Str.get(R.string.hql_no)), !pc.planVoice(), () -> {
+                pc.setPlanVoice(false);
+                build[0].run();
+            }), chipParams());
+            body.addView(vo);
             body.addView(section(Str.get(R.string.hql_charger_networks)));
             java.util.List<String> keys = new java.util.ArrayList<>();
             RoutePlanner.Plan pl = plan;
@@ -696,6 +732,10 @@ final class RouteTab implements CarScreen {
         return t;
     }
 
+    private static String capital(String t) {
+        return t.isEmpty() ? t : t.substring(0, 1).toUpperCase(Locale.getDefault()) + t.substring(1);
+    }
+
     private static LinearLayout.LayoutParams chipParams() {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.rightMargin = 12;
@@ -703,13 +743,114 @@ final class RouteTab implements CarScreen {
         return lp;
     }
 
+    /**
+     * El plan de carga de RoutePlanner (que lo rehace también en segundo plano, con cómo se está gastando en el viaje,
+     * y avisa si cambia).
+     */
+    private void updateChargePlan() {
+        boolean charging = cloud != null && cloud.hasData() && (cloud.status.charging() || cloud.status.pluggedIn());
+        chargePlan = planner.chargePlan(soc, capKwh, realSoc, reev(), charging);
+    }
+
+    /** La sección del plan de carga encima de la lista de cargadores. */
+    private void addPlan(RoutePlanner.Plan p) {
+        ChargePlanner.Result cp = chargePlan;
+        if (cp == null) return;
+        if (cp.outcome == ChargePlanner.Outcome.NO_STOPS) {
+            TextView t = hint(Str.get(R.string.hql_plan_none, cp.arrivalPct));
+            t.setTextColor(CarKit.GREEN);
+            chargers.addView(t);
+            addReplanNote(cp);
+            return;
+        }
+        if (cp.outcome == ChargePlanner.Outcome.NO_CHARGER && cp.stops.isEmpty()) {
+            TextView t = hint(Str.get(R.string.hql_plan_impossible));
+            t.setTextColor(CarKit.AMBER);
+            chargers.addView(t);
+            return;
+        }
+        TextView title = CarStyle.text(ctx, Str.get(R.string.hql_plan_title).toUpperCase(Locale.getDefault()), 19, CarKit.ACCENT);
+        title.setTypeface(CarKit.MEDIUM);
+        title.setLetterSpacing(0.1f);
+        title.setPadding(0, 10, 0, 2);
+        chargers.addView(title);
+        String sum = cp.stops.size() == 1
+                ? Str.get(R.string.hql_plan_summary_one, DriveTab.duration(Math.round(cp.chargeMinutes * 60)), cp.arrivalPct)
+                : Str.get(R.string.hql_plan_summary_many, cp.stops.size(), DriveTab.duration(Math.round(cp.chargeMinutes * 60)), cp.arrivalPct);
+        TextView s = CarStyle.text(ctx, sum, 22, cp.outcome == ChargePlanner.Outcome.PLANNED ? CarKit.TEXT : CarKit.AMBER);
+        chargers.addView(s);
+        addReplanNote(cp);
+        if (cp.outcome == ChargePlanner.Outcome.NO_CHARGER) chargers.addView(hint(Str.get(R.string.hql_plan_impossible)));
+        int n = 1;
+        for (ChargePlanner.Stop st : cp.stops) {
+            LinearLayout item = CarKit.row(ctx);
+            item.setGravity(Gravity.CENTER_VERTICAL);
+            item.setPadding(0, 10, 0, 10);
+            ChargerDot dot = new ChargerDot(ctx, st.charger.maxKw);
+            item.addView(dot, new LinearLayout.LayoutParams(52, 52));
+            LinearLayout txt = CarKit.col(ctx);
+            txt.setPadding(16, 0, 10, 0);
+            TextView name = CarStyle.text(ctx, n++ + ". " + st.charger.name, 24, CarKit.TEXT);
+            name.setTypeface(CarKit.MEDIUM);
+            name.setSingleLine(true);
+            name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            TextView line = CarStyle.text(ctx, Str.get(R.string.hql_plan_stop_line, st.km, st.arrivePct, st.departPct,
+                    DriveTab.duration(Math.round(st.minutes * 60))) + (st.charger.maxKw > 0
+                    ? String.format(Locale.getDefault(), " · %.0f kW", st.charger.maxKw) : ""), 20, CarKit.ACCENT);
+            line.setMaxLines(2);
+            txt.addView(name);
+            txt.addView(line);
+            item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            TextView go = CarKit.pill(ctx, Str.get(R.string.hql_go), false);
+            go.setOnClickListener(v -> navigateTo(st.charger.lat, st.charger.lon));
+            item.addView(go);
+            chargers.addView(item);
+        }
+        TextView all = CarKit.pill(ctx, Str.get(R.string.hql_plan_go), true);
+        all.setOnClickListener(v -> RoutePlanner.navigateWithStops(ctx, p, cp));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = 6;
+        lp.bottomMargin = 10;
+        chargers.addView(all, lp);
+        TextView other = CarStyle.text(ctx, Str.get(R.string.hql_plan_other_chargers).toUpperCase(Locale.getDefault()), 19, CarKit.FAINT);
+        other.setTypeface(CarKit.MEDIUM);
+        other.setLetterSpacing(0.1f);
+        other.setPadding(0, 8, 0, 0);
+        chargers.addView(other);
+    }
+
+    /**
+     * Bajo el resumen del plan: el último cambio durante el viaje («Recalculado a las 14:32: …», en ámbar, media hora)
+     * o, si no, cuánto se está gastando de más o de menos en este viaje (ya está metido en el plan).
+     */
+    private void addReplanNote(ChargePlanner.Result cp) {
+        String alert = planner.lastAlert;
+        long at = planner.lastAlertAtMs;
+        long now = DemoMode.wallClockMs();
+        if (alert != null && now - at < 30 * 60_000L) {
+            String hhmm = new java.text.SimpleDateFormat("HH:mm", Locale.getDefault()).format(new java.util.Date(at));
+            TextView t = hint(Str.get(R.string.hql_plan_replanned, hhmm) + " " + alert);
+            t.setTextColor(CarKit.AMBER);
+            t.setMaxLines(3);
+            chargers.addView(t);
+            return;
+        }
+        double pct = (cp.trend - 1) * 100;
+        if (Math.abs(pct) >= 5) {
+            chargers.addView(hint(Str.get(R.string.hql_plan_trend, String.format(Locale.getDefault(), "%+.0f %%", pct))));
+        }
+    }
+
     private void fillChargers(RoutePlanner.Plan p) {
         chargers.removeAllViews();
+        addPlan(p);
+        java.util.Set<RoutePlanner.Charger> inPlan = new java.util.HashSet<>();
+        if (chargePlan != null) for (ChargePlanner.Stop st : chargePlan.stops) inPlan.add(st.charger);
         double here = p.km[Math.min(p.progress, p.n - 1)];
         int shown = 0;
         int hidden = 0;
         for (RoutePlanner.Charger c : p.chargers) {
-            if (c.kmAlong < here - 0.5) continue;
+            if (c.kmAlong < here - 0.5 || inPlan.contains(c)) continue;
             if (!wanted(c)) {
                 hidden++;
                 continue;
@@ -816,11 +957,16 @@ final class RouteTab implements CarScreen {
 
     /** kWh hasta el destino (desde la posición actual), o NaN. */
     private double remainingKwh() {
+        ChargePlanner.Result cp = chargePlan;
+        RoutePlanner.Plan pl = plan;
+        if (cp != null && pl != null && pl.n >= 2) return ChargePlanner.kwhAt(cp.km, cp.kwhCum, pl.totalKm) - ChargePlanner.kwhAt(cp.km, cp.kwhCum, cp.fromKm);
         return RoutePlanner.remainingKwh(plan);
     }
 
     /** % de batería al llegar, o NaN si no se sabe (en un REEV, no baja del 20 %: lo pone el generador). */
     private double arrivalPct() {
+        ChargePlanner.Result cp = chargePlan;
+        if (cp != null && cp.outcome == ChargePlanner.Outcome.PLANNED) return cp.arrivalPct;
         double a = CloudEnergy.arrivalPct(soc, remainingKwh(), capKwh);
         return reev() && !Double.isNaN(a) ? Math.max(Math.min(soc, REEV_FLOOR_PCT), a) : a;
     }
@@ -1073,9 +1219,16 @@ final class RouteTab implements CarScreen {
         cv.drawRect(c.left, c.top, xp, c.bottom + 1, p);
         // Cargadores sobre el eje.
         double here = pl.km[prog];
+        java.util.Set<RoutePlanner.Charger> planStops = new java.util.HashSet<>();
+        if (chargePlan != null) for (ChargePlanner.Stop st : chargePlan.stops) planStops.add(st.charger);
         for (RoutePlanner.Charger ch : pl.chargers) {
             if (!wanted(ch)) continue;
             float x = (float) (c.left + ch.kmAlong / Math.max(0.1, pl.totalKm) * c.width());
+            if (planStops.contains(ch)) {
+                // Parada del plan: anillo del acento alrededor del rayo.
+                p.setColor(CarKit.alpha(CarKit.ACCENT, 0.35f));
+                cv.drawCircle(x, c.bottom - 18, 22, p);
+            }
             boolean ahead = ch.kmAlong >= here - 0.5;
             p.setColor(ahead ? CarKit.SURFACE_TOP : CarKit.SURFACE_HI);
             cv.drawCircle(x, c.bottom - 18, 15, p);
@@ -1086,9 +1239,23 @@ final class RouteTab implements CarScreen {
             socLine.rewind();
             double last = soc;
             boolean hold = reev();
+            ChargePlanner.Result cp = chargePlan;
+            boolean planned = cp != null && cp.outcome == ChargePlanner.Outcome.PLANNED;
+            int stop = 0;
+            double[] kc = cp != null ? cp.kwhCum : pl.kwhCum;
             for (int i = prog; i < pl.n; i++) {
-                double sp = soc - (pl.kwhCum[i] - pl.kwhCum[prog]) / capKwh * 100;
+                double sp = soc - (kc[i] - kc[prog]) / capKwh * 100;
                 if (hold) sp = Math.max(Math.min(soc, REEV_FLOOR_PCT), sp);
+                if (planned) {
+                    // Al pasar por una parada, la línea sube en vertical hasta lo cargado.
+                    while (stop < cp.stops.size() && cp.stops.get(stop).km <= pl.km[i]) {
+                        ChargePlanner.Stop st = cp.stops.get(stop++);
+                        float xs = (float) (c.left + st.km / Math.max(0.1, pl.totalKm) * c.width());
+                        socLine.lineTo(xs, (float) (c.bottom - Math.max(0, Math.min(100, st.arrivePct)) / 100 * c.height()));
+                        socLine.lineTo(xs, (float) (c.bottom - Math.max(0, Math.min(100, st.departPct)) / 100 * c.height()));
+                    }
+                    sp = cp.pctAt(pl.km[i]);
+                }
                 last = sp;
                 float y = (float) (c.bottom - Math.max(0, Math.min(100, sp)) / 100 * c.height());
                 if (i == prog) socLine.moveTo(xFor(pl, i, c), y);
@@ -1288,6 +1455,9 @@ final class RouteTab implements CarScreen {
         } else if (reevLiters() > 0.05) {
             st = Str.get(R.string.hql_route_reev_fuel, reevLiters());
             sc = CarKit.AMBER;
+        } else if (chargePlan != null && chargePlan.outcome == ChargePlanner.Outcome.PLANNED) {
+            st = Str.get(R.string.hql_route_battery_plan, DriveTab.duration(Math.round(chargePlan.chargeMinutes * 60)));
+            sc = CarKit.ACCENT;
         } else if (arr < 0) {
             st = Str.get(R.string.hql_route_battery_no);
             sc = CarKit.RED;

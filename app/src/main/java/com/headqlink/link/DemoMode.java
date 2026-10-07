@@ -125,8 +125,9 @@ final class DemoMode {
     /**
      * Estado de la demostración para una captura: "" (con destino, viajes y datos de la nube), "sin_ruta" (sin destino:
      * Ruta y Conducción vacías), "sin_viajes" (la pestaña Viajes sin viajes guardados), "sin_nube" (sin cuenta de
-     * Leapmotor: todo estimado y Estado vacío), "cargando" (el coche cargando en un cargador rápido) o "reev" (un C10
-     * de autonomía extendida, con su depósito de gasolina).
+     * Leapmotor: todo estimado y Estado vacío), "cargando" (el coche cargando en un cargador rápido), "reev" (un C10
+     * de autonomía extendida, con su depósito de gasolina) o "replan" (se gasta más de lo previsto: el plan de carga
+     * cambia y avisa).
      */
     static void applyState(String state) {
         if (drive == null) return;
@@ -134,6 +135,27 @@ final class DemoMode {
         trips = "sin_viajes".equals(state) ? new ArrayList<>() : defaultTrips;
         cloudState = "sin_nube".equals(state) || "cargando".equals(state) ? state : "";
         reev = "reev".equals(state);
+        replan = "replan".equals(state);
+        replanAsked = false;
+    }
+
+    /** Estado "replan": a mitad de la demostración se empieza a gastar un 45 % más (la parada del plan ya no se alcanza: se rehace y avisa). */
+    private static volatile boolean replan;
+    private static volatile boolean replanAsked;
+    private static volatile long replanAskedAtMs;
+    /** En la vista previa en vivo, el gasto sube pasado este rato (se ve el plan de antes y luego el cambio). */
+    static final long REPLAN_LIVE_DELAY_MS = 10_000;
+
+    /** Gasto del viaje frente a lo previsto en la demostración: 1, o 1,45 con "replan" (tras el primer plan). */
+    static double planTrend() {
+        if (!replan) return 1;
+        if (!replanAsked) {
+            replanAsked = true;
+            replanAskedAtMs = android.os.SystemClock.elapsedRealtime();
+            return 1;
+        }
+        if (live && android.os.SystemClock.elapsedRealtime() - replanAskedAtMs < REPLAN_LIVE_DELAY_MS) return 1;
+        return 1.45;
     }
 
     /** La demostración es de un REEV. */

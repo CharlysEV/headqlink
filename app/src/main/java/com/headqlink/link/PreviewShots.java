@@ -50,6 +50,7 @@ final class PreviewShots {
             new Shot("coche_estado_reev", "car-5", 300, 1800, "reev"),
             new Shot("coche_viajes_reev", "car-2", 600, 1800, "reev"),
             new Shot("coche_ruta_reev", "car-0", 300, 1800, "reev"),
+            new Shot("coche_ruta_replan", "car-0", 300, 3000, "replan"),
             new Shot("auto", "aa", 300, 1500),
             new Shot("fotos", "photos", 300, 2500),
             new Shot("videos", "videos", 300, 2500),

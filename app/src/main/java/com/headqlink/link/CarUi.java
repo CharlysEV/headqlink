@@ -91,6 +91,18 @@ final class CarUi {
     private FrameLayout root;
     private float swipeX = -1;
     private final Runnable radioChanged = () -> main.post(this::renderRadioMini);
+    // Aviso del plan de carga (RoutePlanner): tarjeta ámbar abajo en el panel, por encima de Android Auto.
+    private LinearLayout alertCard;
+    private TextView alertTitle;
+    private TextView alertText;
+    private View alertGo;
+    private boolean alertPending;
+    /** El panel se despliega para enseñar el aviso y se vuelve a ocultar pasado esto (si se oculta solo). */
+    private static final long ALERT_SHOW_MS = 20_000;
+    /** Sin tocarlo, el aviso se quita pasado esto (sigue en la pestaña Ruta). */
+    private static final long ALERT_KEEP_MS = 10 * 60_000L;
+    private final Runnable alertExpire = this::clearAlert;
+    private final RoutePlanner.ChargeAlertListener chargeAlert = (title, text) -> main.post(() -> showAlert(title, text));
     private final Runnable hideTask = () -> setHidden(true);
     /** AA ya ha dado imagen; antes, en su zona se ve la animación de carga. */
     private boolean aaReady;
@@ -188,6 +200,7 @@ final class CarUi {
         }
         battery.setVisibility(rail ? View.GONE : View.VISIBLE);
         expand.setVisibility(hidden ? View.VISIBLE : View.GONE);
+        renderAlert();
         panel.setPadding(rail ? 12 : 20, 20, rail ? 12 : 20, 20);
         renderRadioMini();
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) content.getLayoutParams();
@@ -292,6 +305,7 @@ final class CarUi {
             CarCloud.start(ctx);
             TripLog.start(ctx);
             RoutePlanner.start(ctx);
+            RoutePlanner.chargeAlerts = chargeAlert;
             RoadInfo.start(ctx);
             open("aa");
             if (autoHide) setHidden(true);
@@ -302,6 +316,8 @@ final class CarUi {
         main.post(() -> {
             if (current == this) current = null;
             main.removeCallbacks(hideTask);
+            main.removeCallbacks(alertExpire);
+            if (RoutePlanner.chargeAlerts == chargeAlert) RoutePlanner.chargeAlerts = null;
             SspSession.setDrivingUi(true);
             try {
                 ctx.unregisterReceiver(batteryReceiver);
@@ -363,6 +379,7 @@ final class CarUi {
         CarCloud.start(ctx);
         TripLog.start(ctx);
         RoutePlanner.start(ctx);
+        RoutePlanner.chargeAlerts = chargeAlert;
         RoadInfo.start(ctx);
         open("aa");
         return r;
@@ -412,7 +429,108 @@ final class CarUi {
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(contentWidth(), height);
         lp.leftMargin = panelW;
         root.addView(content, lp);
+        FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(panelW - 24, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM | Gravity.LEFT);
+        alp.leftMargin = 12;
+        alp.bottomMargin = 12;
+        root.addView(buildAlert(c), alp);
         return root;
+    }
+
+    /** Tarjeta del aviso del plan de carga: qué ha cambiado, «Ir» (Google Maps con las paradas nuevas) y «Ruta». */
+    private View buildAlert(Context c) {
+        LinearLayout card = new LinearLayout(c);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(18, 16, 18, 16);
+        card.setBackground(CarStyle.round(0xFF3B2F14, 24));
+        card.setClickable(true);
+        LinearLayout top = new LinearLayout(c);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        top.addView(new AlertIcon(c), new LinearLayout.LayoutParams(40, 40));
+        alertTitle = CarStyle.text(c, "", 22, CarKit.AMBER);
+        alertTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        alertTitle.setPadding(12, 0, 0, 0);
+        alertTitle.setMaxLines(2);
+        top.addView(alertTitle, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        card.addView(top);
+        alertText = CarStyle.text(c, "", 20, CarStyle.TEXT);
+        alertText.setMaxLines(6);
+        alertText.setPadding(0, 10, 0, 12);
+        card.addView(alertText);
+        LinearLayout btns = new LinearLayout(c);
+        btns.setOrientation(LinearLayout.HORIZONTAL);
+        TextView go = CarKit.pill(c, Str.get(R.string.hql_go), true);
+        go.setOnClickListener(v -> {
+            RoutePlanner r = RoutePlanner.get();
+            RoutePlanner.Plan p = r == null ? null : r.plan();
+            ChargePlanner.Result cp = r == null ? null : r.lastChargePlan();
+            clearAlert();
+            if (p != null && cp != null) RoutePlanner.navigateWithStops(ctx, p, cp);
+        });
+        LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        glp.rightMargin = 12;
+        btns.addView(go, glp);
+        alertGo = go;
+        TextView route = CarKit.pill(c, Str.get(R.string.hql_tab_route), false);
+        route.setOnClickListener(v -> {
+            clearAlert();
+            CarHubScreen.selectTab(0);
+            open("car");
+        });
+        btns.addView(route);
+        card.addView(btns);
+        card.setVisibility(View.GONE);
+        alertCard = card;
+        return card;
+    }
+
+    /** El plan de carga ha cambiado: se despliega el panel con el aviso un rato (y el botón Coche queda en ámbar). */
+    private void showAlert(String title, String text) {
+        if (alertCard == null) return;
+        alertTitle.setText(title);
+        alertText.setText(text);
+        RoutePlanner r = RoutePlanner.get();
+        ChargePlanner.Result cp = r == null ? null : r.lastChargePlan();
+        alertGo.setVisibility(cp != null && cp.next() != null ? View.VISIBLE : View.GONE);
+        alertPending = true;
+        main.removeCallbacks(alertExpire);
+        main.postDelayed(alertExpire, ALERT_KEEP_MS);
+        if (hidden) setHidden(false);
+        renderAlert();
+        markNav();
+        main.removeCallbacks(hideTask);
+        if (autoHide && aaShown) main.postDelayed(hideTask, ALERT_SHOW_MS);
+    }
+
+    private void clearAlert() {
+        alertPending = false;
+        main.removeCallbacks(alertExpire);
+        renderAlert();
+        markNav();
+    }
+
+    /** La tarjeta solo con el panel completo (en la barra de iconos no cabe: queda el botón Coche en ámbar). */
+    private void renderAlert() {
+        if (alertCard != null) alertCard.setVisibility(alertPending && !rail() ? View.VISIBLE : View.GONE);
+    }
+
+    /** Rayo ámbar en un círculo (icono del aviso). */
+    private static final class AlertIcon extends View {
+        private final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+        AlertIcon(Context c) {
+            super(c);
+        }
+
+        @Override
+        protected void onDraw(android.graphics.Canvas cv) {
+            float r = Math.min(getWidth(), getHeight()) / 2f;
+            p.setStyle(android.graphics.Paint.Style.FILL);
+            p.setColor(CarKit.alpha(CarKit.AMBER, 0.25f));
+            cv.drawCircle(getWidth() / 2f, getHeight() / 2f, r, p);
+            CarIcons.bolt(cv, getWidth() / 2f, getHeight() / 2f, r * 1.2f, CarKit.AMBER, p);
+        }
     }
 
     private View buildPanel(Context c) {
@@ -542,7 +660,7 @@ final class CarUi {
     private void markNav() {
         for (LinearLayout b : navButtons) {
             boolean on = screenName.equals(b.getTag());
-            int fg = on ? CarStyle.ON_ACCENT : 0xFFDADCE0;
+            int fg = on ? CarStyle.ON_ACCENT : alertPending && "car".equals(b.getTag()) ? CarKit.AMBER : 0xFFDADCE0;
             b.setBackground(on ? CarStyle.accent(36) : null);
             if (radioMini != null) radioMini.setBackground(CarStyle.round(CarStyle.lighter(panelColor, 14), 36));
             ((ImageView) b.getChildAt(0)).setImageTintList(ColorStateList.valueOf(fg));

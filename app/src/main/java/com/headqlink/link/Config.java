@@ -429,6 +429,32 @@ final class Config {
         if (hex != null && hex.matches("#[0-9a-fA-F]{6}")) sp.edit().putString("car_color", hex.toLowerCase(java.util.Locale.ROOT)).apply();
     }
 
+    /** Plan de carga (ChargePlanner): % mínimo al llegar y % máximo al que cargar en cada parada. */
+    int planArrivePct() {
+        return Math.max(5, Math.min(50, sp.getInt("plan_arrive_pct", 15)));
+    }
+
+    void setPlanArrivePct(int pct) {
+        sp.edit().putInt("plan_arrive_pct", pct).apply();
+    }
+
+    int planMaxPct() {
+        return Math.max(50, Math.min(100, sp.getInt("plan_max_pct", 80)));
+    }
+
+    void setPlanMaxPct(int pct) {
+        sp.edit().putInt("plan_max_pct", pct).apply();
+    }
+
+    /** Avisar por voz si el plan de carga cambia durante el viaje. */
+    boolean planVoice() {
+        return sp.getBoolean("plan_voice", true);
+    }
+
+    void setPlanVoice(boolean on) {
+        sp.edit().putBoolean("plan_voice", on).apply();
+    }
+
     /** Últimos destinos elegidos en el coche (JSON, del más reciente al más antiguo). Solo en el móvil. */
     String recentPlaces() {
         return sp.getString("recent_places", "");
