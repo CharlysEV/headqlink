@@ -1631,6 +1631,8 @@ No se puede saber sin el móvil. Lo que se sabe:
   `perf/*.csv`: `p_kb`, `p_qp_min`). Si no, sale `… el encoder no parece respetarlo; desde ahora cada subida baja además
   el bitrate` y el plan B actúa solo. Además, `encoder: parámetros de fabricante útiles: …` ahora lista también los
   que contienen «qp» o «rate» (por si el c2.qti declara su propio rango de QP de fabricante).
+- **Respuesta (§23): no.** Los cambios de QP en marcha no hacen nada en el c2.qti; el de configure, sí. La causa
+  principal de los P-frames grandes era el P-frame que sigue a cada IDR, y el arreglo es un suelo de QP-P al configurar.
 
 ### 19.3 Qué buscar en el log
 
@@ -2053,3 +2055,141 @@ paquete `com.headqlink.link`, 391.
 - Un corte de verdad en los 10 s siguientes a un cierre nuestro no cuenta para el diagnóstico.
 - El volcado del menú lleva sus textos tal cual (recortados): son las opciones de AA, no datos del usuario; de la
   pantalla de ajustes, donde podría salir el nombre de un coche, no se vuelca texto.
+
+## 23. P-frames grandes: el P-frame que sigue a cada IDR (2026-10-07)
+
+**Informe.** En los dos viajes del 2026-10-07 (mañana 08:51-09:13, tarde 15:36-16:00, perfil Coche, zona Wi-Fi) y en
+la prueba de radio floja en casa (`qdsim --scenario radio-mala`, 10:38) salen P-frames de 160-335 KB mientras el
+control del enlace pide 1,2-2,5 Mbit/s a 20-30 fps (un P-frame medio son 5-12 KB). Los IDR de esas sesiones pesan
+56-110 KB: los P-frames grandes pesan el doble que un IDR. Subir el QP-P mínimo en marcha hasta 38-40 y bajar el bitrate
+no los encoge (§19). En el modo ampliado (panel casi quieto, ~1,8 Mbit/s) no hubo cortes.
+
+### 23.1 Método
+
+Análisis offline de las trazas `perf/*.csv` (13 sesiones de los viajes y la de casa; las de la mañana son de una
+versión sin `p_kb`: el tamaño sale de las filas `frame` y el instante de codificación, de restar la espera en cola y la
+escritura). Para cada P-frame «grande» (más de 6 veces la media de la sesión y ≥ 40 KB) se mira qué pasó justo antes:
+
+| Clase | Criterio |
+|---|---|
+| **tras IDR** | La salida anterior del encoder fue un IDR (≤ 250 ms antes) |
+| **puerta** | Hubo dibujo (`relay_draw`) y el anterior fue hace > 100 ms con el frame esperando ≥ 60 ms o la cola del kernel ≥ 32 KB (la puerta «último frame» lo retuvo) |
+| **AA quieto** | Más de 100 ms sin dibujo pero sin puerta: Android Auto no mandó nada (el encoder repetía el último frame) |
+| **transición** | El P-frame anterior ya era grande (≥ 3 medias): animación o cambio de pantalla de AA a ritmo normal |
+| **suelto** | Ninguna de las anteriores |
+
+Además: `setParameters` (bitrate del enlace, QP-P, bajadas) en los 400 ms anteriores, cambio de fps en el segundo
+anterior y hueco desde la salida anterior del encoder.
+
+### 23.2 Resultado por sesión
+
+| Traza | s | P | media KB | máx. KB | IDR (mediana) KB | grandes | tras IDR | puerta | AA quieto | transición | suelto | ≥ 150 KB (tras IDR) | P tras IDR > su IDR | P/IDR (mediana) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| mañana S22 | 336 | 6648 | 14,6 | 348 | 97 | 109 | 49 | 49 | 0 | 9 | 2 | 53 (45) | 49/55 | 2,65 |
+| mañana S23 | 171 | 4697 | 12,6 | 302 | 57 | 29 | 7 | 14 | 0 | 6 | 2 | 2 (2) | 6/7 | 1,97 |
+| mañana S24 | 22 | 499 | 16,1 | 78 | 80 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0/1 | — |
+| mañana S25 | 55 | 651 | 18,1 | 303 | 97 | 7 | 3 | 4 | 0 | 0 | 0 | 6 (3) | 3/4 | 1,65 |
+| mañana S26 | 173 | 1747 | 18,8 | 265 | 94 | 41 | 38 | 3 | 0 | 0 | 0 | 39 (36) | 38/45 | 2,61 |
+| mañana S27 | 163 | 2818 | 18,2 | 380 | 104 | 38 | 27 | 11 | 0 | 0 | 0 | 32 (24) | 28/29 | 2,23 |
+| mañana S28 | 74 | 622 | 27,5 | 356 | 90 | 17 | 15 | 1 | 0 | 0 | 1 | 17 (15) | 26/27 | 2,12 |
+| mañana S29 (cable, 60 fps) | 134 | 6904 | 17,8 | 196 | 82 | 63 | 1 | 0 | 0 | 46 | 16 | 13 (1) | 2/2 | 1,61 |
+| tarde S1 | 252 | 6430 | 21,8 | 247 | 93 | 7 | 6 | 0 | 0 | 1 | 0 | 6 (5) | 8/11 | 1,79 |
+| tarde S2 | 189 | 4644 | 21,9 | 219 | 100 | 15 | 3 | 3 | 0 | 8 | 1 | 9 (2) | 4/7 | 1,01 |
+| tarde S3 | 22 | 578 | 21,4 | 178 | — | 4 | 0 | 0 | 0 | 4 | 0 | 2 (0) | 0/0 | — |
+| tarde S4 | 396 | 5517 | 15,8 | 335 | 78 | 61 | 5 | 14 | 6 | 32 | 4 | 23 (2) | 5/6 | 1,86 |
+| tarde S5 | 78 | 1856 | 16,9 | 224 | 83 | 19 | 3 | 4 | 0 | 12 | 0 | 5 (3) | 3/3 | 2,67 |
+| casa, radio floja | 120 | 2277 | 8,4 | 285 | 56 | 35 | 27 | 5 | 0 | 2 | 1 | 16 (12) | 25/33 | 2,19 |
+| **Total** | | | | | | **445** | **184** | **108** | **6** | **120** | **27** | **223 (150)** | **197/230** | **2,29** |
+
+**De los 223 P-frames de ≥ 150 KB (los que cortan la radio), 150 (67 %) son el primer P-frame tras un IDR.** Y de los
+230 IDR con un P-frame detrás, en 197 (86 %) ese P-frame pesa más que el IDR, de mediana 2,3 veces.
+
+Ejemplos (bytes exactos de la traza):
+
+| Sesión | Secuencia |
+|---|---|
+| tarde S1, 32 s | P-frames de 10 KB a 30 fps · `idr_req` (el coche pide IDR) · **IDR 61 412 B** · 31 ms después **P 171 895 B** (con un dibujo normal, sin puerta) · P de 10 KB |
+| tarde S1, 64 s | IDR periódico (sin petición ni `setParameters`) de 77 KB → P de 137 KB |
+| casa, 77 s | IDR 57 710 B (pedido por BACKLOG) → 100 ms después, sin dibujo (la repetición del encoder de la misma imagen) **P de 164 KB** → repeticiones de 4-16 KB |
+| tarde S4, 177 s | transición: 117 → 149 → 178 → 214 → 238 → 255 → 282 → 239 KB, uno cada 33 ms, sin puerta |
+| tarde S1, 2 s | arranque (IDR de 7 KB con la pantalla negra, luego el fundido de AA): 2, 9, 18, 27, 40, 52, 69, 84, 102, 119, 206 KB |
+
+### 23.3 Hipótesis
+
+| Hipótesis | Veredicto |
+|---|---|
+| (a) La puerta retiene frames cientos de ms y el siguiente cambia mucho | **Secundaria**: 34 de 223 (15 %) de los ≥ 150 KB, 108 de 445 grandes; casi todos de 90-130 KB (el tamaño de un IDR). Pedir un IDR en su lugar no sirve: el IDR va seguido del P-frame gigante de (e). |
+| (b) `setParameters` en marcha (bitrate, QP, fps) provoca un frame de refresco | **No**: el pico tras IDR sale igual con IDR periódicos (sin petición) y sin bajada de bitrate («con bitrate bajado 0» en todas las sesiones de la tarde). De los 261 grandes que no siguen a un IDR, 77 tienen un `setParameters` en los 400 ms anteriores, pero es la reacción del control de P-frames al grande anterior de la misma ráfaga. |
+| (c) Cambios del periodo de intra-refresh al cambiar el tope de fps | **No**: `applyFpsCap` solo cambia el ritmo del relay GL; el periodo de intra-refresh no se toca en marcha. 4 de 261 con un cambio de fps en el segundo anterior. |
+| (d) Huecos en la marca de tiempo: el VBR gasta segundos de presupuesto en un frame | **No**: el encoder repite el último frame cada 100 ms (`KEY_REPEAT_PREVIOUS_FRAME_AFTER`), así que nunca ve huecos mayores; y los picos tras IDR salen a 33 ms del frame anterior. |
+| **(e) El P-frame que sigue a un IDR «afina» la imagen entera** | **Sí, la principal.** Ver 23.4. |
+
+Las transiciones (27 de los ≥ 150 KB, sobre todo el cable a 60 fps y S4) son contenido: el VBR del c2.qti deja pasar
+varios frames seguidos de 150-280 KB.
+
+### 23.4 Por qué: el QP de configure manda y el de en marcha no
+
+- El encoder se configura con QP-I 24-51 (`IdrSizeController.QP_START`) y, hasta ahora, QP-P **1**-51 («sin mínimo»).
+- El IDR sale **en el suelo de QP-I**: en casa, el mismo IDR pesó 57 0xx-57 7xx B durante un minuto mientras
+  `IdrSizeController` bajaba el QP-I mínimo de 21 a 18 en marcha, y con bajadas de bitrate de hasta el 40 % en medio. Es
+  decir: el control de tasa quería más calidad que QP 24 (el suelo lo frena) y **los cambios de QP en marcha no llegan**
+  (lo mismo que se vio con el QP-P en §19: subirlo de 26 a 40 no encoge nada).
+- El P-frame siguiente no tiene suelo: el VBR, con presupuesto de sobra tras un IDR «barato», le da un QP mucho más bajo
+  y el P-frame recodifica la imagen entera a más calidad que el IDR: 2-3 veces su tamaño. Luego todo vuelve a 10 KB.
+- Lo mismo acota los otros casos: un P-frame con la imagen muy cambiada (puerta, transición, fundido) también salía con
+  un QP muy por debajo de 24.
+
+**Parámetros de fabricante** que declara el c2.qti.avc.encoder (S25, línea `encoder: parámetros de fabricante útiles`):
+`bitrate-boost-margin`, `bitrate-mode`, `chroma-qp-offset`, `dynamic-frame-rate`, `frame-qp` (QP fijo por frame, para
+tasa apagada), `initial-qp` (I/P/B), `low-latency`, `peak-bitrate`, `roi-mbmap-info`, `slice`, `perfboost-mode` (todos
+`vendor.qti-ext-enc-*`). **Ninguno de tamaño máximo de frame, VBV, HRD o control de tasa por frame**; pero el filtro solo
+listaba los que contenían «qp», «rate», «latency», etc., así que ahora lista también los de `frame-size`, `max-frame`,
+`vbv`, `hrd`, `rc`, `boost`, `peak`, `intra`, `refresh`, `gop`, `ltr`, `hier` y `adaptive` para el próximo viaje. El
+`peak-bitrate` sale en el formato de salida como `max-bitrate` = el bitrate inicial (5,08 Mbit/s) y no baja con el del
+enlace; no se toca: es un tope medio, no por frame.
+
+### 23.5 Arreglo
+
+| Cambio | Detalle |
+|---|---|
+| **Suelo de QP-P al configurar** | `VideoPipeline.startEncoder`: `vp.qpPMin = PFrameSizeController.QP_FLOOR` (= `IdrSizeController.QP_START`, 24). El encoder se configura con QP-P **24**-51 en vez de 1-51: un P-frame no puede quedar más fino que el IDR al que sigue, así que el pico tras IDR desaparece y un P-frame con la imagen entera cambiada queda acotado por el tamaño de un IDR (~60-110 KB en lugar de 160-335). Va en configure porque es lo único que el c2.qti respeta. Mismo orden de intentos (QP-I + QP-P, solo QP-I, nada). |
+| **`setQpPMin` nunca baja del suelo** | `VideoEncoder.qpPMinFor(pedido, suelo)`: «sin mínimo propio» del control de P-frames (§19) es ahora el suelo de configure, no QP 1, también en los encoders que sí aplican el QP en marcha. Las subidas (26…40) y el plan B siguen igual. Textos: `QP-P en el suelo (24)` en lugar de `QP-P sin mínimo (el del encoder)`. |
+| **Vigilancia del P-frame tras IDR** (`PAfterIdr`, puro) | El primer P-frame tras cada IDR: a la traza (`p_after_idr`, KB) y, si pesa más que su IDR, `W VIDEO P-frame tras IDR: 168 KB, 2.8 veces el IDR (60 KB) · QP-P suelo 24` (como mucho una línea cada 10 s; las demás se cuentan). Al desenganchar cada sesión (`VIDEO desenganchado de S3 (el vídeo sigue vivo) · P-frames tras IDR 13 · más grandes que su IDR 0 · hasta 0.3 veces el IDR · el mayor 31 KB`) y al parar el vídeo. |
+| **Puerta en la traza** | `GlFrameRelay`: `gate_hold_ms` al dibujar, con los ms que la puerta «último frame» retuvo el dibujo (solo si lo retuvo), y `(puerta cerrada máx N ms)` en la línea de 5 s del relay. |
+
+**Qué no se ha cambiado y por qué.** No se pide un IDR tras una espera larga de la puerta (el IDR va seguido del pico de
+23.4 y no es más pequeño que el P-frame que sustituye); no se tocan el intra-refresh, los fps ni los IDR periódicos de
+30 s (no son la causa: con el suelo, cada uno vale un IDR y un P-frame normal); sin CBR (§12: peor imagen con el mismo
+bitrate) ni claves de fabricante sin probar. Coste del suelo: con la pantalla quieta y enlace bueno, la imagen ya no se
+afina por debajo de QP 24, la calidad de cada IDR (la misma que se ve justo tras cada IDR desde siempre). Si se viera
+blanda, el mando es `IdrSizeController.QP_START`, que mueve los dos.
+
+### 23.6 Cómo comprobarlo
+
+**En casa** (móvil y PC en la misma Wi-Fi; `.\gradlew.bat :qdsim:installDist` una vez):
+
+```
+qdsim\build\install\qdsim\bin\qdsim.bat --scenario radio-mala --target <IP del móvil>
+```
+
+| Dónde | Antes | Esperado |
+|---|---|---|
+| Log del móvil al arrancar el vídeo | `encoder: QP-I 24-51 al configurar · QP-P 1-51 (sin mínimo)` | `… · QP-P 24-51 (suelo: un P-frame no afina la imagen más que el IDR)` |
+| Tras cada `VIDEO IDR 56 KB … pedido (BACKLOG)` | `VIDEO P-frames: 164 KB > tope 24 KB … → QP-P mín 40 …` 100 ms después | Nada, o un P-frame por debajo del IDR. Si sale `W VIDEO P-frame tras IDR: … veces el IDR`, el encoder no respeta el suelo |
+| Al acabar la sesión | — | `VIDEO desenganchado de S1 … · P-frames tras IDR N · más grandes que su IDR 0 · hasta 0.x veces el IDR · el mayor … KB` |
+| `qdsim`, líneas `radio:` | P-frames máx. 285 KB, 35 de más de 6 medios | Máximo ≲ el IDR (~60-80 KB) y muchos menos de más de 6 medios |
+| `perf/*.csv` | `idr_kb,56` y luego `p_kb,164` | `p_after_idr` ≤ el `idr_kb` de justo antes |
+
+**En el coche:** en `sessions.csv`, `p_max_kb` ≲ 110 (el IDR más grande) en vez de 220-250 y `p_sobre_tope` mucho
+menor; en el log, ninguna `W VIDEO P-frame tras IDR`; en `perf/*.csv`, `p_after_idr` por debajo del `idr_kb` anterior y,
+para los grandes que queden, `gate_hold_ms` justo antes (puerta, hipótesis (a)) o una racha de `p_kb` crecientes
+(transición de AA). Menos «Corte … RADIO» a la vez que un `write de VIDEO_P` grande.
+
+### 23.7 Pruebas en el PC
+
+`cmd /c ".\gradlew.bat :qdcore:test :app:testGithubDebugUnitTest :app:assembleGithubRelease --console=plain"`: **BUILD
+SUCCESSFUL**. `:qdcore` 162/162. App: 3059 pruebas, 0 fallos y 4 saltadas (las de siempre). Nueva: `PAfterIdrTest` (5:
+solo cuenta el primer P-frame tras un IDR; uno más grande que su IDR da una línea como mucho cada 10 s y el resumen; con
+el suelo el resumen dice 0; sesión nueva conserva el IDR pendiente e ignora IDR vacíos; `qpPMinFor` nunca baja del suelo
+y sin suelo deja el de siempre). `PFrameSizeControllerTest` con los textos nuevos del suelo. Sin probar en el móvil ni
+en el coche.

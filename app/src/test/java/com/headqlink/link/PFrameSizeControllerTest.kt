@@ -109,10 +109,10 @@ class PFrameSizeControllerTest {
         now = 15_800
         val none = c.onPFrame(10 * kb, bps, fps)!!
         assertEquals(PFrameSizeController.QP_NONE, none.qpAfter)
-        assertEquals("P-frames: 5 s sin pasar del tope (61 KB) → QP-P sin mínimo (el del encoder)", none.line())
+        assertEquals("P-frames: 5 s sin pasar del tope (61 KB) → QP-P en el suelo (24)", none.line())
         now = 30_000
         assertNull(c.onPFrame(10 * kb, bps, fps))
-        assertTrue(c.summary(), c.summary().contains("QP-P sin mínimo (el del encoder) (máx. 28, subidas 2, bajadas 3)"))
+        assertTrue(c.summary(), c.summary().contains("QP-P en el suelo (24) (máx. 28, subidas 2, bajadas 3)"))
     }
 
     @Test

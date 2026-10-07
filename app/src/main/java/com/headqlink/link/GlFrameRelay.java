@@ -122,6 +122,11 @@ final class GlFrameRelay {
 
     private boolean hasNew;
     private long frameNs;
+    /**
+     * Desde cuándo la puerta (el enlace) retiene un frame pendiente, o 0. Al dibujar va a la traza como gate_hold_ms
+     * (docs §23: para ver si un P-frame grande sigue a un rato con la puerta cerrada).
+     */
+    private long gateHoldSinceNs;
     private boolean scheduled;
     private boolean released;
 
@@ -129,6 +134,7 @@ final class GlFrameRelay {
     private int statDecoded;
     private int statDrawn;
     private long statMaxWaitMs;
+    private long statMaxHoldMs;
     private int statDenyInterval;
     private int statDenyGate;
     private long statStart = SystemClock.elapsedRealtime();
@@ -419,8 +425,12 @@ final class GlFrameRelay {
         boolean early = wait > 0;
         boolean closed = !early && g != null && !g.ready();
         if (early || closed) {
-            if (early) statDenyInterval++;
-            else statDenyGate++;
+            if (early) {
+                statDenyInterval++;
+            } else {
+                statDenyGate++;
+                if (gateHoldSinceNs == 0) gateHoldSinceNs = now;
+            }
             if (!scheduled) {
                 scheduled = true;
                 // Con cadencia fija se espera justo al tic (redondeando hacia arriba, sin el mínimo de 4 ms).
@@ -434,6 +444,12 @@ final class GlFrameRelay {
         long waitedMs = (now - frameNs) / 1_000_000;
         statMaxWaitMs = Math.max(statMaxWaitMs, waitedMs);
         PerfTrace.event("relay_draw", waitedMs);
+        if (gateHoldSinceNs != 0) {
+            long heldMs = (now - gateHoldSinceNs) / 1_000_000;
+            gateHoldSinceNs = 0;
+            statMaxHoldMs = Math.max(statMaxHoldMs, heldMs);
+            PerfTrace.event("gate_hold_ms", heldMs);
+        }
         hasNew = false;
         // Siguiente dibujo: en rejilla, el tic siguiente (si nos hemos retrasado más de un periodo, por el enlace
         // cerrado o sin frames, la rejilla vuelve a empezar aquí); si no, el ritmo medio.
@@ -503,14 +519,16 @@ final class GlFrameRelay {
     private void maybeLogStats() {
         long now = SystemClock.elapsedRealtime();
         if (now - statStart < 5000) return;
-        L.i(String.format(java.util.Locale.US, "GL relay: AA %d frames, enviados %d (descartados %d por ir atrasados), espera máx %d ms · esperas por ritmo %d, por enlace %d",
-                statDecoded, statDrawn, Math.max(0, statDecoded - statDrawn), statMaxWaitMs, statDenyInterval, statDenyGate));
+        L.i(String.format(java.util.Locale.US, "GL relay: AA %d frames, enviados %d (descartados %d por ir atrasados), espera máx %d ms · esperas por ritmo %d, por enlace %d%s",
+                statDecoded, statDrawn, Math.max(0, statDecoded - statDrawn), statMaxWaitMs, statDenyInterval, statDenyGate,
+                statMaxHoldMs > 0 ? " (puerta cerrada máx " + statMaxHoldMs + " ms)" : ""));
         statDenyInterval = 0;
         statDenyGate = 0;
         statStart = now;
         statDecoded = 0;
         statDrawn = 0;
         statMaxWaitMs = 0;
+        statMaxHoldMs = 0;
     }
 
     private static int compile(int type, String src) {

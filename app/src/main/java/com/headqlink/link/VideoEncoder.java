@@ -18,11 +18,16 @@ import java.util.List;
  * marcha (setQpIMin); con Android 13+, el QP medio de cada IDR si el encoder lo informa (lastIdrQp); y, para un IDR
  * pedido, bajada temporal del bitrate (requestKeyFrame(dip)) que se repone en cuanto sale el IDR.
  *
- * Tamaño de los P-frames (PFrameSizeController): con las mismas claves, QP mínimo de los P-frames (KEY_VIDEO_QP_P_MIN/MAX,
- * «sin mínimo» al configurar) en marcha con setQpPMin; los rangos de I y P van siempre juntos en cada setParameters (en
- * Codec2, CCodecConfig traduce las claves de QP a un único parámetro con todos los tipos de frame, y uno que faltara
- * podría quedar sin rango), así que un control nunca deshace el del otro. Plan B: bajada temporal del bitrate
- * (dipForPFrames), que se combina con la de un IDR pedido (manda la mayor).
+ * Tamaño de los P-frames (PFrameSizeController): con las mismas claves, QP mínimo de los P-frames (KEY_VIDEO_QP_P_MIN/MAX)
+ * con un suelo al configurar (Params.qpPMin, el QP-I de partida: docs §23) y en marcha con setQpPMin, que nunca baja de
+ * ese suelo; los rangos de I y P van siempre juntos en cada setParameters (en Codec2, CCodecConfig traduce las claves de
+ * QP a un único parámetro con todos los tipos de frame, y uno que faltara podría quedar sin rango), así que un control
+ * nunca deshace el del otro. Plan B: bajada temporal del bitrate (dipForPFrames), que se combina con la de un IDR pedido
+ * (manda la mayor).
+ *
+ * El c2.qti.avc.encoder (S25, 2026-10-07) respeta el rango de QP de configure pero no parece hacer caso de los cambios
+ * en marcha (IDR del mismo tamaño al byte con el QP-I mínimo de 21 a 18; P-frames igual de grandes con el QP-P mínimo
+ * subido de 26 a 40): por eso el suelo de los P-frames va al configurar.
  */
 final class VideoEncoder {
     interface Sink {
@@ -56,7 +61,11 @@ final class VideoEncoder {
         int qpIMin;
         /** QP máximo de los I-frames (con qpIMin). */
         int qpIMax = 51;
-        /** Con qpIMin: QP mínimo de los P-frames al configurar (KEY_VIDEO_QP_P_MIN); 0 = sin mínimo (QP_P_NONE). */
+        /**
+         * Con qpIMin: QP mínimo de los P-frames al configurar (KEY_VIDEO_QP_P_MIN) y suelo de setQpPMin; 0 = sin mínimo
+         * (QP_P_NONE). Con el QP-I de partida, un P-frame no puede «afinar» la imagen por debajo de la calidad del IDR al
+         * que sigue (docs §23: sin suelo pesaba de mediana 2,3 veces el IDR).
+         */
         int qpPMin;
         /** QP máximo de los P-frames. */
         int qpPMax = 51;
@@ -91,6 +100,8 @@ final class VideoEncoder {
     /** QP mínimo de I y de P que lleva el códec (se mandan juntos: setQpRange). */
     private int curQpIMin;
     private int curQpPMin;
+    /** Suelo del QP mínimo de los P-frames (el de configure): setQpPMin no baja de aquí. */
+    private int qpPFloor = QP_P_NONE;
     /** Bajada del bitrate por P-frames grandes (factor) y hasta cuándo, o 0. */
     private volatile double pDipFactor;
     private volatile long pDipUntilNs;
@@ -196,11 +207,13 @@ final class VideoEncoder {
         qpKeys = android.os.Build.VERSION.SDK_INT >= 31 && used.containsKey(QP_I_MIN);
         qpPKeys = qpKeys && used.containsKey(QP_P_MIN);
         curQpIMin = p.qpIMin;
-        curQpPMin = Math.max(QP_P_NONE, p.qpPMin);
+        qpPFloor = Math.max(QP_P_NONE, p.qpPMin);
+        curQpPMin = qpPFloor;
         qpStats = android.os.Build.VERSION.SDK_INT >= 33 && used.containsKey(STATS_LEVEL);
         if (p.qpIMin > 0) {
             L.i(qpKeys ? "encoder: QP-I " + p.qpIMin + "-" + p.qpIMax + " al configurar"
-                    + (qpPKeys ? " · QP-P " + curQpPMin + "-" + p.qpPMax + (curQpPMin == QP_P_NONE ? " (sin mínimo)" : "")
+                    + (qpPKeys ? " · QP-P " + curQpPMin + "-" + p.qpPMax + (curQpPMin == QP_P_NONE ? " (sin mínimo)"
+                    : " (suelo: un P-frame no afina la imagen más que el IDR)")
                     : " · sin QP-P (rechazado)")
                     + (qpStats ? "; pide el QP medio de cada IDR" : "")
                     : "encoder: sin claves de QP (Android " + android.os.Build.VERSION.SDK_INT + " < 12 o rechazadas)");
@@ -311,9 +324,22 @@ final class VideoEncoder {
         return qpPKeys;
     }
 
-    /** QP mínimo de los P-frames en marcha (QP_P_NONE o menos = sin mínimo), con el de los I-frames de ahora. */
+    /**
+     * QP mínimo de los P-frames en marcha (QP_P_NONE o menos = sin mínimo propio, que es el suelo de configure), con el de
+     * los I-frames de ahora.
+     */
     boolean setQpPMin(int min) {
-        return setQpRange(curQpIMin, Math.max(QP_P_NONE, min), true);
+        return setQpRange(curQpIMin, qpPMinFor(min, qpPFloor), true);
+    }
+
+    /** QP mínimo de los P-frames que se manda al códec: el pedido, sin bajar del suelo de configure (puro, tests). */
+    static int qpPMinFor(int requested, int floor) {
+        return Math.max(Math.max(QP_P_NONE, floor), requested);
+    }
+
+    /** Suelo del QP mínimo de los P-frames (el de configure; QP_P_NONE sin suelo). */
+    int qpPFloor() {
+        return qpPFloor;
     }
 
     /**
@@ -376,7 +402,7 @@ final class VideoEncoder {
         return out;
     }
 
-    /** Copia de f (ya con el QP-I) con el rango de QP de los P-frames: sin mínimo propio de partida (Params.qpPMin). */
+    /** Copia de f (ya con el QP-I) con el rango de QP de los P-frames: el suelo de partida (Params.qpPMin). */
     private MediaFormat withPSizeControl(MediaFormat f) {
         MediaFormat out = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, p.width, p.height);
         for (String k : f.getKeys()) copyKey(f, out, k);
@@ -494,10 +520,14 @@ final class VideoEncoder {
             for (String n : codec.getSupportedVendorParameters()) {
                 String l = n.toLowerCase(java.util.Locale.ROOT);
                 // «qp» y «rate»: para ver si el encoder declara su propio rango de QP (vendor.qti-ext-enc-qp-range…) o su
-                // control de tasa, por si el QP-P estándar no le llega en marcha.
+                // control de tasa, por si el QP-P estándar no le llega en marcha. Los de tamaño de frame, VBV/HRD, control
+                // de tasa, refresco intra y GOP: por si alguno permite poner un tope por frame (docs §23).
                 if (l.contains("latency") || l.contains("perf") || l.contains("priority") || l.contains("lowlat")
                         || l.contains("realtime") || l.contains("slice") || l.contains("operating") || l.contains("qp")
-                        || l.contains("rate")) {
+                        || l.contains("rate") || l.contains("frame-size") || l.contains("framesize") || l.contains("max-frame")
+                        || l.contains("vbv") || l.contains("hrd") || l.contains("-rc") || l.contains(".rc") || l.contains("boost")
+                        || l.contains("peak") || l.contains("intra") || l.contains("refresh") || l.contains("gop")
+                        || l.contains("ltr") || l.contains("hier") || l.contains("adaptive")) {
                     sb.append(sb.length() > 0 ? ", " : "").append(n);
                 }
             }

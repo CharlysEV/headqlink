@@ -14,12 +14,16 @@ import java.util.Locale;
  *   del enlace vio congestión, o empezó un corte de radio, en los últimos CONGESTION_WINDOW_MS):
  *   max(MIN_CAP_BYTES, CONGESTED_CAP_FRAMES × bitrate/fps).
  * - **Subir**: un P-frame por encima del tope sube el QP mínimo de los P-frames (Android 12+, KEY_VIDEO_QP_P_MIN) en
- *   STEP, como mucho una vez cada RAISE_HOLD_MS y sin pasar de QP_CEIL. Desde «sin mínimo» (el del encoder) la primera
- *   subida va a QP_BASE + STEP.
+ *   STEP, como mucho una vez cada RAISE_HOLD_MS y sin pasar de QP_CEIL. Desde «sin mínimo propio» (el suelo de
+ *   configure, QP_FLOOR: VideoEncoder.setQpPMin nunca baja de él) la primera subida va a QP_BASE + STEP.
  *   Con el mínimo ya en QP_CEIL, cada P-frame por encima del tope (con la misma espera) baja
  *   el bitrate como en el plan B.
  * - **Bajar**: RELAX_AFTER_MS sin ningún P-frame por encima del tope (ni otro cambio) lo bajan 1; por debajo de
- *   QP_BASE + STEP vuelve a «sin mínimo».
+ *   QP_BASE + STEP vuelve a «sin mínimo propio» (el suelo de configure).
+ *
+ * Ojo (docs §23): el c2.qti.avc.encoder no parece hacer caso de los cambios de QP en marcha; lo que de verdad acota los
+ * P-frames allí es el suelo QP_FLOOR al configurar. Este control sirve para los encoders que sí los respetan y, con el
+ * plan B, baja el bitrate.
  * - **Plan B, bajada del bitrate** (como la del IDR): si el encoder no tiene las claves de QP (Android < 12 o las
  *   rechazó), si rechaza el QP nuevo en marcha, o si tras subir el mínimo INEFFECTIVE_QP_RISE o más los P-frames por
  *   encima del tope siguen siendo casi tan grandes como el primero (INEFFECTIVE_RATIO): desde entonces cada subida (o, sin
@@ -39,9 +43,14 @@ final class PFrameSizeController {
     static final int CAP_FRAMES = 6;
     static final int CONGESTED_CAP_FRAMES = 3;
     static final long CONGESTION_WINDOW_MS = 2_000;
-    /** Sin mínimo propio: el del encoder. */
+    /** Sin mínimo propio: el suelo de configure (QP_FLOOR). */
     static final int QP_NONE = 0;
     static final int QP_BASE = 24;
+    /**
+     * Suelo del QP de los P-frames al configurar el encoder (VideoEncoder.Params.qpPMin): el QP-I de partida, para que el
+     * P-frame que sigue a un IDR no «afine» la imagen entera por debajo de la calidad del IDR (docs §23).
+     */
+    static final int QP_FLOOR = IdrSizeController.QP_START;
     static final int STEP = 2;
     static final int QP_CEIL = 40;
     /** QP máximo de los P-frames (el de H.264: sin tope). */
@@ -63,7 +72,7 @@ final class PFrameSizeController {
     private long lastOversizeMs = Long.MIN_VALUE / 4;
     private long lastChangeMs = Long.MIN_VALUE / 4;
     private long lastCongestionMs = Long.MIN_VALUE / 4;
-    /** Primer P-frame por encima del tope de la subida actual (desde «sin mínimo») y el QP con que empezó. */
+    /** Primer P-frame por encima del tope de la subida actual (desde «sin mínimo propio») y el QP con que empezó. */
     private int climbBytes;
     private int climbQp;
 
@@ -134,7 +143,7 @@ final class PFrameSizeController {
     }
 
     static String qpText(int qp) {
-        return qp == QP_NONE ? "QP-P sin mínimo (el del encoder)" : "QP-P mín " + qp;
+        return qp == QP_NONE ? "QP-P en el suelo (" + QP_FLOOR + ")" : "QP-P mín " + qp;
     }
 
     /** Tope de un P-frame: max(MIN_CAP_BYTES, k × bitrate/fps) con k = CAP_FRAMES, o CONGESTED_CAP_FRAMES congestionado. */
@@ -258,13 +267,13 @@ final class PFrameSizeController {
     synchronized String describe() {
         return "tamaño de los P-frames: tope max(" + MIN_CAP_BYTES / 1024 + " KB, " + CAP_FRAMES + " × bitrate/fps), "
                 + CONGESTED_CAP_FRAMES + " × con el enlace congestionado · "
-                + (qpKeys ? "QP-P mínimo adaptable (+" + STEP + " por P-frame grande cada " + RAISE_HOLD_MS + " ms, desde "
+                + (qpKeys ? "QP-P con suelo " + QP_FLOOR + " al configurar y mínimo adaptable (+" + STEP + " por P-frame grande cada " + RAISE_HOLD_MS + " ms, desde "
                 + (QP_BASE + STEP) + " hasta " + QP_CEIL + "; -1 tras " + RELAX_AFTER_MS / 1000 + " s limpios)"
                 : "sin claves de QP (Android < 12): cada P-frame grande baja el bitrate al " + IdrSizeController.pct(DIP)
                 + " % " + DIP_MS + " ms");
     }
 
-    /** Línea de las estadísticas de 5 s, o null si no hubo nada que contar (ningún P-frame grande y sin mínimo). */
+    /** Línea de las estadísticas de 5 s, o null si no hubo nada que contar (ningún P-frame grande y sin mínimo propio). */
     synchronized String takeWindowLine() {
         if (winOverCap == 0 && qpMin == QP_NONE) {
             winMaxBytes = 0;

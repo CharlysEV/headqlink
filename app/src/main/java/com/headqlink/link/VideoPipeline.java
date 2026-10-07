@@ -35,7 +35,10 @@ import dev.qdauto.core.wire.VideoMessage;
  *
  * Tamaño de los P-frames (C10, 2026-10-07: P-frames de 250-270 KB a 2,5 Mbit/s, cada uno casi un segundo de radio):
  * PFrameSizeController, con el QP-P mínimo y, si no basta, una bajada corta del bitrate; con el enlace congestionado (el
- * controlador del enlace o un corte de radio en los últimos 2 s) el tope se estrecha.
+ * controlador del enlace o un corte de radio en los últimos 2 s) el tope se estrecha. La causa principal (docs §23) era
+ * el primer P-frame tras cada IDR: el IDR sale en el QP-I mínimo de configure y el P-frame siguiente, sin suelo de QP,
+ * afinaba la imagen entera (de mediana 2,3 veces el IDR). Ahora los P-frames llevan el mismo suelo al configurar
+ * (Params.qpPMin), y PAfterIdr lo vigila (perf p_after_idr, «P-frame tras IDR: …»).
  */
 final class VideoPipeline {
     /**
@@ -139,6 +142,8 @@ final class VideoPipeline {
     private volatile IdrSizeController idrCtl;
     /** Tamaño de los P-frames con encoder propio (hilo enc-drain; la congestión llega desde hql-video). */
     private volatile PFrameSizeController pCtl;
+    /** El primer P-frame tras cada IDR (hilo enc-drain): ¿sigue pesando más que el IDR? (docs §23). */
+    private final PAfterIdr afterIdr = new PAfterIdr();
     private final IdrRequestGate idrGate = new IdrRequestGate();
     /** Se pidió un IDR que aún no ha salido (para el log: pedido o periódico). */
     private volatile boolean idrRequested;
@@ -275,6 +280,10 @@ final class VideoPipeline {
         // Tamaño de los IDR: QP mínimo de los I-frames de partida (Android 12+); lo ajusta IdrSizeController.
         vp.qpIMin = IdrSizeController.QP_START;
         vp.qpIMax = IdrSizeController.QP_MAX;
+        // Suelo de QP de los P-frames al configurar, el mismo que el del IDR (docs §23): sin él, el P-frame que sigue a
+        // cada IDR afinaba la imagen entera y pesaba de mediana 2,3 veces el IDR (hasta 250-335 KB a 1,2-2,5 Mbit/s). El
+        // c2.qti no hace caso de los cambios de QP en marcha, así que tiene que ir aquí.
+        vp.qpPMin = PFrameSizeController.QP_FLOOR;
         boolean latestFrame = source instanceof AaPassthroughSource;
         if (latestFrame) {
             // Como SspSession: sin IDR periódicos (el coche pide uno cuando lo necesita), intra-refresh. VBR en todos los
@@ -393,6 +402,12 @@ final class VideoPipeline {
         PFrameSizeController.Step st = ctl.onPFrame(len, enc.bitrate(), Math.max(1, fpsCap));
         // Cada P-frame a la traza de rendimiento (como enc_ms): para ver si bajan de tamaño tras subir el QP-P.
         PerfTrace.event("p_kb", IdrSizeController.kb(len));
+        // El primero tras un IDR, aparte (docs §23): con el suelo de QP no debería pesar más que el IDR.
+        PAfterIdr.Seen first = afterIdr.onP(len, SystemClock.elapsedRealtime());
+        if (first != null) {
+            PerfTrace.event("p_after_idr", IdrSizeController.kb(len));
+            if (first.line != null) L.w("VIDEO " + first.line + " · QP-P suelo " + enc.qpPFloor());
+        }
         if (st == null) return;
         String rejected = null;
         if (st.qpChanged() && !enc.setQpPMin(st.qpAfter)) rejected = ctl.onQpRejected();
@@ -417,6 +432,7 @@ final class VideoPipeline {
         IdrSizeController ctl = idrCtl;
         VideoEncoder enc = encoder;
         if (ctl == null || enc == null) return;
+        afterIdr.onIdr(len);
         IdrSizeController.Step st = ctl.onIdr(len, enc.lastIdrQp(), enc.lastIdrDip());
         boolean applied = !st.qpChanged() || enc.setQpIMin(st.qpAfter);
         PerfTrace.event("idr_kb", IdrSizeController.kb(len));
@@ -665,6 +681,7 @@ final class VideoPipeline {
         }
         PFrameSizeController pc = pCtl;
         if (pc != null) pc.beginSession();
+        afterIdr.beginSession();
         port.setSocketJitter(new Jitter("socket", Math.max(1, vp != null ? vp.fps : plan.fps)));
         long lost = droppedNoSession.getAndSet(0);
         // SPS/PPS en caché delante del primer IDR, y la sesión enganchada, a la vez (csdLock).
@@ -685,7 +702,8 @@ final class VideoPipeline {
     void detach(SessionPort port) {
         if (active != port) return;
         active = null;
-        L.i("VIDEO desenganchado de S" + port.getId() + " (el vídeo sigue vivo)");
+        String ai = afterIdr.summary();
+        L.i("VIDEO desenganchado de S" + port.getId() + " (el vídeo sigue vivo)" + (ai != null ? " · " + ai : ""));
     }
 
     SessionPort active() {
@@ -908,7 +926,8 @@ final class VideoPipeline {
         IdrSizeController ctl = idrCtl;
         if (ctl != null) L.i("VIDEO " + ctl.summary() + " · " + idrGate.summary());
         PFrameSizeController pc = pCtl;
-        if (pc != null) L.i("VIDEO " + pc.summary());
+        String ai = afterIdr.summary();
+        if (pc != null) L.i("VIDEO " + pc.summary() + (ai != null ? " · " + ai : ""));
         if (aaOversizeTotal > 0) L.i("AA: " + aaOversizeTotal + " IDR descartados por pasar del tope del coche");
         if (brake != null) {
             VideoTap.setAckGate(null);

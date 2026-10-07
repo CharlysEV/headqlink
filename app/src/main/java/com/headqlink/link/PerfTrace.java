@@ -29,6 +29,9 @@ import java.util.Locale;
  *   bluetooth, bt_a2dp, bt_hfp (0/1), power_save, doze (0/1), thermal (0..6),
  *   screen_on / screen_off / unlocked
  *   idr_req, flush (frames descartados), wifi_scan, note (texto en a)
+ *   relay_draw: ms que esperó el frame dibujado · gate_hold_ms: ms que la puerta «último frame» retuvo el dibujo (solo si
+ *           lo retuvo) · p_kb / idr_kb: tamaño de cada P-frame / IDR del encoder · p_after_idr: KB del primer P-frame tras
+ *           un IDR (docs §23)
  * Fichero: getExternalFilesDir()/perf/perf-AAAAMMDD-HHMMSS-mmm[-S<sesión>].csv
  */
 final class PerfTrace {
