@@ -53,6 +53,11 @@ public class AaGuardService extends Service {
     private boolean started;
     private boolean alerted;
     private boolean releasing;
+    /**
+     * La última orden recibida: se para con stopSelf(lastStartId), que Android no hace si hay otra en cola (otro park()
+     * con startForegroundService): esa pasa a primer plano y sigue. Pararlo con una en cola cerraría la app.
+     */
+    private int lastStartId;
     private long releaseStart;
 
     /** Aparca la sesión de AA hasta que el usuario desbloquee (llamar con AA conectado y el móvil bloqueado). */
@@ -152,9 +157,10 @@ public class AaGuardService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        lastStartId = startId;
         if (handingOver) {
             // Se pidió el relevo antes de llegar aquí: nada que guardar.
-            stopSelf();
+            stopSelf(startId);
             return START_NOT_STICKY;
         }
         if (!started) {
@@ -172,6 +178,10 @@ public class AaGuardService extends Service {
                     L.i("AA guardián: foco de vídeo en nativo (AA deja de enviar imagen)");
                 }
             }, 800);
+            main.postDelayed(check, CHECK_MS);
+        } else if (active && !releasing) {
+            // Otro park() que llegó mientras se liberaba el anterior (su stopSelf no se hizo): se vuelve a vigilar.
+            main.removeCallbacks(check);
             main.postDelayed(check, CHECK_MS);
         }
         return START_NOT_STICKY;
@@ -201,12 +211,13 @@ public class AaGuardService extends Service {
     private void finish() {
         L.life("AA guardián: liberado");
         active = false;
+        releasing = false;
         AaPark.release("guardián liberado");
         // Con orden (ByeBye), como todo cierre de nuestra conexión con AA: así su servidor sigue atendiendo después.
         AaClose.stopAa(this, "guardián liberado");
         VideoTap.setHeadless(false);
         getSystemService(NotificationManager.class).cancel(ALERT_ID);
-        stopSelf();
+        stopSelf(lastStartId);
     }
 
     private void alertOpenServer() {

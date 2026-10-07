@@ -819,11 +819,13 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         Notification n = buildNotification(text);
         boolean fine = LocationAccess.fine(this);
         boolean visibleNow = LocationAccess.appVisible();
-        if (inForeground && fine && !visibleNow) {
+        if (fine && !visibleNow && ForegroundCheck.alreadyForeground(inForeground, systemForegroundType(),
+                android.os.Build.VERSION.SDK_INT)) {
             // Ya en primer plano y HeadQLink no se ve: otro startForeground ahora haría que Android volviera a evaluar la
             // ubicación «mientras se usa» del servicio con la app en segundo plano, y la perdería (el GPS de los paneles se
-            // para al bloquear el móvil). Si ya está en primer plano, Android no lo exige ni con startForegroundService:
-            // solo se actualiza el aviso.
+            // para al bloquear el móvil). Si el sistema ya lo tiene en primer plano, no lo exige ni con
+            // startForegroundService: solo se actualiza el aviso. Si no lo tiene (aunque esta instancia lo crea), se llama
+            // a startForeground: sin eso Android cierra la app (ForegroundServiceDidNotStartInTimeException).
             NotificationManager nm = getSystemService(NotificationManager.class);
             if (nm != null) nm.notify(1, n);
             return true;
@@ -849,6 +851,16 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             L.e("Android no deja pasar a primer plano ahora; me detengo", e);
             stopSelf();
             return false;
+        }
+    }
+
+    /** Los tipos con los que el sistema tiene el servicio en primer plano (0: no lo está); antes de Android 10, 0. */
+    private int systemForegroundType() {
+        if (android.os.Build.VERSION.SDK_INT < 29) return 0;
+        try {
+            return getForegroundServiceType();
+        } catch (RuntimeException e) {
+            return 0;
         }
     }
 

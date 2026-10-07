@@ -271,6 +271,12 @@ class AapService : Service() {
     // creates it before it disconnects, so a teardown that has not started yet is still waited for.
     @Volatile private var exitTeardownDone: CompletableDeferred<Unit>? = null
 
+    // headqlink: a stop (ACTION_STOP_SERVICE) was accepted by this instance, and the id of the last
+    // command it received. The stop uses stopSelf(lastStartId), which Android ignores while a newer
+    // start is queued; that command then finishes the stop itself (ServiceStopRacePolicy).
+    private var stopAccepted = false
+    private var lastStartId = 0
+
     /**
      * Set by a `no_ui` automation command, which asks for the session without the screen.
      * Consumed by the next raise only, so an ordinary reconnect still comes to the front.
@@ -2610,6 +2616,12 @@ class AapService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
+        if (!ServiceStopRacePolicy.restartOnTaskRemoved(stopAccepted)) {
+            // headqlink: stopping on request; a restart here is the queued start that kills the app.
+            AppLog.i("AapService: onTaskRemoved while stopping — no restart")
+            super.onTaskRemoved(rootIntent)
+            return
+        }
         AppLog.i("AapService: onTaskRemoved — attempting restart")
         try {
             val restartIntent = Intent(this, AapService::class.java)
@@ -2724,6 +2736,24 @@ class AapService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        lastStartId = startId
+
+        // headqlink: a command queued behind an accepted stop (a start that arrived while the stop
+        // was on its way): startForeground() is done just above, so the promise is kept; now the
+        // stop is finished here, or left to the teardown that is still running.
+        when (ServiceStopRacePolicy.afterStopAccepted(stopAccepted, exitTeardownDone != null)) {
+            ServiceStopRacePolicy.Next.STOP_NOW -> {
+                AppLog.i("AapService: ${intent?.action ?: "start"} after the stop: foreground kept, stopping now")
+                stopForeground(true)
+                stopSelf(startId)
+                return START_NOT_STICKY
+            }
+            ServiceStopRacePolicy.Next.LEAVE_TO_TEARDOWN -> {
+                AppLog.i("AapService: ${intent?.action ?: "start"} during the stop teardown: it stops the service")
+                return START_NOT_STICKY
+            }
+            ServiceStopRacePolicy.Next.HANDLE -> Unit
+        }
 
         // An automation command may ask for the session without the screen; latch it before any
         // branch below can reach a raise.
@@ -2738,6 +2768,7 @@ class AapService : Service() {
                 setPackage(packageName)
             })
             isDestroying = true
+            stopAccepted = true
             // Asked before the disconnect, and the latch made before it too. The teardown that
             // gives the network back runs on serviceScope and suspends on the disconnect, and
             // onDestroy cancels that scope: a stopSelf() taken here killed it at the await and left
@@ -2753,7 +2784,9 @@ class AapService : Service() {
             selfLauncherManager.stop(wasConnected = false)
             stopForeground(true)
             if (teardownDone == null) {
-                stopSelf()
+                // headqlink: with this command's id, not stopSelf(): a start queued behind this one
+                // keeps the service until it has called startForeground() and stops it itself.
+                stopSelf(startId)
             } else {
                 serviceScope.launch {
                     val gaveItBack = withTimeoutOrNull(ServiceStopWaitPolicy.TEARDOWN_TIMEOUT_MS) {
@@ -2768,7 +2801,7 @@ class AapService : Service() {
                         )
                     }
                     exitTeardownDone = null
-                    stopSelf()
+                    stopSelf(lastStartId)
                 }
             }
             return START_NOT_STICKY
