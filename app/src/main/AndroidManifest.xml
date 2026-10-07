@@ -606,6 +606,19 @@
             android:theme="@style/Theme.HeadQLink" />
 
         <!--
+            headqlink: coche virtual (menú de inicio): la pantalla del coche en el móvil, con Android Auto por Self-Mode,
+            nuestras pantallas y rutas reales, sin coche. Solo desde la app.
+        -->
+        <activity
+            android:name="com.headqlink.link.CarSimActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|navigation|uiMode|density"
+            android:exported="false"
+            android:label="@string/hql_sim_menu"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/Theme.HeadQLink" />
+
+        <!--
             headqlink: cable USB del coche (experimental). Android la lanza al enchufar el móvil cuando el coche lo pone en
             modo accesorio con el filtro de QDLink (Neusoft / QDriveLink) y da permiso para ese accesorio. Transparente:
             arranca LinkService por el cable y se cierra. Si QDLink también está instalada, Android pregunta qué app lo

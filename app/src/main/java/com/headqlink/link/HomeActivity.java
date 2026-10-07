@@ -406,6 +406,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         if (android.os.Build.VERSION.SDK_INT >= 33) m.add(0, 4, 4, Str.get(R.string.hql_language));
         if (android.os.Build.VERSION.SDK_INT >= 26) m.add(0, 8, 5, Str.get(R.string.hql_w_add_widget));
         if (android.os.Build.VERSION.SDK_INT >= 33) m.add(0, 9, 5, Str.get(R.string.hql_w_add_tile));
+        // Coche virtual: la pantalla del coche en el móvil (Android Auto, nuestras pantallas y rutas reales), sin coche.
+        m.add(0, 11, 6, Str.get(R.string.hql_sim_menu));
         m.add(0, 6, 6, Str.get(R.string.hql_diagnostics));
         pm.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
@@ -432,6 +434,13 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     break;
                 case 10:
                     startActivity(new Intent(this, CarCloudActivity.class));
+                    break;
+                case 11:
+                    if (LinkState.running) {
+                        android.widget.Toast.makeText(this, Str.get(R.string.hql_preview_busy), android.widget.Toast.LENGTH_LONG).show();
+                    } else {
+                        startActivity(new Intent(this, CarSimActivity.class));
+                    }
                     break;
                 default:
                     startActivity(new Intent(this, LogActivity.class));

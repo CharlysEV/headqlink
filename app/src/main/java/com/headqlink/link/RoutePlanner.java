@@ -84,6 +84,49 @@ final class RoutePlanner {
 
     private static RoutePlanner instance;
 
+    // Modo prueba (coche virtual, sin coche): rutas reales desde el GPS o desde la salida elegida, con un % de prueba
+    // que se cambia a mano, sin guardar nada del viaje ni ajustar la previsión.
+    private static volatile boolean testMode;
+    /** Salida elegida en el modo prueba, o null: el GPS. */
+    private static volatile Place testOrigin;
+    private static volatile double testSoc = Double.NaN;
+
+    static boolean testMode() {
+        return testMode;
+    }
+
+    static Place testOrigin() {
+        return testMode ? testOrigin : null;
+    }
+
+    /** Entra o sale del modo prueba (al salir se olvidan la salida, el % y el destino elegidos). */
+    static void setTestMode(boolean on) {
+        testMode = on;
+        testOrigin = null;
+        testSoc = Double.NaN;
+        if (!on) setManualDestination(null);
+        L.i("ruta: modo prueba " + (on ? "activado (coche virtual)" : "desactivado"));
+    }
+
+    /** Modo prueba: la salida (null: el GPS); la ruta se rehace enseguida desde ahí. */
+    static void setTestOrigin(Place pl) {
+        if (!testMode) return;
+        testOrigin = pl;
+        L.i("ruta: salida de prueba " + (pl == null ? "el GPS" : "elegida a mano"));
+        RoutePlanner r = instance;
+        if (r == null || r.demo) return;
+        r.plan = null;
+        r.lastAttemptMs = 0;
+        r.failedDestination = null;
+        new Thread(() -> {
+            try {
+                r.step();
+            } catch (Exception e) {
+                L.w("ruta: " + Http.safeError(e));
+            }
+        }, "route-now").start();
+    }
+
     private final Context ctx;
     private final CarSensors sensors;
     private volatile boolean running;
@@ -164,6 +207,8 @@ final class RoutePlanner {
 
     /** Última posición conocida del móvil (NaN si no hay). */
     double[] position() {
+        Place o = testOrigin();
+        if (o != null) return new double[]{o.lat, o.lon};
         CarSensors.Snapshot s = sensors.snapshot();
         return new double[]{s.lat, s.lon};
     }
@@ -215,6 +260,15 @@ final class RoutePlanner {
     /** % de batería estimado ahora, o NaN si el usuario no lo ha indicado. */
     double socNow() {
         if (demo) return DemoMode.soc(sensors.snapshot().kwhTotal);
+        if (testMode) {
+            // Empieza con el % real del coche (si hay cuenta) o un 80 %; luego, el que se elija con ±5.
+            if (Double.isNaN(testSoc)) {
+                CarCloud.Snapshot cs = CarCloud.snapshot();
+                double real = cs == null ? Double.NaN : cs.soc(System.currentTimeMillis(), CarCloud.SOC_MAX_AGE_MS);
+                testSoc = Double.isNaN(real) ? 80 : Math.round(real);
+            }
+            return testSoc;
+        }
         Config c = new Config(ctx);
         double set = c.socPct();
         if (Double.isNaN(set)) return Double.NaN;
@@ -223,6 +277,10 @@ final class RoutePlanner {
 
     /** El usuario indica el % de batería actual. */
     void setSoc(double pct) {
+        if (testMode) {
+            testSoc = Math.max(0, Math.min(100, pct));
+            return;
+        }
         if (demo) {
             DemoMode.setSoc(pct, sensors.snapshot().kwhTotal);
             return;
@@ -265,10 +323,11 @@ final class RoutePlanner {
 
     private synchronized void step() {
         CarSensors.Snapshot s = sensors.snapshot();
-        trackEnergy(s);
+        if (!testMode) trackEnergy(s);
+        Place origin = testOrigin();
         NavTap.Info nav = NavTap.getInfo();
         Plan p = plan;
-        if (p != null && !Double.isNaN(s.lat)) p.progress = nearest(p, s.lat, s.lon, p.progress);
+        if (p != null && origin == null && !Double.isNaN(s.lat)) p.progress = nearest(p, s.lat, s.lon, p.progress);
         if (p != null) compareOnArrival(p, s);
         if (p != null) followCharge(p);
         // Destino: el de AA si lo manda; si no, el elegido aquí.
@@ -280,7 +339,9 @@ final class RoutePlanner {
             return;
         }
         if (p != null && dest.equals(p.destination)) return;
-        if (Double.isNaN(s.lat)) {
+        double oLat = origin != null ? origin.lat : s.lat;
+        double oLon = origin != null ? origin.lon : s.lon;
+        if (Double.isNaN(oLat)) {
             status = Str.get(R.string.hql_waiting_gps);
             return;
         }
@@ -290,7 +351,7 @@ final class RoutePlanner {
         lastAttemptMs = now;
         status = Str.get(R.string.hql_route_calculating, dest);
         try {
-            Plan np = useManual ? build(dest, s.lat, s.lon, m.lat, m.lon) : build(dest, s.lat, s.lon, Double.NaN, Double.NaN);
+            Plan np = useManual ? build(dest, oLat, oLon, m.lat, m.lon) : build(dest, oLat, oLon, Double.NaN, Double.NaN);
             np.builtAtMs = System.currentTimeMillis();
             plan = np;
             failedDestination = null;
@@ -336,7 +397,7 @@ final class RoutePlanner {
         CarCloud.Snapshot cs = CarCloud.snapshot();
         boolean data = cs != null && cs.hasData();
         boolean charging = data && (cs.status.charging() || cs.status.pluggedIn());
-        if (data && !cs.demo) {
+        if (data && !cs.demo && !testMode) {
             synchronized (chargeLock) {
                 trend.observe(p, p.km, p.kwhCum, p.km[Math.min(p.progress, p.n - 1)], cs.status.socBest(), cs.status.odometerKm,
                         cs.capacityKwh, charging, cs.dataTimeMs());
@@ -351,6 +412,7 @@ final class RoutePlanner {
      * indicado.
      */
     double[] battery(CarCloud.Snapshot cs) {
+        if (testMode) return new double[]{socNow(), cs != null && cs.hasData() ? cs.capacityKwh : EnergyModel.USABLE_KWH, 0};
         double real = cs == null ? Double.NaN : cs.soc(DemoMode.wallClockMs(), CarCloud.SOC_MAX_AGE_MS);
         if (!Double.isNaN(real)) return new double[]{real, cs.capacityKwh, 1};
         return new double[]{socNow(), EnergyModel.USABLE_KWH, 0};
@@ -500,7 +562,7 @@ final class RoutePlanner {
      * primera lectura de después da lo real. Con una llegada que sirva, se ajusta la previsión de las siguientes rutas.
      */
     private void compareOnArrival(Plan p, CarSensors.Snapshot s) {
-        if (p.arrivalDone || demo) return;
+        if (p.arrivalDone || demo || testMode) return;
         CarCloud.Snapshot cs = CarCloud.snapshot();
         if (cs == null || !cs.hasData() || cs.demo) return;
         LeapStatus st = cs.status;
@@ -762,22 +824,45 @@ final class RoutePlanner {
         return out;
     }
 
+    /** Tramo de ruta por consulta a Overpass (km): en rutas largas, varias consultas en vez de una enorme. */
+    static final double CHARGER_CHUNK_KM = 150;
+
     private void findChargers(Plan p) throws Exception {
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        Exception last = null;
+        int done = 0;
+        for (double from = 0; from < p.totalKm; from += CHARGER_CHUNK_KM) {
+            try {
+                findChargers(p, from, Math.min(p.totalKm, from + CHARGER_CHUNK_KM), seen);
+                done++;
+            } catch (Exception e) {
+                last = e;
+                L.w(String.format(Locale.US, "ruta: cargadores del km %.0f al %.0f: %s", from, from + CHARGER_CHUNK_KM, Http.safeError(e)));
+            }
+        }
+        if (done == 0 && last != null) throw last;
+        java.util.Collections.sort(p.chargers, (a, b) -> Double.compare(a.kmAlong, b.kmAlong));
+    }
+
+    private void findChargers(Plan p, double fromKm, double toKm, java.util.Set<String> seen) throws Exception {
         StringBuilder poly = new StringBuilder();
         double lastKm = -10;
         int count = 0;
         for (int i = 0; i < p.n; i++) {
+            if (p.km[i] < fromKm - 1 || p.km[i] > toKm + 1) continue;
             if (p.km[i] - lastKm < 3 && i != p.n - 1) continue;
             if (count++ > 0) poly.append(',');
             poly.append(String.format(Locale.US, "%.4f,%.4f", p.lat[i], p.lon[i]));
             lastKm = p.km[i];
         }
+        if (count < 2) return;
         // Nodos y también áreas (algunas estaciones están dibujadas como superficie): de esas, su centro.
-        String q = "[out:json][timeout:25];nwr[\"amenity\"=\"charging_station\"](around:2500," + poly + ");out center body 300;";
+        String q = "[out:json][timeout:40];nwr[\"amenity\"=\"charging_station\"](around:2500," + poly + ");out center body 600;";
         JSONArray els = new JSONObject(Http.post("https://overpass-api.de/api/interpreter", "data=" + Uri.encode(q)))
                 .getJSONArray("elements");
         for (int i = 0; i < els.length(); i++) {
             JSONObject e = els.getJSONObject(i);
+            if (!seen.add(e.optString("type") + e.optLong("id"))) continue;
             JSONObject tags = e.optJSONObject("tags");
             if (tags == null) continue;
             Charger c = new Charger();
@@ -806,7 +891,6 @@ final class RoutePlanner {
             c.kmAlong = p.km[idx];
             p.chargers.add(c);
         }
-        java.util.Collections.sort(p.chargers, (a, b) -> Double.compare(a.kmAlong, b.kmAlong));
     }
 
     private static double parseKw(String v) {

@@ -303,7 +303,8 @@ final class CarUi {
             // Sección Coche: viajes, ruta y datos de la vía, mientras dure el modo ampliado (y los datos reales del coche
             // de la cuenta de Leapmotor, si está configurada: CarCloud).
             CarCloud.start(ctx);
-            TripLog.start(ctx);
+            // Coche virtual (sin coche): sin guardar viajes.
+            if (!RoutePlanner.testMode()) TripLog.start(ctx);
             RoutePlanner.start(ctx);
             RoutePlanner.chargeAlerts = chargeAlert;
             RoadInfo.start(ctx);

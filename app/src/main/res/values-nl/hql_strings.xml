@@ -710,4 +710,12 @@
     <string name="hql_plan_replanned">Herberekend om %1$s:</string>
     <string name="hql_plan_trend">Aangepast aan het verbruik van deze rit: %1$s</string>
     <string name="hql_plan_voice">Gesproken melding als het plan verandert</string>
+    <string name="hql_sim_menu">Virtuele auto (proberen zonder auto)</string>
+    <string name="hql_sim_starting">Android Auto starten…</string>
+    <string name="hql_sim_toast">Virtuele auto: het autoscherm op je telefoon, met Android Auto en echte routes. Er worden geen ritten opgeslagen. Terug om te stoppen.</string>
+    <string name="hql_route_from">Vertrek: %1$s</string>
+    <string name="hql_route_gps">GPS</string>
+    <string name="hql_route_origin_gps">Mijn locatie (gps)</string>
+    <string name="hql_route_origin_hint">Waar vertrek je?</string>
+    <string name="hql_route_test_soc">testbatterij</string>
 </resources>

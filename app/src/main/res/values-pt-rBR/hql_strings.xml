@@ -711,4 +711,12 @@
     <string name="hql_plan_replanned">Recalculado às %1$s:</string>
     <string name="hql_plan_trend">Ajustado ao consumo desta viagem: %1$s</string>
     <string name="hql_plan_voice">Avisar por voz se o plano mudar</string>
+    <string name="hql_sim_menu">Carro virtual (testar sem o carro)</string>
+    <string name="hql_sim_starting">Iniciando o Android Auto…</string>
+    <string name="hql_sim_toast">Carro virtual: a tela do carro no celular, com Android Auto e rotas reais. Nenhuma viagem é salva. Voltar para sair.</string>
+    <string name="hql_route_from">Saída: %1$s</string>
+    <string name="hql_route_gps">GPS</string>
+    <string name="hql_route_origin_gps">Minha localização (GPS)</string>
+    <string name="hql_route_origin_hint">De onde você sai?</string>
+    <string name="hql_route_test_soc">bateria de teste</string>
 </resources>

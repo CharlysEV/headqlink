@@ -54,6 +54,8 @@ final class RouteTab implements CarScreen {
     private int chargerMinKw;
     private java.util.Set<String> chargerNets = new java.util.LinkedHashSet<>();
     private TextView filterSummary;
+    /** Coche virtual: «Desde: GPS» / «Desde: Sevilla». */
+    private TextView originPill;
     /** El plan de carga con el % de ahora (null sin % de batería, sin ruta o en un REEV) y de qué datos salió. */
     private ChargePlanner.Result chargePlan;
     private TextView search;
@@ -110,11 +112,19 @@ final class RouteTab implements CarScreen {
         search = CarKit.pill(ctx, Str.get(R.string.hql_route_search_dest), true);
         goMaps = CarKit.pill(ctx, Str.get(R.string.hql_route_guide_maps), false);
         clear = CarKit.pill(ctx, Str.get(R.string.hql_remove), false);
-        actions.addView(search);
+        // Coche virtual (modo prueba): desde dónde sale la ruta (el GPS o un lugar elegido: «un Sevilla-Barcelona»).
+        originPill = CarKit.pill(ctx, "", false);
+        originPill.setOnClickListener(v -> openSearch(true));
+        if (RoutePlanner.testMode()) {
+            actions.addView(originPill);
+            actions.addView(search, spaced());
+        } else {
+            actions.addView(search);
+        }
         actions.addView(goMaps, spaced());
         actions.addView(clear, spaced());
         routeCard.addView(actions, CarKit.at(Gravity.TOP | Gravity.END, 0, 0, 0, 0));
-        search.setOnClickListener(v -> openSearch());
+        search.setOnClickListener(v -> openSearch(false));
         goMaps.setOnClickListener(v -> {
             RoutePlanner.Place m = RoutePlanner.manualDestination();
             if (m != null) navigateTo(m.lat, m.lon);
@@ -128,7 +138,7 @@ final class RouteTab implements CarScreen {
         cta.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 28);
         cta.setPadding(44, 20, 44, 20);
         routeCard.addView(cta, CarKit.at(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0, 0, 90));
-        cta.setOnClickListener(v -> openSearch());
+        cta.setOnClickListener(v -> openSearch(false));
 
         LinearLayout right = CarKit.add(row, CarKit.col(ctx), 1f, 0);
         batteryCard = CarKit.add(right, new CarKit.Card(ctx, Str.get(R.string.hql_battery_arrival), this::paintBattery), 0, 290);
@@ -179,7 +189,7 @@ final class RouteTab implements CarScreen {
         if (pq != null) {
             previewQuery = null;
             root.post(() -> {
-                openSearch();
+                openSearch(false);
                 if (searchState != null) {
                     searchState.buf.append(pq);
                     searchState.changed();
@@ -211,7 +221,7 @@ final class RouteTab implements CarScreen {
      * al dejar de escribir (TYPE_PAUSE_MS, desde 3 letras) en el buscador de Android y en Photon (PlaceSearch); Buscar
      * o Ir buscan ya y, si no hay nada, prueban Nominatim.
      */
-    private void openSearch() {
+    private void openSearch(boolean origin) {
         LinearLayout panel = new LinearLayout(ctx);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setBackgroundColor(CarKit.BG);
@@ -219,7 +229,7 @@ final class RouteTab implements CarScreen {
         LinearLayout bar = CarStyle.bar(ctx);
         bar.setBackgroundColor(CarKit.SURFACE);
         TextView query = CarStyle.text(ctx, "", 30, CarKit.TEXT);
-        query.setHint(Str.get(R.string.hql_route_query_hint));
+        query.setHint(Str.get(origin ? R.string.hql_route_origin_hint : R.string.hql_route_query_hint));
         query.setHintTextColor(CarKit.FAINT);
         query.setSingleLine(true);
         query.setEllipsize(android.text.TextUtils.TruncateAt.START);
@@ -241,7 +251,7 @@ final class RouteTab implements CarScreen {
         ScrollView rs = new ScrollView(ctx);
         rs.addView(results);
         panel.addView(rs, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        SearchState st = new SearchState(panel, query, results);
+        SearchState st = new SearchState(panel, query, results, origin);
         searchState = st;
         CarKeyboard kb = new CarKeyboard(ctx, new CarKeyboard.Listener() {
             @Override
@@ -286,17 +296,24 @@ final class RouteTab implements CarScreen {
         String shownFor = "";
         android.speech.SpeechRecognizer speech;
         final Runnable typed = () -> searchNow(false);
+        /** Se busca la salida (coche virtual), no el destino. */
+        final boolean origin;
 
-        SearchState(View panel, TextView query, LinearLayout results) {
+        SearchState(View panel, TextView query, LinearLayout results, boolean origin) {
             this.panel = panel;
             this.query = query;
             this.results = results;
+            this.origin = origin;
+        }
+
+        String hint() {
+            return Str.get(origin ? R.string.hql_route_origin_hint : R.string.hql_route_query_hint);
         }
 
         /** Cambió el texto: se ve en la caja y sobre el teclado; se busca solo al dejar de escribir. */
         void changed() {
             query.setText(buf);
-            if (kb != null) kb.showText(buf, Str.get(R.string.hql_route_query_hint));
+            if (kb != null) kb.showText(buf, hint());
             results.removeCallbacks(typed);
             String q = buf.toString().trim();
             if (q.isEmpty()) {
@@ -342,9 +359,11 @@ final class RouteTab implements CarScreen {
             java.util.List<RoutePlanner.Place> rec = PlaceSearch.recents(new Config(ctx).recentPlaces());
             if (rec.isEmpty()) {
                 header(Str.get(R.string.hql_search_tip), CarKit.FAINT);
+                if (origin) results.addView(gpsItem(this), itemParams());
                 return;
             }
             header(Str.get(R.string.hql_search_recent), CarKit.FAINT);
+            if (origin) results.addView(gpsItem(this), itemParams());
             double[] pos = planner.position();
             for (RoutePlanner.Place pl : rec) results.addView(item(this, pl, pos), itemParams());
         }
@@ -510,10 +529,31 @@ final class RouteTab implements CarScreen {
             item.addView(k);
         }
         item.setOnClickListener(v -> {
-            L.i("ruta: destino elegido en el coche"); // sin el nombre: el log se exporta (qdauto §7.5)
             Config c = new Config(ctx);
             c.setRecentPlaces(PlaceSearch.remember(c.recentPlaces(), pl));
-            RoutePlanner.setManualDestination(pl);
+            if (st.origin) {
+                RoutePlanner.setTestOrigin(pl);
+            } else {
+                L.i("ruta: destino elegido en el coche"); // sin el nombre: el log se exporta (qdauto §7.5)
+                RoutePlanner.setManualDestination(pl);
+            }
+            st.close();
+            tick();
+        });
+        return item;
+    }
+
+    /** Buscando la salida: «Mi ubicación (GPS)», para volver a salir de donde está el móvil. */
+    private View gpsItem(SearchState st) {
+        LinearLayout item = new LinearLayout(ctx);
+        item.setOrientation(LinearLayout.HORIZONTAL);
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setPadding(22, 18, 22, 18);
+        item.setBackground(CarKit.outlined(CarKit.SURFACE, CarKit.ACCENT, 18));
+        TextView n = CarStyle.text(ctx, "📍 " + Str.get(R.string.hql_route_origin_gps), 27, CarKit.ACCENT);
+        item.addView(n);
+        item.setOnClickListener(v -> {
+            RoutePlanner.setTestOrigin(null);
             st.close();
             tick();
         });
@@ -533,16 +573,21 @@ final class RouteTab implements CarScreen {
         // Batería: la real del coche si la hay (nube de Leapmotor); si no, la indicada con ±5.
         cloud = CarCloud.snapshot();
         double real = cloud.soc(DemoMode.wallClockMs(), CarCloud.SOC_MAX_AGE_MS);
-        realSoc = !Double.isNaN(real);
+        realSoc = !Double.isNaN(real) && !RoutePlanner.testMode();
         soc = realSoc ? real : planner.socNow();
-        capKwh = realSoc ? cloud.capacityKwh : EnergyModel.USABLE_KWH;
+        capKwh = realSoc || (RoutePlanner.testMode() && cloud.hasData()) ? cloud.capacityKwh : EnergyModel.USABLE_KWH;
         socControls.setVisibility(realSoc ? View.GONE : View.VISIBLE);
         status = planner.status();
         CarSensors.Snapshot gps = planner.sensorSnapshot();
         gpsNote = gps.gpsState == GpsWatch.State.WAITING ? null : CarSensors.gpsNote(gps);
         nav = DemoMode.navInfo();
         boolean have = plan != null && plan.n >= 2;
-        goMaps.setVisibility(manual && have ? View.VISIBLE : View.GONE);
+        boolean test = RoutePlanner.testMode();
+        goMaps.setVisibility(manual && have && !test ? View.VISIBLE : View.GONE);
+        if (test) {
+            RoutePlanner.Place o = RoutePlanner.testOrigin();
+            originPill.setText(Str.get(R.string.hql_route_from, o == null ? Str.get(R.string.hql_route_gps) : o.name));
+        }
         clear.setVisibility(manual ? View.VISIBLE : View.GONE);
         cta.setVisibility(have ? View.GONE : View.VISIBLE);
         search.setVisibility(have ? View.VISIBLE : View.GONE);
@@ -1436,7 +1481,8 @@ final class RouteTab implements CarScreen {
         float lw = CarKit.label(cv, Str.get(R.string.hql_now), tx, r.top + 18, p);
         // De dónde sale: el dato real del coche (con su edad) o la estimación desde el % indicado.
         if (!Double.isNaN(soc)) {
-            String src = realSoc ? CarCloud.realLabel(cloud, DemoMode.wallClockMs()) : Str.get(R.string.hql_cloud_estimated);
+            String src = realSoc ? CarCloud.realLabel(cloud, DemoMode.wallClockMs())
+                    : Str.get(RoutePlanner.testMode() ? R.string.hql_route_test_soc : R.string.hql_cloud_estimated);
             p.setTypeface(CarKit.MEDIUM);
             p.setTextSize(19);
             CarKit.text(cv, CarKit.ellipsize(src, r.right - tx - lw - 12, p), tx + lw + 12, r.top + 18, 19,
