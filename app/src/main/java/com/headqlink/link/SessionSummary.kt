@@ -79,6 +79,9 @@ internal object SessionSummary {
         /** Banda de la zona Wi-Fi («5 GHz», «2,4 GHz», «desconocida»; "" = no es la zona Wi-Fi) y su detalle (canal, ancho). */
         val wifiBand: String = "",
         val wifiDetail: String = "",
+        /** P-frame más grande del encoder propio (bytes; 0 = sin encoder propio) y cuántos pasaron del tope. */
+        val pFrameMaxBytes: Long = 0,
+        val pFrameOverCap: Int = 0,
     ) {
         val durationS: Double get() = (endWallMs - startWallMs) / 1000.0
         val fps: Double get() = if (videoSeconds > 0) frames / videoSeconds else 0.0
@@ -140,6 +143,10 @@ internal object SessionSummary {
                 .append(" Mbit/s · congestiones ").append(r.congestionEvents)
         }
         if (r.writeStalls > 0) append(" · writes bloqueados ").append(r.writeStalls)
+        if (r.pFrameMaxBytes > 0) {
+            append(" · P-frame máx. ").append(kb(r.pFrameMaxBytes)).append(" KB (por encima del tope ").append(r.pFrameOverCap)
+                .append(')')
+        }
         append('\n')
         append("coche: ").append(r.carHeartbeats).append(" heartbeats")
         if (r.heartbeatMinMs >= 0) {
@@ -158,6 +165,7 @@ internal object SessionSummary {
         "heartbeats_coche", "toques", "max_hueco_coche_ms", "cortes", "max_corte_ms", "retrans", "reconexion_ms",
         "video_reutilizado", "ciclos_foco_aa", "termico_fin", "termico_max", "tope_fps_fin", "tope_fps_min",
         "frame_max_kb", "descartados_grandes", "bitrate_min_kbps", "congestiones", "writes_bloqueados", "banda_wifi",
+        "p_max_kb", "p_sobre_tope",
     ).joinToString(",")
 
     fun csvRow(r: Record): String = listOf(
@@ -170,7 +178,7 @@ internal object SessionSummary {
         r.retrans.toString(), r.reconnectMs.toString(), if (r.videoVerdict == "REUTILIZADO") "1" else "0", r.aaCycles.toString(),
         r.thermalEnd.toString(), r.thermalMax.toString(), r.fpsCapEnd.toString(), r.fpsCapMin.toString(),
         kb(r.maxMessageBytes).toString(), r.oversizedDrops.toString(), r.bitrateMinKbps.toString(), r.congestionEvents.toString(),
-        r.writeStalls.toString(), r.wifiBand.replace(',', '.'),
+        r.writeStalls.toString(), r.wifiBand.replace(',', '.'), kb(r.pFrameMaxBytes).toString(), r.pFrameOverCap.toString(),
     ).joinToString(",") { csv(it) }
 
     private val NUMBER = Regex("-?[0-9]+(\\.[0-9]+)?")
@@ -272,6 +280,11 @@ internal object SessionSummary {
         if (congestions > 0) {
             append("enlace: ").append(congestions).append(" congestiones · bitrate mín. ")
                 .append(f1((trip.filter { it.bitrateMinKbps > 0 }.minOfOrNull { it.bitrateMinKbps } ?: 0) / 1000.0)).append(" Mbit/s\n")
+        }
+        val pMax = trip.maxOfOrNull { it.pFrameMaxBytes } ?: 0L
+        if (pMax > 0) {
+            append("P-frames: máx. ").append(kb(pMax)).append(" KB · por encima del tope ").append(trip.sumOf { it.pFrameOverCap })
+                .append('\n')
         }
         val bands = trip.filter { it.wifiBand.isNotEmpty() }.groupingBy { it.wifiBand }.eachCount()
         if (bands.isNotEmpty()) {

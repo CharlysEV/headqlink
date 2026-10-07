@@ -141,6 +141,18 @@ final class VideoHub {
         return p != null && p.active() == port ? p.linkCongestionEvents() : 0;
     }
 
+    /** P-frame más grande de la sesión de port (bytes), o 0. */
+    int pFrameMaxBytes(SessionPort port) {
+        VideoPipeline p = live;
+        return p != null && p.active() == port ? p.pFrameMaxBytes() : 0;
+    }
+
+    /** P-frames por encima del tope en la sesión de port, o 0. */
+    int pFrameOverCap(SessionPort port) {
+        VideoPipeline p = live;
+        return p != null && p.active() == port ? p.pFrameOverCap() : 0;
+    }
+
     /** Para el vídeo (ajustes o fin del servicio). */
     void stop(String why) {
         h.post(() -> doStop(why));

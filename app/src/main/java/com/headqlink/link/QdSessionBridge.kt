@@ -579,6 +579,8 @@ internal class QdSessionBridge(
                 oversizedMaxBytes = st.maxOversizedBytes,
                 bitrateMinKbps = if (s.frames > 0) hub.linkMinKbps(port) else 0,
                 congestionEvents = if (s.frames > 0) hub.linkCongestionEvents(port) else 0,
+                pFrameMaxBytes = if (s.frames > 0) hub.pFrameMaxBytes(port).toLong() else 0,
+                pFrameOverCap = if (s.frames > 0) hub.pFrameOverCap(port) else 0,
                 writeStalls = st.writeStalls,
                 wifiBand = if (isHotspotLink()) HotspotRadio.summaryBand() else "",
                 wifiDetail = if (isHotspotLink()) HotspotRadio.summaryDetail() else "",

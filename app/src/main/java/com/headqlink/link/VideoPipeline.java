@@ -32,6 +32,10 @@ import dev.qdauto.core.wire.VideoMessage;
  * SessionConfigs.MAX_VIDEO_MESSAGE_BYTES): con encoder propio, IdrSizeController (QP-I adaptable y, si no basta, bitrate
  * bajado para el IDR pedido) e IdrRequestGate (antirrebote de las peticiones). En el reenvío directo no se controla el
  * encoder de AA: un IDR grande se descarta y se pide otro (KeyframePolicy); si se repite, aviso y peticiones espaciadas.
+ *
+ * Tamaño de los P-frames (C10, 2026-10-07: P-frames de 250-270 KB a 2,5 Mbit/s, cada uno casi un segundo de radio):
+ * PFrameSizeController, con el QP-P mínimo y, si no basta, una bajada corta del bitrate; con el enlace congestionado (el
+ * controlador del enlace o un corte de radio en los últimos 2 s) el tope se estrecha.
  */
 final class VideoPipeline {
     /**
@@ -133,6 +137,8 @@ final class VideoPipeline {
 
     // Tamaño de los IDR con encoder propio.
     private volatile IdrSizeController idrCtl;
+    /** Tamaño de los P-frames con encoder propio (hilo enc-drain; la congestión llega desde hql-video). */
+    private volatile PFrameSizeController pCtl;
     private final IdrRequestGate idrGate = new IdrRequestGate();
     /** Se pidió un IDR que aún no ha salido (para el log: pedido o periódico). */
     private volatile boolean idrRequested;
@@ -336,6 +342,9 @@ final class VideoPipeline {
         IdrSizeController ctl = new IdrSizeController(encoder.qpControl(), PAYLOAD_CAP);
         idrCtl = ctl;
         L.i("VIDEO " + ctl.describe());
+        PFrameSizeController pc = new PFrameSizeController(encoder.qpPControl(), SystemClock::elapsedRealtime);
+        pCtl = pc;
+        L.i("VIDEO " + pc.describe());
         source.start(in, plan.videoW, plan.videoH, vp.fps, vp.toString());
         if (gated) L.i("VIDEO puerta «último frame»: cola del kernel < " + gateOutq / 1024 + " KB · modo de tasa " + encoder.bitrateMode());
         LinkRateController lk = link;
@@ -368,7 +377,31 @@ final class VideoPipeline {
             return;
         }
         if (key) noteIdr();
+        else onEncoderPFrame(len);
         p.sendFrame(buf, 0, len, key, ptsUs, null);
+    }
+
+    /**
+     * Hilo enc-drain, antes de mandar un P-frame con sesión: tamaño al controlador de los P-frames, QP-P nuevo o bajada
+     * corta del bitrate al encoder y una línea por cambio («P-frames: 263 KB > tope 60 KB → QP-P mín 26»). El tope sale
+     * del bitrate pedido al encoder (el del enlace o el térmico) y de los fps que lleva la sesión.
+     */
+    private void onEncoderPFrame(int len) {
+        PFrameSizeController ctl = pCtl;
+        VideoEncoder enc = encoder;
+        if (ctl == null || enc == null) return;
+        PFrameSizeController.Step st = ctl.onPFrame(len, enc.bitrate(), Math.max(1, fpsCap));
+        // Cada P-frame a la traza de rendimiento (como enc_ms): para ver si bajan de tamaño tras subir el QP-P.
+        PerfTrace.event("p_kb", IdrSizeController.kb(len));
+        if (st == null) return;
+        String rejected = null;
+        if (st.qpChanged() && !enc.setQpPMin(st.qpAfter)) rejected = ctl.onQpRejected();
+        if (st.dip > 0 || rejected != null) enc.dipForPFrames(PFrameSizeController.DIP, PFrameSizeController.DIP_MS);
+        if (st.qpChanged()) PerfTrace.event("p_qp_min", st.qpAfter);
+        if (st.dip > 0) PerfTrace.event("p_dip_pct", IdrSizeController.pct(st.dip));
+        String line = "VIDEO " + st.line() + (rejected != null ? " · " + rejected : "");
+        if (rejected != null || st.note != null) L.w(line);
+        else L.i(line);
     }
 
     /**
@@ -441,11 +474,16 @@ final class VideoPipeline {
     void onLinkSample(SessionPort port, LinkRateController.Sample sample) {
         LinkRateController lk = link;
         VideoEncoder enc = encoder;
-        if (lk == null || enc == null || stopped || active != port) return;
+        PFrameSizeController pc = pCtl;
+        if (enc == null || stopped || active != port) return;
+        // Un corte de radio estrecha el tope de los P-frames aunque no haya controlador del enlace (ABR, link_fixed).
+        if (pc != null && sample.radioCut) pc.onCongestion();
+        if (lk == null) return;
         int waits = linkWaits;
         int delta = Math.max(0, waits - linkWaitsSeen);
         linkWaitsSeen = waits;
         LinkRateController.Step st = lk.onSample(sample.with(delta, sample.lateFlushes));
+        if (pc != null && lk.congestedNow()) pc.onCongestion();
         if (st == null) return;
         if (st.bitrateChanged()) {
             enc.setBitrate(st.bitrateAfter);
@@ -567,6 +605,18 @@ final class VideoPipeline {
         return lk != null ? lk.congestionEvents() : 0;
     }
 
+    /** P-frame más grande de la sesión activa (bytes), o 0 sin encoder propio. */
+    int pFrameMaxBytes() {
+        PFrameSizeController pc = pCtl;
+        return pc != null ? pc.maxBytes() : 0;
+    }
+
+    /** P-frames por encima del tope en la sesión activa, o 0. */
+    int pFrameOverCap() {
+        PFrameSizeController pc = pCtl;
+        return pc != null ? pc.overCap() : 0;
+    }
+
     private void noteIdr() {
         if (!idrAfterAttach) {
             idrAfterAttach = true;
@@ -613,6 +663,8 @@ final class VideoPipeline {
             applyFpsCap();
             if (wasLow) L.i("enlace: sesión nueva → bitrate " + LinkRateController.mbit(lk.bitrate()) + " · " + lk.fpsCap() + " fps");
         }
+        PFrameSizeController pc = pCtl;
+        if (pc != null) pc.beginSession();
         port.setSocketJitter(new Jitter("socket", Math.max(1, vp != null ? vp.fps : plan.fps)));
         long lost = droppedNoSession.getAndSet(0);
         // SPS/PPS en caché delante del primer IDR, y la sesión enganchada, a la vez (csdLock).
@@ -818,6 +870,9 @@ final class VideoPipeline {
         if (abrMax > 0) out.add(String.format(Locale.US, "bitrate %.1f Mbps (%.1f-%.1f)", abrBps / 1e6, abrMin / 1e6, abrMax / 1e6));
         LinkRateController lk = link;
         if (lk != null && lk.active()) out.add(lk.statsLine());
+        PFrameSizeController pc = pCtl;
+        String pl = pc != null ? pc.takeWindowLine() : null;
+        if (pl != null) out.add(pl);
         String gate = idrGate.takeWindowLine();
         if (gate != null) out.add(gate);
         return out;
@@ -852,6 +907,8 @@ final class VideoPipeline {
         h.removeCallbacks(deferredIdr);
         IdrSizeController ctl = idrCtl;
         if (ctl != null) L.i("VIDEO " + ctl.summary() + " · " + idrGate.summary());
+        PFrameSizeController pc = pCtl;
+        if (pc != null) L.i("VIDEO " + pc.summary());
         if (aaOversizeTotal > 0) L.i("AA: " + aaOversizeTotal + " IDR descartados por pasar del tope del coche");
         if (brake != null) {
             VideoTap.setAckGate(null);

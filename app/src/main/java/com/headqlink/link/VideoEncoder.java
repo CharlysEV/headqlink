@@ -17,6 +17,12 @@ import java.util.List;
  * Tamaño de los IDR (IdrSizeController): con Params.qpIMin y Android 12+, QP mínimo de los I-frames al configurar y en
  * marcha (setQpIMin); con Android 13+, el QP medio de cada IDR si el encoder lo informa (lastIdrQp); y, para un IDR
  * pedido, bajada temporal del bitrate (requestKeyFrame(dip)) que se repone en cuanto sale el IDR.
+ *
+ * Tamaño de los P-frames (PFrameSizeController): con las mismas claves, QP mínimo de los P-frames (KEY_VIDEO_QP_P_MIN/MAX,
+ * «sin mínimo» al configurar) en marcha con setQpPMin; los rangos de I y P van siempre juntos en cada setParameters (en
+ * Codec2, CCodecConfig traduce las claves de QP a un único parámetro con todos los tipos de frame, y uno que faltara
+ * podría quedar sin rango), así que un control nunca deshace el del otro. Plan B: bajada temporal del bitrate
+ * (dipForPFrames), que se combina con la de un IDR pedido (manda la mayor).
  */
 final class VideoEncoder {
     interface Sink {
@@ -50,6 +56,10 @@ final class VideoEncoder {
         int qpIMin;
         /** QP máximo de los I-frames (con qpIMin). */
         int qpIMax = 51;
+        /** Con qpIMin: QP mínimo de los P-frames al configurar (KEY_VIDEO_QP_P_MIN); 0 = sin mínimo (QP_P_NONE). */
+        int qpPMin;
+        /** QP máximo de los P-frames. */
+        int qpPMax = 51;
 
         @Override
         public String toString() {
@@ -57,7 +67,7 @@ final class VideoEncoder {
                     + (cbr ? " CBR" : " VBR") + " gop=" + iFrameIntervalSec + "s"
                     + (intraRefreshFrames > 0 ? " intra-refresh=" + intraRefreshFrames : "") + " prepend=" + prependSpsPps
                     + (noRepeat ? " sin-repetir" : "") + (maxClocks ? " relojes-max" : "")
-                    + (qpIMin > 0 ? " qp-i=" + qpIMin + "-" + qpIMax : "");
+                    + (qpIMin > 0 ? " qp-i=" + qpIMin + "-" + qpIMax + " qp-p=" + Math.max(QP_P_NONE, qpPMin) + "-" + qpPMax : "");
         }
     }
 
@@ -75,8 +85,15 @@ final class VideoEncoder {
     /** Bajada en curso para un IDR pedido (factor), o 0. */
     private volatile double dipFactor;
     private volatile long dipSinceNs;
-    /** Se configuró con las claves de QP de los I-frames / con las estadísticas de codificación (QP medio). */
+    /** Se configuró con las claves de QP de los I-frames / de los P-frames / con las estadísticas (QP medio). */
     private volatile boolean qpKeys;
+    private volatile boolean qpPKeys;
+    /** QP mínimo de I y de P que lleva el códec (se mandan juntos: setQpRange). */
+    private int curQpIMin;
+    private int curQpPMin;
+    /** Bajada del bitrate por P-frames grandes (factor) y hasta cuándo, o 0. */
+    private volatile double pDipFactor;
+    private volatile long pDipUntilNs;
     private volatile boolean qpStats;
     /** Último SPS/PPS entregado (hilo enc-drain). */
     private byte[] lastCsd;
@@ -149,11 +166,14 @@ final class VideoEncoder {
         // Intentos, de más a menos: baja latencia (si se pide) y control del tamaño de los IDR; se quita lo que el
         // códec rechace (un encoder que no admite las claves de baja latencia acaba con la configuración normal).
         MediaFormat sized = withIdrSizeControl(f);
+        MediaFormat sizedP = sized != null ? withPSizeControl(sized) : null;
         List<MediaFormat> tries = new ArrayList<>();
         if (p.lowLatency) {
+            if (sizedP != null) tries.add(lowLatency(sizedP));
             if (sized != null) tries.add(lowLatency(sized));
             tries.add(lowLatency(f));
         }
+        if (sizedP != null) tries.add(sizedP);
         if (sized != null) tries.add(sized);
         tries.add(f);
         MediaFormat used = null;
@@ -166,16 +186,22 @@ final class VideoEncoder {
             } catch (RuntimeException e) {
                 last = e;
                 L.w("encoder: configuración rechazada (" + (t.containsKey(LOW_LATENCY_KEYS[0]) ? "baja latencia" : "normal")
-                        + (t.containsKey(QP_I_MIN) ? " + QP-I" : "") + "): " + e.getMessage());
+                        + (t.containsKey(QP_I_MIN) ? " + QP-I" : "") + (t.containsKey(QP_P_MIN) ? " + QP-P" : "") + "): "
+                        + e.getMessage());
                 codec.reset();
             }
         }
         if (used == null) throw last;
         if (p.lowLatency && !used.containsKey(LOW_LATENCY_KEYS[0])) L.w("encoder sin modo de baja latencia");
         qpKeys = android.os.Build.VERSION.SDK_INT >= 31 && used.containsKey(QP_I_MIN);
+        qpPKeys = qpKeys && used.containsKey(QP_P_MIN);
+        curQpIMin = p.qpIMin;
+        curQpPMin = Math.max(QP_P_NONE, p.qpPMin);
         qpStats = android.os.Build.VERSION.SDK_INT >= 33 && used.containsKey(STATS_LEVEL);
         if (p.qpIMin > 0) {
             L.i(qpKeys ? "encoder: QP-I " + p.qpIMin + "-" + p.qpIMax + " al configurar"
+                    + (qpPKeys ? " · QP-P " + curQpPMin + "-" + p.qpPMax + (curQpPMin == QP_P_NONE ? " (sin mínimo)" : "")
+                    : " · sin QP-P (rechazado)")
                     + (qpStats ? "; pide el QP medio de cada IDR" : "")
                     : "encoder: sin claves de QP (Android " + android.os.Build.VERSION.SDK_INT + " < 12 o rechazadas)");
         }
@@ -218,11 +244,36 @@ final class VideoEncoder {
         }
     }
 
-    /** Bitrate nuevo (ABR, térmico). Durante una bajada por IDR se aplica con la bajada y queda para reponerlo. */
+    /**
+     * Bitrate nuevo (ABR, térmico, enlace). Durante una bajada (IDR pedido o P-frames grandes) se aplica con la bajada y
+     * queda para reponerlo.
+     */
     void setBitrate(int bps) {
         bitrate = bps;
+        applyBitrate(effectiveBitrate());
+    }
+
+    /** Bitrate pedido (sin las bajadas temporales). */
+    int bitrate() {
+        return bitrate;
+    }
+
+    /** El pedido con la bajada en curso que más baje (la del IDR o la de los P-frames). */
+    private int effectiveBitrate() {
+        double f = 1;
         double d = dipFactor;
-        applyBitrate(d > 0 ? (int) (bps * d) : bps);
+        double pd = pDipFactor;
+        if (d > 0) f = Math.min(f, d);
+        if (pd > 0) f = Math.min(f, pd);
+        return f < 1 ? (int) (bitrate * f) : bitrate;
+    }
+
+    /** Plan B de los P-frames grandes: bitrate a factor durante ms (se repone solo; una bajada nueva la alarga). */
+    void dipForPFrames(double factor, long ms) {
+        if (codec == null || factor <= 0 || factor >= 1) return;
+        pDipUntilNs = System.nanoTime() + ms * 1_000_000L;
+        pDipFactor = factor;
+        applyBitrate(effectiveBitrate());
     }
 
     private void applyBitrate(int bps) {
@@ -236,10 +287,10 @@ final class VideoEncoder {
         }
     }
 
-    /** Fin de la bajada por IDR: el bitrate pedido vuelve al códec. */
+    /** Fin de la bajada por IDR: el bitrate pedido vuelve al códec (con la de los P-frames, si sigue). */
     private void endDip() {
         dipFactor = 0;
-        applyBitrate(bitrate);
+        applyBitrate(effectiveBitrate());
     }
 
     /** Se configuró con las claves de QP de los I-frames (Android 12+): setQpIMin puede servir. */
@@ -252,13 +303,38 @@ final class VideoEncoder {
      * que lo respete o no se ve en el tamaño (o el QP medio) de los IDR siguientes.
      */
     boolean setQpIMin(int min) {
+        return setQpRange(min, curQpPMin, false);
+    }
+
+    /** Se configuró también con las claves de QP de los P-frames: setQpPMin puede servir. */
+    boolean qpPControl() {
+        return qpPKeys;
+    }
+
+    /** QP mínimo de los P-frames en marcha (QP_P_NONE o menos = sin mínimo), con el de los I-frames de ahora. */
+    boolean setQpPMin(int min) {
+        return setQpRange(curQpIMin, Math.max(QP_P_NONE, min), true);
+    }
+
+    /**
+     * Los rangos de QP de I y de P en un solo setParameters (Android 12+): en Codec2 las claves de QP se traducen a un
+     * único parámetro con todos los tipos de frame, así que mandar solo las de un tipo podría dejar el otro sin rango. Hilo
+     * enc-drain (los dos controles de tamaño); sincronizado por si acaso.
+     */
+    private synchronized boolean setQpRange(int iMin, int pMin, boolean forP) {
         MediaCodec c = codec;
-        if (c == null || !qpKeys || android.os.Build.VERSION.SDK_INT < 31) return false;
+        if (c == null || !qpKeys || android.os.Build.VERSION.SDK_INT < 31 || (forP && !qpPKeys)) return false;
         Bundle b = new Bundle();
-        b.putInt(QP_I_MIN, min);
-        b.putInt(QP_I_MAX, Math.max(min, p.qpIMax));
+        b.putInt(QP_I_MIN, iMin);
+        b.putInt(QP_I_MAX, Math.max(iMin, p.qpIMax));
+        if (qpPKeys) {
+            b.putInt(QP_P_MIN, pMin);
+            b.putInt(QP_P_MAX, Math.max(pMin, p.qpPMax));
+        }
         try {
             c.setParameters(b);
+            curQpIMin = iMin;
+            if (qpPKeys) curQpPMin = pMin;
             return true;
         } catch (IllegalStateException | IllegalArgumentException e) {
             return false;
@@ -279,6 +355,11 @@ final class VideoEncoder {
     // (Android 13). Con su valor literal, que es fijo: así se pueden usar con minSdk 16 sin avisos de API.
     private static final String QP_I_MIN = "video-qp-i-min";
     private static final String QP_I_MAX = "video-qp-i-max";
+    // KEY_VIDEO_QP_P_MIN/MAX (Android 12).
+    private static final String QP_P_MIN = "video-qp-p-min";
+    private static final String QP_P_MAX = "video-qp-p-max";
+    /** «Sin mínimo» de los P-frames: el QP más bajo de H.264 salvo el 0 (casi sin pérdidas); el encoder elige. */
+    static final int QP_P_NONE = 1;
     private static final String STATS_LEVEL = "video-encoding-statistics-level";
     private static final String QP_AVERAGE = "video-qp-average";
 
@@ -292,6 +373,16 @@ final class VideoEncoder {
         // Sin VIDEO_ENCODING_STATISTICS_LEVEL: en el c2.qti.avc.encoder (S25) hace que el formato de salida cambie
         // en cada frame (picture-type, QP medio), y cada cambio acababa en un SPS/PPS reenviado al coche, que
         // reinicia su decodificador con cada uno y pinta artefactos (coche, 2026-10-05).
+        return out;
+    }
+
+    /** Copia de f (ya con el QP-I) con el rango de QP de los P-frames: sin mínimo propio de partida (Params.qpPMin). */
+    private MediaFormat withPSizeControl(MediaFormat f) {
+        MediaFormat out = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, p.width, p.height);
+        for (String k : f.getKeys()) copyKey(f, out, k);
+        int min = Math.max(QP_P_NONE, p.qpPMin);
+        out.setInteger(QP_P_MIN, min);
+        out.setInteger(QP_P_MAX, Math.max(min, p.qpPMax));
         return out;
     }
 
@@ -402,8 +493,11 @@ final class VideoEncoder {
             StringBuilder sb = new StringBuilder();
             for (String n : codec.getSupportedVendorParameters()) {
                 String l = n.toLowerCase(java.util.Locale.ROOT);
+                // «qp» y «rate»: para ver si el encoder declara su propio rango de QP (vendor.qti-ext-enc-qp-range…) o su
+                // control de tasa, por si el QP-P estándar no le llega en marcha.
                 if (l.contains("latency") || l.contains("perf") || l.contains("priority") || l.contains("lowlat")
-                        || l.contains("realtime") || l.contains("slice") || l.contains("operating")) {
+                        || l.contains("realtime") || l.contains("slice") || l.contains("operating") || l.contains("qp")
+                        || l.contains("rate")) {
                     sb.append(sb.length() > 0 ? ", " : "").append(n);
                 }
             }
@@ -482,6 +576,10 @@ final class VideoEncoder {
                         if (d > 0) endDip();
                     } else if (dipFactor > 0 && System.nanoTime() - dipSinceNs > DIP_TIMEOUT_NS) {
                         endDip();
+                    }
+                    if (pDipFactor > 0 && System.nanoTime() - pDipUntilNs > 0) {
+                        pDipFactor = 0;
+                        applyBitrate(effectiveBitrate());
                     }
                     // Tiempo de codificación: la marca de presentación es la hora de dibujo (nanoTime).
                     long encMs = (System.nanoTime() / 1000 - info.presentationTimeUs) / 1000;

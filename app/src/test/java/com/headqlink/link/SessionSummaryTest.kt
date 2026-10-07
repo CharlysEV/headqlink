@@ -44,7 +44,7 @@ class SessionSummaryTest {
         val lines = File(dir, SessionSummary.CSV_NAME).readLines().filter { it.isNotEmpty() }
         assertEquals(SessionSummary.CSV_HEADER, lines[0])
         assertEquals(4, lines.size) // cabecera + 3 filas
-        assertEquals(46, SessionSummary.CSV_HEADER.split(',').size)
+        assertEquals(48, SessionSummary.CSV_HEADER.split(',').size)
         assertTrue(lines[1].split(',')[3] == "3") // se conservan las últimas: S3, S4, S5
         assertTrue(lines[3].contains("\"el coche cerró, la conexión\""))
         assertEquals(listOf("4", "5"), SessionSummary.lastRows(dir, 2).map { it.split(',')[3] })
@@ -92,12 +92,13 @@ class SessionSummaryTest {
             videoVerdict = r.videoVerdict, aaCycles = r.aaCycles,
         )
         val cells = SessionSummary.csvRow(evil).split(',')
-        assertEquals(46, cells.size)
+        assertEquals(48, cells.size)
         assertEquals("'=cmd|' /C calc'!A0", cells[9])
         assertEquals("-1", cells[17])
         assertEquals("-1", cells[33])
         // Sin estado térmico conocido ni vídeo enviado, ni banda Wi-Fi.
-        assertEquals(listOf("-1", "-1", "0", "0", "0", "0", "0", "0", "0", ""), cells.takeLast(10))
+        assertEquals(listOf("-1", "-1", "0", "0", "0", "0", "0", "0", "0", ""), cells.dropLast(2).takeLast(10))
+        assertEquals(listOf("0", "0"), cells.takeLast(2))
     }
 
     @Test
@@ -120,10 +121,10 @@ class SessionSummaryTest {
         assertEquals(7, lines.size)
         assertTrue(lines[3], lines[3].contains("térmico 1 (máx. 3) · tope 30 fps (mín. 20)"))
         val cells = SessionSummary.csvRow(hot).split(',')
-        assertEquals(listOf("1", "3", "30", "20"), cells.dropLast(6).takeLast(4))
+        assertEquals(listOf("1", "3", "30", "20"), cells.dropLast(8).takeLast(4))
         assertEquals(
             listOf("termico_fin", "termico_max", "tope_fps_fin", "tope_fps_min"),
-            SessionSummary.CSV_HEADER.split(',').dropLast(6).takeLast(4),
+            SessionSummary.CSV_HEADER.split(',').dropLast(8).takeLast(4),
         )
         SessionSummary.startTrip(1_000_000L, aaLaunches = 0)
         SessionSummary.noteSession(record(3))
@@ -152,8 +153,8 @@ class SessionSummaryTest {
         assertEquals(7, lines.size)
         assertTrue(lines[3], lines[3].contains("enlace: bitrate mín. 2") && lines[3].contains("5 Mbit/s · congestiones 4 · writes bloqueados 1"))
         val header = SessionSummary.CSV_HEADER.split(',')
-        assertEquals(listOf("bitrate_min_kbps", "congestiones", "writes_bloqueados"), header.dropLast(1).takeLast(3))
-        assertEquals(listOf("2489", "4", "1"), SessionSummary.csvRow(weak).split(',').dropLast(1).takeLast(3))
+        assertEquals(listOf("bitrate_min_kbps", "congestiones", "writes_bloqueados"), header.dropLast(3).takeLast(3))
+        assertEquals(listOf("2489", "4", "1"), SessionSummary.csvRow(weak).split(',').dropLast(3).takeLast(3))
         // Sin controlador del enlace (reenvío directo) ni writes bloqueados no se nombran.
         val plain = SessionSummary.block(record(8)).split('\n')[3]
         assertTrue(plain, !plain.contains("enlace:") && !plain.contains("writes bloqueados"))
@@ -184,8 +185,8 @@ class SessionSummaryTest {
         assertEquals(7, lines.size)
         assertTrue(lines[3], lines[3].contains("mensaje máx. 313 KB · descartados por tamaño 2 (máx. 526 KB)"))
         val header = SessionSummary.CSV_HEADER.split(',')
-        assertEquals(listOf("frame_max_kb", "descartados_grandes"), header.dropLast(4).takeLast(2))
-        assertEquals(listOf("313", "2"), SessionSummary.csvRow(big).split(',').dropLast(4).takeLast(2))
+        assertEquals(listOf("frame_max_kb", "descartados_grandes"), header.dropLast(6).takeLast(2))
+        assertEquals(listOf("313", "2"), SessionSummary.csvRow(big).split(',').dropLast(6).takeLast(2))
         // Sin descartes no se nombran en el bloque.
         assertTrue(SessionSummary.block(record(6)).split('\n')[3].let { !it.contains("descartados por tamaño") })
         SessionSummary.startTrip(1_000_000L, aaLaunches = 0)
@@ -215,11 +216,11 @@ class SessionSummaryTest {
         val lines = SessionSummary.block(five).split('\n')
         assertEquals(7, lines.size)
         assertTrue(lines[1], lines[1].contains("swlan0 (zona Wi-Fi) · banda Wi-Fi 5 GHz (canal 36 · 80 MHz · Wi-Fi 6 (802.11ax)) · motor qdauto"))
-        assertEquals("banda_wifi", SessionSummary.CSV_HEADER.split(',').last())
-        assertEquals("5 GHz", SessionSummary.csvRow(five).split(',').last())
+        assertEquals("banda_wifi", SessionSummary.CSV_HEADER.split(',').dropLast(2).last())
+        assertEquals("5 GHz", SessionSummary.csvRow(five).split(',').dropLast(2).last())
         // En el CSV, «2,4 GHz» va con punto (sin comillas); sin dato, «desconocida» y sin detalle.
         val slow = withBand("2,4 GHz", "canal 6 · 20 MHz")
-        assertEquals("2.4 GHz", SessionSummary.csvRow(slow).split(',').last())
+        assertEquals("2.4 GHz", SessionSummary.csvRow(slow).split(',').dropLast(2).last())
         val unknown = SessionSummary.block(withBand("desconocida", "")).split('\n')[1]
         assertTrue(unknown, unknown.contains("· banda Wi-Fi desconocida · motor"))
         // Wi-Fi Direct o cable: no se nombra.
@@ -231,5 +232,35 @@ class SessionSummaryTest {
         SessionSummary.noteSession(record(10))
         val t = SessionSummary.tripSummary(1_600_000L, aaLaunches = 0)
         assertTrue(t, t.contains("banda Wi-Fi: 5 GHz 2 · 2,4 GHz 1"))
+    }
+
+    @Test
+    fun largestPFrameAndOverCapAreInTheBlockTheCsvAndTheTrip() {
+        val r = record(11)
+        val bursty = SessionSummary.Record(
+            sid = r.sid, startWallMs = r.startWallMs, endWallMs = r.endWallMs, engine = r.engine, link = r.link,
+            videoMode = r.videoMode, profile = "coche", video = r.video, carIp = r.carIp, carPort = r.carPort,
+            carName = r.carName, local = r.local, iface = r.iface, closeKind = r.closeKind, closeDetail = r.closeDetail,
+            reachedVideo = r.reachedVideo, tCarInfoMs = r.tCarInfoMs, tVideoCtrlMs = r.tVideoCtrlMs,
+            tFirstFrameMs = r.tFirstFrameMs, tFirstIdrMs = r.tFirstIdrMs, carKeyframeRequests = r.carKeyframeRequests,
+            frames = r.frames, bytes = r.bytes, idr = r.idr, dropped = r.dropped, flushes = r.flushes,
+            maxWriteMs = r.maxWriteMs, maxLagMs = r.maxLagMs, carHeartbeats = r.carHeartbeats,
+            heartbeatMinMs = r.heartbeatMinMs, heartbeatMaxMs = r.heartbeatMaxMs, touches = r.touches,
+            maxCarGapMs = r.maxCarGapMs, stalls = r.stalls, maxStallMs = r.maxStallMs, retrans = r.retrans, radio = r.radio,
+            reconnectMs = -1, reconnect = "", videoVerdict = r.videoVerdict, aaCycles = r.aaCycles,
+            pFrameMaxBytes = 263_150, pFrameOverCap = 12,
+        )
+        val lines = SessionSummary.block(bursty).split('\n')
+        assertEquals(7, lines.size)
+        assertTrue(lines[3], lines[3].contains("P-frame máx. 257 KB (por encima del tope 12)"))
+        assertEquals(listOf("p_max_kb", "p_sobre_tope"), SessionSummary.CSV_HEADER.split(',').takeLast(2))
+        assertEquals(listOf("257", "12"), SessionSummary.csvRow(bursty).split(',').takeLast(2))
+        // Sin encoder propio (reenvío directo) no se nombra.
+        assertTrue(!SessionSummary.block(record(12)).contains("P-frame"))
+        SessionSummary.startTrip(1_000_000L, aaLaunches = 0)
+        SessionSummary.noteSession(record(3))
+        SessionSummary.noteSession(bursty)
+        val t = SessionSummary.tripSummary(1_600_000L, aaLaunches = 0)
+        assertTrue(t, t.contains("P-frames: máx. 257 KB · por encima del tope 12"))
     }
 }

@@ -1515,7 +1515,7 @@ todo el rato: 7 sesiones, 127 cortes de radio («Corte … RADIO»: TX atascado 
 estaba en su suelo (`bitrate_min_kbps` 2540 = 50 % de los 5,08 Mbit/s del coche, 22 congestiones) y a 24 fps, y aun así
 hubo 45 cortes y 10,5 fps: tras «no hay más que bajar» no hacía nada más. El suelo del 50 % (viaje 6) evita pixelar en
 un enlace bueno, pero en uno malo sigue saturando la radio. Además, en S26 salen P-frames de 250-270 KB a 2,5 Mbit/s
-(cada uno ocupa casi un segundo de enlace): queda pendiente mirar por qué el VBR los produce.
+(cada uno ocupa casi un segundo de enlace): queda pendiente mirar por qué el VBR los produce (§19).
 
 ### 18.1 Suelo de emergencia (`LinkRateController`)
 
@@ -1582,3 +1582,110 @@ huecos cortos frente a recuperación; corte de radio como congestión; rearme so
 una congestión reinicia los 30 s; sesión nueva rearma), `HotspotRadioTest` (4: banda y canal en 2,4/5/6/60 GHz, textos,
 bandas a la vez y MAC recortada, sin zona Wi-Fi no hay banda) y una en `SessionSummaryTest` (banda en el bloque, el CSV
 y el viaje). Sin probar todavía en el móvil ni en el coche.
+
+## 19. P-frames grandes y radio floja en casa (2026-10-07)
+
+**Informe (C10, 2026-10-07, S26 09:03-09:06, perfil Coche, VBR, el enlace ya en 2,5 Mbit/s).** Muchos P-frames de
+160-270 KB («write de VIDEO_P 263150 B»). A 2,5 Mbit/s y 30 fps un P-frame medio son ~10 KB: cada uno es una ráfaga de
+25 veces lo normal que ocupa casi un segundo de radio, y coinciden con los «Corte … RADIO» (TX atascado > 400 ms). En
+la misma sesión los IDR salían de 92-106 KB: los P-frames grandes pesan más que un IDR entero. Hipótesis (sin
+comprobar): el VBR del c2.qti gasta en un frame el presupuesto acumulado mientras la puerta «último frame» no dejaba
+codificar (la marca de tiempo es la hora de dibujo); con el QP-P mínimo eso queda acotado igualmente.
+
+### 19.1 Tamaño de los P-frames (`PFrameSizeController`)
+
+Clase pura en `[hql]PFrameSizeController.java` (reloj inyectable), alimentada desde `VideoPipeline.onEncodedFrame` con
+cada frame que no es clave, solo con sesión enganchada:
+
+| Regla | Detalle |
+|---|---|
+| **Tope** | max(**24 KB**, **6** × bitrate/fps), con el bitrate pedido al encoder (el del enlace o el térmico, sin la bajada de un IDR) y los fps de la sesión (con el tope térmico o del enlace). 2,5 Mbit/s a 30 fps → 61 KB; 5,08 Mbit/s a 30 → 124 KB; 8 Mbit/s a 60 → 98 KB (a 30 fps serían 195 KB). |
+| **Enlace congestionado** | Si el control del enlace vio congestión en una muestra (`LinkRateController.congestedNow`, aunque no tocara el bitrate por la espera entre pasos) o empezó un corte de radio, durante **2 s**: max(24 KB, **3** × bitrate/fps) (2,5 Mbit/s a 30 → 31 KB). Los cortes de radio cuentan también sin controlador del enlace (Muy alto/Alto, `link_fixed`). |
+| **Subir** | Un P-frame por encima del tope sube el QP mínimo de los P-frames (`KEY_VIDEO_QP_P_MIN`) en **+2**, como mucho una vez cada **500 ms**, hasta **40**. Desde «sin mínimo» la primera subida va a **26** (base 24, como el QP-I de partida). |
+| **Bajar** | **5 s** sin ningún P-frame por encima del tope (ni otro cambio) lo bajan **1**; por debajo de 26 vuelve a «sin mínimo» (QP-P 1-51, lo que elija el encoder). |
+| **Plan B** | Bajada del bitrate al **60 %** durante **1 s** (`VideoEncoder.dipForPFrames`), como la del IDR: siempre si no hay claves de QP (Android < 12 o rechazadas al configurar); desde que el encoder rechace el QP-P en marcha; desde que, con el mínimo ya **+8** sobre el de la primera subida, un P-frame por encima del tope siga pesando ≥ 90 % del que la provocó (el encoder no parece hacer caso: cada subida baja además el bitrate); y con el mínimo ya en 40. |
+| **Sesión nueva** | Estadísticas a cero; el QP-P sigue (es del encoder, que sigue vivo) y baja solo. |
+
+**Sin pelearse con lo demás.**
+- *IDR*: aquí solo llegan los P-frames; `IdrSizeController` sigue igual. En Codec2 las claves de QP se traducen a un
+  único parámetro con todos los tipos de frame, así que `VideoEncoder.setQpRange` manda **siempre los dos rangos (I y
+  P) juntos**: subir el QP-P no deja el QP-I sin rango ni al revés. Las dos bajadas de bitrate se combinan (manda la
+  mayor) y `setBitrate` (enlace, térmico) las respeta.
+- *Intra-refresh*: la franja intra va en los P-frames; un tope de 6 frames medios le deja sitio (con 30 frames de
+  periodo, la franja es 1/30 de la imagen).
+- *Baseline/VBR/CBR*: el QP-P vale en los tres; el tope sale del bitrate pedido, no del modo. Con CBR el encoder ya
+  apenas da ráfagas: el controlador casi no actuará.
+- *Configuración*: se prueba primero con QP-I + QP-P (P a 1-51, sin mínimo propio), luego solo QP-I, luego nada; con
+  y sin baja latencia, como antes. Si el encoder rechaza el QP-P al configurar: plan B desde el principio.
+
+### 19.2 ¿Hace caso el c2.qti.avc.encoder al QP-P en marcha?
+
+No se puede saber sin el móvil. Lo que se sabe:
+- En Android 12+ `setParameters` pasa las claves de QP por el mismo camino de `CCodecConfig` que `configure`, así que
+  llegan al componente; aplicarlas con el encoder en marcha depende del componente de Qualcomm.
+- En los logs del coche el QP-I solo ha **bajado** en marcha (24 → 18, con IDR muy por debajo del objetivo), sin
+  errores de `setParameters` («no aceptó el QP-I nuevo» no ha salido nunca); nunca ha hecho falta subirlo, así que no
+  hay prueba de que una subida en marcha se respete.
+- Para verlo en el próximo viaje: tras «QP-P mín 26 → 28 …» los P-frames siguientes deben bajar de tamaño (en
+  `perf/*.csv`: `p_kb`, `p_qp_min`). Si no, sale `… el encoder no parece respetarlo; desde ahora cada subida baja además
+  el bitrate` y el plan B actúa solo. Además, `encoder: parámetros de fabricante útiles: …` ahora lista también los
+  que contienen «qp» o «rate» (por si el c2.qti declara su propio rango de QP de fabricante).
+
+### 19.3 Qué buscar en el log
+
+| Línea | Significado |
+|---|---|
+| `encoder c2.qti.avc.encoder 1920x882@30 5080kbps baseline VBR … qp-i=24-51 qp-p=1-51` | Parámetros pedidos |
+| `encoder: QP-I 24-51 al configurar · QP-P 1-51 (sin mínimo)` | El encoder aceptó las dos claves. `· sin QP-P (rechazado)`: plan B |
+| `VIDEO tamaño de los P-frames: tope max(24 KB, 6 × bitrate/fps), 3 × con el enlace congestionado · QP-P mínimo adaptable (+2 por P-frame grande cada 500 ms, desde 26 hasta 40; -1 tras 5 s limpios)` | Controlador activo |
+| `VIDEO P-frames: 257 KB > tope 61 KB → QP-P mín 26` | Subida |
+| `VIDEO P-frames: 40 KB > tope 31 KB (enlace congestionado) → QP-P mín 28` | Subida con el tope estrecho |
+| `VIDEO P-frames: 5 s sin pasar del tope (61 KB) → QP-P mín 27` / `… → QP-P sin mínimo (el del encoder)` | Bajada |
+| `W VIDEO P-frames: 260 KB > tope 61 KB → QP-P mín 34 y bitrate al 60 % 1000 ms · con el QP-P mínimo 8 más alto los P-frames siguen igual de grandes …` | El encoder no parece hacer caso: plan B |
+| `W VIDEO P-frames: … · el encoder no aceptó el QP-P en marcha: …` | `setParameters` rechazado: plan B |
+| `  P-frames: máx. 257 KB (tope 61 KB) · por encima del tope 3 · QP-P mín 28` | Estadísticas de 5 s (solo si hubo P-frames grandes o hay mínimo) |
+| `VIDEO P-frames 5400 · máx. 257 KB · por encima del tope 12 · QP-P mín 26 (máx. 30, subidas 3, bajadas 2)` | Al parar el vídeo |
+| `vídeo: … · P-frame máx. 257 KB (por encima del tope 12)` | Resumen de la sesión. En `sessions.csv`, columnas nuevas al final: `p_max_kb` y `p_sobre_tope`. En el resumen del viaje: `P-frames: máx. … · por encima del tope …` |
+
+### 19.4 Radio floja en casa (`qdsim` y `carsim`)
+
+El coche simulado lee el TCP a como mucho N kbit/s (cubo de fichas sobre sus lecturas: `RxThrottle`, en `:qdcore` y
+en `qdauto/core`) y, si se pide, deja de leer del todo a ratos. Con algún límite, su búfer de recepción se deja en
+**32 KiB** (antes de conectar), para que la ventana TCP se cierre y la cola de envío del móvil se llene como con la
+radio del C10 saturada: cola del kernel alta, `write()` lento, cortes «RADIO» en el detector y el control del enlace
+bajando (y, si sigue, el suelo de emergencia de §18).
+
+| Opción | Qué hace |
+|---|---|
+| `--rx-kbps N` | Lectura a como mucho N kbit/s |
+| `--rx-stall every=20s,for=1500ms` | Parón completo de la lectura de `for` cada `every` (el primero a los `every` de conectar) |
+| `qdsim --scenario radio-mala` | Como `normal` (toques, `KEY_FRAME_REQ`, modo noche), con `--rx-kbps 1500` y `--rx-stall every=15s,for=1200ms`, 120 s. PASS si la sesión aguanta. Las tres cosas se pueden cambiar. |
+
+Al acabar cada sesión con límite, qdsim saca tres líneas `radio:`: frames recibidos y fps (media, peor segundo,
+segundos con menos de la mitad), peor hueco, kbit/s, P-frames (máximo, medio, cuántos de más de 6 medios) y lo que
+hizo el límite (KB leídos, tiempo al límite, parones). La congestión que vio el móvil no viaja en el vídeo: está en su
+log (`enlace: congestión …`, `enlace muy congestionado`, `VIDEO P-frames: …`, `Corte … RADIO`). carsim lo saca en la
+sección «Radio floja» del informe (y `radioFloja` en el JSON), con `P-frames: máximo …` en la de vídeo.
+
+```
+qdsim\build\install\qdsim\bin\qdsim.bat --scenario radio-mala --target <IP del móvil>
+qdsim\build\install\qdsim\bin\qdsim.bat --scenario normal --duration 120 --rx-kbps 1000 --rx-stall every=20s,for=1500ms
+carsim\build\install\carsim\bin\carsim.bat --target <IP del móvil> --duration 120 --rx-kbps 1500 --rx-stall every=15s,for=1200ms --report radio.json
+```
+
+Con `--local-phone` (`qdsim --scenario radio-mala --local-phone --duration 20 --rx-stall every=8s,for=1200ms`) pasa:
+587 frames, peor hueco 1199 ms (el parón), 2 parones, 30 % del tiempo al límite (el móvil de prueba manda ~1,1
+Mbit/s).
+
+### 19.5 Resultados en el PC
+
+`cmd /c ".\gradlew.bat :qdcore:test :qdsim:installDist :app:testGithubDebugUnitTest :app:assembleGithubDebug"`:
+**BUILD SUCCESSFUL**. `:qdcore` 162/162 (nuevo `RxThrottleTest`, 6: formato de `--rx-stall`, ventanas de parón, tasa
+media del cubo en 10 s, parón que bloquea, el flujo nunca pide más de lo que deja el cubo, textos). `:qdsim`: nuevo
+`RadioTest` (2: opciones y valores de `radio-mala`; resumen del vídeo recibido). App: 3001 pruebas, 0 fallos y 4
+saltadas. Nuevas: `PFrameSizeControllerTest` (10: tope y suelo de 24 KB, P-frames normales con la franja intra, subida
+a 26 y +2 cada 500 ms, techo 40 y bajada del bitrate, bajada de 1 cada 5 s hasta «sin mínimo», tope estrecho 2 s tras
+una congestión, sin claves de QP, encoder que no hace caso, QP rechazado, sesión nueva), una en
+`LinkRateControllerTest` (`congestedNow` durante la espera entre pasos) y una en `SessionSummaryTest` (P-frame máximo
+en el bloque, el CSV y el viaje). En `qdauto`: `:core:test :carsim:test :carsim:installDist` en verde. Sin probar
+todavía en el móvil ni en el coche.

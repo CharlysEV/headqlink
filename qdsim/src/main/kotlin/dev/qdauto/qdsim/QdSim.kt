@@ -8,6 +8,8 @@ import dev.qdauto.core.sim.CarSimConfig
 import dev.qdauto.core.sim.CarSimListener
 import dev.qdauto.core.sim.CarSimState
 import dev.qdauto.core.sim.ReceiverHang
+import dev.qdauto.core.sim.RxLimit
+import dev.qdauto.core.sim.RxStall
 import dev.qdauto.core.sim.VideoArgsValues
 import dev.qdauto.core.sim.VideoFrameInfo
 import dev.qdauto.core.sim.VideoKind
@@ -91,12 +93,19 @@ class Options(
      * y se comprueba que el móvil hace lo mismo (en HeadQLink: Diagnóstico › Opciones de prueba › trama USB por Wi-Fi).
      */
     val usbFraming: Boolean = false,
+    /** Radio floja simulada en el lado del coche (`--rx-kbps`, `--rx-stall`; `radio-mala` las pone por defecto). */
+    val rx: RxLimit = RxLimit(),
 ) {
     /** `estricto`: los WARN cuentan como FAIL y las manías no se pueden desactivar. */
     val strict: Boolean get() = scenario == "estricto"
 
     companion object {
-        val SCENARIOS = listOf("normal", "estricto", "reconnect", "stall", "silent", "disconnect", "rack", "caida")
+        val SCENARIOS = listOf("normal", "estricto", "reconnect", "stall", "silent", "disconnect", "rack", "caida", "radio-mala")
+
+        /** `radio-mala`: lectura del coche a 1500 kbit/s y parón de 1,2 s cada 15 s, 120 s de vídeo. */
+        const val RADIO_MALA_KBPS = 1_500
+        const val RADIO_MALA_STALL = "every=15s,for=1200ms"
+        const val RADIO_MALA_DURATION_S = 120
 
         val USAGE = """
             Uso: qdsim --scenario <escenario> [opciones]
@@ -114,6 +123,10 @@ class Options(
                               a  directo al puerto de antes, sin anunciarse ni esperar ACK
                               b  se anuncia una sola vez y pierde ese ACK: necesita un reenvío
                               c  no se anuncia: solo hace caso a un ACK no pedido del móvil
+                radio-mala  como normal, con la radio del coche floja: lee a 1500 kbit/s (--rx-kbps) y deja de leer
+                            1,2 s cada 15 s (--rx-stall every=15s,for=1200ms), 120 s (--duration). PASS si la sesión
+                            aguanta; el informe da fps recibidos, P-frame máximo, peor hueco y lo que hizo el límite.
+                            La congestión que vio el móvil está en su log («enlace: congestión …», «VIDEO P-frames: …»)
               En todos los escenarios se comprueban las manías del C10 vistas el 2026-10-05 (activas por defecto):
                 tamano_mensaje  el receptor del coche se cuelga con un mensaje de vídeo (48 B + payload) de más de
                                 512 KiB: el coche simulado deja de leer --hang s (manda heartbeats) y cierra → FAIL;
@@ -143,6 +156,11 @@ class Options(
               --verbose            log completo del simulador
               --local-phone        prueba sin teléfono: un móvil de mentira (el núcleo con los ajustes del fork) en
                                    este mismo proceso, en 127.0.0.1
+              --rx-kbps N          radio floja: el coche lee el TCP a como mucho N kbit/s (cubo de fichas, búfer de
+                                   recepción de 32 KiB): la cola de envío del móvil se llena como con una radio débil
+              --rx-stall ESPEC     radio floja: el coche deja de leer del todo a ratos, p. ej. every=20s,for=1500ms
+                                   (el primero a los 20 s de conectar). Con --rx-kbps o --rx-stall, cada sesión acaba
+                                   con una línea «radio:» (fps, P-frame máximo, peor hueco, parones)
               --usb-framing        trama del cable USB (AOA) de QDLink sobre el TCP del Wi-Fi, en los dos sentidos: cada
                                    mensaje relleno con ceros hasta un múltiplo de 512 B (totalSize sin tocar) en un solo
                                    write(), y lectura en bloques de 512 que salta el relleno. Comprueba también trama_usb:
@@ -193,12 +211,16 @@ class Options(
             val hangS = m["hang"]?.let { it.replace(',', '.').toDoubleOrNull()?.takeIf { s -> s > 0 } ?: throw IllegalArgumentException("--hang espera segundos: $it") }
             val ffmpeg = m["ffmpeg"]?.let { File(it) }
             val variants = (m["variant"] ?: "abc").lowercase(Locale.ROOT)
+            val radioMala = scenario == "radio-mala"
+            val rxKbps = m["rx-kbps"]?.let { it.toIntOrNull()?.takeIf { n -> n >= 0 } ?: throw IllegalArgumentException("--rx-kbps espera kbit/s: $it") }
+                ?: if (radioMala) RADIO_MALA_KBPS else 0
+            val rxStall = (m["rx-stall"] ?: if (radioMala) RADIO_MALA_STALL else null)?.let { RxStall.parse(it) }
             require(variants.isNotEmpty() && variants.all { it in "abc" }) { "--variant espera letras a, b o c: $variants" }
             return Options(
                 scenario = scenario,
                 target = InetAddress.getByName(m["target"] ?: if (local) "127.0.0.1" else "255.255.255.255"),
                 sessions = int("sessions", 10).coerceAtLeast(1),
-                durationS = int("duration", if (scenario == "normal") 30 else 20).coerceAtLeast(3),
+                durationS = int("duration", if (scenario == "normal") 30 else if (radioMala) RADIO_MALA_DURATION_S else 20).coerceAtLeast(3),
                 gapMs = (m["gap-ms"]?.toLongOrNull() ?: 200L).coerceAtLeast(0),
                 stallS = int("stall-s", 5).coerceAtLeast(1),
                 width = int("width", 1920),
@@ -223,13 +245,15 @@ class Options(
                 variants = variants,
                 radioS = int("radio-s", 12).coerceAtLeast(1),
                 usbFraming = usbFraming,
+                rx = RxLimit(rxKbps, rxStall),
             )
         }
     }
 }
 
 /** Lo que ve un coche simulado: cuándo llega cada cosa del móvil. */
-private class Probe(private val t0: Long) : CarSimListener {
+private class Probe(private val t0: Long, fps: Int) : CarSimListener {
+    val flow = VideoFlow(fps)
     @Volatile var ackMs = -1L
     @Volatile var streamingMs = -1L
     @Volatile var firstConfigMs = -1L
@@ -259,6 +283,7 @@ private class Probe(private val t0: Long) : CarSimListener {
     }
 
     override fun onVideoFrame(info: VideoFrameInfo) {
+        flow.onFrame(now(), info.kind, info.payloadSize)
         if (info.kind == VideoKind.CONFIG && firstConfigMs < 0) firstConfigMs = now()
         if (info.kind == VideoKind.IDR && firstIdrMs < 0) {
             firstIdrMs = now()
@@ -341,12 +366,13 @@ class QdSim(private val o: Options) {
         directMirrorPort = comeback.directPort,
         connectHost = comeback.directHost,
         blockFraming = o.usbFraming,
+        rxLimit = o.rx,
     )
 
     /** Arranca un coche y espera a que el móvil le mande vídeo. */
     private fun startCar(ignoreAcks: Int = 0, comeback: Comeback = Comeback()): Pair<CarSim, Probe> {
         val t0 = System.nanoTime()
-        val probe = Probe(t0)
+        val probe = Probe(t0, o.fps)
         val sim = CarSim(config(ignoreAcks, comeback), probe, log).start()
         sessionNo++
         when {
@@ -409,10 +435,33 @@ class QdSim(private val o: Options) {
             "errores ${r.videoErrorCount} · heartbeats del móvil ${r.phoneHeartbeats}")
         if (r.videoErrorCount > 0) check(false, "$label: vídeo con errores ${r.videoErrors.take(3)}")
         if (o.usbFraming) check(Quirks.usbFraming(r.phonePaddedMessages, r.phoneUnpaddedMessages, r.phonePaddingBytes, r.phoneStrayZeroBytes), label)
+        if (o.rx.active) radioReport(sim, p, label)
         quirks(sim, p, label)
         sim.close()
         sim.awaitTermination(5_000)
         decode(label)
+    }
+
+    /**
+     * Radio floja: lo que recibió el coche (fps, P-frame máximo, peor hueco) y lo que hizo el límite. En `radio-mala`,
+     * PASS si la sesión sigue abierta al acabar (el móvil no la cerró por la radio).
+     */
+    private fun radioReport(sim: CarSim, p: Probe, label: String) {
+        val flow = p.flow.summary()
+        val rx = sim.rxStats()
+        say("$label: radio: ${flow.describe()}")
+        say("$label: radio: ${o.rx.describe()} → ${rx?.describe() ?: "sin datos del límite"}")
+        say("$label: radio: la congestión que vio el móvil no viaja en el vídeo; búscala en su log («enlace: congestión" +
+            " …», «enlace muy congestionado», «VIDEO P-frames: … > tope …», «Corte … RADIO»)")
+        if (o.scenario == "radio-mala") {
+            val alive = p.closedMs < 0 && sim.currentState != CarSimState.CLOSED
+            check(
+                alive && flow.frames > 0,
+                "$label: la sesión aguanta la radio floja (${flow.frames} frames, ${String.format(Locale.US, "%.1f", flow.fps)} fps, " +
+                    "peor hueco ${flow.worstGapMs} ms, P-frame máx. ${(flow.pMaxBytes + 512) / 1024} KB" +
+                    (if (alive) "" else "; cerrada: ${p.closeReason}") + ")",
+            )
+        }
     }
 
     /** Manías del C10 (2026-10-05) sobre lo que ha visto esta sesión. */
@@ -458,6 +507,7 @@ class QdSim(private val o: Options) {
         val limit = if (o.limitBytes > 0) "se cuelga con mensajes de vídeo de más de ${o.limitBytes / 1024} KiB (${o.hangMs} ms sin leer)" else "sin límite de mensaje"
         say("manías del C10: $limit · ${if (o.spsCheck) "SPS/PPS repetidos" else "sin comprobar SPS/PPS repetidos"}" +
             (if (o.decode) " · ffmpeg al final de cada sesión" else "") + if (o.strict) " · estricto: los WARN cuentan como FAIL" else "")
+        if (o.rx.active) say("radio floja simulada en el coche: ${o.rx.describe()}")
         if (o.usbFraming) {
             say("trama del cable USB sobre el TCP: el coche rellena a 512 B y lee en bloques; el móvil tiene que hacer lo mismo" +
                 if (o.localPhone) " (móvil local con la misma trama)" else " (HeadQLink: Diagnóstico › Opciones de prueba › «Trama del cable USB por Wi-Fi»)")
@@ -467,6 +517,7 @@ class QdSim(private val o: Options) {
         try {
             when (o.scenario) {
                 "normal", "estricto" -> normal()
+                "radio-mala" -> normal(idrWaitMs = 5_000)
                 "reconnect" -> reconnect()
                 "stall" -> stall()
                 "silent" -> silent()
@@ -485,7 +536,8 @@ class QdSim(private val o: Options) {
         return failures == 0
     }
 
-    private fun normal() {
+    /** [idrWaitMs]: espera del IDR pedido con KEY_FRAME_REQ (con la radio floja tarda más en llegar). */
+    private fun normal(idrWaitMs: Long = 2_000) {
         val (sim, p) = startCar()
         if (expectVideo(sim, p, null, "S1")) check(true, "S1: handshake, AppStatus y vídeo")
         Thread.sleep(1_000)
@@ -498,10 +550,10 @@ class QdSim(private val o: Options) {
         check(touches.all { it }, "S1: táctil (toque, arrastre y pellizco enviados)")
         val idrBefore = sim.report().idrFrames
         sim.requestKeyframe()
-        Thread.sleep(2_000)
+        Thread.sleep(idrWaitMs)
         check(sim.report().idrFrames > idrBefore, "S1: KEY_FRAME_REQ servido con un IDR")
         sim.sendAppMessage("Global", "DarkModeOn", JsonObject.of("DarkModeOn" to 1))
-        play(sim, o.durationS - 4)
+        play(sim, o.durationS - 2 - (idrWaitMs / 1000).toInt())
         finish(sim, p, "S1")
     }
 

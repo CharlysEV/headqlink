@@ -462,4 +462,20 @@ class LinkRateControllerTest {
         assertEquals(car, c.bitrate())
         assertTrue(c.queuedUntil(10_000, 18_000).any { it.emergency })
     }
+
+    @Test
+    fun congestedNowFollowsTheLastSampleEvenDuringTheHoldBetweenSteps() {
+        // Lo usa el tope de los P-frames (PFrameSizeController): la congestión cuenta aunque el bitrate no se mueva.
+        val c = LinkRateController(car, 30)
+        assertFalse(c.congestedNow())
+        assertNotNull(c.onSample(clean(100).withRadioCut()))
+        assertTrue(c.congestedNow())
+        assertNull(c.onSample(clean(200).withRadioCut())) // espera de 500 ms entre pasos
+        assertTrue(c.congestedNow())
+        c.onSample(clean(300))
+        assertFalse(c.congestedNow())
+        c.onSample(clean(400).withRadioCut())
+        c.beginSession()
+        assertFalse(c.congestedNow())
+    }
 }

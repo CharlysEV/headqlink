@@ -90,6 +90,10 @@ class CarSim(
     private var reader: FrameReader? = null
     private var mainThread: Thread? = null
     private var readerThread: Thread? = null
+
+    /** hql: limitador de la lectura ([CarSimConfig.rxLimit]), si lo hay. */
+    @Volatile
+    private var rxThrottle: RxThrottle? = null
     private val timer = ScheduledThreadPoolExecutor(1) { r -> Thread(r, "carsim-timer").apply { isDaemon = true } }.apply {
         executeExistingDelayedTasksAfterShutdownPolicy = false
         continueExistingPeriodicTasksAfterShutdownPolicy = false
@@ -261,6 +265,9 @@ class CarSim(
 
     // ===================================================================== informe y cierre
 
+    /** hql: lo que hizo la radio floja simulada ([CarSimConfig.rxLimit]), o null sin límite o antes de conectar. */
+    fun rxStats(): RxThrottleStats? = rxThrottle?.stats()
+
     fun report(): CarSimReport {
         val r = seen.report()
         if (!config.blockFraming) return r
@@ -310,6 +317,8 @@ class CarSim(
             setState(CarSimState.CONNECTING)
             val s = Socket()
             s.tcpNoDelay = true
+            // hql: con la radio floja simulada, búfer de recepción pequeño (antes de conectar: fija la ventana TCP).
+            if (config.rxLimit.active) s.receiveBufferSize = config.rxLimit.receiveBufferBytes
             s.connect(InetSocketAddress(host, port), config.connectTimeoutMs)
             socket = s
             if (closed.get()) {
@@ -331,7 +340,15 @@ class CarSim(
         seen.noteConnected(label)
         log.i(TAG, "conectado a $label" + if (config.blockFraming) " (trama USB: bloques de ${BlockFraming.BLOCK} B)" else "")
         if (closed.get()) return
-        readerThread = Thread({ readLoop(input) }, "carsim-reader").apply {
+        val throttled = if (config.rxLimit.active) {
+            val t = RxThrottle(config.rxLimit)
+            rxThrottle = t
+            log.i(TAG, "radio floja simulada: ${config.rxLimit.describe()}")
+            ThrottledInputStream(input, t)
+        } else {
+            input
+        }
+        readerThread = Thread({ readLoop(throttled) }, "carsim-reader").apply {
             isDaemon = true
             start()
         }

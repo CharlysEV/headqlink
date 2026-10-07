@@ -128,6 +128,11 @@ data class CarSimConfig(
      * (`qdsim --usb-framing`) y sobre flujos ([CarSim.startOnStreams]).
      */
     val blockFraming: Boolean = false,
+    /**
+     * hql: radio floja simulada ([RxLimit]): el coche lee como mucho a `kbps` y con parones; con algún límite, su búfer
+     * de recepción se deja pequeño para que la cola de envío del teléfono se llene. Por defecto, sin límite.
+     */
+    val rxLimit: RxLimit = RxLimit(),
 ) {
     companion object {
         /** Tamaño de mensaje de vídeo a partir del cual el receptor del C10 se cuelga (medido en el coche). */

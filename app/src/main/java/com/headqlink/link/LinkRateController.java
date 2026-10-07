@@ -176,6 +176,8 @@ final class LinkRateController {
     private int baselineRttMs = -1;
     private long lastFlushes;
     private boolean floorNoted;
+    /** La última muestra vio congestión (para el tope de los P-frames, PFrameSizeController). */
+    private boolean lastCongested;
 
     /** Emergencia: por debajo del suelo normal (hasta que la subida vuelva a él). */
     private boolean emergency;
@@ -218,6 +220,7 @@ final class LinkRateController {
         lastFlushes = -1;
         rttHighSinceMs = -1;
         floorNoted = false;
+        lastCongested = false;
         emergency = false;
         emergencyArmed = true;
         emergencies = 0;
@@ -289,6 +292,7 @@ final class LinkRateController {
         if (s.radioCut) add(why, s.outq >= 0 || s.rttMs >= 0 ? "corte de radio" : "corte del cable");
 
         boolean congested = why.length() > 0;
+        lastCongested = congested;
         if (congested) {
             cleanSinceMs = -1;
             rearmCleanSinceMs = -1;
@@ -467,6 +471,11 @@ final class LinkRateController {
     /** Veces que se bajó del suelo normal (emergencia) en la sesión. */
     synchronized int emergencies() {
         return emergencies;
+    }
+
+    /** La última muestra vio congestión (aunque no tocara el bitrate por la espera entre pasos). */
+    synchronized boolean congestedNow() {
+        return lastCongested;
     }
 
     /** Por debajo del suelo normal ahora mismo. */
