@@ -1,0 +1,427 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<!--
+  HeadQLink: el C10 en 3D de la pestaña Estado (three.js, MIT, en assets/three). Se gira con el dedo; las presiones van
+  junto a cada rueda y las puertas o el maletero abiertos se ven abiertos, en ámbar. Solo se dibuja mientras algo se
+  mueve (el dedo, la inercia o una puerta): la imagen del coche es vídeo y un dibujo quieto no cuesta nada.
+  Android llama a update(datos) y la página avisa por HQL.ready() o HQL.failed(motivo).
+-->
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; touch-action: none;
+    font-family: "Roboto", sans-serif; -webkit-user-select: none; user-select: none; }
+  #view { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+  .tyre { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; pointer-events: none;
+    color: #EAF2F7; font-weight: 400; font-size: 40px; line-height: 1; text-shadow: 0 2px 8px rgba(0, 0, 0, .7); }
+  .tyre small { font-size: 20px; color: #A3B3C2; margin-left: 5px; font-weight: 500; }
+  .tyre.warn { color: #FFB547; }
+  .tyre .tag { display: block; font-size: 17px; font-weight: 600; color: #FFB547; margin-top: 4px; text-align: center; }
+  .hint { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font-size: 17px; color: #8296A9;
+    pointer-events: none; }
+  #lines { position: absolute; left: 0; top: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<canvas id="lines"></canvas>
+<div id="labels"></div>
+<div class="hint" id="hint"></div>
+<script src="three/three.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  function fail(why) {
+    try { if (window.HQL) HQL.failed(String(why)); } catch (e) { }
+  }
+  if (typeof THREE === 'undefined') { fail('sin three.js'); return; }
+  var probe = document.createElement('canvas');
+  if (!(probe.getContext('webgl') || probe.getContext('experimental-webgl'))) { fail('sin WebGL'); return; }
+
+  // ---------------------------------------------------------------- medidas del C10 (m)
+  var L = 4.739, W = 1.900, H = 1.680, WB = 2.825;
+  var FX = 1.44, RX = FX - WB;            // ejes delantero y trasero (el morro mira a +x)
+  var TRACK = 1.62, WR = 0.37;            // vía y radio de la rueda (235/55 R19)
+  var BEVEL = 0.09;
+
+  var view = document.getElementById('view');
+  var renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  } catch (e) { fail('WebGL: ' + e.message); return; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setClearColor(0x000000, 0);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  view.appendChild(renderer.domElement);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+
+  scene.add(new THREE.HemisphereLight(0xdfe8f0, 0x1a1f26, 0.9));
+  var key = new THREE.DirectionalLight(0xffffff, 1.15);
+  key.position.set(4, 7, 5);
+  scene.add(key);
+  var rim = new THREE.DirectionalLight(0x9fd8ff, 0.55);
+  rim.position.set(-6, 3, -4);
+  scene.add(rim);
+
+  var car = new THREE.Group();
+  scene.add(car);
+
+  var paint = new THREE.MeshPhysicalMaterial({ color: 0xc9d2da, metalness: 0.35, roughness: 0.38, clearcoat: 0.7, clearcoatRoughness: 0.2 });
+  var glass = new THREE.MeshStandardMaterial({ color: 0x10161d, metalness: 0.6, roughness: 0.15 });
+  var black = new THREE.MeshStandardMaterial({ color: 0x15191f, metalness: 0.2, roughness: 0.7 });
+  var tyreMat = new THREE.MeshStandardMaterial({ color: 0x0c0e11, roughness: 0.9 });
+  var rimMat = new THREE.MeshStandardMaterial({ color: 0x9aa4ae, metalness: 0.8, roughness: 0.35 });
+  var amber = new THREE.MeshStandardMaterial({ color: 0xffb547, emissive: 0x7a4a00, roughness: 0.5 });
+
+  // ---------------------------------------------------------------- carrocería: el perfil del C10 extruido a lo ancho
+  var s = new THREE.Shape();
+  s.moveTo(-L / 2 + 0.02, 0.36);
+  s.lineTo(-L / 2 - 0.01, 0.62);
+  s.lineTo(-L / 2, 0.98);                                  // portón bajo (barra de luz)
+  s.lineTo(-L / 2 + 0.08, 1.08);
+  s.lineTo(-L / 2 + 0.35, 1.58);                           // luneta inclinada hasta el alerón
+  s.quadraticCurveTo(-0.8, H + 0.04, 0.30, 1.62);          // techo curvo
+  s.lineTo(1.30, 1.10);                                    // parabrisas tumbado
+  s.lineTo(2.05, 0.98);                                    // capó largo
+  s.quadraticCurveTo(L / 2 - 0.01, 0.95, L / 2 + 0.02, 0.70); // morro
+  s.lineTo(L / 2 - 0.04, 0.36);
+  var archR = 0.47, archY = WR, a0 = Math.asin((0.34 - archY) / archR);
+  s.lineTo(FX + archR * Math.cos(a0), 0.34);
+  s.absarc(FX, archY, archR, a0, Math.PI - a0, false);
+  s.lineTo(RX + archR * Math.cos(a0), 0.34);
+  s.absarc(RX, archY, archR, a0, Math.PI - a0, false);
+  s.lineTo(-L / 2, 0.32);
+  var bodyGeo = new THREE.ExtrudeGeometry(s, {
+    depth: W - 2 * BEVEL, bevelEnabled: true, bevelThickness: BEVEL, bevelSize: BEVEL * 0.9, bevelSegments: 4, curveSegments: 24
+  });
+  bodyGeo.translate(0, 0, -(W - 2 * BEVEL) / 2);
+  car.add(new THREE.Mesh(bodyGeo, paint));
+
+  // Faldones y pasos de rueda en negro (la franja baja del C10).
+  var sill = new THREE.Mesh(new THREE.BoxGeometry(WB - 2 * archR - 0.04, 0.16, W + 0.012), black);
+  sill.position.set((FX + RX) / 2, 0.42, 0);
+  car.add(sill);
+
+  // ---------------------------------------------------------------- cristales (franja oscura de techo flotante)
+  function sideGlass(z) {
+    var g = new THREE.Shape();
+    g.moveTo(1.18, 1.13);
+    g.lineTo(0.36, 1.555);
+    g.quadraticCurveTo(-0.8, 1.64, -1.55, 1.575);
+    g.lineTo(-L / 2 + 0.36, 1.20);
+    g.lineTo(1.18, 1.13);
+    var m = new THREE.Mesh(new THREE.ShapeGeometry(g), glass);
+    m.position.z = z;
+    if (z < 0) m.rotation.y = Math.PI, m.scale.x = -1;
+    return m;
+  }
+  car.add(sideGlass(W / 2 + 0.004));
+  car.add(sideGlass(-W / 2 - 0.004));
+  function quad(p1, p2, halfW, mat) {
+    // Cristal inclinado entre dos puntos del perfil (x, y), a lo ancho.
+    var g = new THREE.BufferGeometry();
+    var v = new Float32Array([
+      p1[0], p1[1], -halfW, p2[0], p2[1], -halfW, p2[0], p2[1], halfW,
+      p1[0], p1[1], -halfW, p2[0], p2[1], halfW, p1[0], p1[1], halfW]);
+    g.setAttribute('position', new THREE.BufferAttribute(v, 3));
+    g.computeVertexNormals();
+    var m = new THREE.Mesh(g, mat);
+    m.material.side = THREE.DoubleSide;
+    return m;
+  }
+  car.add(quad([1.27, 1.125], [0.33, 1.615], W / 2 - 0.16, glass));          // parabrisas
+  car.add(quad([-L / 2 + 0.10, 1.11], [-L / 2 + 0.34, 1.565], W / 2 - 0.2, glass)); // luneta
+
+  // ---------------------------------------------------------------- luces (la barra de luz de delante y la de atrás)
+  var front = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.035, W - 0.32),
+    new THREE.MeshBasicMaterial({ color: 0xdffcff }));
+  front.position.set(L / 2 - 0.005, 0.84, 0);
+  car.add(front);
+  var rear = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.05, W - 0.22),
+    new THREE.MeshBasicMaterial({ color: 0xff3045 }));
+  rear.position.set(-L / 2 - 0.005, 1.0, 0);
+  car.add(rear);
+
+  // Retrovisores.
+  [1, -1].forEach(function (sz) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.12), paint);
+    m.position.set(0.98, 1.17, sz * (W / 2 + 0.08));
+    car.add(m);
+  });
+
+  // ---------------------------------------------------------------- ruedas: FL, FR, RL, RR (izquierda = -z mirando a +x)
+  var wheelPos = [[FX, -TRACK / 2], [FX, TRACK / 2], [RX, -TRACK / 2], [RX, TRACK / 2]];
+  var wheels = wheelPos.map(function (p) {
+    var g = new THREE.Group();
+    var t = new THREE.Mesh(new THREE.CylinderGeometry(WR, WR, 0.25, 40), tyreMat);
+    t.rotation.x = Math.PI / 2;
+    g.add(t);
+    var r = new THREE.Mesh(new THREE.CylinderGeometry(WR * 0.66, WR * 0.66, 0.255, 28), rimMat);
+    r.rotation.x = Math.PI / 2;
+    g.add(r);
+    for (var i = 0; i < 5; i++) {
+      var sp = new THREE.Mesh(new THREE.BoxGeometry(0.05, WR * 1.2, 0.262), black);
+      sp.rotation.z = i * Math.PI * 2 / 5;
+      g.add(sp);
+    }
+    g.position.set(p[0], WR, p[1]);
+    car.add(g);
+    return g;
+  });
+
+  // ---------------------------------------------------------------- puertas y maletero (se ven al abrirse)
+  // Bisagra en el borde delantero de cada puerta; al abrirse, giran hacia fuera en ámbar.
+  var doorDefs = [
+    { x0: 1.18, x1: 0.02, z: -1 }, { x0: 1.18, x1: 0.02, z: 1 },   // delanteras izquierda y derecha
+    { x0: 0.0, x1: -1.08, z: -1 }, { x0: 0.0, x1: -1.08, z: 1 }    // traseras
+  ];
+  var doors = doorDefs.map(function (d) {
+    var len = d.x0 - d.x1;
+    var pivot = new THREE.Group();
+    pivot.position.set(d.x0, 0, d.z * (W / 2 + 0.01));
+    var panel = new THREE.Mesh(new THREE.BoxGeometry(len, 0.98, 0.05), amber);
+    panel.position.set(-len / 2, 0.92, d.z * 0.025);
+    pivot.add(panel);
+    pivot.visible = false;
+    pivot.userData = { target: 0, angle: 0, side: d.z };
+    car.add(pivot);
+    return pivot;
+  });
+  var bootPivot = new THREE.Group();
+  bootPivot.position.set(-L / 2 + 0.35, 1.58, 0);
+  var bootPanel = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.62, W - 0.2), amber);
+  bootPanel.position.set(-0.17, -0.31, 0);
+  bootPanel.rotation.z = -0.32;
+  bootPivot.add(bootPanel);
+  bootPivot.visible = false;
+  bootPivot.userData = { target: 0, angle: 0 };
+  car.add(bootPivot);
+
+  // Sombra en el suelo.
+  var sc = document.createElement('canvas');
+  sc.width = sc.height = 128;
+  var sg = sc.getContext('2d');
+  var grad = sg.createRadialGradient(64, 64, 8, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(0,0,0,0.55)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  sg.fillStyle = grad;
+  sg.fillRect(0, 0, 128, 128);
+  var shadow = new THREE.Mesh(new THREE.PlaneGeometry(L * 1.25, W * 1.6),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = 0.002;
+  scene.add(shadow);
+
+  car.position.y = 0;
+  var target = new THREE.Vector3(0, 0.78, 0);
+
+  // ---------------------------------------------------------------- cámara: girar con el dedo (con inercia)
+  // Tres cuartos de frente por la izquierda (la rueda delantera izquierda, la más cercana).
+  var yaw = -0.66, pitch = 0.34, dist = 9.2;
+  var vYaw = 0, dragging = false, lastX = 0, lastY = 0, lastT = 0;
+  var intro = { from: -0.2, to: -0.66, t0: 0, ms: 1400 };
+
+  function place() {
+    camera.position.set(
+      target.x + dist * Math.cos(pitch) * Math.cos(yaw),
+      target.y + dist * Math.sin(pitch),
+      target.z + dist * Math.cos(pitch) * Math.sin(yaw));
+    camera.lookAt(target);
+  }
+
+  view.addEventListener('pointerdown', function (e) {
+    dragging = true;
+    vYaw = 0;
+    intro = null;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    lastT = performance.now();
+    try { view.setPointerCapture(e.pointerId); } catch (x) { }
+    kick();
+  });
+  view.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    var now = performance.now();
+    var dx = e.clientX - lastX, dy = e.clientY - lastY;
+    yaw += dx * 0.009;
+    pitch = Math.max(0.08, Math.min(1.05, pitch + dy * 0.006));
+    var dt = Math.max(1, now - lastT);
+    vYaw = dx * 0.009 / dt * 16;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    lastT = now;
+    kick();
+  });
+  function up() { dragging = false; kick(); }
+  view.addEventListener('pointerup', up);
+  view.addEventListener('pointercancel', up);
+
+  // ---------------------------------------------------------------- presiones junto a cada rueda
+  var labels = document.getElementById('labels');
+  var tyreEls = [0, 1, 2, 3].map(function () {
+    var d = document.createElement('div');
+    d.className = 'tyre';
+    labels.appendChild(d);
+    return d;
+  });
+  var tmp = new THREE.Vector3();
+  var lines = document.getElementById('lines');
+  var lctx = lines.getContext('2d');
+  var warnFlags = [false, false, false, false];
+  /*
+   * Cada presión en una esquina (las dos ruedas de la izquierda de la pantalla a la izquierda; la de arriba arriba),
+   * con una línea fina hasta su rueda: así no tapan el coche gire como gire.
+   */
+  function placeLabels() {
+    var w = view.clientWidth, h = view.clientHeight;
+    var pts = [];
+    for (var i = 0; i < 4; i++) {
+      tmp.set(wheelPos[i][0], WR, wheelPos[i][1] * 1.08).project(camera);
+      pts.push({ i: i, x: (tmp.x * 0.5 + 0.5) * w, y: (-tmp.y * 0.5 + 0.5) * h });
+    }
+    var byX = pts.slice().sort(function (a, b) { return a.x - b.x; });
+    var left = byX.slice(0, 2).sort(function (a, b) { return a.y - b.y; });
+    var right = byX.slice(2).sort(function (a, b) { return a.y - b.y; });
+    var dpr = window.devicePixelRatio || 1;
+    if (lines.width !== Math.round(w * dpr) || lines.height !== Math.round(h * dpr)) {
+      lines.width = Math.round(w * dpr);
+      lines.height = Math.round(h * dpr);
+      lines.style.width = w + 'px';
+      lines.style.height = h + 'px';
+    }
+    lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    lctx.clearRect(0, 0, w, h);
+    var mx = 78, top = 34, bottom = h - 64;
+    var slots = [[left[0], mx, top], [left[1], mx, bottom], [right[0], w - mx, top], [right[1], w - mx, bottom]];
+    for (var k = 0; k < 4; k++) {
+      var p = slots[k][0], lx = slots[k][1], ly = slots[k][2];
+      var el = tyreEls[p.i];
+      el.style.left = lx + 'px';
+      el.style.top = ly + 'px';
+      // Línea desde el borde de la etiqueta (hacia el coche) hasta la rueda, con un punto en la rueda.
+      var ex = lx + (k < 2 ? 1 : -1) * 64, ey = ly + 10;
+      lctx.strokeStyle = warnFlags[p.i] ? 'rgba(255,181,71,0.9)' : 'rgba(163,179,194,0.32)';
+      lctx.lineWidth = 2;
+      lctx.beginPath();
+      lctx.moveTo(ex, ey);
+      lctx.lineTo(p.x, p.y);
+      lctx.stroke();
+      lctx.fillStyle = lctx.strokeStyle;
+      lctx.beginPath();
+      lctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      lctx.fill();
+    }
+  }
+
+  // ---------------------------------------------------------------- bucle: solo mientras algo se mueve
+  var running = false;
+  function kick() {
+    if (running) return;
+    running = true;
+    requestAnimationFrame(frame);
+  }
+  function animateDoor(p, dt) {
+    var u = p.userData;
+    if (Math.abs(u.angle - u.target) < 0.002) { u.angle = u.target; return false; }
+    u.angle += (u.target - u.angle) * Math.min(1, dt / 160);
+    return true;
+  }
+  var lastFrame = 0;
+  function frame(now) {
+    var dt = lastFrame ? Math.min(64, now - lastFrame) : 16;
+    lastFrame = now;
+    var moving = dragging;
+    if (intro) {
+      if (!intro.t0) intro.t0 = now;
+      var k = Math.min(1, (now - intro.t0) / intro.ms);
+      var e = 1 - Math.pow(1 - k, 3);
+      yaw = intro.from + (intro.to - intro.from) * e;
+      if (k >= 1) intro = null; else moving = true;
+    }
+    if (!dragging && Math.abs(vYaw) > 0.0004) {
+      yaw += vYaw * dt / 16;
+      vYaw *= Math.pow(0.92, dt / 16);
+      moving = true;
+    }
+    for (var i = 0; i < 4; i++) {
+      if (animateDoor(doors[i], dt)) moving = true;
+      var d = doors[i];
+      d.visible = d.userData.angle > 0.01;
+      // Hacia fuera: la izquierda (-z) gira en negativo, la derecha en positivo.
+      d.rotation.y = d.userData.side * d.userData.angle;
+    }
+    if (animateDoor(bootPivot, dt)) moving = true;
+    bootPivot.visible = bootPivot.userData.angle > 0.01;
+    bootPivot.rotation.z = -bootPivot.userData.angle * 1.15;
+    place();
+    renderer.render(scene, camera);
+    placeLabels();
+    if (moving) {
+      requestAnimationFrame(frame);
+    } else {
+      running = false;
+      lastFrame = 0;
+    }
+  }
+
+  function resize() {
+    var w = view.clientWidth, h = view.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    renderer.domElement.style.width = w + 'px';
+    renderer.domElement.style.height = h + 'px';
+    camera.aspect = w / h;
+    // Que quepa el coche entero a lo ancho y a lo alto, gire como gire.
+    var half = Math.tan(camera.fov * Math.PI / 360);
+    // El coche en el centro, con sitio a los lados para las presiones.
+    var fitH = 1.55 / half;
+    var fitW = 3.0 / (half * camera.aspect);
+    dist = Math.max(fitH, fitW);
+    camera.updateProjectionMatrix();
+    kick();
+  }
+  window.addEventListener('resize', resize);
+
+  // ---------------------------------------------------------------- datos (desde Android)
+  // d = {tyres:[{text, unit, warn, tag}×4 en FL, FR, RL, RR], doors:[4 bool], boot:bool, hint:texto, color:"#rrggbb"}
+  window.update = function (d) {
+    if (!d) return;
+    if (d.tyres) {
+      for (var i = 0; i < 4; i++) {
+        var t = d.tyres[i] || {};
+        var el = tyreEls[i];
+        el.className = 'tyre' + (t.warn ? ' warn' : '');
+        warnFlags[i] = !!t.warn;
+        el.innerHTML = '';
+        el.appendChild(document.createTextNode(t.text || '—'));
+        if (t.unit) {
+          var sm = document.createElement('small');
+          sm.textContent = t.unit;
+          el.appendChild(sm);
+        }
+        if (t.tag) {
+          var tg = document.createElement('span');
+          tg.className = 'tag';
+          tg.textContent = t.tag;
+          el.appendChild(tg);
+        }
+      }
+    }
+    if (d.doors) for (var j = 0; j < 4; j++) doors[j].userData.target = d.doors[j] ? 0.95 : 0;
+    bootPivot.userData.target = d.boot ? 1 : 0;
+    if (d.color) paint.color.set(d.color);
+    if (typeof d.hint === 'string') document.getElementById('hint').textContent = d.hint;
+    kick();
+  };
+
+  resize();
+  intro.t0 = 0;
+  kick();
+  try { if (window.HQL) HQL.ready(); } catch (e) { }
+})();
+</script>
+</body>
+</html>

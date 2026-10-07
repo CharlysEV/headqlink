@@ -36,6 +36,8 @@ final class DemoMode {
     private static List<TripLog.Trip> defaultTrips;
     /** Estado de la nube en la demostración: "" (datos en marcha), "sin_nube" (sin cuenta) o "cargando". */
     private static volatile String cloudState = "";
+    /** La demostración es de un C10 REEV (con depósito de gasolina). */
+    private static volatile boolean reev;
 
     // Nube de la demostración: C10 Life, 84 % al salir, 20,5 kWh/100 km reales y 12 480 km en el cuentakilómetros.
     static final double CLOUD_CAP_KWH = CarCloudStore.KWH_C10_LIFE;
@@ -123,13 +125,20 @@ final class DemoMode {
     /**
      * Estado de la demostración para una captura: "" (con destino, viajes y datos de la nube), "sin_ruta" (sin destino:
      * Ruta y Conducción vacías), "sin_viajes" (la pestaña Viajes sin viajes guardados), "sin_nube" (sin cuenta de
-     * Leapmotor: todo estimado y Estado vacío) o "cargando" (el coche cargando en un cargador rápido).
+     * Leapmotor: todo estimado y Estado vacío), "cargando" (el coche cargando en un cargador rápido) o "reev" (un C10
+     * de autonomía extendida, con su depósito de gasolina).
      */
     static void applyState(String state) {
         if (drive == null) return;
         place = "sin_ruta".equals(state) ? null : defaultPlace;
         trips = "sin_viajes".equals(state) ? new ArrayList<>() : defaultTrips;
         cloudState = "sin_nube".equals(state) || "cargando".equals(state) ? state : "";
+        reev = "reev".equals(state);
+    }
+
+    /** La demostración es de un REEV. */
+    static boolean reev() {
+        return reev;
     }
 
     /** Fija el instante (capturas): los sensores se recalculan hasta ahí. */
@@ -268,7 +277,9 @@ final class DemoMode {
         int k = sample();
         double km = d.distKm[k];
         double speed = charging ? 0 : d.speedKmh[k];
-        double soc = charging ? 56.4 : CLOUD_SOC0 - km * CLOUD_KWH_PER_KM / CLOUD_CAP_KWH * 100;
+        double cap = reev ? CarCloudStore.KWH_C10_REEV : CLOUD_CAP_KWH;
+        // REEV: la batería baja hasta el 25 % y ahí la mantiene el generador (gastando gasolina).
+        double soc = charging ? 56.4 : Math.max(reev ? 25 : 0, CLOUD_SOC0 - km * CLOUD_KWH_PER_KM / cap * 100);
         double volts = charging ? 412.6 : 398.6;
         // Potencia «medida»: la del modelo con la pendiente y la aceleración del trayecto, un 4 % más (otra fuente).
         int k0 = Math.max(0, k - 20);
@@ -308,10 +319,18 @@ final class DemoMode {
             sig.put("2648", 0);
             sig.put("2655", 0);
             sig.put("2662", 0);
+            if (reev) {
+                double fuel = 31.6 - Math.max(0, km - 40) * 0.065;
+                sig.put("3235", Math.round(fuel / 47.5 * 1000) / 10.0);
+                sig.put("3263", Math.round(fuel * 1000));
+                sig.put("3259", Math.round(fuel / 6.4 * 100));
+                sig.put("3261", Math.round(fuel / 6.4 * 100 + soc * 1.3));
+                sig.put("2188", Math.round(soc * 1.3));
+            }
             org.json.JSONObject data = new org.json.JSONObject();
             data.put("collectTime", now - 40_000);
             data.put("signal", sig);
-            return new CarCloud.Snapshot(CarCloud.State.OK, LeapStatus.parse(data), now - 12_000, 640, CLOUD_CAP_KWH, "C10", 0, true);
+            return new CarCloud.Snapshot(CarCloud.State.OK, LeapStatus.parse(data), now - 12_000, 640, cap, "C10", 0, true);
         } catch (org.json.JSONException e) {
             return CarCloud.Snapshot.of(CarCloud.State.NO_ACCOUNT);
         }
@@ -343,6 +362,52 @@ final class DemoMode {
             t.socStart = t.socEnd + Math.round(drop * 10) / 10.0;
             t.capKwh = CLOUD_CAP_KWH;
         }
+    }
+
+    /**
+     * Historial de la nube de la demostración: lo que «dice el coche» de los viajes guardados (un 7 % más que lo
+     * estimado, como en la realidad) y, en el REEV, los litros del viaje largo.
+     */
+    static List<CloudHistory.Trip> cloudHistory() {
+        List<TripLog.Trip> all = trips;
+        List<CloudHistory.Trip> out = new ArrayList<>();
+        if (all == null || "sin_nube".equals(cloudState)) return out;
+        for (int i = 0; i < all.size(); i++) {
+            TripLog.Trip t = all.get(i);
+            if (i == 3) continue; // uno sin dato del coche (la nube a veces no lo sube)
+            double fuel = reev ? (t.km > 100 ? 4.9 : 0) : Double.NaN;
+            out.add(new CloudHistory.Trip(t.startMs + 60_000, t.endMs() - 60_000, Math.round(t.km * 10) / 10.0,
+                    Math.round(t.kwh * 1.07 * 100) / 100.0, fuel, t.maxKmh));
+        }
+        return out;
+    }
+
+    /** Consumo semanal de la demostración según el coche. */
+    static CloudHistory.Weekly cloudWeekly() {
+        if ("sin_nube".equals(cloudState)) return null;
+        return new CloudHistory.Weekly(17.6, new double[]{18.4, 17.1, 19.2, 16.8, 17.5, 16.6});
+    }
+
+    /** Resultados del buscador en la demostración (sin red): sitios inventados alrededor del coche. */
+    static List<RoutePlanner.Place> searchResults(String q) {
+        DemoDrive d = drive;
+        List<RoutePlanner.Place> out = new ArrayList<>();
+        if (d == null) return out;
+        int k = sample();
+        String[][] names = {{"Electrolinera Puerto Lápice", "Autovía del Sur, km 135 · 150 kW"},
+                {"Electrolinera Valdepeñas Centro", "Avenida del Vino 12, Valdepeñas"},
+                {"Hub de carga Manzanares", "Calle de la Estación 4, Manzanares"},
+                {"Electrolinera La Mancha", "Área de servicio, Madridejos"}};
+        double[][] off = {{0.012, -0.018}, {-0.08, 0.05}, {0.15, -0.11}, {-0.21, 0.19}};
+        for (int i = 0; i < names.length; i++) {
+            RoutePlanner.Place p = new RoutePlanner.Place();
+            p.name = names[i][0];
+            p.detail = names[i][1];
+            p.lat = d.lat[k] + off[i][0];
+            p.lon = d.lon[k] + off[i][1];
+            out.add(p);
+        }
+        return out;
     }
 
     /** Viajes guardados de la demostración (no se leen ni se escriben los del usuario). */

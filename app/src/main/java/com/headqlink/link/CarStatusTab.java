@@ -21,6 +21,10 @@ import java.util.Locale;
  * que sale o entra, las temperaturas; las cuatro presiones sobre el coche visto desde arriba (en ámbar la rueda baja o
  * con aviso) con las puertas y el maletero abiertos y el cierre; el cuentakilómetros y de cuándo es cada dato. Sin
  * cuenta (o caducada, desactivada…), un estado vacío que dice qué hacer en el móvil. Solo lectura.
+ *
+ * El coche de la tarjeta de neumáticos es un C10 en 3D (assets/car3d.html, three.js) que se gira con el dedo, con las
+ * presiones junto a cada rueda y las puertas y el maletero abiertos en ámbar. Sin WebGL (o en las pruebas del PC), el
+ * dibujo de siempre visto desde arriba.
  */
 final class CarStatusTab implements CarScreen {
     private static final long TICK_MS = 1000;
@@ -41,6 +45,12 @@ final class CarStatusTab implements CarScreen {
     private final CarKit.Para alert = new CarKit.Para(22, CarKit.AMBER, CarKit.MEDIUM);
     private Bitmap carTop;
     private Bitmap carFront;
+    /** El C10 en 3D (null: el dibujo visto desde arriba) y si ya está listo para recibir datos. */
+    private android.webkit.WebView car3d;
+    private boolean ready3d;
+    private String sent3d = "";
+    /** Lo que ocupan, bajo el coche, el cierre, las puertas, las presiones y la nota. */
+    private static final int TYRES_TEXT_H = 196;
     private final Paint bmp = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG);
 
     @Override
@@ -52,7 +62,9 @@ final class CarStatusTab implements CarScreen {
         LinearLayout c2 = CarKit.add(dataView, CarKit.col(ctx), 1.1f, 0);
         LinearLayout c3 = CarKit.add(dataView, CarKit.col(ctx), 0.88f, 0);
         cards.add(CarKit.add(c1, new CarKit.Card(ctx, Str.get(R.string.hql_cloud_battery), this::paintBattery), 1f, 0));
-        cards.add(CarKit.add(c2, new CarKit.Card(ctx, Str.get(R.string.hql_cloud_tyres_doors), this::paintTyres), 1f, 0));
+        CarKit.Card tyres = CarKit.add(c2, new CarKit.Card(ctx, Str.get(R.string.hql_cloud_tyres_doors), this::paintTyres), 1f, 0);
+        cards.add(tyres);
+        setup3d(tyres);
         cards.add(CarKit.add(c3, new CarKit.Card(ctx, Str.get(R.string.hql_car), this::paintCar), 1.12f, 0));
         cards.add(CarKit.add(c3, new CarKit.Card(ctx, Str.get(R.string.hql_cloud_data), this::paintData), 1f, 0));
         frame.addView(dataView, CarStyle.match());
@@ -72,6 +84,7 @@ final class CarStatusTab implements CarScreen {
         emptyCard.setVisibility(data ? View.GONE : View.VISIBLE);
         if (data) {
             for (View v : cards) v.invalidate();
+            push3d();
         } else {
             emptyCard.invalidate();
         }
@@ -81,6 +94,11 @@ final class CarStatusTab implements CarScreen {
     @Override
     public void destroy() {
         running = false;
+        if (car3d != null) {
+            car3d.stopLoading();
+            car3d.destroy();
+            car3d = null;
+        }
         if (carTop != null) carTop.recycle();
         if (carFront != null) carFront.recycle();
         carTop = null;
@@ -131,8 +149,10 @@ final class CarStatusTab implements CarScreen {
         cv.drawRect(r.left, y, r.right, y + 2, p);
         y += 50;
         paintCharge(cv, r, y, s, p);
-        // La energía que queda: el % por la capacidad de la variante elegida.
-        if (!Double.isNaN(soc) && snap.capacityKwh > 0) {
+        // REEV: el depósito de gasolina; si no, la energía que queda (el % por la capacidad de la variante elegida).
+        if (s.reev()) {
+            paintFuel(cv, r, y + 122, s, p);
+        } else if (!Double.isNaN(soc) && snap.capacityKwh > 0) {
             float ky = y + 120;
             CarKit.label(cv, Str.get(R.string.hql_cloud_in_battery), r.left, ky, p);
             CarKit.text(cv, Str.get(R.string.hql_cloud_kwh_of, num(soc / 100 * snap.capacityKwh, 1), num(snap.capacityKwh, 1)), r.left,
@@ -152,6 +172,38 @@ final class CarStatusTab implements CarScreen {
             CarKit.text(cv, CarKit.ellipsize(t.toString(), r.width() - 36, p), r.left + 34, ty, 23, CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.LEFT);
         }
         if (s.coldBattery()) alert.draw(cv, Str.get(R.string.hql_cloud_cold_battery), r.left, r.bottom - 52, (int) r.width(), false);
+    }
+
+    /** REEV: el depósito (barra con el %), los litros y la autonomía con gasolina; debajo, la autonomía total. */
+    private void paintFuel(Canvas cv, RectF r, float y, LeapStatus s, Paint p) {
+        double pct = s.fuelPct;
+        int col = Double.isNaN(pct) ? CarKit.MUTED : pct >= 15 ? CarKit.AMBER : CarKit.RED;
+        CarIcons.fuel(cv, r.left + 14, y - 9, 28, col, p);
+        CarKit.label(cv, Str.get(R.string.hql_cloud_fuel), r.left + 38, y, p);
+        String right = Double.isNaN(pct) ? "" : num(pct, 0) + " %";
+        CarKit.text(cv, right, r.right, y, 24, CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.RIGHT);
+        float by = y + 14;
+        tmp.set(r.left, by, r.right, by + 14);
+        p.setColor(CarKit.SURFACE_TOP);
+        cv.drawRoundRect(tmp, 7, 7, p);
+        if (!Double.isNaN(pct)) {
+            tmp.set(r.left, by, r.left + (float) (r.width() * Math.max(0, Math.min(100, pct)) / 100), by + 14);
+            p.setColor(col);
+            cv.drawRoundRect(tmp, 7, 7, p);
+        }
+        StringBuilder b = new StringBuilder();
+        if (!Double.isNaN(s.fuelLiters)) b.append(Str.get(R.string.hql_cloud_fuel_liters, num(s.fuelLiters, 1)));
+        if (!Double.isNaN(s.fuelRangeKm)) {
+            if (b.length() > 0) b.append(" · ");
+            b.append(Str.get(R.string.hql_cloud_fuel_range, num(s.fuelRangeKm, 0)));
+        }
+        p.setTypeface(CarKit.MEDIUM);
+        p.setTextSize(28);
+        CarKit.text(cv, CarKit.ellipsize(b.toString(), r.width(), p), r.left, by + 50, 28, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        if (!Double.isNaN(s.combinedRangeKm)) {
+            CarKit.text(cv, Str.get(R.string.hql_cloud_total_range, num(s.combinedRangeKm, 0)), r.left, by + 82, 23, CarKit.DIM,
+                    CarKit.MEDIUM, p, Paint.Align.LEFT);
+        }
     }
 
     /** Carga: CA o CC con su potencia y lo que falta; sin enchufar, la potencia que sale o entra. */
@@ -205,6 +257,97 @@ final class CarStatusTab implements CarScreen {
         }
     }
 
+    // ------------------------------------------------------------------ el C10 en 3D
+
+    /** Pone el C10 en 3D en la tarjeta (menos en las pruebas del PC, donde no hay WebGL). */
+    @android.annotation.SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
+    private void setup3d(CarKit.Card card) {
+        if ("robolectric".equals(android.os.Build.FINGERPRINT)) return;
+        try {
+            android.webkit.WebView w = new android.webkit.WebView(ctx);
+            w.setBackgroundColor(0);
+            w.setVerticalScrollBarEnabled(false);
+            w.setHorizontalScrollBarEnabled(false);
+            android.webkit.WebSettings ws = w.getSettings();
+            ws.setJavaScriptEnabled(true);
+            ws.setAllowFileAccess(true);
+            w.addJavascriptInterface(new Bridge3d(), "HQL");
+            w.setWebChromeClient(new android.webkit.WebChromeClient() {
+                @Override
+                public boolean onConsoleMessage(android.webkit.ConsoleMessage m) {
+                    if (m.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR) L.w("3d: " + m.message());
+                    return true;
+                }
+            });
+            w.loadUrl("file:///android_asset/car3d.html");
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT);
+            lp.bottomMargin = TYRES_TEXT_H - 8;
+            card.addView(w, lp);
+            car3d = w;
+        } catch (RuntimeException e) {
+            // Sin WebView (se está actualizando, o falta): el dibujo de siempre.
+            L.w("3d: sin WebView (" + e.getClass().getSimpleName() + "): el coche visto desde arriba");
+            car3d = null;
+        }
+    }
+
+    /** La página avisa de que está lista o de que no puede (sin WebGL). */
+    private final class Bridge3d {
+        @android.webkit.JavascriptInterface
+        public void ready() {
+            emptyCard.post(() -> {
+                ready3d = true;
+                sent3d = "";
+                push3d();
+            });
+        }
+
+        @android.webkit.JavascriptInterface
+        public void failed(String why) {
+            emptyCard.post(() -> {
+                L.i("3d: " + why + ": el coche visto desde arriba");
+                if (car3d != null) {
+                    ((android.view.ViewGroup) car3d.getParent()).removeView(car3d);
+                    car3d.destroy();
+                    car3d = null;
+                }
+                for (View v : cards) v.invalidate();
+            });
+        }
+    }
+
+    /** Manda a la página las presiones, las puertas y el maletero (solo si han cambiado). */
+    private void push3d() {
+        if (car3d == null || !ready3d || snap.status == null) return;
+        LeapStatus s = snap.status;
+        try {
+            org.json.JSONObject d = new org.json.JSONObject();
+            org.json.JSONArray t = new org.json.JSONArray();
+            org.json.JSONArray doors = new org.json.JSONArray();
+            for (int i = 0; i < 4; i++) {
+                double bar = s.tyreBar(i);
+                org.json.JSONObject o = new org.json.JSONObject();
+                o.put("text", num(bar, 2));
+                o.put("unit", Double.isNaN(bar) ? "" : "bar");
+                o.put("warn", s.tyreWarning(i));
+                o.put("tag", s.tyreStateAlert(i) ? Str.get(R.string.hql_cloud_tyre_tpms_short) : "");
+                t.put(o);
+                doors.put(Boolean.TRUE.equals(s.doorOpen(i)));
+            }
+            d.put("tyres", t);
+            d.put("doors", doors);
+            d.put("boot", Boolean.TRUE.equals(s.bootOpen));
+            d.put("hint", Str.get(R.string.hql_cloud_3d_hint));
+            String js = d.toString();
+            if (js.equals(sent3d)) return;
+            sent3d = js;
+            car3d.evaluateJavascript("update(" + js + ")", null);
+        } catch (org.json.JSONException e) {
+            L.w("3d: " + e.getMessage());
+        }
+    }
+
     // ------------------------------------------------------------------ neumáticos y puertas
 
     private Bitmap carTop(int w, int h) {
@@ -220,10 +363,18 @@ final class CarStatusTab implements CarScreen {
 
     private void paintTyres(Canvas cv, RectF r, Paint p) {
         LeapStatus s = snap.status;
-        float ch = Math.min(r.height() - 196, 420);
+        // Con el 3D, el coche ocupa todo el alto que dejan los textos de abajo (los pinta la página, no este lienzo).
+        boolean threeD = car3d != null;
+        float ch = threeD ? r.height() - TYRES_TEXT_H : Math.min(r.height() - TYRES_TEXT_H, 420);
+        float top = r.top + 8;
+        if (!threeD) paintTyresTop(cv, r, s, ch, top, p);
+        paintTyresText(cv, r, s, ch, top, p);
+    }
+
+    /** El coche visto desde arriba con las presiones y las puertas abiertas (sin 3D). */
+    private void paintTyresTop(Canvas cv, RectF r, LeapStatus s, float ch, float top, Paint p) {
         float cw = ch * 0.46f;
         float cx = r.centerX();
-        float top = r.top + 8;
         // El dibujo lleva un margen del 10 % a cada lado para los retrovisores y las ruedas.
         int bw = Math.round(cw / 0.8f);
         Bitmap b = carTop(bw, Math.round(ch));
@@ -276,7 +427,10 @@ final class CarStatusTab implements CarScreen {
         }
         p.setStrokeCap(Paint.Cap.BUTT);
         p.setStyle(Paint.Style.FILL);
-        // Debajo: cierre, puertas y presiones.
+    }
+
+    /** Debajo del coche: cierre, puertas, presiones y la nota. */
+    private void paintTyresText(Canvas cv, RectF r, LeapStatus s, float ch, float top, Paint p) {
         float y = top + ch + 50;
         Boolean locked = s.locked;
         int lc = locked == null ? CarKit.MUTED : locked ? CarKit.GREEN : CarKit.AMBER;

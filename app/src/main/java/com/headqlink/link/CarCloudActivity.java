@@ -133,6 +133,8 @@ public class CarCloudActivity extends Activity {
                 setProfile(CarCloudStore.PROFILE_C10_LIFE, 0);
             } else if (id == R.id.hql_cloud_profile_promax) {
                 setProfile(CarCloudStore.PROFILE_C10_PROMAX, 0);
+            } else if (id == R.id.hql_cloud_profile_reev) {
+                setProfile(CarCloudStore.PROFILE_C10_REEV, 0);
             } else if (id == R.id.hql_cloud_profile_custom) {
                 askCustomKwh();
             }
@@ -194,6 +196,7 @@ public class CarCloudActivity extends Activity {
         String p = store.profile();
         int checked = CarCloudStore.PROFILE_C10_LIFE.equals(p) ? R.id.hql_cloud_profile_life
                 : CarCloudStore.PROFILE_C10_PROMAX.equals(p) ? R.id.hql_cloud_profile_promax
+                : CarCloudStore.PROFILE_C10_REEV.equals(p) ? R.id.hql_cloud_profile_reev
                 : CarCloudStore.PROFILE_CUSTOM.equals(p) ? R.id.hql_cloud_profile_custom : View.NO_ID;
         if (checked == View.NO_ID) profile.clearCheck();
         else profile.check(checked);
@@ -615,12 +618,13 @@ public class CarCloudActivity extends Activity {
     private void afterCarChosen() {
         if (store.profile().isEmpty()) {
             String[] names = {Str.get(R.string.hql_cloud_profile_life), Str.get(R.string.hql_cloud_profile_promax),
-                    Str.get(R.string.hql_cloud_profile_custom_none)};
+                    Str.get(R.string.hql_cloud_profile_reev), Str.get(R.string.hql_cloud_profile_custom_none)};
             new MaterialAlertDialogBuilder(this)
                     .setTitle(R.string.hql_cloud_step_battery)
                     .setItems(names, (d, which) -> {
                         if (which == 0) setProfile(CarCloudStore.PROFILE_C10_LIFE, 0);
                         else if (which == 1) setProfile(CarCloudStore.PROFILE_C10_PROMAX, 0);
+                        else if (which == 2) setProfile(CarCloudStore.PROFILE_C10_REEV, 0);
                         else askCustomKwh();
                     })
                     .show();

@@ -14,6 +14,10 @@ import java.util.Locale;
  * 30 s con la sección Coche en pantalla, y si falla, a los 2, 5 y 10 minutos. Se para con el servicio. Las pantallas
  * leen una foto inmutable (snapshot()) con la hora del dato y la de la lectura. Una línea en el log por sondeo, sin
  * secretos (ni VIN, ni correo, ni posición).
+ *
+ * Además, el historial oficial (CloudHistory): los viajes con los kWh y los litros que mide el coche, cada 30 min como
+ * mucho (antes si el coche acaba de terminar un viaje) y el consumo de las últimas semanas cada 12 h. Cuenta para el
+ * tope diario y se guarda cifrado.
  */
 final class CarCloud {
     /** Por qué hay o no hay datos. */
@@ -128,7 +132,46 @@ final class CarCloud {
         }
     }
 
+    /** Cuándo vuelve a leer el historial. Pura: se prueba en el PC. */
+    static final class HistoryPolicy {
+        static final long EVERY_MS = 30 * 60_000L;
+        /** Tras un viaje (sube el cuentakilómetros y el coche está parado): a los 3 min y otra vez a los 12. */
+        static final long AFTER_TRIP_MS = 3 * 60_000L;
+        static final long FOLLOW_UP_MS = 12 * 60_000L;
+        static final long WEEKLY_MS = 12 * 3600_000L;
+        /** Si la nube no lo da (o falla): no se insiste en 2 h. */
+        static final long FAIL_MS = 2 * 3600_000L;
+        static final int MAX_PAGES = 5;
+
+        private HistoryPolicy() {
+        }
+
+        /**
+         * ¿Toca leer el historial? lastAtMs: la última lectura (0 = nunca); odoNow y odoAtLast: el cuentakilómetros ahora
+         * y en esa lectura; parked: el coche está parado; followUpAtMs: lectura de repaso pendiente (0 = ninguna).
+         */
+        static boolean due(long nowMs, long lastAtMs, double odoNow, double odoAtLast, boolean parked, long followUpAtMs,
+                           long failUntilMs) {
+            if (nowMs < failUntilMs) return false;
+            if (lastAtMs == 0) return true;
+            long since = nowMs - lastAtMs;
+            if (since >= EVERY_MS) return true;
+            if (followUpAtMs > 0 && nowMs >= followUpAtMs) return true;
+            boolean drove = !Double.isNaN(odoNow) && !Double.isNaN(odoAtLast) && odoNow >= odoAtLast + 1;
+            return drove && parked && since >= AFTER_TRIP_MS;
+        }
+    }
+
     private static volatile Snapshot current = Snapshot.of(State.NO_ACCOUNT);
+    private static volatile java.util.List<CloudHistory.Trip> history = java.util.Collections.emptyList();
+    private static volatile CloudHistory.Weekly weekly;
+    private static long historyAtMs;
+    private static long weeklyAtMs;
+    private static long historyFailUntilMs;
+    private static long weeklyFailUntilMs;
+    private static long followUpAtMs;
+    private static double odoAtHistory = Double.NaN;
+    private static boolean historyLoaded;
     private static volatile boolean running;
     /** Lecturas seguidas en las que el coche no había subido un dato nuevo (aparcado o dormido). */
     private static volatile int staleReads;
@@ -259,6 +302,7 @@ final class CarCloud {
                 current = new Snapshot(State.WAITING, null, 0, 0, st.capacityKwh(), st.carType(), 0, false);
             }
             failures = pollOnce(st, failures, gen);
+            if (failures == 0 && current.state == State.OK && alive(gen)) pollHistory(st, gen);
         }
         L.i("nube Leapmotor: sondeo parado");
     }
@@ -269,6 +313,10 @@ final class CarCloud {
         try {
             LeapStatus s = CarCloudSession.readStatus(app);
             if (!alive(gen)) return failures;
+            if (s.reev() && st.adoptReev()) {
+                L.i(String.format(Locale.US, "nube Leapmotor: el coche tiene depósito de gasolina (REEV): batería de %.1f kWh y "
+                        + "consumo de gasolina", CarCloudStore.KWH_C10_REEV));
+            }
             long lat = SystemClock.elapsedRealtime() - t0;
             long wall = System.currentTimeMillis();
             Snapshot snap = new Snapshot(State.OK, s, wall, lat, st.capacityKwh(), st.carType(), 0, false);
@@ -303,6 +351,98 @@ final class CarCloud {
             L.w("nube Leapmotor: sin datos (" + safeError(e) + ", " + (SystemClock.elapsedRealtime() - t0) + " ms); fallo "
                     + n + ", reintento en " + wait / 60_000 + " min");
             return n;
+        }
+    }
+
+    // ------------------------------------------------------------------ historial
+
+    /** Viajes según el coche (del más reciente al más antiguo); vacío si aún no hay (en la demostración, los suyos). */
+    static java.util.List<CloudHistory.Trip> history() {
+        if (DemoMode.active() && history.isEmpty()) return DemoMode.cloudHistory();
+        return history;
+    }
+
+    /** Consumo de las últimas semanas según el coche, o null (en la demostración, el suyo). */
+    static CloudHistory.Weekly weekly() {
+        CloudHistory.Weekly w = weekly;
+        if (DemoMode.active() && w == null) return DemoMode.cloudWeekly();
+        return w;
+    }
+
+    private static boolean hasFuel(java.util.List<CloudHistory.Trip> trips) {
+        for (CloudHistory.Trip t : trips) if (!Double.isNaN(t.fuelL)) return true;
+        return false;
+    }
+
+    /** El historial y el consumo semanal, cuando tocan (HistoryPolicy); nunca tumba el sondeo del estado. */
+    private static void pollHistory(CarCloudStore st, int gen) {
+        long now = System.currentTimeMillis();
+        if (!historyLoaded) {
+            historyLoaded = true;
+            org.json.JSONObject o = st.history();
+            if (o != null) {
+                history = CloudHistory.merge(CloudHistory.tripsFromJson(o), null, now - CloudHistory.KEEP_MS);
+                weekly = CloudHistory.weeklyFromJson(o);
+                historyAtMs = o.optLong("tripsAt");
+                weeklyAtMs = o.optLong("weeklyAt");
+            }
+        }
+        Snapshot snap = current;
+        LeapStatus s = snap.status;
+        // Un eléctrico puro también manda la gasolina (a 0): fuera también de lo guardado (la caché de antes la tenía).
+        if (s != null && !s.reev() && hasFuel(history)) history = CloudHistory.withoutFuel(history);
+        double odo = s == null ? Double.NaN : s.odometerKm;
+        boolean parked = s != null && (Double.isNaN(s.speedKmh) || s.speedKmh < 1);
+        boolean changed = false;
+        if (HistoryPolicy.due(now, historyAtMs, odo, odoAtHistory, parked, followUpAtMs, historyFailUntilMs)) {
+            boolean afterTrip = historyAtMs > 0 && !Double.isNaN(odo) && !Double.isNaN(odoAtHistory) && odo >= odoAtHistory + 1;
+            long from = now - CloudHistory.KEEP_MS;
+            java.util.List<CloudHistory.Trip> old = history;
+            if (!old.isEmpty() && historyAtMs > 0) from = Math.max(from, old.get(0).startMs - 2 * 86_400_000L);
+            try {
+                java.util.List<CloudHistory.Trip> fresh = CarCloudSession.readTrips(app, from / 1000, now / 1000,
+                        HistoryPolicy.MAX_PAGES, CarCloud::takeDailyQuota);
+                if (!alive(gen)) return;
+                // Un eléctrico puro manda la gasolina a 0: fuera, o saldría «0 L» en cada viaje.
+                if (s != null && !s.reev()) {
+                    fresh = CloudHistory.withoutFuel(fresh);
+                    old = CloudHistory.withoutFuel(old);
+                }
+                history = CloudHistory.merge(old, fresh, now - CloudHistory.KEEP_MS);
+                historyAtMs = now;
+                odoAtHistory = odo;
+                // Tras un viaje, un repaso a los 12 min: el coche puede subir el resumen del viaje con retraso.
+                followUpAtMs = afterTrip ? now + HistoryPolicy.FOLLOW_UP_MS : 0;
+                changed = true;
+                L.i("nube Leapmotor: historial de viajes según el coche: " + CloudHistory.logLine(history, now - 30 * 86_400_000L)
+                        + " en 30 días" + (afterTrip ? " (tras un viaje)" : ""));
+            } catch (Exception e) {
+                historyFailUntilMs = now + HistoryPolicy.FAIL_MS;
+                followUpAtMs = 0;
+                L.w("nube Leapmotor: historial de viajes no disponible (" + safeError(e) + "); se reintenta en "
+                        + HistoryPolicy.FAIL_MS / 3_600_000L + " h");
+            }
+        }
+        if (now >= weeklyFailUntilMs && (weeklyAtMs == 0 || now - weeklyAtMs >= HistoryPolicy.WEEKLY_MS) && takeDailyQuota()) {
+            try {
+                CloudHistory.Weekly w = CarCloudSession.readWeekly(app);
+                if (!alive(gen)) return;
+                weeklyAtMs = now;
+                if (w != null) weekly = w;
+                changed = true;
+                L.i("nube Leapmotor: consumo según el coche: " + (w == null || Double.isNaN(w.avgKwhPer100) ? "sin cifra"
+                        : String.format(Locale.US, "%.1f kWh/100 km de media (%d semanas)", w.avgKwhPer100, w.weeks.length)));
+            } catch (Exception e) {
+                weeklyFailUntilMs = now + HistoryPolicy.FAIL_MS;
+                L.w("nube Leapmotor: consumo semanal no disponible (" + safeError(e) + ")");
+            }
+        }
+        if (changed) {
+            try {
+                st.saveHistory(CloudHistory.toJson(history, weekly, historyAtMs, weeklyAtMs));
+            } catch (Exception e) {
+                L.w("nube Leapmotor: no se pudo guardar el historial: " + e.getClass().getSimpleName());
+            }
         }
     }
 

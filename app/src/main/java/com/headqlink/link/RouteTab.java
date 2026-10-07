@@ -31,7 +31,9 @@ import java.util.Locale;
  * el usuario, ±5), el tiempo en el destino a la hora de llegada y los cargadores junto a la ruta («Ir» abre la
  * navegación de Google Maps en el móvil y AA la muestra). Todo estimado: ver RoutePlanner y EnergyModel. Con la cuenta
  * de Leapmotor (CarCloud), el % de ahora es el REAL del coche (sin ±5, con la edad del dato) y la batería al llegar
- * sale de él con la capacidad de la variante elegida.
+ * sale de él con la capacidad de la variante elegida. Bajo las fichas, de dónde sale la previsión: lo que suben y bajan
+ * los km que faltan (y lo que cuestan), la media según el propio coche y, al llegar, lo previsto frente a lo real. En un
+ * REEV la batería no baja del 20 %: lo que falta lo pone el generador, en litros de gasolina.
  */
 final class RouteTab implements CarScreen {
     private static final long TICK_MS = 1000;
@@ -48,7 +50,13 @@ final class RouteTab implements CarScreen {
     private CarKit.Card batteryCard;
     private CarKit.Card weatherCard;
     private LinearLayout chargers;
+    /** Filtro de los cargadores (ChargerFilter): potencia mínima y redes; y su resumen junto al botón. */
+    private int chargerMinKw;
+    private java.util.Set<String> chargerNets = new java.util.LinkedHashSet<>();
+    private TextView filterSummary;
     private TextView search;
+    /** Los botones de arriba a la derecha (buscar, Google Maps, quitar): su ancho real recorta el nombre del destino. */
+    private LinearLayout actionsRow;
     private TextView goMaps;
     private TextView clear;
     private TextView cta;
@@ -96,6 +104,7 @@ final class RouteTab implements CarScreen {
         routeCard = CarKit.add(row, new CarKit.Card(ctx, null, this::paintRoute), 1.95f, 0);
         // Destino elegido aquí (AA no nos manda el suyo): buscar, abrir en Google Maps, quitar.
         LinearLayout actions = CarKit.row(ctx);
+        actionsRow = actions;
         search = CarKit.pill(ctx, Str.get(R.string.hql_route_search_dest), true);
         goMaps = CarKit.pill(ctx, Str.get(R.string.hql_route_guide_maps), false);
         clear = CarKit.pill(ctx, Str.get(R.string.hql_remove), false);
@@ -135,15 +144,47 @@ final class RouteTab implements CarScreen {
         plus.setOnClickListener(v -> bump(5));
         weatherCard = CarKit.add(right, new CarKit.Card(ctx, Str.get(R.string.hql_route_weather), this::paintWeather), 0, 172);
         CarKit.Card ch = CarKit.add(right, new CarKit.Card(ctx, Str.get(R.string.hql_route_chargers), null), 1f, 0);
+        Config cfg0 = new Config(ctx);
+        chargerMinKw = cfg0.chargerMinKw();
+        chargerNets = ChargerFilter.parseNetworks(cfg0.chargerNetworks());
+        LinearLayout chCol = CarKit.col(ctx);
+        // Filtro: potencia mínima y redes (como en los planificadores de rutas).
+        LinearLayout fRow = CarKit.row(ctx);
+        fRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView filter = CarKit.pill(ctx, Str.get(R.string.hql_charger_filter), false);
+        filter.setOnClickListener(v -> openChargerFilter());
+        fRow.addView(filter);
+        filterSummary = CarStyle.text(ctx, "", 20, CarKit.DIM);
+        filterSummary.setSingleLine(true);
+        filterSummary.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        filterSummary.setPadding(16, 0, 0, 0);
+        fRow.addView(filterSummary, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        chCol.addView(fRow);
         chargers = CarKit.col(ctx);
         ScrollView sv = new ScrollView(ctx);
         sv.setVerticalScrollBarEnabled(false);
         sv.addView(chargers);
-        ch.addView(sv, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        LinearLayout.LayoutParams svp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        svp.topMargin = 6;
+        chCol.addView(sv, svp);
+        ch.addView(chCol, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        updateFilterSummary();
 
         running = true;
         root = CarKit.page(ctx, row);
         tick();
+        String pq = previewQuery;
+        if (pq != null) {
+            previewQuery = null;
+            root.post(() -> {
+                openSearch();
+                if (searchState != null) {
+                    searchState.buf.append(pq);
+                    searchState.changed();
+                    searchState.searchNow(false);
+                }
+            });
+        }
         return root;
     }
 
@@ -155,7 +196,19 @@ final class RouteTab implements CarScreen {
 
     // ------------------------------------------------------------------ búsqueda de destino
 
-    /** Buscador a pantalla completa de la pestaña: texto, resultados y teclado del coche. */
+    /** Espera tras la última tecla antes de buscar solo (ms). */
+    private static final long TYPE_PAUSE_MS = 650;
+    /** El buscador abierto, o null. */
+    private SearchState searchState;
+    /** Vista previa: abrir el buscador con este texto al crear la pestaña. */
+    static volatile String previewQuery;
+
+    /**
+     * Buscador a pantalla completa de la pestaña: la caja con lo escrito, el micrófono, los resultados (o los destinos
+     * recientes con la caja vacía) y el teclado del coche, que enseña también lo escrito encima de las teclas. Busca solo
+     * al dejar de escribir (TYPE_PAUSE_MS, desde 3 letras) en el buscador de Android y en Photon (PlaceSearch); Buscar
+     * o Ir buscan ya y, si no hay nada, prueban Nominatim.
+     */
     private void openSearch() {
         LinearLayout panel = new LinearLayout(ctx);
         panel.setOrientation(LinearLayout.VERTICAL);
@@ -163,103 +216,306 @@ final class RouteTab implements CarScreen {
         panel.setClickable(true);
         LinearLayout bar = CarStyle.bar(ctx);
         bar.setBackgroundColor(CarKit.SURFACE);
-        TextView query = CarStyle.text(ctx, "", 28, CarKit.TEXT);
+        TextView query = CarStyle.text(ctx, "", 30, CarKit.TEXT);
         query.setHint(Str.get(R.string.hql_route_query_hint));
         query.setHintTextColor(CarKit.FAINT);
         query.setSingleLine(true);
-        query.setPadding(24, 12, 24, 12);
-        query.setBackground(CarKit.outlined(CarKit.SURFACE_HI, CarKit.OUTLINE, 28));
+        query.setEllipsize(android.text.TextUtils.TruncateAt.START);
+        query.setPadding(26, 14, 26, 14);
+        query.setBackground(CarKit.outlined(CarKit.SURFACE_HI, CarKit.ACCENT, 28));
         LinearLayout.LayoutParams qlp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         qlp.rightMargin = 10;
         bar.addView(query, qlp);
+        TextView mic = CarKit.pill(ctx, "🎤 " + Str.get(R.string.hql_search_voice), false);
         TextView find = CarKit.pill(ctx, Str.get(R.string.hql_search), true);
         TextView close = CarKit.pill(ctx, Str.get(R.string.hql_close), false);
-        bar.addView(find);
+        bar.addView(mic);
+        bar.addView(find, spaced());
         bar.addView(close, spaced());
         panel.addView(bar);
         LinearLayout results = new LinearLayout(ctx);
         results.setOrientation(LinearLayout.VERTICAL);
-        results.setPadding(24, 8, 24, 8);
+        results.setPadding(24, 10, 24, 8);
         ScrollView rs = new ScrollView(ctx);
         rs.addView(results);
         panel.addView(rs, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        StringBuilder buf = new StringBuilder();
-        Runnable doSearch = () -> {
-            String q = buf.toString().trim();
-            if (q.isEmpty()) return;
-            results.removeAllViews();
-            results.addView(CarStyle.text(ctx, Str.get(R.string.hql_searching), 24, CarKit.DIM));
-            double[] pos = planner.position();
-            new Thread(() -> {
-                java.util.List<RoutePlanner.Place> found;
-                String err = null;
-                try {
-                    found = RoutePlanner.search(q, pos[0], pos[1]);
-                } catch (Exception e) {
-                    found = new java.util.ArrayList<>();
-                    err = e.getMessage();
-                }
-                java.util.List<RoutePlanner.Place> f = found;
-                String fe = err;
-                results.post(() -> showResults(results, f, fe, panel));
-            }, "route-search").start();
-        };
+        SearchState st = new SearchState(panel, query, results);
+        searchState = st;
         CarKeyboard kb = new CarKeyboard(ctx, new CarKeyboard.Listener() {
             @Override
             public void onText(String t) {
-                buf.append(t);
-                query.setText(buf);
+                st.buf.append(t);
+                st.changed();
             }
 
             @Override
             public void onBackspace() {
-                if (buf.length() > 0) buf.setLength(buf.length() - 1);
-                query.setText(buf);
+                if (st.buf.length() > 0) st.buf.setLength(st.buf.length() - 1);
+                st.changed();
             }
 
             @Override
             public void onEnter() {
-                doSearch.run();
+                st.searchNow(true);
             }
 
             @Override
             public void onHide() {
             }
         });
+        st.kb = kb;
         panel.addView(kb);
-        find.setOnClickListener(v -> doSearch.run());
-        close.setOnClickListener(v -> root.removeView(panel));
+        find.setOnClickListener(v -> st.searchNow(true));
+        mic.setOnClickListener(v -> st.listen());
+        close.setOnClickListener(v -> st.close());
         root.addView(panel, CarStyle.match());
+        st.changed();
     }
 
-    private void showResults(LinearLayout results, java.util.List<RoutePlanner.Place> found, String err, View panel) {
+    /** Lo que vive mientras está abierto el buscador. */
+    private final class SearchState {
+        final View panel;
+        final TextView query;
+        final LinearLayout results;
+        final StringBuilder buf = new StringBuilder();
+        CarKeyboard kb;
+        /** Sube con cada búsqueda: la respuesta de una búsqueda vieja no pisa la de una nueva. */
+        int seq;
+        String shownFor = "";
+        android.speech.SpeechRecognizer speech;
+        final Runnable typed = () -> searchNow(false);
+
+        SearchState(View panel, TextView query, LinearLayout results) {
+            this.panel = panel;
+            this.query = query;
+            this.results = results;
+        }
+
+        /** Cambió el texto: se ve en la caja y sobre el teclado; se busca solo al dejar de escribir. */
+        void changed() {
+            query.setText(buf);
+            if (kb != null) kb.showText(buf, Str.get(R.string.hql_route_query_hint));
+            results.removeCallbacks(typed);
+            String q = buf.toString().trim();
+            if (q.isEmpty()) {
+                seq++;
+                shownFor = "";
+                showRecents();
+            } else if (PlaceSearch.worthTyping(q) && !q.equals(shownFor)) {
+                results.postDelayed(typed, TYPE_PAUSE_MS);
+            }
+        }
+
+        /** Busca ya; explicit: pulsado Buscar/Ir (entonces, sin resultados, se prueba también Nominatim). */
+        void searchNow(boolean explicit) {
+            results.removeCallbacks(typed);
+            String q = buf.toString().trim();
+            if (q.isEmpty() || (!explicit && q.equals(shownFor))) return;
+            int my = ++seq;
+            shownFor = q;
+            header(Str.get(R.string.hql_searching), CarKit.DIM);
+            double[] pos = planner.position();
+            new Thread(() -> {
+                // Las capturas (reloj quieto) no usan la red; la vista previa interactiva sí busca de verdad.
+                java.util.List<RoutePlanner.Place> found = DemoMode.active() && !DemoMode.live() ? DemoMode.searchResults(q)
+                        : PlaceSearch.search(ctx, q, pos[0], pos[1]);
+                String err = null;
+                if (found.isEmpty() && explicit) {
+                    try {
+                        found = RoutePlanner.search(q, pos[0], pos[1]);
+                    } catch (Exception e) {
+                        err = e.getMessage();
+                    }
+                }
+                java.util.List<RoutePlanner.Place> f = found;
+                String fe = err;
+                results.post(() -> {
+                    if (my == seq && root.indexOfChild(panel) >= 0) showResults(this, f, fe, pos);
+                });
+            }, "route-search").start();
+        }
+
+        void showRecents() {
+            results.removeAllViews();
+            java.util.List<RoutePlanner.Place> rec = PlaceSearch.recents(new Config(ctx).recentPlaces());
+            if (rec.isEmpty()) {
+                header(Str.get(R.string.hql_search_tip), CarKit.FAINT);
+                return;
+            }
+            header(Str.get(R.string.hql_search_recent), CarKit.FAINT);
+            double[] pos = planner.position();
+            for (RoutePlanner.Place pl : rec) results.addView(item(this, pl, pos), itemParams());
+        }
+
+        void header(String text, int color) {
+            results.removeAllViews();
+            TextView h = CarStyle.text(ctx, text, 22, color);
+            h.setPadding(6, 4, 6, 12);
+            results.addView(h);
+        }
+
+        /** Buscar hablando (el reconocimiento de voz del móvil, con su micrófono). */
+        void listen() {
+            if (ctx.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                header(Str.get(R.string.hql_search_voice_permission), CarKit.AMBER);
+                return;
+            }
+            if (!android.speech.SpeechRecognizer.isRecognitionAvailable(ctx)) {
+                header(Str.get(R.string.hql_search_voice_none), CarKit.AMBER);
+                return;
+            }
+            stopListening();
+            speech = android.speech.SpeechRecognizer.createSpeechRecognizer(ctx);
+            speech.setRecognitionListener(new android.speech.RecognitionListener() {
+                @Override
+                public void onReadyForSpeech(android.os.Bundle params) {
+                    header(Str.get(R.string.hql_search_listening), CarKit.ACCENT);
+                }
+
+                @Override
+                public void onPartialResults(android.os.Bundle b) {
+                    String t = first(b);
+                    if (t != null && !t.isEmpty()) {
+                        buf.setLength(0);
+                        buf.append(t);
+                        query.setText(buf);
+                        if (kb != null) kb.showText(buf, "");
+                    }
+                }
+
+                @Override
+                public void onResults(android.os.Bundle b) {
+                    String t = first(b);
+                    stopListening();
+                    if (t == null || t.trim().isEmpty()) {
+                        header(Str.get(R.string.hql_search_voice_nothing), CarKit.DIM);
+                        return;
+                    }
+                    L.i("buscar: destino dicho en voz alta"); // sin el texto: el log se exporta
+                    buf.setLength(0);
+                    buf.append(t.trim());
+                    query.setText(buf);
+                    if (kb != null) kb.showText(buf, "");
+                    searchNow(true);
+                }
+
+                @Override
+                public void onError(int error) {
+                    stopListening();
+                    L.i("buscar: la voz no entendió nada (error " + error + ")");
+                    header(Str.get(error == android.speech.SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
+                            ? R.string.hql_search_voice_permission : R.string.hql_search_voice_nothing), CarKit.DIM);
+                }
+
+                @Override
+                public void onBeginningOfSpeech() {
+                }
+
+                @Override
+                public void onRmsChanged(float rmsdB) {
+                }
+
+                @Override
+                public void onBufferReceived(byte[] buffer) {
+                }
+
+                @Override
+                public void onEndOfSpeech() {
+                    header(Str.get(R.string.hql_searching), CarKit.DIM);
+                }
+
+                @Override
+                public void onEvent(int eventType, android.os.Bundle params) {
+                }
+            });
+            Intent in = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            in.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            in.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag());
+            in.putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+            in.putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+            try {
+                speech.startListening(in);
+            } catch (RuntimeException e) {
+                stopListening();
+                header(Str.get(R.string.hql_search_voice_none), CarKit.AMBER);
+            }
+        }
+
+        String first(android.os.Bundle b) {
+            java.util.ArrayList<String> r = b == null ? null : b.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION);
+            return r == null || r.isEmpty() ? null : r.get(0);
+        }
+
+        void stopListening() {
+            if (speech == null) return;
+            try {
+                speech.cancel();
+                speech.destroy();
+            } catch (RuntimeException ignored) {
+                // Ya parado.
+            }
+            speech = null;
+        }
+
+        void close() {
+            results.removeCallbacks(typed);
+            seq++;
+            stopListening();
+            root.removeView(panel);
+            if (searchState == this) searchState = null;
+        }
+    }
+
+    private static LinearLayout.LayoutParams itemParams() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = 8;
+        return lp;
+    }
+
+    private void showResults(SearchState st, java.util.List<RoutePlanner.Place> found, String err, double[] pos) {
+        LinearLayout results = st.results;
         results.removeAllViews();
         if (found.isEmpty()) {
-            results.addView(CarStyle.text(ctx, err != null ? Str.get(R.string.hql_search_failed, err) : Str.get(R.string.hql_no_results), 24, CarKit.DIM));
+            st.header(err != null ? Str.get(R.string.hql_search_failed, err) : Str.get(R.string.hql_no_results), CarKit.DIM);
             return;
         }
-        for (RoutePlanner.Place pl : found) {
-            LinearLayout item = new LinearLayout(ctx);
-            item.setOrientation(LinearLayout.VERTICAL);
-            item.setPadding(22, 14, 22, 14);
-            item.setBackground(CarKit.outlined(CarKit.SURFACE, CarKit.OUTLINE, 18));
-            TextView n = CarStyle.text(ctx, pl.name, 26, CarKit.TEXT);
-            n.setSingleLine(true);
-            TextView d = CarStyle.text(ctx, pl.detail, 20, CarKit.DIM);
-            d.setSingleLine(true);
-            d.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            item.addView(n);
-            item.addView(d);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.bottomMargin = 8;
-            results.addView(item, lp);
-            item.setOnClickListener(v -> {
-                L.i("ruta: destino elegido en el coche"); // sin el nombre: el log se exporta (qdauto §7.5)
-                RoutePlanner.setManualDestination(pl);
-                root.removeView(panel);
-                tick();
-            });
+        for (RoutePlanner.Place pl : found) results.addView(item(st, pl, pos), itemParams());
+    }
+
+    /** Un resultado: nombre, dirección y, a la derecha, a cuántos km está. Al pulsarlo, es el destino. */
+    private View item(SearchState st, RoutePlanner.Place pl, double[] pos) {
+        LinearLayout item = new LinearLayout(ctx);
+        item.setOrientation(LinearLayout.HORIZONTAL);
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setPadding(22, 14, 22, 14);
+        item.setBackground(CarKit.outlined(CarKit.SURFACE, CarKit.OUTLINE, 18));
+        LinearLayout text = new LinearLayout(ctx);
+        text.setOrientation(LinearLayout.VERTICAL);
+        TextView n = CarStyle.text(ctx, pl.name, 27, CarKit.TEXT);
+        n.setSingleLine(true);
+        n.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView d = CarStyle.text(ctx, pl.detail, 20, CarKit.DIM);
+        d.setSingleLine(true);
+        d.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        text.addView(n);
+        text.addView(d);
+        item.addView(text, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        if (!Double.isNaN(pos[0])) {
+            double km = RoadInfo.dist(pos[0], pos[1], pl.lat, pl.lon) / 1000;
+            TextView k = CarStyle.text(ctx, km < 10 ? String.format(Locale.getDefault(), "%.1f km", km)
+                    : String.format(Locale.getDefault(), "%.0f km", km), 24, CarKit.ACCENT);
+            k.setPadding(18, 0, 0, 0);
+            item.addView(k);
         }
+        item.setOnClickListener(v -> {
+            L.i("ruta: destino elegido en el coche"); // sin el nombre: el log se exporta (qdauto §7.5)
+            Config c = new Config(ctx);
+            c.setRecentPlaces(PlaceSearch.remember(c.recentPlaces(), pl));
+            RoutePlanner.setManualDestination(pl);
+            st.close();
+            tick();
+        });
+        return item;
     }
 
     private void bump(int d) {
@@ -292,7 +548,7 @@ final class RouteTab implements CarScreen {
         batteryCard.invalidate();
         weatherCard.invalidate();
         if (have) {
-            int key = System.identityHashCode(plan) * 31 + plan.progress / 10;
+            int key = (System.identityHashCode(plan) * 31 + plan.progress / 10) * 31 + chargerMinKw * 7 + chargerNets.hashCode();
             if (key != shownChargersFor) {
                 shownChargersFor = key;
                 fillChargers(plan);
@@ -312,12 +568,153 @@ final class RouteTab implements CarScreen {
         return t;
     }
 
+    /** El cargador pasa el filtro elegido. */
+    private boolean wanted(RoutePlanner.Charger c) {
+        return ChargerFilter.accepts(c.maxKw, c.network, chargerMinKw, chargerNets);
+    }
+
+    /** «Todos los cargadores» o «≥ 100 kW · Tesla, Zunder». */
+    private void updateFilterSummary() {
+        StringBuilder b = new StringBuilder();
+        if (chargerMinKw > 0) b.append(Str.get(R.string.hql_charger_summary_kw, chargerMinKw));
+        if (!chargerNets.isEmpty()) {
+            StringBuilder n = new StringBuilder();
+            for (String k : chargerNets) {
+                n.append(n.length() > 0 ? ", " : "").append(k.equals(ChargerFilter.OTHER) ? Str.get(R.string.hql_charger_other)
+                        : ChargerFilter.label(k));
+            }
+            b.append(b.length() > 0 ? " · " : "").append(n);
+        }
+        filterSummary.setText(b.length() == 0 ? Str.get(R.string.hql_charger_summary_all) : b.toString());
+        filterSummary.setTextColor(b.length() == 0 ? CarKit.FAINT : CarKit.ACCENT);
+    }
+
+    /** Cambió el filtro: se guarda, se rehace la lista y el perfil. */
+    private void filterChanged() {
+        Config c = new Config(ctx);
+        c.setChargerMinKw(chargerMinKw);
+        c.setChargerNetworks(ChargerFilter.formatNetworks(chargerNets));
+        updateFilterSummary();
+        shownChargersFor = -1;
+        tick();
+    }
+
+    /**
+     * Panel del filtro de cargadores: potencia mínima (una) y redes (varias; ninguna marcada = todas), con las redes que
+     * hay en esta ruta y cuántos cargadores tiene cada una.
+     */
+    private void openChargerFilter() {
+        LinearLayout panel = new LinearLayout(ctx);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setBackgroundColor(CarKit.BG);
+        panel.setClickable(true);
+        panel.setPadding(CarKit.PAD, 18, CarKit.PAD, CarKit.PAD);
+        LinearLayout bar = CarKit.row(ctx);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = CarStyle.text(ctx, Str.get(R.string.hql_charger_filter_title), 34, CarKit.TEXT);
+        title.setTypeface(CarKit.MEDIUM);
+        bar.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView done = CarKit.pill(ctx, Str.get(R.string.hql_close), true);
+        bar.addView(done);
+        panel.addView(bar);
+        LinearLayout body = CarKit.col(ctx);
+        ScrollView sv = new ScrollView(ctx);
+        sv.addView(body);
+        panel.addView(sv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        Runnable[] build = new Runnable[1];
+        build[0] = () -> {
+            body.removeAllViews();
+            body.addView(section(Str.get(R.string.hql_charger_min_power)));
+            LinearLayout kw = CarKit.row(ctx);
+            for (int v : ChargerFilter.MIN_KW_CHOICES) {
+                String label = v == 0 ? Str.get(R.string.hql_charger_any) : v + " kW";
+                kw.addView(chip(label, chargerMinKw == v, () -> {
+                    chargerMinKw = v;
+                    filterChanged();
+                    build[0].run();
+                }), chipParams());
+            }
+            body.addView(kw);
+            body.addView(section(Str.get(R.string.hql_charger_networks)));
+            java.util.List<String> keys = new java.util.ArrayList<>();
+            RoutePlanner.Plan pl = plan;
+            if (pl != null) for (RoutePlanner.Charger c : pl.chargers) keys.add(c.network == null ? ChargerFilter.OTHER : c.network);
+            java.util.List<java.util.Map.Entry<String, Integer>> found = ChargerFilter.counts(keys);
+            // Las marcadas que no salen en esta ruta también se ven (para poder quitarlas).
+            for (String k : chargerNets) {
+                boolean in = false;
+                for (java.util.Map.Entry<String, Integer> e : found) in |= e.getKey().equals(k);
+                if (!in) found.add(new java.util.AbstractMap.SimpleEntry<>(k, 0));
+            }
+            LinearLayout row = null;
+            int i = 0;
+            row = CarKit.row(ctx);
+            row.addView(chip(Str.get(R.string.hql_charger_all_networks), chargerNets.isEmpty(), () -> {
+                chargerNets.clear();
+                filterChanged();
+                build[0].run();
+            }), chipParams());
+            i++;
+            for (java.util.Map.Entry<String, Integer> e : found) {
+                if (i % 4 == 0) {
+                    body.addView(row);
+                    row = CarKit.row(ctx);
+                }
+                String k = e.getKey();
+                String name = k.equals(ChargerFilter.OTHER) ? Str.get(R.string.hql_charger_other) : ChargerFilter.label(k);
+                row.addView(chip(name + " · " + e.getValue(), chargerNets.contains(k), () -> {
+                    if (!chargerNets.remove(k)) chargerNets.add(k);
+                    filterChanged();
+                    build[0].run();
+                }), chipParams());
+                i++;
+            }
+            body.addView(row);
+            TextView note = CarStyle.text(ctx, Str.get(R.string.hql_charger_filter_note), 21, CarKit.FAINT);
+            note.setPadding(4, 26, 4, 0);
+            body.addView(note);
+        };
+        build[0].run();
+        done.setOnClickListener(v -> root.removeView(panel));
+        root.addView(panel, CarStyle.match());
+    }
+
+    private TextView section(String s) {
+        TextView t = CarStyle.text(ctx, s.toUpperCase(Locale.getDefault()), 21, CarKit.FAINT);
+        t.setLetterSpacing(0.1f);
+        t.setTypeface(CarKit.MEDIUM);
+        t.setPadding(4, 30, 4, 12);
+        return t;
+    }
+
+    /** Ficha de elección: marcada, rellena con el acento. */
+    private TextView chip(String label, boolean on, Runnable action) {
+        TextView t = CarKit.pill(ctx, label, on);
+        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 25);
+        t.setPadding(30, 16, 30, 16);
+        t.setOnClickListener(v -> action.run());
+        return t;
+    }
+
+    private static LinearLayout.LayoutParams chipParams() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.rightMargin = 12;
+        lp.bottomMargin = 12;
+        return lp;
+    }
+
     private void fillChargers(RoutePlanner.Plan p) {
         chargers.removeAllViews();
         double here = p.km[Math.min(p.progress, p.n - 1)];
         int shown = 0;
+        int hidden = 0;
         for (RoutePlanner.Charger c : p.chargers) {
-            if (c.kmAlong < here - 0.5 || shown >= 12) continue;
+            if (c.kmAlong < here - 0.5) continue;
+            if (!wanted(c)) {
+                hidden++;
+                continue;
+            }
+            if (shown >= 12) continue;
             shown++;
             LinearLayout item = CarKit.row(ctx);
             item.setGravity(Gravity.CENTER_VERTICAL);
@@ -345,7 +742,22 @@ final class RouteTab implements CarScreen {
             item.addView(go);
             chargers.addView(item);
         }
-        if (shown == 0) chargers.addView(hint(Str.get(R.string.hql_route_no_chargers)));
+        if (shown == 0 && hidden > 0) {
+            // Hay cargadores, pero el filtro los esconde todos: se dice y se deja quitarlo.
+            chargers.addView(hint(Str.get(R.string.hql_charger_none_filtered)));
+            TextView clearF = CarKit.pill(ctx, Str.get(R.string.hql_charger_clear_filters), false);
+            clearF.setOnClickListener(v -> {
+                chargerMinKw = 0;
+                chargerNets.clear();
+                filterChanged();
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.topMargin = 12;
+            chargers.addView(clearF, lp);
+        } else if (shown == 0) {
+            chargers.addView(hint(Str.get(R.string.hql_route_no_chargers)));
+        }
     }
 
     /** Círculo con el rayo, del color según la potencia del cargador. */
@@ -384,6 +796,7 @@ final class RouteTab implements CarScreen {
     @Override
     public void destroy() {
         running = false;
+        if (searchState != null) searchState.close();
     }
 
     static String weatherText(int code) {
@@ -406,9 +819,61 @@ final class RouteTab implements CarScreen {
         return RoutePlanner.remainingKwh(plan);
     }
 
-    /** % de batería al llegar, o NaN si no se sabe. */
+    /** % de batería al llegar, o NaN si no se sabe (en un REEV, no baja del 20 %: lo pone el generador). */
     private double arrivalPct() {
-        return CloudEnergy.arrivalPct(soc, remainingKwh(), capKwh);
+        double a = CloudEnergy.arrivalPct(soc, remainingKwh(), capKwh);
+        return reev() && !Double.isNaN(a) ? Math.max(Math.min(soc, REEV_FLOOR_PCT), a) : a;
+    }
+
+    /** REEV: por debajo de este % arranca el generador y la batería ya no baja (lo pone la gasolina). */
+    static final double REEV_FLOOR_PCT = 20;
+
+    /** El coche es un REEV (lo dice la nube). */
+    private boolean reev() {
+        return cloud != null && cloud.hasData() && cloud.status.reev();
+    }
+
+    /** Litros de gasolina que pondría el generador para llegar (REEV), o 0. */
+    private double reevLiters() {
+        double raw = CloudEnergy.arrivalPct(soc, remainingKwh(), capKwh);
+        if (!reev() || Double.isNaN(raw) || raw >= REEV_FLOOR_PCT) return 0;
+        return (REEV_FLOOR_PCT - raw) / 100 * capKwh / TripStats.KWH_PER_LITER;
+    }
+
+    /** Consumo medio según el coche: el de sus viajes de los últimos 30 días o, si no, el de las últimas semanas. NaN si no. */
+    private static double carAverage() {
+        CloudHistory.Match m = CloudHistory.totals(CarCloud.history(), DemoMode.wallClockMs() - 30 * 86_400_000L);
+        if (m != null && m.km >= 20 && !Double.isNaN(m.kwhPer100())) return m.kwhPer100();
+        CloudHistory.Weekly w = CarCloud.weekly();
+        return w == null ? Double.NaN : w.avgKwhPer100;
+    }
+
+    /**
+     * De dónde sale la previsión, en una línea: al llegar, lo previsto frente a lo real; antes, lo que suben y bajan los km
+     * que faltan y lo que cuestan esas cuestas, y la media según el coche.
+     */
+    private String explain(RoutePlanner.Plan pl, int prog) {
+        if (!Double.isNaN(pl.arrivalPredictedKwh)) {
+            return Double.isNaN(pl.arrivalRealKwh)
+                    ? Str.get(R.string.hql_route_arrival_generator, pl.arrivalPredictedKwh)
+                    : Str.get(R.string.hql_route_arrival_compare, pl.arrivalPredictedKwh, pl.arrivalRealKwh);
+        }
+        double up = 0;
+        double down = 0;
+        for (int i = prog + 1; i < pl.n; i++) {
+            double d = pl.elev[i] - pl.elev[i - 1];
+            if (d > 0) up += d;
+            else down -= d;
+        }
+        double hills = pl.gravCum == null ? Double.NaN : pl.gravCum[pl.n - 1] - pl.gravCum[Math.min(prog, pl.n - 1)];
+        StringBuilder b = new StringBuilder();
+        if (up < 15 && down < 15) {
+            b.append(Str.get(R.string.hql_route_flat_ahead));
+        } else if (!Double.isNaN(hills)) {
+            b.append(Str.get(hills >= 0 ? R.string.hql_route_hills_cost : R.string.hql_route_hills_gain, Math.round(up), Math.round(down),
+                    Math.abs(hills)));
+        }
+        return b.toString();
     }
 
     private static int levelColor(double pct) {
@@ -428,10 +893,12 @@ final class RouteTab implements CarScreen {
         }
         // Destino.
         CarIcons.pin(cv, x0 + 16, y0 + 30, 40, CarKit.ACCENT, CarKit.SURFACE, p);
-        CarKit.label(cv, Str.get(R.string.hql_destination), x0 + 48, y0 + 14, p);
+        // El hueco de los botones, medido (en otros idiomas son más anchos que en español).
+        float pillsW = actionsRow.getWidth() > 0 ? actionsRow.getWidth() + 20
+                : goMaps.getVisibility() == View.VISIBLE ? 620 : clear.getVisibility() == View.VISIBLE ? 360 : 240;
+        CarKit.label(cv, Str.get(R.string.hql_destination), x0 + 48, y0 + 14, CarKit.FAINT, p, Paint.Align.LEFT, r.width() - pillsW - 60);
         p.setTypeface(CarKit.MEDIUM);
         p.setTextSize(40);
-        float pillsW = goMaps.getVisibility() == View.VISIBLE ? 620 : clear.getVisibility() == View.VISIBLE ? 360 : 240;
         CarKit.text(cv, CarKit.ellipsize(dest != null ? dest : "", r.width() - pillsW - 60, p), x0 + 48, y0 + 58, 40, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
         // Fichas: lo que falta, llegada, energía y consumo previstos.
         int prog = Math.min(pl.progress, pl.n - 1);
@@ -458,6 +925,19 @@ final class RouteTab implements CarScreen {
             p.setTypeface(CarKit.MEDIUM);
             p.setTextSize(21);
             CarKit.text(cv, CarKit.ellipsize(gpsNote, r.width(), p), x0, cy0 + 114, 21, CarKit.RED, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        } else {
+            // De dónde sale la previsión: las cuestas de lo que falta (o, al llegar, lo previsto y lo real), a la izquierda
+            // de la nota «ruta aproximada».
+            String why = explain(pl, prog);
+            p.setTypeface(CarKit.MEDIUM);
+            p.setTextSize(18);
+            float right = CarKit.text(cv, Str.get(R.string.hql_route_source), r.right, cy0 + 114, 18, CarKit.FAINT, CarKit.MEDIUM, p,
+                    Paint.Align.RIGHT) + 30;
+            if (!why.isEmpty()) {
+                p.setTextSize(21);
+                CarKit.text(cv, CarKit.ellipsize(why, r.width() - right, p), x0, cy0 + 114, 21, CarKit.DIM, CarKit.MEDIUM, p,
+                        Paint.Align.LEFT);
+            }
         }
         // Perfil, viento, tramos y leyenda.
         float gx0 = x0 + 74;
@@ -587,7 +1067,6 @@ final class RouteTab implements CarScreen {
         }
         p.setStrokeCap(Paint.Cap.BUTT);
         p.setStyle(Paint.Style.FILL);
-        CarKit.text(cv, Str.get(R.string.hql_route_source), c.right, c.top - 10, 18, CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.RIGHT);
         // Lo ya recorrido, apagado.
         float xp = xFor(pl, prog, c);
         p.setColor(CarKit.alpha(CarKit.SURFACE, 0.5f));
@@ -595,6 +1074,7 @@ final class RouteTab implements CarScreen {
         // Cargadores sobre el eje.
         double here = pl.km[prog];
         for (RoutePlanner.Charger ch : pl.chargers) {
+            if (!wanted(ch)) continue;
             float x = (float) (c.left + ch.kmAlong / Math.max(0.1, pl.totalKm) * c.width());
             boolean ahead = ch.kmAlong >= here - 0.5;
             p.setColor(ahead ? CarKit.SURFACE_TOP : CarKit.SURFACE_HI);
@@ -605,8 +1085,10 @@ final class RouteTab implements CarScreen {
         if (!Double.isNaN(soc)) {
             socLine.rewind();
             double last = soc;
+            boolean hold = reev();
             for (int i = prog; i < pl.n; i++) {
                 double sp = soc - (pl.kwhCum[i] - pl.kwhCum[prog]) / capKwh * 100;
+                if (hold) sp = Math.max(Math.min(soc, REEV_FLOOR_PCT), sp);
                 last = sp;
                 float y = (float) (c.bottom - Math.max(0, Math.min(100, sp)) / 100 * c.height());
                 if (i == prog) socLine.moveTo(xFor(pl, i, c), y);
@@ -656,10 +1138,14 @@ final class RouteTab implements CarScreen {
         CarKit.text(cv, "km", c.right, c.bottom + 24, 18, CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.RIGHT);
     }
 
-    /** Consumo previsto de cada tramo (kWh/100 km); lo ya recorrido, apagado. */
+    /**
+     * Consumo previsto de cada tramo (kWh/100 km); lo ya recorrido, apagado. Con datos del coche, su media como línea de
+     * referencia: así se ve qué tramos gastarán más o menos de lo normal en ese coche.
+     */
     private void segments(Canvas cv, RectF c, RoutePlanner.Plan pl, int prog, Paint p) {
         double len = pl.totalKm / SEGMENTS;
-        double max = 30;
+        double avg = carAverage();
+        double max = Double.isNaN(avg) ? 30 : Math.max(30, avg * 1.25);
         double[] v = new double[SEGMENTS];
         for (int j = 0; j < SEGMENTS; j++) {
             double a = kwhAt(pl, j * len);
@@ -669,6 +1155,7 @@ final class RouteTab implements CarScreen {
         }
         float w = c.width() / SEGMENTS;
         double here = pl.km[prog];
+        if (!Double.isNaN(avg)) averageLine(cv, c, avg, max, p);
         for (int j = 0; j < SEGMENTS; j++) {
             float h = (float) (Math.max(0, v[j]) / max * (c.height() - 20));
             float x = c.left + j * w + 4;
@@ -680,6 +1167,18 @@ final class RouteTab implements CarScreen {
             CarKit.text(cv, String.format(Locale.getDefault(), "%.0f", v[j]), x + (w - 8) / 2, tmp.top - 6, 17,
                     past ? CarKit.MUTED : CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.CENTER);
         }
+    }
+
+    /** La media según el coche como línea a trazos por detrás de las barras (la explica la leyenda). */
+    private void averageLine(Canvas cv, RectF c, double avg, double max, Paint p) {
+        float ya = (float) (c.bottom - avg / max * (c.height() - 20));
+        p.setStyle(Paint.Style.STROKE);
+        p.setStrokeWidth(3);
+        p.setColor(CarKit.alpha(CarKit.TEXT, 0.7f));
+        p.setPathEffect(dash);
+        cv.drawLine(c.left, ya, c.right, ya, p);
+        p.setPathEffect(null);
+        p.setStyle(Paint.Style.FILL);
     }
 
     private static double kwhAt(RoutePlanner.Plan pl, double km) {
@@ -700,7 +1199,20 @@ final class RouteTab implements CarScreen {
         x = swatch(cv, x, y, CarKit.BLUE, Str.get(R.string.hql_legend_tailwind), p);
         p.setColor(CarKit.ACCENT);
         cv.drawRect(x, y - 9, x + 22, y - 5, p);
-        CarKit.text(cv, Str.get(R.string.hql_legend_battery), x + 30, y, 19, CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        x += 30 + CarKit.text(cv, Str.get(R.string.hql_legend_battery), x + 30, y, 19, CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.LEFT) + 22;
+        // La media según el coche (la línea a trazos sobre las barras), si hay datos y cabe.
+        double avg = carAverage();
+        if (!Double.isNaN(avg)) {
+            String t = Str.get(R.string.hql_legend_car_avg, avg);
+            p.setTypeface(CarKit.MEDIUM);
+            p.setTextSize(19);
+            if (x + 30 + p.measureText(t) <= right) {
+                p.setColor(CarKit.TEXT);
+                cv.drawRect(x, y - 9, x + 8, y - 5, p);
+                cv.drawRect(x + 13, y - 9, x + 22, y - 5, p);
+                CarKit.text(cv, t, x + 30, y, 19, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+            }
+        }
     }
 
     private float swatch(Canvas cv, float x, float y, int color, String s, Paint p) {
@@ -773,6 +1285,9 @@ final class RouteTab implements CarScreen {
         } else if (Double.isNaN(arr)) {
             st = "";
             sc = CarKit.DIM;
+        } else if (reevLiters() > 0.05) {
+            st = Str.get(R.string.hql_route_reev_fuel, reevLiters());
+            sc = CarKit.AMBER;
         } else if (arr < 0) {
             st = Str.get(R.string.hql_route_battery_no);
             sc = CarKit.RED;

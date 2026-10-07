@@ -98,8 +98,8 @@ android {
         applicationId = "com.headqlink.app" // headqlink: identificador propio del fork
         minSdk = 16
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.2.6-qdauto"
+        versionCode = 9
+        versionName = "0.2.7-qdauto"
         setProperty("archivesBaseName", "${applicationId}_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
@@ -228,6 +228,7 @@ android {
                 it.systemProperty("hql.preview.dir", layout.buildDirectory.dir("preview").get().asFile.absolutePath)
                 it.systemProperty("hql.preview.suffix", (project.findProperty("previewSuffix") ?: "").toString())
                 it.systemProperty("hql.preview.only", (project.findProperty("previewOnly") ?: "").toString())
+                it.systemProperty("hql.preview.lang", (project.findProperty("previewLang") ?: "").toString())
             }
         }
     }

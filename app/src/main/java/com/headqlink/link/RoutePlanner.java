@@ -23,6 +23,11 @@ import java.util.Locale;
  * tiempo previsto en cada tramo a la hora de paso) y Overpass/OSM (cargadores junto a la ruta).
  * Con EnergyModel se estima la energía de cada tramo y el % de batería al llegar. La ruta de OSRM
  * puede no coincidir exactamente con la de Google Maps: es una aproximación y así se indica.
+ *
+ * La energía de cada tramo tiene dos partes: la de las cuestas (física: subir cuesta, bajar recupera) y la de la
+ * conducción (aire, rodadura, arrancar y frenar en ciudad, climatización). La segunda se ajusta con lo que gastó el
+ * coche de verdad en las últimas rutas (RouteCalibration): al llegar, se compara lo previsto con la bajada real del %
+ * de la nube de Leapmotor.
  */
 final class RoutePlanner {
     static final class Charger {
@@ -32,6 +37,8 @@ final class RoutePlanner {
         double lon;
         double kmAlong;
         double maxKw;
+        /** Red (ChargerFilter: «tesla», «zunder»… u OTHER). */
+        String network = ChargerFilter.OTHER;
     }
 
     static final class Plan {
@@ -46,6 +53,10 @@ final class RoutePlanner {
         double[] headwind;
         double[] temp;
         double[] kwhCum;
+        /** La parte de kwhCum que se debe a las cuestas (kWh acumulados; negativa si se recupera bajando). */
+        double[] gravCum;
+        /** Factor de ajuste a la conducción real con el que se calculó (RouteCalibration). */
+        double factor = 1.0;
         double totalKm;
         long totalSeconds;
         double destTemp = Double.NaN;
@@ -55,6 +66,20 @@ final class RoutePlanner {
         final List<Charger> chargers = new ArrayList<>();
         /** Índice del punto de la ruta más cercano a la posición actual. */
         volatile int progress;
+        /** Hora (de pared) a la que se calculó. */
+        long builtAtMs;
+        // Para comparar al llegar: la primera lectura de la nube tras calcularla (NaN: aún no) y el punto de la ruta.
+        double startSoc = Double.NaN;
+        double startOdo = Double.NaN;
+        double startCap = Double.NaN;
+        double startFuel = Double.NaN;
+        int startProgress;
+        /** Hora (de pared) de la llegada, o 0. */
+        long arrivedAtMs;
+        /** Lo previsto y lo real al llegar (kWh); NaN hasta saberlo. */
+        volatile double arrivalPredictedKwh = Double.NaN;
+        volatile double arrivalRealKwh = Double.NaN;
+        boolean arrivalDone;
     }
 
     private static RoutePlanner instance;
@@ -229,6 +254,7 @@ final class RoutePlanner {
         NavTap.Info nav = NavTap.getInfo();
         Plan p = plan;
         if (p != null && !Double.isNaN(s.lat)) p.progress = nearest(p, s.lat, s.lon, p.progress);
+        if (p != null) compareOnArrival(p, s);
         // Destino: el de AA si lo manda; si no, el elegido aquí.
         Place m = manual;
         String dest = nav.active && nav.destination != null ? nav.destination : m != null ? m.name : null;
@@ -249,17 +275,94 @@ final class RoutePlanner {
         status = Str.get(R.string.hql_route_calculating, dest);
         try {
             Plan np = useManual ? build(dest, s.lat, s.lon, m.lat, m.lon) : build(dest, s.lat, s.lon, Double.NaN, Double.NaN);
+            np.builtAtMs = System.currentTimeMillis();
             plan = np;
             failedDestination = null;
             status = "";
             // Sin el nombre del destino: el log se exporta y no lleva ubicaciones (qdauto §7.5).
-            L.i(String.format(Locale.US, "ruta: %.1f km · %.1f kWh estimados · %d cargadores",
-                    np.totalKm, np.kwhCum[np.n - 1], np.chargers.size()));
+            L.i(String.format(Locale.US, "ruta: %.1f km · %.1f kWh estimados (%.1f por las cuestas, ajuste a la conducción ×%.2f) · "
+                    + "%d cargadores", np.totalKm, np.kwhCum[np.n - 1], np.gravCum[np.n - 1], np.factor, np.chargers.size()));
         } catch (Exception e) {
             failedDestination = dest;
             status = Str.get(R.string.hql_route_failed, e.getMessage());
             L.w("ruta: " + Http.safeError(e));
         }
+    }
+
+    /** Distancia al destino por debajo de la cual se da por llegado (km). */
+    static final double ARRIVED_KM = 0.3;
+
+    /**
+     * Lo previsto frente a lo real: la primera lectura de la nube tras calcular la ruta marca el inicio; al llegar, la
+     * primera lectura de después da lo real. Con una llegada que sirva, se ajusta la previsión de las siguientes rutas.
+     */
+    private void compareOnArrival(Plan p, CarSensors.Snapshot s) {
+        if (p.arrivalDone || demo) return;
+        CarCloud.Snapshot cs = CarCloud.snapshot();
+        if (cs == null || !cs.hasData() || cs.demo) return;
+        LeapStatus st = cs.status;
+        if (Double.isNaN(p.startSoc)) {
+            if (cs.fetchedAtMs <= p.builtAtMs || Double.isNaN(st.socBest()) || Double.isNaN(st.odometerKm)) return;
+            p.startSoc = st.socBest();
+            p.startOdo = st.odometerKm;
+            p.startCap = cs.capacityKwh;
+            p.startFuel = st.fuelLiters;
+            p.startProgress = p.progress;
+            return;
+        }
+        if (st.charging() || st.pluggedIn() || st.socBest() > p.startSoc + 0.5) {
+            p.arrivalDone = true; // cargó por el camino: no se compara
+            return;
+        }
+        double toGo = p.totalKm - p.km[Math.min(p.progress, p.n - 1)];
+        if (p.arrivedAtMs == 0) {
+            if (toGo > ARRIVED_KM || Double.isNaN(s.lat)) return;
+            p.arrivedAtMs = System.currentTimeMillis();
+            return;
+        }
+        // La lectura de después de llegar (el coche sube el dato cada poco; se espera a una nueva).
+        if (cs.fetchedAtMs < p.arrivedAtMs + 20_000) return;
+        p.arrivalDone = true;
+        double predicted = p.kwhCum[p.n - 1] - p.kwhCum[Math.min(p.startProgress, p.n - 1)];
+        double real = (p.startSoc - st.socBest()) / 100.0 * p.startCap;
+        double km = st.odometerKm - p.startOdo;
+        // REEV con el generador en marcha: la bajada del % no es lo gastado.
+        boolean generator = !Double.isNaN(p.startFuel) && !Double.isNaN(st.fuelLiters) && p.startFuel - st.fuelLiters > 0.05;
+        p.arrivalPredictedKwh = predicted;
+        p.arrivalRealKwh = generator ? Double.NaN : real;
+        boolean usable = !generator && RouteCalibration.usable(predicted, real, km);
+        Config c = new Config(ctx);
+        String note = "";
+        if (usable) {
+            java.util.List<RouteCalibration.Sample> all = RouteCalibration.add(RouteCalibration.fromJson(c.routeCalibration()),
+                    new RouteCalibration.Sample(predicted, real, km, System.currentTimeMillis()));
+            c.setRouteCalibration(RouteCalibration.toJson(all));
+            note = String.format(Locale.US, "; el ajuste a la conducción pasa a ×%.2f (%d rutas)", RouteCalibration.factor(all), all.size());
+        }
+        L.i(String.format(Locale.US, "ruta: llegada: previsto %.2f kWh, real %s (nube Leapmotor, %.0f km)%s", predicted,
+                generator ? "sin medir (el generador del REEV cargó)" : String.format(Locale.US, "%.2f kWh", real), km, note));
+    }
+
+    /**
+     * Factor de ajuste a la conducción real: parte del historial del coche (su consumo de los últimos viajes, según la
+     * nube) y lo afinan las llegadas medidas. 1 sin nada de eso.
+     */
+    private double calibrationFactor() {
+        if (demo) return 1.0;
+        double prior = RouteCalibration.historyFactor(CarCloud.history(), 15);
+        return RouteCalibration.factor(RouteCalibration.fromJson(new Config(ctx).routeCalibration()), prior);
+    }
+
+    /**
+     * Energía de arrancar y frenar en ciudad que no ve un modelo a velocidad constante (kWh en dkm): paradas por km según
+     * la velocidad media del tramo, cada una con la energía cinética que no se recupera al frenar.
+     */
+    static double stopAndGoKwh(double speedKmh, double dkm) {
+        double perKm = speedKmh < 35 ? 1.5 : speedKmh < 50 ? 1.0 : speedKmh < 70 ? 0.4 : 0;
+        if (perKm == 0) return 0;
+        double v = speedKmh / 3.6;
+        double lost = 0.5 * EnergyModel.MASS_KG * v * v * (1 / EnergyModel.DRIVE_EFF - EnergyModel.REGEN_EFF);
+        return perKm * dkm * lost / 3.6e6;
     }
 
     private void trackEnergy(CarSensors.Snapshot s) {
@@ -385,16 +488,24 @@ final class RoutePlanner {
         p.destRain = last[3];
         p.destCode = (int) last[4];
 
-        // 5. Energía estimada por tramo.
+        // 5. Energía estimada por tramo: la de la conducción (ajustada a lo real) y la de las cuestas (física).
         EnergyModel m = new EnergyModel();
+        double f = calibrationFactor();
+        p.factor = f;
         p.kwhCum = new double[n];
+        p.gravCum = new double[n];
         for (int i = 1; i < n; i++) {
             double dkm = p.km[i] - p.km[i - 1];
             double s = Math.max(1, segS[i]);
             double v = Math.max(5, Math.min(140, dkm / s * 3600));
             double grade = dkm > 0 ? Math.max(-15, Math.min(15, (p.elev[i] - p.elev[i - 1]) / (dkm * 1000) * 100)) : 0;
+            double h = s / 3600;
             double kw = m.compute(v, grade, p.headwind[i], p.temp[i], 0);
-            p.kwhCum[i] = p.kwhCum[i - 1] + kw * s / 3600;
+            double flat = m.compute(v, 0, p.headwind[i], p.temp[i], 0);
+            double drive = flat * h + stopAndGoKwh(v, dkm);
+            double hills = (kw - flat) * h;
+            p.kwhCum[i] = p.kwhCum[i - 1] + drive * f + hills;
+            p.gravCum[i] = p.gravCum[i - 1] + hills;
         }
 
         // 6. Cargadores a menos de 2,5 km de la ruta (OpenStreetMap).
@@ -458,7 +569,8 @@ final class RoutePlanner {
             poly.append(String.format(Locale.US, "%.4f,%.4f", p.lat[i], p.lon[i]));
             lastKm = p.km[i];
         }
-        String q = "[out:json][timeout:25];node[\"amenity\"=\"charging_station\"](around:2500," + poly + ");out body 300;";
+        // Nodos y también áreas (algunas estaciones están dibujadas como superficie): de esas, su centro.
+        String q = "[out:json][timeout:25];nwr[\"amenity\"=\"charging_station\"](around:2500," + poly + ");out center body 300;";
         JSONArray els = new JSONObject(Http.post("https://overpass-api.de/api/interpreter", "data=" + Uri.encode(q)))
                 .getJSONArray("elements");
         for (int i = 0; i < els.length(); i++) {
@@ -466,8 +578,12 @@ final class RoutePlanner {
             JSONObject tags = e.optJSONObject("tags");
             if (tags == null) continue;
             Charger c = new Charger();
-            c.lat = e.getDouble("lat");
-            c.lon = e.getDouble("lon");
+            JSONObject center = e.optJSONObject("center");
+            c.lat = center != null ? center.optDouble("lat") : e.optDouble("lat");
+            c.lon = center != null ? center.optDouble("lon") : e.optDouble("lon");
+            if (Double.isNaN(c.lat) || Double.isNaN(c.lon)) continue;
+            c.network = ChargerFilter.classify(tags.optString("brand"), tags.optString("network"), tags.optString("operator"),
+                    tags.optString("name"));
             c.name = firstNonEmpty(tags.optString("name"), tags.optString("operator"), tags.optString("brand"), Str.get(R.string.hql_charge_point));
             StringBuilder sockets = new StringBuilder();
             java.util.Iterator<String> it = tags.keys();
@@ -487,7 +603,7 @@ final class RoutePlanner {
             c.kmAlong = p.km[idx];
             p.chargers.add(c);
         }
-        p.chargers.sort((a, b) -> Double.compare(a.kmAlong, b.kmAlong));
+        java.util.Collections.sort(p.chargers, (a, b) -> Double.compare(a.kmAlong, b.kmAlong));
     }
 
     private static double parseKw(String v) {

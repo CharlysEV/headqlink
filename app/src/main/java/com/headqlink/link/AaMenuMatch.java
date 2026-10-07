@@ -49,12 +49,14 @@ final class AaMenuMatch {
     private static final String[] HEAD_UNIT = {
             "unidad principal", "unidade principal", "head unit", "headunit", "unidad central", "unidade central",
             "unita principale", "unite principale", "haupteinheit", "hoofdunit",
+            // Alemán: según la versión, «Server für Infotainmentsystem starten»; neerlandés, «hoofdeenheid».
+            "infotainmentsystem", "hoofdeenheid",
     };
     /** Verbos de parar (palabras enteras, normalizadas). */
     private static final String[] STOP_WORDS = {
             "parar", "detener", "stop", "interromper", "deter", "desactivar", "desativar", "apagar", "terminar",
             "finalizar", "encerrar",
-            "arresta", "arrestare", "ferma", "arreter", "stoppen", "anhalten", "beenden",
+            "arresta", "arrestare", "ferma", "interrompi", "arreter", "stoppen", "anhalten", "beenden",
     };
     /** Descripción del botón ⋮ (normalizada; trozos). */
     private static final String[] OVERFLOW_DESC = {

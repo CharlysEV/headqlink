@@ -1,6 +1,6 @@
 # HeadQLink · User manual
 
-**Languages:** [Español](MANUAL.md) · [Português](MANUAL.pt.md) · **English**
+**Languages:** [Español](MANUAL.md) · [Português](MANUAL.pt.md) · **English** · [Italiano](MANUAL.it.md)
 
 Driver's manual for HeadQLink version **0.2** (fork [CharlysEV/headqlink](https://github.com/CharlysEV/headqlink)).
 Button and menu names are shown in "quotes", exactly as the app shows them in English.
@@ -377,16 +377,31 @@ version). That tells us whether the C10 supports it.
     in green, where energy is recovered), the wind along the way, the chargers and the expected battery; the battery on
     arrival in a ring (set your % with "−5"/"+5"), the weather at the destination and the chargers along the route ("Go"
     opens Google Maps navigation).
+    - **Search destination:** it searches while you type (when you pause, from 3 letters), with Android's address search
+      (Google's) and Photon (OpenStreetMap) at once: addresses with a number and places ("petrol station",
+      "supermarket"), each with how many km away it is. Every key lights up when pressed and what you type is also shown
+      above the keyboard. With the box empty you get your **recent destinations**. "Speak" searches what you say (the
+      phone's speech recognition; it needs the microphone permission).
+    - **Where the forecast comes from:** under the chips, how much the remaining km climb and descend and what those
+      hills cost ("Ahead: up 90 m, down 20 m: +0.5 kWh"). With the Leapmotor account, the dashed line over the bars is
+      **your car's average** (from its history: see [Real car data](#real-car-data-leapmotor-account)) and the forecast
+      is fitted to your real consumption; on arrival it shows "expected … · real …".
+    - **Filter chargers:** "Filter" picks the minimum power (any, 22, 50, 100 or 150 kW) and the networks (Tesla, Zunder,
+      Ionity, Iberdrola, Endesa X, Repsol, Wenea…, those on the route, with how many chargers each has). It is saved,
+      and the bolts on the profile follow it too. The data comes from OpenStreetMap: power or network may be missing.
   - "Driving": the next manoeuvre in large, with a bar that empties until the turn, the lanes and the manoeuvre after;
     the speed with the speed-limit sign, heading, altitude, slope and the sun until sunset.
   - "Trips": the current trip and the saved ones, with their route, consumption, climbing and cost; the km of the last
-    14 days and the records.
+    14 days and the records. **Tap a trip** to open it in large: the route on a map (OpenStreetMap), the start, the end and
+    **the stops** (2 minutes or more in the same place, with how long, the time and the km), and its figures. Stops are
+    known for trips from 0.2.7 on.
   - "Gauges": speedometer with the limit and the maximum, G forces with the trail of the last seconds and the peaks,
     inclination and a smoothness score (0-100) from the jerks when accelerating, braking and turning.
   - "Efficiency": the power of the last 2 minutes (what is recovered in green), consumption now, for the trip and on
     average, where the energy goes, the trip cost, the CO₂ that did not come out of a tailpipe and a tip.
   - "Status" (with the Leapmotor account): the car's real battery, range, charging, tyre pressures, doors and odometer,
-    with the age of the data. Without an account, it explains how to set one up.
+    with the age of the data; the pressures sit on **a 3D C10 you rotate with your finger** (open doors and boot show
+    open, in amber). Without an account, it explains how to set one up.
   - **With the phone locked: "Location all the time".** Route, Driving, Trips, Gauges and Efficiency use the phone's
     GPS. If HeadQLink's location is only "Allow only while using the app", Android only gives it the GPS while
     HeadQLink is on screen or if the link went to the foreground with HeadQLink in front. When it starts without it
@@ -576,8 +591,8 @@ a few seconds"), auto-hide the panel and latency optimizations, the "Electricity
 
 ### "Language"
 
-"Language" (Android 13 or later): "System language", "Español", "English", "Português (Portugal)" or "Português
-(Brasil)". The car interface switches on the next connection. On Android 12 or earlier, the app uses the system
+"Language" (Android 13 or later): "System language", "Español", "English", "Português (Portugal)", "Português
+(Brasil)", "Italiano", "Français", "Deutsch" or "Nederlands". The car interface switches on the next connection. On Android 12 or earlier, the app uses the system
 language.
 
 ### "TV list" and "Radio list" ("Auto extended")
@@ -602,16 +617,29 @@ extended":
 
 - **"Status"** (the sixth "Car" tab): the battery in a ring with the range and the kWh left; charging (AC or DC fast,
   with the power and the time left) or, unplugged, the power leaving or entering the battery; the battery temperature
-  (with "Cold battery: slower fast charging and less regeneration" below 10 °C); the four pressures on the car seen
-  from above, the low tyre in amber (below 2.1 bar, 0.3 bar or more below the others, or with the car's own warning);
-  open doors and boot, the lock, the odometer and how old the data is. The cloud does not report the windows.
+  (with "Cold battery: slower fast charging and less regeneration" below 10 °C); the four pressures on **a 3D C10** you
+  rotate with your finger, the low tyre in amber (below 2.1 bar, 0.3 bar or more below the others, or with the car's own
+  warning); open doors and boot (open on the model), the lock, the odometer and how old the data is. The cloud does not
+  report the windows. The 3D view only redraws while you move it (it doesn't heat the phone); without WebGL you get the
+  car seen from above.
+- **C10 REEV (range extender):** HeadQLink recognises it by itself (the car reports its tank) and switches the battery
+  to 28.4 kWh. In "Status", the **tank** (%, exact litres, range on petrol and total range); in "Trips", the **litres**
+  of each trip and L/100 km (with the generator off, "0 L: all electric"), and the cost including petrol; in "Route",
+  the battery doesn't go below 20 % (where the generator steps in) and it says how many litres it will add to get there.
 - **"Route"**: the current % is the real one ("−5"/"+5" disappear) and the battery on arrival comes from it with your
-  variant's capacity.
+  variant's capacity. The **consumption forecast** is fitted to your car: it starts from the real consumption of your
+  trips (its history) and is refined by the routes you finish (on arrival it compares the forecast with what the battery
+  dropped). The hills part is physics and isn't touched: if what's left climbs, the forecast goes up even if your average
+  is lower.
 - **"Efficiency"**: the trip consumption is the real one (how much the battery dropped times its capacity, over the
   odometer km) once the battery has dropped 2 %; before that it says "too little used to measure yet". Next to the
   estimated power, the real one shows when the data is recent. The energy breakdown is still estimated.
-- **"Trips"**: each trip stores the car's % and km at the start and at the end; with them, its real consumption
-  (marked "REAL") and the real totals under "Records".
+- **"Trips"**: each trip's consumption is **the car's own** from its history (marked "CAR"; the same as the official
+  Leapmotor app) or, if missing, the real one from the % drop (marked "REAL"); under "Records", the last 30 days' total
+  according to the car.
+- **Car history:** the cloud keeps your trips of the last weeks with the kWh (and on a REEV the litres) measured by the
+  car itself, and its weekly average consumption. HeadQLink reads it every 30 minutes at most (3 and 12 minutes after a
+  trip ends) and the weekly average every 12 hours.
 
 Every figure says where it comes from: "real · 40 s ago" (the age of the data: the cloud is not real time and, with
 the car off, gives the last it knew) or "estimated".
@@ -624,20 +652,22 @@ the car off, gives the last it knew) or "estimated".
    a .p12/.pfx (it asks for the password if it has one).
 2. **Account.** Your Leapmotor email and password, then "Sign in". The password is not stored.
 3. **Car.** If the account has one, it is chosen; with several, pick yours.
-4. **Battery.** The cloud does not report the variant: "C10 Life · 69.9 kWh", "C10 ProMax · 81.9 kWh" or "Other" (kWh
-   by hand). It turns the % into kWh.
+4. **Battery.** The cloud does not report the variant: "C10 Life · 69.9 kWh", "C10 ProMax · 81.9 kWh", "C10 REEV ·
+   28.4 kWh + petrol" (chosen by itself if the car has a tank) or "Other" (kWh by hand). It turns the % into kWh.
 5. **"Read status now"** to check it: battery, range, charging, pressures and the age of the data.
 
 With "Auto extended" running (or the "Extended mode preview"), HeadQLink reads the car every 2 minutes (90 s with the
 "Car" section on screen, like LMB10); if the car hasn't uploaded anything new (parked or asleep), every 5 and then 15
-minutes; after errors, at 2, 5 and 10 minutes; and at most 400 reads a day, so as not to abuse an unofficial API. It stops when you disconnect. "Use the real car
+minutes; after errors, at 2, 5 and 10 minutes; and at most 400 reads a day (history included), so as not to abuse an
+unofficial API. It stops when you disconnect. "Use the real car
 data" turns it off without deleting anything.
 
 **Privacy and security.**
 
 - Read-only: HeadQLink **never sends commands to the car** (no lock, climate, charging, nothing).
 - Your data only goes **to Leapmotor's servers**. The car's location is neither read nor stored.
-- The certificate and the session are stored **encrypted** with an Android Keystore key, outside backups. The password
+- The certificate, the session and the trip history are stored **encrypted** with an Android Keystore key, outside
+  backups. The password
   is not stored: if the session expires, "Status" says so and you sign in again on the phone.
 - The Leapmotor server uses a certificate from its own authority. HeadQLink checks that its key is the known one; if it
   ever changes, it does not connect until you accept it on the phone (only do so on a network you trust).
@@ -647,10 +677,13 @@ data" turns it off without deleting anything.
 
 > [!WARNING]
 > It uses an **unofficial Leapmotor API**: it may stop working at any time, and HeadQLink is not affiliated with
-> Leapmotor. With the **C10 REEV** (range extender) the real consumption is meaningless: the generator charges the
-> battery while driving.
+> Leapmotor. With the **C10 REEV**, the real consumption from the % drop is meaningless while the generator charges on
+> the move: then the car's history and its petrol counter rule.
 
-The protocol comes from **[LMB10](https://github.com/txurtxil/LPB10)** by **txurtxil** (GPL-3.0).
+The protocol comes from **[LMB10](https://github.com/txurtxil/LPB10)** by **txurtxil** (GPL-3.0). The REEV tank signals
+and the trip history come from **[leapmotor-mate](https://github.com/ProtossBlaster/leapmotor-mate)** (ProtossBlaster),
+and the weekly consumption from **[leapmotor-api](https://github.com/markoceri/leapmotor-api)** (markoceri), both
+AGPL-3.0.
 
 ---
 
@@ -769,13 +802,16 @@ You can ask for help on the project's GitHub page: [CharlysEV/headqlink](https:/
 | Display over other apps | Opening Android Auto with the phone in the background. | Optional |
 | Photos, videos and location | Gallery and driving panels. | Optional, "Auto extended" |
 | Location all the time | Keeping the "Car" panels going with the phone locked. Only used with the link running or the "Car" screens open. | Recommended, "Auto extended" |
-| Internet | "Auto extended" services (OpenStreetMap, OSRM, Open-Meteo, radio-browser.info), your TV and radio lists and, if you set it up, the Leapmotor cloud (real car data, read-only). | Only those features |
+| Microphone | "Speak" in "Search destination": the phone's speech recognition understands it. | Optional, "Auto extended" |
+| Internet | "Auto extended" services (OpenStreetMap, OSRM, Open-Meteo, radio-browser.info), the destination search (Photon and Android's address search, Google's: they receive what you type), the trip map (OpenStreetMap tiles), your TV and radio lists and, if you set it up, the Leapmotor cloud (real car data, read-only). | Only those features |
 
 - HeadQLink **sends no telemetry** and has no ads.
 - It **doesn't share GPS** with Android Auto by default.
 - Its internal services aren't open to other apps.
-- The APK declares other permissions inherited from Open Headunit, such as the microphone. HeadQLink doesn't ask for
-  them during setup.
+- The APK declares other permissions inherited from Open Headunit. HeadQLink doesn't ask for them during setup; the
+  microphone is only used for "Speak" in the search (if it isn't allowed, the car says how to allow it).
+- The search's **recent destinations** and the **trip routes** are only stored on the phone (the log carries neither
+  destinations nor positions).
 
 > [!IMPORTANT]
 > **The Android Auto server.** With Android Auto 17.4 or later, HeadQLink switches on the "head unit server" in Android

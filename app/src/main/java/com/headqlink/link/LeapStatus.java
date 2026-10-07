@@ -7,6 +7,9 @@
  * https://github.com/txurtxil/LPB10 (GPL-3.0). HeadQLink (AGPL-3.0) las incorpora según la sección 13 de ambas
  * licencias.
  *
+ * Las señales del depósito de los REEV (3235 % de gasolina, 3263 mililitros, 3259 autonomía con gasolina y 3261
+ * autonomía total) son las que descifró leapmotor-mate (ProtossBlaster, AGPL-3.0) con los datos de sus usuarios.
+ *
  * A propósito NO se leen ni se guardan la posición del coche (latitud y longitud) ni nada que no enseñe HeadQLink.
  */
 package com.headqlink.link;
@@ -61,6 +64,11 @@ final class LeapStatus {
         m.put("2648", "rightFrontTirePressureState");
         m.put("2655", "leftRearTirePressureState");
         m.put("2662", "rightRearTirePressureState");
+        // Autonomía extendida (C10 REEV): solo las manda un coche con depósito.
+        m.put("3235", "fuelLevel");
+        m.put("3263", "fuelMl");
+        m.put("3259", "fuelRange");
+        m.put("3261", "combinedRange");
         SIGNALS = java.util.Collections.unmodifiableMap(m);
     }
 
@@ -106,6 +114,11 @@ final class LeapStatus {
     private final int[] tyreState;
     /** Hora del dato en el coche (ms), o 0 si la nube no la da. */
     final long carTimeMs;
+    /** REEV: % del depósito (en pasos de 0,1), litros que cuenta el coche (en ml), autonomía con gasolina y total. */
+    final double fuelPct;
+    final double fuelLiters;
+    final double fuelRangeKm;
+    final double combinedRangeKm;
 
     private LeapStatus(Map<String, Object> m) {
         soc = asDouble(asIntObj(m.get("soc")));
@@ -138,6 +151,11 @@ final class LeapStatus {
             tyreState[i] = st == null ? -1 : st;
         }
         carTimeMs = dataTime(m);
+        fuelPct = asDouble(m.get("fuelLevel"));
+        double ml = asDouble(m.get("fuelMl"));
+        fuelLiters = Double.isNaN(ml) ? Double.NaN : ml / 1000.0;
+        fuelRangeKm = asDouble(m.get("fuelRange"));
+        combinedRangeKm = asDouble(m.get("combinedRange"));
     }
 
     /** Estado a partir del objeto «data» de la respuesta de /status/get/…, con sus señales ya fusionadas. */
@@ -290,6 +308,11 @@ final class LeapStatus {
         return Double.isNaN(preciseSoc) ? soc : preciseSoc;
     }
 
+    /** Autonomía extendida (REEV): el coche manda el depósito de gasolina. */
+    boolean reev() {
+        return !Double.isNaN(fuelPct) || !Double.isNaN(fuelLiters);
+    }
+
     /** Enchufado: entrada de CA (lenta) o de CC (rápida) activa. */
     boolean pluggedIn() {
         return Boolean.TRUE.equals(acCharge) || Boolean.TRUE.equals(dcCharge);
@@ -396,6 +419,12 @@ final class LeapStatus {
         double kw = powerKw();
         if (!Double.isNaN(kw)) b.append(String.format(Locale.US, ", %.1f kW", kw));
         if (!Double.isNaN(odometerKm)) b.append(String.format(Locale.US, ", %.0f km", odometerKm));
+        if (reev()) {
+            b.append(String.format(Locale.US, ", gasolina %s %%", fmt(fuelPct, 1)));
+            if (!Double.isNaN(fuelLiters)) b.append(String.format(Locale.US, " (%.2f L)", fuelLiters));
+            if (!Double.isNaN(fuelRangeKm)) b.append(String.format(Locale.US, ", %.0f km con gasolina", fuelRangeKm));
+            if (!Double.isNaN(combinedRangeKm)) b.append(String.format(Locale.US, ", %.0f km en total", combinedRangeKm));
+        }
         return b.toString();
     }
 

@@ -7,7 +7,11 @@
  *
  * SOLO LECTURA: de LMB10 se ha portado únicamente el login, la sesión, la lista de coches y el estado. Ninguna orden al
  * coche (cerrar, abrir, clima, ventanillas, carga, centinela, PIN…): esas funciones no existen aquí y, además, la capa
- * de transporte se niega a pedir cualquier ruta que no sea de las cuatro de lectura (ALLOWED_PATHS).
+ * de transporte se niega a pedir cualquier ruta que no sea de las de lectura (ALLOWED_PATHS).
+ *
+ * El historial de viajes (mileage/daily/detail/page, con los kWh y los litros de cada viaje según el coche) y el consumo
+ * semanal (getLastNweeks100kmECAndRank) siguen lo documentado por leapmotor-mate (ProtossBlaster) y leapmotor-api
+ * (markoceri), los dos AGPL-3.0: rutas, campos y la firma (pageNum y pageSize se firman como texto y van como número).
  */
 package com.headqlink.link;
 
@@ -36,15 +40,22 @@ final class LeapApi {
     static final String PATH_REFRESH = "/carownerservice/oversea/acct/v1/token/refresh";
     static final String PATH_VEHICLES = "/carownerservice/oversea/vehicle/v1/list";
     static final String PATH_STATUS = "/carownerservice/oversea/vehicle/v1/status/get/";
+    /** Viajes del coche por días (los kWh y, en un REEV, los litros de cada uno). Va en JSON, sin «oversea». */
+    static final String PATH_TRIPS = "/carownerservice/mileage/daily/detail/page";
+    /** Consumo medio de las últimas semanas según el coche (kWh/100 km). */
+    static final String PATH_WEEKLY_EC = "/carownerservice/oversea/drivingRecord/v1/getLastNweeks100kmECAndRank";
 
     /** Las únicas rutas que se piden. Todas leen; ninguna manda nada al coche. */
     static final List<String> ALLOWED_PATHS = Collections.unmodifiableList(java.util.Arrays.asList(
-            PATH_LOGIN, PATH_REFRESH, PATH_VEHICLES, PATH_STATUS));
+            PATH_LOGIN, PATH_REFRESH, PATH_VEHICLES, PATH_STATUS, PATH_TRIPS, PATH_WEEKLY_EC));
 
     /** true si la ruta es una de las de lectura (el estado, con el modelo detrás: /status/get/c10). */
     static boolean allowed(String path) {
         if (path == null) return false;
-        if (path.equals(PATH_LOGIN) || path.equals(PATH_REFRESH) || path.equals(PATH_VEHICLES)) return true;
+        if (path.equals(PATH_LOGIN) || path.equals(PATH_REFRESH) || path.equals(PATH_VEHICLES) || path.equals(PATH_TRIPS)
+                || path.equals(PATH_WEEKLY_EC)) {
+            return true;
+        }
         return path.startsWith(PATH_STATUS) && path.substring(PATH_STATUS.length()).matches("[a-z0-9_-]{1,24}");
     }
 
@@ -314,6 +325,57 @@ final class LeapApi {
         });
     }
 
+    /** Filas por página del historial de viajes (la nube solo admite 20). */
+    static final int TRIPS_PAGE_SIZE = 20;
+
+    /**
+     * Una página del historial de viajes entre fromS y toS (segundos de época): el objeto «data» (pageNum, totalPage,
+     * total y list). Va en JSON; pageNum y pageSize se firman como texto y se envían como número (si no, la firma no
+     * cuadra).
+     */
+    JSONObject tripsPage(String vin, long fromS, long toS, int page) throws IOException {
+        return withTokenRetry(() -> {
+            Session s = requireSession();
+            Map<String, String> params = new LinkedHashMap<>();
+            params.put("startTime", String.valueOf(fromS));
+            params.put("endTime", String.valueOf(toS));
+            params.put("pageNum", String.valueOf(page));
+            params.put("pageSize", String.valueOf(TRIPS_PAGE_SIZE));
+            Map<String, String> h = signedHeaders(vin, params);
+            h.putAll(authHeaders(s));
+            h.put("carvin", vin);
+            h.put("Content-Type", "application/json");
+            JSONObject body = new JSONObject();
+            try {
+                body.put("vin", vin);
+                body.put("startTime", String.valueOf(fromS));
+                body.put("endTime", String.valueOf(toS));
+                body.put("pageNum", page);
+                body.put("pageSize", TRIPS_PAGE_SIZE);
+            } catch (JSONException e) {
+                throw new IOException(e);
+            }
+            JSONObject res = parse(call(accountIdentity, PATH_TRIPS, h, body.toString()), "trip history", true);
+            JSONObject d = res.optJSONObject("data");
+            return d != null ? d : new JSONObject();
+        });
+    }
+
+    /** Consumo de las últimas semanas según el coche: el objeto «data» (rankResult y weeklyEC). */
+    JSONObject weeklyConsumption(String vin) throws IOException {
+        return withTokenRetry(() -> {
+            Session s = requireSession();
+            Map<String, String> params = new LinkedHashMap<>();
+            params.put("carvin", vin);
+            Map<String, String> h = signedHeaders(null, params);
+            h.putAll(authHeaders(s));
+            JSONObject res = parse(call(accountIdentity, PATH_WEEKLY_EC, h, "carvin=" + LeapCrypto.encodeComponent(vin)),
+                    "weekly consumption");
+            JSONObject d = res.optJSONObject("data");
+            return d != null ? d : new JSONObject();
+        });
+    }
+
     // ------------------------------------------------------------------ piezas
 
     private interface Call<T> {
@@ -385,6 +447,10 @@ final class LeapApi {
 
     /** _parseBody: JSON con code 0 y HTTP 200; si no, ApiException (sin copiar el cuerpo: puede llevar datos). */
     static JSONObject parse(Response r, String label) throws ApiException {
+        return parse(r, label, false);
+    }
+
+    static JSONObject parse(Response r, String label, boolean textCodeOk) throws ApiException {
         JSONObject o;
         try {
             o = new JSONObject(r.body);
@@ -392,6 +458,10 @@ final class LeapApi {
             throw new ApiException(r.code, -1, label + ": la respuesta no es JSON");
         }
         Object code = o.opt("code");
+        // El historial de viajes puede mandar el código como texto («0»): solo ahí se admite (leapmotor-mate).
+        if (textCodeOk && code instanceof String && ((String) code).trim().matches("-?[0-9]{1,12}")) {
+            code = Long.parseLong(((String) code).trim());
+        }
         boolean ok = code instanceof Number && ((Number) code).doubleValue() == 0;
         if (r.code != 200 || !ok) {
             int c = code instanceof Number ? ((Number) code).intValue() : -1;

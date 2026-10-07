@@ -239,6 +239,8 @@ class LeapApiTest {
         assertTrue(LeapApi.allowed(LeapApi.PATH_REFRESH))
         assertTrue(LeapApi.allowed(LeapApi.PATH_VEHICLES))
         assertTrue(LeapApi.allowed(LeapApi.PATH_STATUS + "c10"))
+        assertTrue(LeapApi.allowed(LeapApi.PATH_TRIPS))
+        assertTrue(LeapApi.allowed(LeapApi.PATH_WEEKLY_EC))
         for (p in listOf(
             "/carownerservice/oversea/vehicle/v1/app/remote/ctl",
             "/carownerservice/oversea/vehicle/v1/app/remote/ctl/result/query",
@@ -255,6 +257,40 @@ class LeapApiTest {
         val names = LeapApi::class.java.declaredMethods.map { it.name.lowercase() }
         for (bad in listOf("lock", "unlock", "remote", "ctl", "climate", "window", "trunk", "sentry", "pin", "operate", "command"))
             assertFalse(bad, names.any { it.contains(bad) })
+    }
+
+    @Test
+    fun tripHistoryIsJsonWithThePagingSignedAsText() {
+        val (a, fake) = loggedIn {
+            LeapApi.Response(200, """{"code":"0","data":{"pageNum":1,"pageSize":20,"totalPage":1,"total":1,"list":[]}}""")
+        }
+        val d = a.tripsPage("VIN000000000000A1", 1790000000L, 1791297600L, 1)
+        assertEquals(1, d.getInt("totalPage"))
+        val c = fake.calls.single()
+        assertEquals(LeapApi.PATH_TRIPS, c.path)
+        assertEquals("application/json", c.headers["Content-Type"])
+        assertEquals("VIN000000000000A1", c.headers["carvin"])
+        val body = JSONObject(c.body)
+        assertEquals("VIN000000000000A1", body.getString("vin"))
+        assertEquals("1790000000", body.getString("startTime"))
+        assertEquals("1791297600", body.getString("endTime"))
+        // Se envían como número…
+        assertTrue(body.get("pageNum") is Int)
+        assertEquals(20, body.getInt("pageSize"))
+        // …y se firman como texto, con el VIN.
+        assertSigned(c, mapOf("vin" to "VIN000000000000A1", "startTime" to "1790000000", "endTime" to "1791297600",
+            "pageNum" to "1", "pageSize" to "20"))
+    }
+
+    @Test
+    fun weeklyConsumptionIsAFormWithTheCarvinSigned() {
+        val (a, fake) = loggedIn { ok("""{"rankResult":{"hundredKmEC":"16.8"},"weeklyEC":[]}""") }
+        val d = a.weeklyConsumption("VIN000000000000A1")
+        assertEquals("16.8", d.getJSONObject("rankResult").getString("hundredKmEC"))
+        val c = fake.calls.single()
+        assertEquals(LeapApi.PATH_WEEKLY_EC, c.path)
+        assertEquals("carvin=VIN000000000000A1", c.body)
+        assertSigned(c, mapOf("carvin" to "VIN000000000000A1"))
     }
 
     @Test

@@ -92,7 +92,8 @@ final class CarKit {
         if (p.measureText(up) > maxW) p.setTextSize(Math.max(14, 19 * maxW / p.measureText(up)));
         p.setColor(color);
         p.setTextAlign(align);
-        String u = up;
+        // Si ni así cabe (títulos largos en alemán u holandés), acaba en «…».
+        String u = p.measureText(up) > maxW ? ellipsize(up, maxW, p) : up;
         cv.drawText(u, x, y, p);
         float w = p.measureText(u);
         p.setLetterSpacing(0);
@@ -282,7 +283,7 @@ final class CarKit {
         protected void onDraw(Canvas cv) {
             r.set(BORDER / 2, BORDER / 2, getWidth() - BORDER / 2, getHeight() - BORDER / 2);
             card(cv, r, p);
-            if (title != null) label(cv, title, PAD, PAD + 20, p);
+            if (title != null) label(cv, title, PAD, PAD + 20, FAINT, p, Paint.Align.LEFT, getWidth() - 2 * PAD);
             inner.set(getPaddingLeft(), getPaddingTop(), getWidth() - getPaddingRight(), getHeight() - getPaddingBottom());
             if (painter != null) painter.paint(cv, inner, p);
         }

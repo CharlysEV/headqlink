@@ -287,6 +287,7 @@ final class DemoDrive {
         p.headwind = new double[n];
         p.temp = new double[n];
         p.kwhCum = new double[n];
+        p.gravCum = new double[n];
         p.totalKm = total;
         double[][] relief = {{0, 655}, {25, 610}, {60, 700}, {100, 690}, {140, 760}, {180, 650}, {210, 690}, {240, 720},
                 {252, 790}, {262, 640}, {275, 470}, {300, 340}, {330, 260}, {360, 200}, {400, 110}, {430, 160}, {455, 130},
@@ -310,7 +311,10 @@ final class DemoDrive {
                 double grade = Math.max(-15, Math.min(15, (p.elev[i] - p.elev[i - 1]) / (dkm * 1000) * 100));
                 double s = dkm / v * 3600;
                 secs += s;
-                p.kwhCum[i] = p.kwhCum[i - 1] + m.compute(v, grade, p.headwind[i], p.temp[i], 0) * s / 3600;
+                double kw = m.compute(v, grade, p.headwind[i], p.temp[i], 0);
+                double flat = m.compute(v, 0, p.headwind[i], p.temp[i], 0);
+                p.kwhCum[i] = p.kwhCum[i - 1] + kw * s / 3600;
+                p.gravCum[i] = p.gravCum[i - 1] + (kw - flat) * s / 3600;
             }
         }
         p.totalSeconds = Math.round(secs);
@@ -321,14 +325,14 @@ final class DemoDrive {
         p.destRain = 0;
         p.destCode = 1;
         Object[][] ch = {
-                {62.0, "Área de servicio La Mancha", 150.0, "CCS · Tipo 2"},
-                {118.0, "Electrolinera Puerto Lápice", 100.0, "CCS · CHAdeMO"},
-                {196.0, "Hub de carga Valdepeñas", 300.0, "CCS"},
-                {243.0, "Área de Despeñaperros", 50.0, "CCS · CHAdeMO · Tipo 2"},
-                {318.0, "Hub de carga Bailén", 350.0, "CCS · Tipo 2"},
-                {352.0, "Electrolinera Andújar", 120.0, "CCS"},
-                {402.0, "Centro comercial Córdoba Sur", 22.0, "Tipo 2"},
-                {470.0, "Área de servicio Écija", 150.0, "CCS · Tipo 2"},
+                {62.0, "Zunder La Mancha", 150.0, "CCS · Tipo 2", "zunder"},
+                {118.0, "Iberdrola Puerto Lápice", 100.0, "CCS · CHAdeMO", "iberdrola"},
+                {196.0, "Ionity Valdepeñas", 300.0, "CCS", "ionity"},
+                {243.0, "Repsol Despeñaperros", 50.0, "CCS · CHAdeMO · Tipo 2", "repsol"},
+                {318.0, "Tesla Supercharger Bailén", 250.0, "CCS · Tipo 2", "tesla"},
+                {352.0, "Endesa X Andújar", 120.0, "CCS", "endesa"},
+                {402.0, "Centro comercial Córdoba Sur", 22.0, "Tipo 2", "other"},
+                {470.0, "Zunder Écija", 150.0, "CCS · Tipo 2", "zunder"},
         };
         for (Object[] o : ch) {
             RoutePlanner.Charger c = new RoutePlanner.Charger();
@@ -336,6 +340,7 @@ final class DemoDrive {
             c.name = (String) o[1];
             c.maxKw = (Double) o[2];
             c.detail = (String) o[3];
+            c.network = (String) o[4];
             int idx = (int) Math.round(c.kmAlong / total * (n - 1));
             c.lat = p.lat[idx] + 0.004;
             c.lon = p.lon[idx] - 0.003;
@@ -394,27 +399,38 @@ final class DemoDrive {
             t.climb = q[6];
             t.descent = q[6] * (0.85 + rnd.nextDouble() * 0.3);
             t.maxKmh = q[7];
-            t.track = track(rnd, q[3]);
+            // Una parada de 14 min en el viaje largo y otra de 6 en el de la tarde (para ver las paradas en el mapa).
+            double stopMin = q[3] > 100 ? 14 : q[0] == 1 ? 6 : 0;
+            t.track = track(rnd, q[3], q[4], stopMin);
             out.add(t);
         }
         return out;
     }
 
-    /** Recorrido verosímil: tramos rectos con giros, más largos cuanto más largo el viaje. */
-    private static double[][] track(Random rnd, double km) {
+    /**
+     * Recorrido verosímil: tramos rectos con giros, más largos cuanto más largo el viaje, con el segundo de cada punto
+     * y, si stopMin > 0, una parada de ese rato a un 40 % del camino.
+     */
+    private static double[][] track(Random rnd, double km, double minutes, double stopMin) {
         int pts = 70;
-        double[][] out = new double[pts][];
+        double moveSec = Math.max(60, (minutes - stopMin) * 60);
+        int stopAt = stopMin > 0 ? (int) (pts * 0.4) : -1;
         double la = 40.43 + rnd.nextDouble() * 0.05;
         double lo = -3.70 + rnd.nextDouble() * 0.05;
         double hdg = rnd.nextDouble() * 360;
         double stepM = km * 1000 / pts;
+        java.util.List<double[]> list = new java.util.ArrayList<>();
         for (int i = 0; i < pts; i++) {
             if (rnd.nextDouble() < 0.18) hdg += (rnd.nextBoolean() ? 1 : -1) * (35 + rnd.nextDouble() * 60);
             else hdg += rnd.nextGaussian() * 6;
             la += stepM * Math.cos(Math.toRadians(hdg)) / 111320;
             lo += stepM * Math.sin(Math.toRadians(hdg)) / (111320 * Math.cos(Math.toRadians(la)));
-            out[i] = new double[]{Math.round(la * 1e5) / 1e5, Math.round(lo * 1e5) / 1e5};
+            double sec = moveSec * i / (pts - 1) + (stopAt >= 0 && i > stopAt ? stopMin * 60 : 0);
+            list.add(new double[]{Math.round(la * 1e5) / 1e5, Math.round(lo * 1e5) / 1e5, Math.round(sec)});
+            // Tras la parada, el primer punto llega a unos 40 m (como el registro real, que apunta cada 30 m movidos).
+            if (i == stopAt) list.add(new double[]{Math.round((la + 0.00036) * 1e5) / 1e5, Math.round(lo * 1e5) / 1e5,
+                    Math.round(sec + stopMin * 60)});
         }
-        return out;
+        return list.toArray(new double[0][]);
     }
 }

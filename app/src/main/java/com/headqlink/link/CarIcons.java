@@ -132,6 +132,42 @@ final class CarIcons {
         cv.drawPath(PATH, p);
     }
 
+    /** Surtidor de gasolina (REEV). */
+    static void fuel(Canvas cv, float cx, float cy, float s, int color, Paint p) {
+        fill(p, color);
+        // Cuerpo con la ventanilla hueca.
+        R.set(cx - s * 0.36f, cy - s * 0.44f, cx + s * 0.12f, cy + s * 0.44f);
+        cv.drawRoundRect(R, s * 0.06f, s * 0.06f, p);
+        cv.drawRect(cx - s * 0.46f, cy + s * 0.36f, cx + s * 0.22f, cy + s * 0.48f, p);
+        p.setColor(CarKit.SURFACE);
+        R.set(cx - s * 0.27f, cy - s * 0.34f, cx + s * 0.03f, cy - s * 0.1f);
+        cv.drawRoundRect(R, s * 0.03f, s * 0.03f, p);
+        // Manguera.
+        stroke(p, color, Math.max(2, s * 0.07f));
+        PATH.rewind();
+        PATH.moveTo(cx + s * 0.12f, cy - s * 0.12f);
+        PATH.lineTo(cx + s * 0.3f, cy - s * 0.12f);
+        PATH.lineTo(cx + s * 0.3f, cy + s * 0.22f);
+        PATH.cubicTo(cx + s * 0.3f, cy + s * 0.32f, cx + s * 0.44f, cy + s * 0.32f, cx + s * 0.44f, cy + s * 0.22f);
+        PATH.lineTo(cx + s * 0.44f, cy - s * 0.2f);
+        PATH.lineTo(cx + s * 0.32f, cy - s * 0.36f);
+        cv.drawPath(PATH, p);
+        done(p);
+    }
+
+    /** Micrófono (buscar hablando). */
+    static void mic(Canvas cv, float cx, float cy, float s, int color, Paint p) {
+        fill(p, color);
+        R.set(cx - s * 0.16f, cy - s * 0.48f, cx + s * 0.16f, cy + s * 0.12f);
+        cv.drawRoundRect(R, s * 0.16f, s * 0.16f, p);
+        stroke(p, color, Math.max(2, s * 0.08f));
+        R.set(cx - s * 0.3f, cy - s * 0.2f, cx + s * 0.3f, cy + s * 0.3f);
+        cv.drawArc(R, 0, 180, false, p);
+        cv.drawLine(cx, cy + s * 0.3f, cx, cy + s * 0.46f, p);
+        cv.drawLine(cx - s * 0.18f, cy + s * 0.46f, cx + s * 0.18f, cy + s * 0.46f, p);
+        done(p);
+    }
+
     /** Chincheta de destino. */
     static void pin(Canvas cv, float cx, float cy, float s, int color, int hole, Paint p) {
         fill(p, color);

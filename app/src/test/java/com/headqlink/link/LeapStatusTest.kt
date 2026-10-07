@@ -161,6 +161,22 @@ class LeapStatusTest {
     }
 
     @Test
+    fun reevFuelSignals() {
+        val bev = LeapStatus.parse(JSONObject(sample))
+        assertFalse(bev.reev())
+        assertTrue(bev.fuelLiters.isNaN())
+        val reev = LeapStatus.parse(JSONObject("""{"signal":{"1204":24,"100003":"24.6","3235":"62.4","3263":29640,
+            "3259":"463","3261":530,"2188":31}}"""))
+        assertTrue(reev.reev())
+        assertEquals(62.4, reev.fuelPct, 1e-9)
+        assertEquals(29.64, reev.fuelLiters, 1e-9) // la señal 3263 va en mililitros
+        assertEquals(463.0, reev.fuelRangeKm, 1e-9)
+        assertEquals(530.0, reev.combinedRangeKm, 1e-9)
+        val line = reev.logLine()
+        assertTrue(line, line.contains("gasolina 62.4 % (29.64 L), 463 km con gasolina, 530 km en total"))
+    }
+
+    @Test
     fun onlyReadsTheSignalsItShows() {
         // Ni latitud ni longitud (señales 2/3 y 3724/3725/2190/2191) están en la tabla: no se leen.
         for (id in listOf("2", "3", "3724", "3725", "2190", "2191")) assertFalse(LeapStatus.SIGNALS.containsKey(id))

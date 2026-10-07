@@ -189,6 +189,58 @@ class CarCloudTest {
     }
 
     @Test
+    fun reevProfileIsAdoptedWhenTheCarHasATank() {
+        assertEquals(28.4, CarCloudStore.capacityFor(CarCloudStore.PROFILE_C10_REEV, 0.0), 0.0)
+        val dir = Files.createTempDirectory("carcloud").toFile()
+        val st = store(dir, MemBox())
+        // Sin elegir (o con una batería de eléctrico puro): pasa al REEV, una vez.
+        st.setProfile(CarCloudStore.PROFILE_C10_PROMAX, 0.0)
+        assertTrue(st.adoptReev())
+        assertEquals(CarCloudStore.PROFILE_C10_REEV, st.profile())
+        assertEquals(28.4, st.capacityKwh(), 0.0)
+        assertFalse(st.adoptReev())
+        // «Otra» a mano se respeta.
+        st.setProfile(CarCloudStore.PROFILE_CUSTOM, 30.0)
+        assertFalse(st.adoptReev())
+        assertEquals(30.0, st.capacityKwh(), 1e-4)
+        dir.deleteRecursively()
+    }
+
+    @Test
+    fun historyIsSealedAndGoesWithTheSession() {
+        val dir = Files.createTempDirectory("carcloud").toFile()
+        val st = store(dir, MemBox())
+        assertNull(st.history())
+        st.saveHistory(org.json.JSONObject().put("tripsAt", 5L))
+        assertEquals(5L, st.history()!!.getLong("tripsAt"))
+        // Cifrado: en el disco no se lee.
+        val raw = File(dir, "history.bin").readBytes().toString(Charsets.ISO_8859_1)
+        assertFalse(raw.contains("tripsAt"))
+        st.deleteSession()
+        assertNull(st.history())
+        dir.deleteRecursively()
+    }
+
+    @Test
+    fun historyPolicy() {
+        val now = 10_000_000_000L
+        // Nunca leído: ya.
+        assertTrue(CarCloud.HistoryPolicy.due(now, 0, Double.NaN, Double.NaN, false, 0, 0))
+        // Cada 30 min.
+        assertFalse(CarCloud.HistoryPolicy.due(now, now - 29 * 60_000L, 100.0, 100.0, true, 0, 0))
+        assertTrue(CarCloud.HistoryPolicy.due(now, now - 30 * 60_000L, 100.0, 100.0, true, 0, 0))
+        // Tras un viaje (más km y parado), a los 3 min.
+        assertFalse(CarCloud.HistoryPolicy.due(now, now - 2 * 60_000L, 107.0, 100.0, true, 0, 0))
+        assertTrue(CarCloud.HistoryPolicy.due(now, now - 3 * 60_000L, 107.0, 100.0, true, 0, 0))
+        // En marcha, no.
+        assertFalse(CarCloud.HistoryPolicy.due(now, now - 10 * 60_000L, 107.0, 100.0, false, 0, 0))
+        // El repaso pendiente.
+        assertTrue(CarCloud.HistoryPolicy.due(now, now - 10 * 60_000L, 100.0, 100.0, false, now - 1, 0))
+        // Tras un fallo, nada hasta que pase la espera.
+        assertFalse(CarCloud.HistoryPolicy.due(now, 0, 100.0, 100.0, true, 0, now + 1))
+    }
+
+    @Test
     fun emailMasking() {
         assertEquals("c***@c***.es", CarCloudStore.maskEmail("carlos.ejemplo@correo.es"))
         assertEquals("a***@e***.com", CarCloudStore.maskEmail(" A.b@Example.COM "))

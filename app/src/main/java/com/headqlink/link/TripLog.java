@@ -17,10 +17,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Registro de viajes: cada sesión con el coche (modo ampliado) graba el recorrido GPS, km, tiempo,
- * desnivel, energía estimada (EnergyModel) y velocidad máxima, y lo guarda en files/trips/ al
- * terminar si se han recorrido más de 300 m. Con la cuenta de Leapmotor (CarCloud), además el % de
- * batería y el cuentakilómetros del coche al empezar y al terminar: de ahí sale el consumo real.
+ * Registro de viajes: cada sesión con el coche (modo ampliado) graba el recorrido GPS (con el segundo de cada punto:
+ * de ahí salen las paradas, TripStops), km, tiempo, desnivel, energía estimada (EnergyModel) y velocidad máxima, y lo
+ * guarda en files/trips/ al terminar si se han recorrido más de 300 m. Con la cuenta de Leapmotor (CarCloud), además el
+ * % de batería, el cuentakilómetros y, en un REEV, los litros del depósito al empezar y al terminar: de ahí salen el
+ * consumo real y la gasolina gastada.
  */
 final class TripLog {
     static final class Trip {
@@ -41,6 +42,22 @@ final class TripLog {
         double capKwh = Double.NaN;
         /** Se vio cargando (o subir la batería) por el camino: la bajada no es el consumo. */
         boolean charged;
+        /** REEV: litros del depósito al empezar y al terminar (NaN si no es REEV o no se supo). */
+        double fuelStartL = Double.NaN;
+        double fuelEndL = Double.NaN;
+
+        /** Fin del viaje (aproximado: el inicio más la duración). */
+        long endMs() {
+            return startMs + minutes * 60_000L;
+        }
+
+        /** Litros de gasolina gastados según el depósito (REEV), o NaN. */
+        double fuelUsedL() {
+            if (Double.isNaN(fuelStartL) || Double.isNaN(fuelEndL)) return Double.NaN;
+            double d = fuelStartL - fuelEndL;
+            // Más de 0,3 L de subida es que se repostó por el camino: no es un consumo.
+            return d < -0.3 ? Double.NaN : Math.max(0, d);
+        }
     }
 
     /** % de batería y cuentakilómetros del coche en un momento (de la nube). */
@@ -48,11 +65,18 @@ final class TripLog {
         final double soc;
         final double odo;
         final long timeMs;
+        /** REEV: litros del depósito (NaN si no es REEV). */
+        final double fuelL;
 
         CloudMark(double soc, double odo, long timeMs) {
+            this(soc, odo, timeMs, Double.NaN);
+        }
+
+        CloudMark(double soc, double odo, long timeMs, double fuelL) {
             this.soc = soc;
             this.odo = odo;
             this.timeMs = timeMs;
+            this.fuelL = fuelL;
         }
     }
 
@@ -114,7 +138,8 @@ final class TripLog {
                 synchronized (track) {
                     double[] last = track.isEmpty() ? null : track.get(track.size() - 1);
                     if (last == null || RoadInfo.dist(last[0], last[1], s.lat, s.lon) > 30) {
-                        track.add(new double[]{s.lat, s.lon});
+                        // Con el segundo del viaje: un hueco largo en el mismo sitio es una parada (TripStops).
+                        track.add(new double[]{s.lat, s.lon, (SystemClock.elapsedRealtime() - startElapsed) / 1000});
                     }
                 }
             }
@@ -132,12 +157,15 @@ final class TripLog {
         double soc = cs.status.socBest();
         double odo = cs.status.odometerKm;
         if (Double.isNaN(soc) || Double.isNaN(odo)) return;
-        CloudMark m = new CloudMark(soc, odo, cs.dataTimeMs());
+        CloudMark m = new CloudMark(soc, odo, cs.dataTimeMs(), cs.status.fuelLiters);
         CloudMark prev = cloudEnd;
+        // REEV sin enchufar: la batería sube en marcha porque el generador gasta gasolina; eso no es una carga.
+        boolean generator = cs.status.reev() && !cs.status.pluggedIn();
         if (cloudStart == null) {
             cloudStart = m;
-            L.i(String.format(Locale.US, "viaje: inicio con datos del coche (%.1f %%)", soc));
-        } else if (cs.status.charging() || cs.status.pluggedIn() || (prev != null && soc > prev.soc + 1.0)) {
+            L.i(String.format(Locale.US, "viaje: inicio con datos del coche (%.1f %%%s)", soc,
+                    Double.isNaN(m.fuelL) ? "" : String.format(Locale.US, ", %.2f L de gasolina", m.fuelL)));
+        } else if (cs.status.charging() || cs.status.pluggedIn() || (!generator && prev != null && soc > prev.soc + 1.0)) {
             if (!cloudCharged) L.i("viaje: el coche ha cargado por el camino (el consumo real del viaje no se mide)");
             cloudCharged = true;
         }
@@ -180,7 +208,7 @@ final class TripLog {
             if (s.gpsGapSec > 0) o.put("gpsGapSec", s.gpsGapSec);
             JSONArray t = new JSONArray();
             synchronized (track) {
-                for (double[] p : track) t.put(new JSONArray().put(round(p[0])).put(round(p[1])));
+                for (double[] p : track) t.put(new JSONArray().put(round(p[0])).put(round(p[1])).put(Math.round(p[2])));
             }
             o.put("track", t);
             CloudMark c0 = cloudStart;
@@ -193,6 +221,12 @@ final class TripLog {
                 c.put("odoEnd", c1.odo);
                 c.put("cap", cloudCap);
                 c.put("charged", cloudCharged);
+                if (!Double.isNaN(c0.fuelL) && !Double.isNaN(c1.fuelL)) {
+                    c.put("fuelStart", c0.fuelL);
+                    c.put("fuelEnd", c1.fuelL);
+                    L.i(String.format(Locale.US, "viaje: gasolina %.2f → %.2f L (%.2f L gastados)", c0.fuelL, c1.fuelL,
+                            Math.max(0, c0.fuelL - c1.fuelL)));
+                }
                 o.put("cloud", c);
                 CloudEnergy.Result r = CloudEnergy.between(c0.soc, c0.odo, c1.soc, c1.odo, cloudCap, cloudCharged);
                 L.i(String.format(Locale.US, "viaje: datos del coche %.1f → %.1f %%, %.0f km de cuentakilómetros%s", c0.soc, c1.soc,
@@ -237,7 +271,9 @@ final class TripLog {
                 if (tr != null) {
                     t.track = new double[tr.length()][];
                     for (int k = 0; k < tr.length(); k++) {
-                        t.track[k] = new double[]{tr.getJSONArray(k).getDouble(0), tr.getJSONArray(k).getDouble(1)};
+                        JSONArray q = tr.getJSONArray(k);
+                        // Los viajes de antes de la 0.2.7 no llevan el segundo de cada punto (NaN: sin paradas).
+                        t.track[k] = new double[]{q.getDouble(0), q.getDouble(1), q.length() > 2 ? q.getDouble(2) : Double.NaN};
                     }
                 }
                 JSONObject c = o.optJSONObject("cloud");
@@ -248,6 +284,8 @@ final class TripLog {
                     t.odoEnd = c.optDouble("odoEnd");
                     t.capKwh = c.optDouble("cap");
                     t.charged = c.optBoolean("charged");
+                    t.fuelStartL = c.optDouble("fuelStart");
+                    t.fuelEndL = c.optDouble("fuelEnd");
                 }
                 out.add(t);
             } catch (Exception e) {

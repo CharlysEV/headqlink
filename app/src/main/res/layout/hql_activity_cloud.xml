@@ -310,6 +310,14 @@
                             android:textColor="@color/hql_text" />
 
                         <com.google.android.material.radiobutton.MaterialRadioButton
+                            android:id="@+id/hql_cloud_profile_reev"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="48dp"
+                            android:text="@string/hql_cloud_profile_reev"
+                            android:textColor="@color/hql_text" />
+
+                        <com.google.android.material.radiobutton.MaterialRadioButton
                             android:id="@+id/hql_cloud_profile_custom"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"

@@ -38,6 +38,10 @@
         <package android:name="com.autokit" />
         <package android:name="com.suding.speedplay" />
         <package android:name="com.tlink.carplay" />
+        <!-- headqlink: buscar destino hablando (SpeechRecognizer necesita ver el servicio de reconocimiento) -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
     </queries>
 
     <uses-feature

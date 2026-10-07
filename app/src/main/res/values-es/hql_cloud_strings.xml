@@ -142,10 +142,19 @@
     <string name="hql_cloud_server_key_dialog">Huella SHA-256:\n%1$s\nCaduca: %2$s\n\nPuede ser un cambio normal de Leapmotor o alguien interceptando la conexión. Acéptalo solo en una red de confianza (datos móviles o el Wi-Fi de casa).</string>
     <string name="hql_cloud_server_key_accept">Confiar en este certificado</string>
     <string name="hql_cloud_unsupported_phone">Necesita Android 6 o superior (para guardar el certificado cifrado).</string>
-    <string name="hql_cloud_credits">Protocolo basado en LMB10, de txurtxil (GPL-3.0). API no oficial, sin relación con Leapmotor.</string>
+    <string name="hql_cloud_credits">Protocolo basado en LMB10, de txurtxil (GPL-3.0); señales del REEV e historial de viajes según leapmotor-mate (ProtossBlaster) y leapmotor-api (markoceri), AGPL-3.0. API no oficial, sin relación con Leapmotor.</string>
     <string name="hql_cloud_err_network">sin conexión con la nube de Leapmotor</string>
     <string name="hql_cloud_err_expired">la sesión caducó; vuelve a entrar</string>
     <string name="hql_cloud_err_p12">no se pudo abrir el certificado de cuenta (%1$s)</string>
     <string name="hql_cloud_err_not_configured">falta algo (certificado, entrar o el coche)</string>
     <string name="hql_cloud_status_line">En el coche: %1$s</string>
+    <string name="hql_cloud_car_tag">coche</string>
+    <string name="hql_cloud_fuel">Gasolina</string>
+    <string name="hql_cloud_fuel_liters">%1$s L</string>
+    <string name="hql_cloud_fuel_range">%1$s km con gasolina</string>
+    <string name="hql_cloud_total_range">Autonomía total: %1$s km</string>
+    <string name="hql_cloud_profile_reev">C10 REEV · 28,4 kWh + gasolina</string>
+    <string name="hql_cloud_trips_car_total">Según el coche: %1$d viajes · %2$.0f km · %3$.1f kWh/100</string>
+    <string name="hql_cloud_trips_car_total_fuel">Según el coche: %1$d viajes · %3$.1f kWh/100 · %4$.1f L/100</string>
+    <string name="hql_cloud_3d_hint">Gíralo con el dedo</string>
 </resources>

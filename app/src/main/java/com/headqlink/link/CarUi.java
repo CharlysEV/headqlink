@@ -388,7 +388,11 @@ final class CarUi {
                 GamesScreen.previewGame = Integer.parseInt(name.substring(5));
                 open("games");
             } else if (name.startsWith("car-")) {
-                CarHubScreen.selectTab(Integer.parseInt(name.substring(4)));
+                // "car-N" o "car-N-detalle" (Viajes con un viaje abierto) o "car-N-buscar" (Ruta con el buscador).
+                String[] parts = name.split("-", 3);
+                CarHubScreen.selectTab(Integer.parseInt(parts[1]));
+                if (parts.length > 2 && parts[2].equals("detalle")) TripsTab.previewDetail = true;
+                if (parts.length > 2 && parts[2].equals("buscar")) RouteTab.previewQuery = "electrolinera";
                 open("car");
             } else {
                 open(name);

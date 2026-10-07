@@ -37,6 +37,86 @@ final class TripStats {
         return Double.isNaN(r) ? kwhPer100(t) : r;
     }
 
+    // ------------------------------------------------------------------ lo que dice el coche (historial de la nube)
+
+    /** Lo que dice el coche de este viaje (sus viajes del historial de la nube que caen dentro), o null. */
+    static CloudHistory.Match car(TripLog.Trip t, List<CloudHistory.Trip> history) {
+        return CloudHistory.match(history, t.startMs, t.endMs());
+    }
+
+    /** kWh/100 km según el coche, o NaN. */
+    static double carKwhPer100(TripLog.Trip t, List<CloudHistory.Trip> history) {
+        CloudHistory.Match m = car(t, history);
+        return m == null ? Double.NaN : m.kwhPer100();
+    }
+
+    /** De dónde sale el consumo que se enseña. */
+    enum Source {CAR, REAL, ESTIMATED}
+
+    /** La fuente del mejor dato: el coche (historial), el real (bajada del %) o el estimado. */
+    static Source source(TripLog.Trip t, List<CloudHistory.Trip> history) {
+        if (!Double.isNaN(carKwhPer100(t, history))) return Source.CAR;
+        if (!Double.isNaN(realKwhPer100(t))) return Source.REAL;
+        return Source.ESTIMATED;
+    }
+
+    /** El mejor dato del viaje: el del coche, el real o el estimado. */
+    static double bestKwhPer100(TripLog.Trip t, List<CloudHistory.Trip> history) {
+        double c = carKwhPer100(t, history);
+        return Double.isNaN(c) ? bestKwhPer100(t) : c;
+    }
+
+    /** Electricidad que da un litro de gasolina en el generador de un REEV (kWh), para separar el coste. */
+    static final double KWH_PER_LITER = 3.0;
+
+    /** Litros de gasolina del viaje (REEV): los del coche si los dice; si no, los del depósito; NaN si no es REEV. */
+    static double fuelL(TripLog.Trip t, List<CloudHistory.Trip> history) {
+        CloudHistory.Match m = car(t, history);
+        if (m != null && !Double.isNaN(m.fuelL)) return m.fuelL;
+        return t.fuelUsedL();
+    }
+
+    /** L/100 km de gasolina del viaje, o NaN. */
+    static double litersPer100(TripLog.Trip t, List<CloudHistory.Trip> history) {
+        double l = fuelL(t, history);
+        return Double.isNaN(l) || t.km < 0.5 ? Double.NaN : l / t.km * 100;
+    }
+
+    /**
+     * Coste del viaje: la electricidad de la red (la bajada del % si se midió; si no, la energía menos la que dio el
+     * generador) por su precio, más la gasolina (REEV) por la suya.
+     */
+    static double cost(TripLog.Trip t, List<CloudHistory.Trip> history, double elecPrice, double fuelPrice) {
+        double fuel = fuelL(t, history);
+        double litres = Double.isNaN(fuel) ? 0 : fuel;
+        CloudEnergy.Result r = real(t);
+        double grid;
+        if (r.ok()) {
+            grid = r.kwh;
+        } else {
+            CloudHistory.Match m = car(t, history);
+            double kwh = m != null && m.km >= 0.5 ? m.kwh : t.kwh;
+            grid = Math.max(0, kwh - litres * KWH_PER_LITER);
+        }
+        return grid * elecPrice + litres * fuelPrice;
+    }
+
+    /** Índice del viaje de menos kWh/100 km (el del coche o el real si lo tiene) entre los de al menos MIN_KM_FOR_RECORD. */
+    static int mostEfficient(List<TripLog.Trip> trips, List<CloudHistory.Trip> history) {
+        int best = -1;
+        double bestV = Double.MAX_VALUE;
+        for (int i = 0; i < trips.size(); i++) {
+            TripLog.Trip t = trips.get(i);
+            double v = bestKwhPer100(t, history);
+            if (t.km < MIN_KM_FOR_RECORD || Double.isNaN(v) || v <= 0) continue;
+            if (v < bestV) {
+                bestV = v;
+                best = i;
+            }
+        }
+        return best;
+    }
+
     /** Velocidad media (km/h, con las paradas), o NaN sin duración. */
     static double avgKmh(TripLog.Trip t) {
         return t.minutes > 0 ? t.km / (t.minutes / 60.0) : Double.NaN;

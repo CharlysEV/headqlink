@@ -90,4 +90,40 @@ class TripStatsTest {
         assertEquals(4, TripStats.longest(trips))
         assertEquals(3, TripStats.mostEfficient(trips))
     }
+
+    @Test
+    fun theCarsOwnFigureWinsAndSaysWhereItComesFrom() {
+        val t = trip(DemoDrive.BASE_MS, 15.8, 2.4, 37)
+        assertEquals(TripStats.Source.ESTIMATED, TripStats.source(t, emptyList()))
+        // Con el % y el cuentakilómetros del coche: real.
+        t.socStart = 81.8; t.socEnd = 78.4; t.odoStart = 4496.0; t.odoEnd = 4511.0; t.capKwh = 81.9
+        assertEquals(TripStats.Source.REAL, TripStats.source(t, emptyList()))
+        assertEquals(3.4 / 100 * 81.9 / 15 * 100, TripStats.bestKwhPer100(t, emptyList()), 1e-9)
+        // Con el historial del coche: lo que dice el coche.
+        val h = listOf(CloudHistory.Trip(t.startMs + 60_000, t.startMs + 12 * 60_000, 7.0, 0.74, Double.NaN, 60.0),
+            CloudHistory.Trip(t.startMs + 28 * 60_000, t.startMs + 37 * 60_000, 7.0, 1.64, Double.NaN, 70.0))
+        assertEquals(TripStats.Source.CAR, TripStats.source(t, h))
+        assertEquals(2.38 / 14 * 100, TripStats.bestKwhPer100(t, h), 1e-9)
+        assertTrue(TripStats.fuelL(t, h).isNaN())
+    }
+
+    @Test
+    fun reevPetrolAndCost() {
+        val t = trip(DemoDrive.BASE_MS, 77.0, 15.0, 60)
+        // Del depósito.
+        t.fuelStartL = 30.0; t.fuelEndL = 25.6
+        assertEquals(4.4, TripStats.fuelL(t, emptyList()), 1e-9)
+        // El del coche manda.
+        val h = listOf(CloudHistory.Trip(t.startMs + 60_000, t.endMs() - 60_000, 77.0, 15.0, 4.9, 120.0))
+        assertEquals(4.9, TripStats.fuelL(t, h), 1e-9)
+        assertEquals(4.9 / 77 * 100, TripStats.litersPer100(t, h), 1e-9)
+        // Coste: la luz que no dio el generador (15 − 4,9 × 3 kWh) y la gasolina.
+        assertEquals((15.0 - 4.9 * TripStats.KWH_PER_LITER) * 0.2 + 4.9 * 1.6, TripStats.cost(t, h, 0.2, 1.6), 1e-9)
+        // Un eléctrico: solo la luz.
+        val e = trip(DemoDrive.BASE_MS, 10.0, 1.5, 15)
+        assertEquals(1.5 * 0.2, TripStats.cost(e, emptyList(), 0.2, 1.6), 1e-9)
+        // Repostar por el camino no es un consumo.
+        t.fuelStartL = 10.0; t.fuelEndL = 40.0
+        assertTrue(t.fuelUsedL().isNaN())
+    }
 }

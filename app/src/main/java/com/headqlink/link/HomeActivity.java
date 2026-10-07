@@ -241,7 +241,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         boolean showSource = !Config.MODE_PATTERN.equals(mode);
         sourceRow.setVisibility(showSource ? View.VISIBLE : View.GONE);
         if (showSource) {
-            ((TextView) sourceRow.findViewById(R.id.hql_status_name)).setText(Config.isAa(mode) ? "Auto" : "App");
+            // «Auto» sale de la cadena: en neerlandés «auto» es coche y sería «Android Auto».
+            ((TextView) sourceRow.findViewById(R.id.hql_status_name)).setText(Config.isAa(mode) ? Str.get(R.string.hql_mode_aa) : "App");
             String src = starting ? Str.get(R.string.hql_preparing) : LinkState.source;
             setRow(sourceRow, starting ? LinkState.Level.BUSY : LinkState.sourceLevel, src.isEmpty() ? "—" : src);
         }
@@ -441,18 +442,23 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     }
 
     /**
-     * Idioma de la app (Android 13+): el del sistema, español, inglés o portugués (Portugal o Brasil). Android recrea las pantallas
+     * Idioma de la app (Android 13+): el del sistema, español, inglés, portugués (Portugal o Brasil), italiano, francés, alemán
+     * o neerlandés. Android recrea las pantallas
      * y la interfaz del coche usa el nuevo al volver a conectar.
      */
     @android.annotation.TargetApi(33)
     private void showLanguage() {
         android.app.LocaleManager lm = getSystemService(android.app.LocaleManager.class);
         String cur = lm.getApplicationLocales().isEmpty() ? "" : lm.getApplicationLocales().get(0).getLanguage();
-        String[] tags = {"", "es", "en", "pt-PT", "pt-BR"};
-        String[] names = {Str.get(R.string.hql_language_system), "Español", "English", "Português (Portugal)", "Português (Brasil)"};
+        String[] tags = {"", "es", "en", "pt-PT", "pt-BR", "it", "fr", "de", "nl"};
+        String[] names = {Str.get(R.string.hql_language_system), "Español", "English", "Português (Portugal)", "Português (Brasil)",
+                "Italiano", "Français", "Deutsch", "Nederlands"};
         String curTag = lm.getApplicationLocales().isEmpty() ? "" : lm.getApplicationLocales().get(0).toLanguageTag();
-        int checked = cur.equals("es") ? 1 : cur.equals("en") ? 2
-                : curTag.equals("pt-BR") ? 4 : cur.equals("pt") ? 3 : 0;
+        int checked = 0;
+        for (int i = 1; i < tags.length; i++) {
+            if (tags[i].equals(curTag) || (tags[i].indexOf('-') < 0 && tags[i].equals(cur) && !cur.equals("pt"))) checked = i;
+        }
+        if (checked == 0 && cur.equals("pt")) checked = curTag.equals("pt-BR") ? 4 : 3;
         new MaterialAlertDialogBuilder(this)
                 .setTitle(Str.get(R.string.hql_language))
                 .setSingleChoiceItems(names, checked, (d, which) -> {

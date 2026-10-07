@@ -26,6 +26,7 @@ cómo exportar el log.
 - **Español:** [MANUAL.md](MANUAL.md)
 - **Português:** [MANUAL.pt.md](MANUAL.pt.md)
 - **English:** [MANUAL.en.md](MANUAL.en.md)
+- **Italiano:** [MANUAL.it.md](MANUAL.it.md)
 
 
 Android app that brings **Android Auto** and a custom side panel with extra features to the
@@ -133,7 +134,11 @@ pressures, doors and odometer in the extended mode) uses a client ported from
 [LMB10](https://github.com/txurtxil/LPB10) by **txurtxil** (GPL-3.0), combined here under section 13 of
 the GPL-3.0/AGPL-3.0: login, session refresh, request signing, vehicle list and status only, never any
 remote command. See [NOTICE](NOTICE) and the ported files' headers. It talks to Leapmotor's unofficial
-API, which may stop working at any time.
+API, which may stop working at any time. The range-extender (REEV) tank signals and the per-trip history
+fields follow [leapmotor-mate](https://github.com/ProtossBlaster/leapmotor-mate) (ProtossBlaster), and the
+weekly consumption endpoint follows [leapmotor-api](https://github.com/markoceri/leapmotor-api) (markoceri),
+both AGPL-3.0. The 3D car in the Status tab uses [three.js](https://threejs.org) (MIT, bundled in
+`app/src/main/assets/three` with its licence).
 
 This project is not affiliated with, endorsed by or sponsored by Leapmotor, Google, Neusoft, Open
 Headunit or any other company or project. Leapmotor, C10, Android Auto and QDLink are trademarks of

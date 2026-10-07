@@ -40,8 +40,14 @@ class CarPanelRenderTest {
         val dir = File(System.getProperty("hql.preview.dir")!!)
         val suffix = System.getProperty("hql.preview.suffix") ?: ""
         dir.mkdirs()
-        // En español, como en el coche del usuario (números con coma decimal incluidos).
-        Locale.setDefault(Locale.forLanguageTag("es-ES"))
+        // En español, como en el coche del usuario (números con coma decimal incluidos), u otro con -PpreviewLang=de.
+        val lang = System.getProperty("hql.preview.lang") ?: ""
+        if (lang.isNotBlank()) {
+            org.robolectric.RuntimeEnvironment.setQualifiers("+$lang")
+            Locale.setDefault(Locale.forLanguageTag(lang))
+        } else {
+            Locale.setDefault(Locale.forLanguageTag("es-ES"))
+        }
         val act = Robolectric.buildActivity(Activity::class.java).setup().get()
         Str.init(act)
         assertTrue(DemoMode.enable(false, 0.0))

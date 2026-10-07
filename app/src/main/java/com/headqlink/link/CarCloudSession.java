@@ -22,6 +22,11 @@ final class CarCloudSession {
         }
     }
 
+    /** Antes de pedir cada página: false para no pedir más (el tope diario de lecturas). */
+    interface PageGate {
+        boolean take();
+    }
+
     private static LeapApi api;
     private static CarCloudStore.Saved saved;
     /** Pedido de olvidar el cliente (sin esperar al candado: lo pide la interfaz mientras el sondeo puede estar leyendo). */
@@ -108,6 +113,51 @@ final class CarCloudSession {
             if (api != null && api.sessionVersion() != v0) persist(st);
         }
         return LeapStatus.parse(data);
+    }
+
+    /**
+     * Viajes del coche entre fromS y toS (segundos de época) del historial de la nube, como mucho maxPages páginas de 20.
+     * pageRead se llama antes de cada página (el sondeo cuenta ahí su tope diario; si devuelve false, se para).
+     */
+    static synchronized List<CloudHistory.Trip> readTrips(Context ctx, long fromS, long toS, int maxPages,
+                                                        PageGate pageRead)
+            throws IOException, GeneralSecurityException {
+        CarCloudStore st = new CarCloudStore(ctx);
+        ensure(st);
+        if (saved.vin.isEmpty()) throw new NotConfiguredException("sin coche elegido");
+        int v0 = api.sessionVersion();
+        List<CloudHistory.Trip> out = new java.util.ArrayList<>();
+        try {
+            int pages = 1;
+            for (int page = 1; page <= pages; page++) {
+                if (!pageRead.take()) break;
+                JSONObject d = api.tripsPage(saved.vin, fromS, toS, page);
+                out.addAll(CloudHistory.parsePage(d));
+                if (page == 1) pages = CloudHistory.pages(d, maxPages);
+            }
+        } catch (LeapApi.SessionExpiredException e) {
+            api = null;
+            throw e;
+        } finally {
+            if (api != null && api.sessionVersion() != v0) persist(st);
+        }
+        return out;
+    }
+
+    /** Consumo medio de las últimas semanas según el coche, o null si la nube no da cifras. */
+    static synchronized CloudHistory.Weekly readWeekly(Context ctx) throws IOException, GeneralSecurityException {
+        CarCloudStore st = new CarCloudStore(ctx);
+        ensure(st);
+        if (saved.vin.isEmpty()) throw new NotConfiguredException("sin coche elegido");
+        int v0 = api.sessionVersion();
+        try {
+            return CloudHistory.parseWeekly(api.weeklyConsumption(saved.vin));
+        } catch (LeapApi.SessionExpiredException e) {
+            api = null;
+            throw e;
+        } finally {
+            if (api != null && api.sessionVersion() != v0) persist(st);
+        }
     }
 
     /**

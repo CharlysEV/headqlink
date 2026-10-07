@@ -49,6 +49,8 @@ final class CarCloudStore {
     private static final String DIR = "carcloud";
     private static final String F_IDENTITY = "identity.bin";
     private static final String F_SESSION = "session.bin";
+    /** Historial de la nube (viajes con sus kWh y litros, consumo semanal): cifrado como lo demás. */
+    private static final String F_HISTORY = "history.bin";
     private static final String K_ENABLED = "enabled";
     private static final String K_PROFILE = "profile";
     private static final String K_CUSTOM_KWH = "custom_kwh";
@@ -60,8 +62,11 @@ final class CarCloudStore {
     static final String PROFILE_C10_LIFE = "c10_life";
     static final String PROFILE_C10_PROMAX = "c10_promax";
     static final String PROFILE_CUSTOM = "custom";
+    /** Autonomía extendida (generador de gasolina): se elige sola si el coche manda el depósito. */
+    static final String PROFILE_C10_REEV = "c10_reev";
     static final double KWH_C10_LIFE = 69.9;
     static final double KWH_C10_PROMAX = 81.9;
+    static final double KWH_C10_REEV = 28.4;
 
     private final File dir;
     private final SharedPreferences sp;
@@ -122,8 +127,20 @@ final class CarCloudStore {
 
     static double capacityFor(String profile, double customKwh) {
         if (PROFILE_C10_PROMAX.equals(profile)) return KWH_C10_PROMAX;
+        if (PROFILE_C10_REEV.equals(profile)) return KWH_C10_REEV;
         if (PROFILE_CUSTOM.equals(profile) && customKwh >= 10) return clampKwh(customKwh);
         return KWH_C10_LIFE;
+    }
+
+    /**
+     * El coche manda el depósito de gasolina (REEV): si el perfil es de una batería de eléctrico puro (o no hay), se pasa
+     * al REEV. Un perfil «a mano» se respeta. true si ha cambiado.
+     */
+    boolean adoptReev() {
+        String p = profile();
+        if (PROFILE_C10_REEV.equals(p) || PROFILE_CUSTOM.equals(p)) return false;
+        setProfile(PROFILE_C10_REEV, 0);
+        return true;
     }
 
     String carType() {
@@ -210,9 +227,24 @@ final class CarCloudStore {
         sp.edit().putString(K_CAR_TYPE, s.carType).putString(K_EMAIL_MASKED, maskEmail(s.email)).apply();
     }
 
+    /** El historial guardado de la nube, o null. */
+    JSONObject history() {
+        try {
+            byte[] b = readSealed(F_HISTORY);
+            return b == null ? null : new JSONObject(new String(b, StandardCharsets.UTF_8));
+        } catch (IOException | GeneralSecurityException | JSONException e) {
+            return null;
+        }
+    }
+
+    void saveHistory(JSONObject o) throws IOException, GeneralSecurityException {
+        writeSealed(F_HISTORY, o.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
     /** Cerrar sesión: fuera la sesión (y el coche y el correo). El certificado se queda. */
     void deleteSession() {
         wipeFile(F_SESSION);
+        wipeFile(F_HISTORY);
         sp.edit().remove(K_CAR_TYPE).remove(K_EMAIL_MASKED).apply();
     }
 
@@ -220,6 +252,7 @@ final class CarCloudStore {
     void wipeAll() {
         wipeFile(F_IDENTITY);
         wipeFile(F_SESSION);
+        wipeFile(F_HISTORY);
         sp.edit().clear().apply();
         box.destroy();
     }

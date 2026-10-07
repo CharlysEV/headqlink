@@ -10,3 +10,15 @@ Leapmotor cloud client (read-only real car data, optional):
     app/src/main/java/com/headqlink/link/LeapApi.java     - login, session, token refresh, vehicle list and status
     app/src/main/java/com/headqlink/link/LeapStatus.java  - signal table, field merging, conversions, charge/tyre rules
   The unofficial Leapmotor API may stop working at any time. HeadQLink is not affiliated with Leapmotor.
+
+Range-extender (REEV) signals and the Leapmotor cloud trip history:
+  The fuel signals (3235 tank %, 3263 millilitres, 3259 fuel range, 3261 total range) and the
+  per-trip history fields (routeStartTs, routeEndTs, totalMileage, totalEnergy, driveReevOil) follow
+  leapmotor-mate (https://github.com/ProtossBlaster/leapmotor-mate) by ProtossBlaster; the weekly
+  consumption endpoint follows leapmotor-api (https://github.com/markoceri/leapmotor-api) by markoceri.
+  Both are licensed under the GNU Affero General Public License v3.0. No code was copied; HeadQLink
+  reimplements the read-only requests in LeapApi.java, LeapStatus.java and CloudHistory.java.
+
+three.js (3D car in the Status tab):
+  app/src/main/assets/three/three.min.js is three.js r149 (https://threejs.org), Copyright 2010-2023
+  three.js authors, MIT License (app/src/main/assets/three/LICENSE).

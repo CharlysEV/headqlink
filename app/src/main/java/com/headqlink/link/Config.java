@@ -393,6 +393,41 @@ final class Config {
         return sp.getFloat("fuel_l100", 6.5f);
     }
 
+    /** Ajuste de la previsión de las rutas (RouteCalibration): las últimas llegadas, en JSON. */
+    String routeCalibration() {
+        return sp.getString("route_calib", "");
+    }
+
+    void setRouteCalibration(String json) {
+        sp.edit().putString("route_calib", json).apply();
+    }
+
+    /** Filtro de los cargadores de la Ruta (ChargerFilter): potencia mínima (kW, 0 = cualquiera) y redes («tesla,zunder»). */
+    int chargerMinKw() {
+        return ChargerFilter.snapMinKw(sp.getInt("charger_min_kw", 0));
+    }
+
+    void setChargerMinKw(int kw) {
+        sp.edit().putInt("charger_min_kw", ChargerFilter.snapMinKw(kw)).apply();
+    }
+
+    String chargerNetworks() {
+        return sp.getString("charger_networks", "");
+    }
+
+    void setChargerNetworks(String keys) {
+        sp.edit().putString("charger_networks", keys == null ? "" : keys).apply();
+    }
+
+    /** Últimos destinos elegidos en el coche (JSON, del más reciente al más antiguo). Solo en el móvil. */
+    String recentPlaces() {
+        return sp.getString("recent_places", "");
+    }
+
+    void setRecentPlaces(String json) {
+        sp.edit().putString("recent_places", json).apply();
+    }
+
     /** Accesos directos de la web en el coche: {nombre, url}. */
     String[][] webShortcuts() {
         return WebScreen.DEFAULT_SHORTCUTS;
