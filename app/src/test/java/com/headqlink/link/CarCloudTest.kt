@@ -35,9 +35,20 @@ class CarCloudTest {
     // ------------------------------------------------------------------ cuándo lee
 
     @Test
-    fun pollsEvery60sOr30sWithTheHubOnScreen() {
-        assertEquals(60_000L, CarCloud.Policy.delayMs(0, false))
-        assertEquals(30_000L, CarCloud.Policy.delayMs(0, true))
+    fun pollsEvery2MinOr90sWithTheHubOnScreen() {
+        assertEquals(120_000L, CarCloud.Policy.delayMs(0, false))
+        assertEquals(90_000L, CarCloud.Policy.delayMs(0, true))
+    }
+
+    @Test
+    fun spacesOutWhenTheCarStopsUploading() {
+        // Una lectura sin dato nuevo no cambia nada; desde la segunda, 5 min y luego 15 min (aunque se vea la sección).
+        assertEquals(90_000L, CarCloud.Policy.delayMs(0, true, 1))
+        assertEquals(300_000L, CarCloud.Policy.delayMs(0, true, 2))
+        assertEquals(900_000L, CarCloud.Policy.delayMs(0, false, 3))
+        assertEquals("no pasa de 15 min", 900_000L, CarCloud.Policy.delayMs(0, false, 20))
+        // Los errores mandan sobre el coche dormido.
+        assertEquals(120_000L, CarCloud.Policy.delayMs(1, false, 5))
     }
 
     @Test

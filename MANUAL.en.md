@@ -628,8 +628,9 @@ the car off, gives the last it knew) or "estimated".
    by hand). It turns the % into kWh.
 5. **"Read status now"** to check it: battery, range, charging, pressures and the age of the data.
 
-With "Auto extended" running (or the "Extended mode preview"), HeadQLink reads the car every 60 s (every 30 s with the
-"Car" section on screen) and, after errors, at 2, 5 and 10 minutes. It stops when you disconnect. "Use the real car
+With "Auto extended" running (or the "Extended mode preview"), HeadQLink reads the car every 2 minutes (90 s with the
+"Car" section on screen, like LMB10); if the car hasn't uploaded anything new (parked or asleep), every 5 and then 15
+minutes; after errors, at 2, 5 and 10 minutes; and at most 400 reads a day, so as not to abuse an unofficial API. It stops when you disconnect. "Use the real car
 data" turns it off without deleting anything.
 
 **Privacy and security.**

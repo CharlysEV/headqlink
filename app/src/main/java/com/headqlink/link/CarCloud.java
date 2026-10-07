@@ -99,8 +99,15 @@ final class CarCloud {
 
     /** Cuándo vuelve a leer. Pura (sin Android): se prueba en el PC. */
     static final class Policy {
-        static final long NORMAL_MS = 60_000;
-        static final long HUB_MS = 30_000;
+        /**
+         * Discreto con la API (no oficial: Leapmotor podría limitar o bloquear una cuenta que consulte demasiado): 2 min de
+         * base, 90 s con la sección Coche a la vista (lo mismo que LMB10 con su app abierta); si el coche no ha subido un
+         * dato nuevo en las dos últimas lecturas (aparcado o dormido), 5 min y luego 15 min; tope diario de lecturas.
+         */
+        static final long NORMAL_MS = 120_000;
+        static final long HUB_MS = 90_000;
+        static final long[] STALE_MS = {300_000, 900_000};
+        static final int DAILY_CAP = 400;
         static final long[] BACKOFF_MS = {120_000, 300_000, 600_000};
         /** Sin cuenta o desactivado: se mira cada tanto si eso cambia (sin red). */
         static final long IDLE_MS = 30_000;
@@ -110,13 +117,25 @@ final class CarCloud {
 
         /** Espera hasta la siguiente lectura: 60 s (30 s con la sección Coche a la vista) o 2, 5 y 10 min tras errores. */
         static long delayMs(int failures, boolean hubVisible) {
-            if (failures <= 0) return hubVisible ? HUB_MS : NORMAL_MS;
-            return BACKOFF_MS[Math.min(failures, BACKOFF_MS.length) - 1];
+            return delayMs(failures, hubVisible, 0);
+        }
+
+        /** Con stale = lecturas seguidas sin dato nuevo del coche (a partir de 2, el coche está dormido: se espacia). */
+        static long delayMs(int failures, boolean hubVisible, int stale) {
+            if (failures > 0) return BACKOFF_MS[Math.min(failures, BACKOFF_MS.length) - 1];
+            if (stale >= 2) return STALE_MS[Math.min(stale - 2, STALE_MS.length - 1)];
+            return hubVisible ? HUB_MS : NORMAL_MS;
         }
     }
 
     private static volatile Snapshot current = Snapshot.of(State.NO_ACCOUNT);
     private static volatile boolean running;
+    /** Lecturas seguidas en las que el coche no había subido un dato nuevo (aparcado o dormido). */
+    private static volatile int staleReads;
+    private static volatile long lastDataTime;
+    /** Tope diario de lecturas (Policy.DAILY_CAP), por día local. */
+    private static int readsToday;
+    private static long readsDay = -1;
     private static volatile boolean hubVisible;
     /** EXPIRED / SERVER_KEY / NO_ACCOUNT: no se vuelve a intentar hasta que cambie algo en el móvil. */
     private static volatile boolean blocked;
@@ -199,7 +218,8 @@ final class CarCloud {
     }
 
     private static void loop(int gen) {
-        L.i("nube Leapmotor: sondeo en marcha (cada 60 s; 30 s con la sección Coche en pantalla)");
+        L.i("nube Leapmotor: sondeo en marcha (cada 2 min; 90 s con la sección Coche en pantalla; 5-15 min si el coche no sube "
+                + "datos nuevos; como mucho " + Policy.DAILY_CAP + " lecturas al día)");
         int failures = 0;
         long lastAttempt = 0;
         while (alive(gen)) {
@@ -224,10 +244,14 @@ final class CarCloud {
                 failures = 0;
             }
             // Espera hasta que toque (se recalcula si la sección Coche aparece o desaparece).
-            long due = lastAttempt == 0 ? 0 : lastAttempt + Policy.delayMs(failures, hubVisible);
+            long due = lastAttempt == 0 ? 0 : lastAttempt + Policy.delayMs(failures, hubVisible, staleReads);
             long now = SystemClock.elapsedRealtime();
             if (now < due) {
                 sleep(due - now);
+                continue;
+            }
+            if (!takeDailyQuota()) {
+                sleep(Policy.STALE_MS[Policy.STALE_MS.length - 1]);
                 continue;
             }
             lastAttempt = SystemClock.elapsedRealtime();
@@ -249,7 +273,12 @@ final class CarCloud {
             long wall = System.currentTimeMillis();
             Snapshot snap = new Snapshot(State.OK, s, wall, lat, st.capacityKwh(), st.carType(), 0, false);
             current = snap;
-            L.i("nube Leapmotor: " + s.logLine() + " · dato del coche de hace " + agoLog(snap.ageMs(wall)) + " · " + lat + " ms");
+            long dataTime = snap.dataTimeMs();
+            staleReads = dataTime > 0 && dataTime == lastDataTime ? staleReads + 1 : 0;
+            lastDataTime = dataTime;
+            L.i("nube Leapmotor: " + s.logLine() + " · dato del coche de hace " + agoLog(snap.ageMs(wall)) + " · " + lat + " ms"
+                    + (staleReads >= 2 ? " · sin dato nuevo " + staleReads + " veces: la siguiente en "
+                    + Policy.delayMs(0, hubVisible, staleReads) / 60_000 + " min" : "") + " · lecturas hoy " + readsToday);
             return 0;
         } catch (LeapApi.SessionExpiredException e) {
             current = current.with(State.EXPIRED, 0);
@@ -281,6 +310,24 @@ final class CarCloud {
     static void publish(Context ctx, LeapStatus s, long latencyMs) {
         CarCloudStore st = new CarCloudStore(ctx);
         current = new Snapshot(State.OK, s, System.currentTimeMillis(), latencyMs, st.capacityKwh(), st.carType(), 0, false);
+    }
+
+    /** Cuenta una lectura del día; false si ya se llegó al tope (se registra una vez). */
+    private static synchronized boolean takeDailyQuota() {
+        long day = java.util.concurrent.TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis() + java.util.TimeZone.getDefault().getOffset(System.currentTimeMillis()));
+        if (day != readsDay) {
+            readsDay = day;
+            readsToday = 0;
+        }
+        if (readsToday >= Policy.DAILY_CAP) {
+            if (readsToday == Policy.DAILY_CAP) {
+                readsToday++;
+                L.w("nube Leapmotor: tope de " + Policy.DAILY_CAP + " lecturas hoy: no leo más hasta mañana (para no abusar de la API)");
+            }
+            return false;
+        }
+        readsToday++;
+        return true;
     }
 
     private static void sleep(long ms) {

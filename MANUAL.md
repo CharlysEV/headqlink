@@ -638,8 +638,10 @@ apagado, da lo último que supo) o «estimado».
    Sirve para pasar el % a kWh.
 5. **«Leer estado ahora»** para comprobarlo: batería, autonomía, carga, presiones y la edad del dato.
 
-Con «Auto extendido» en marcha (o la «Vista previa del modo extendido»), HeadQLink lee el coche cada 60 s (cada 30 s con
-la sección «Coche» en pantalla) y, si falla, a los 2, 5 y 10 minutos. Se para al desconectar. «Usar los datos reales
+Con «Auto extendido» en marcha (o la «Vista previa del modo extendido»), HeadQLink lee el coche cada 2 minutos (90 s con
+la sección «Coche» en pantalla, como LMB10); si el coche no ha subido nada nuevo (aparcado o dormido), cada 5 y luego
+cada 15 minutos; si falla, a los 2, 5 y 10 minutos; y como mucho 400 lecturas al día, para no abusar de una API no
+oficial. Se para al desconectar. «Usar los datos reales
 del coche» lo apaga sin borrar nada.
 
 **Privacidad y seguridad.**

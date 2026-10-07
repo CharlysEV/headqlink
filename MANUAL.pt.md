@@ -652,8 +652,10 @@ dá o último que soube) ou «estimado».
    mão). Serve para passar a % a kWh.
 5. **«Ler o estado agora»** para o confirmar: bateria, autonomia, carga, pressões e a idade do dado.
 
-Com o «Auto estendido» em funcionamento (ou a «Pré-visualização do modo estendido»), o HeadQLink lê o carro a cada 60 s
-(a cada 30 s com a secção «Carro» no ecrã) e, se falhar, aos 2, 5 e 10 minutos. Para ao desligar. «Usar os dados reais
+Com o «Auto estendido» em funcionamento (ou a «Pré-visualização do modo estendido»), o HeadQLink lê o carro a cada 2 minutos
+(90 s com a secção «Carro» no ecrã, como o LMB10); se o carro não enviar nada novo (estacionado ou a dormir), a cada 5 e
+depois a cada 15 minutos; se falhar, aos 2, 5 e 10 minutos; e no máximo 400 leituras por dia, para não abusar de uma API
+não oficial. Para ao desligar. «Usar os dados reais
 do carro» desativa-o sem apagar nada.
 
 **Privacidade e segurança.**
