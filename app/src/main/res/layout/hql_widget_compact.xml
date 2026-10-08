@@ -21,8 +21,26 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="end|center_vertical"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
+
+        <!-- Coche virtual (probar sin coche) -->
+        <ImageView
+            android:id="@+id/hql_w_virtual"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/hql_w_cycle_bg"
+            android:contentDescription="@string/hql_sim_menu"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/hql_ln_car"
+            android:tint="@color/hql_accent" />
+
+        <!-- Separador (en RemoteViews no vale un View suelto) -->
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
         <ImageView
             android:id="@+id/hql_w_link_cycle"

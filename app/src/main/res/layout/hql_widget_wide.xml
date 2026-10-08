@@ -51,6 +51,19 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Coche virtual (probar sin coche) -->
+        <ImageView
+            android:id="@+id/hql_w_virtual"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="@drawable/hql_w_cycle_bg"
+            android:contentDescription="@string/hql_sim_menu"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/hql_ln_car"
+            android:layout_marginEnd="6dp"
+            android:tint="@color/hql_accent" />
+
         <TextView
             android:id="@+id/hql_w_mode_aa"
             style="@style/HQL.Widget.Chip"

@@ -35,6 +35,7 @@ final class LinkWidgetViews {
     private static final int RC_LINK = 110;
     private static final int RC_CYCLE = 113;
     private static final int RC_MODE = 120;
+    private static final int RC_VIRTUAL = 130;
     private static final String[] LINKS = {Config.LINK_HOTSPOT, Config.LINK_P2P, Config.LINK_USB};
     private static final int[] LINK_IDS = {R.id.hql_w_link_hotspot, R.id.hql_w_link_p2p, R.id.hql_w_link_usb};
 
@@ -61,6 +62,9 @@ final class LinkWidgetViews {
         rv.setInt(R.id.hql_w_detail, "setMaxLines", tall ? 2 : 1);
         rv.setViewVisibility(R.id.hql_w_detail,
                 detail.isEmpty() || size == LinkGlance.Size.COMPACT_SHORT ? View.GONE : View.VISIBLE);
+        // El coche (en el 2x2, arriba a la izquierda; en el 4x2, en la cabecera): el coche virtual, para probar sin coche.
+        rv.setOnClickPendingIntent(R.id.hql_w_virtual, virtualPending(c));
+        rv.setContentDescription(R.id.hql_w_virtual, c.getString(R.string.hql_sim_menu));
 
         if (compact) {
             // 2x2: el icono de la conexión elegida; al tocarlo, la siguiente.
@@ -260,6 +264,12 @@ final class LinkWidgetViews {
                 .putExtra(HomeActivity.EXTRA_NO_AUTOCONNECT, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return PendingIntent.getActivity(c, RC_OPEN, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    /** El coche virtual (si el coche de verdad está conectado, él mismo avisa y no arranca). */
+    static PendingIntent virtualPending(Context c) {
+        Intent i = new Intent(c, CarSimActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        return PendingIntent.getActivity(c, RC_VIRTUAL, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     private static PendingIntent broadcast(Context c, int requestCode, String action, String value) {
