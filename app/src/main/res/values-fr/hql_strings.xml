@@ -756,4 +756,12 @@
     <string name="hql_live_slow_text">%1$.0f kW ; attendu ~%2$.0f kW</string>
     <string name="hql_live_legend">Plein : ce qu\'elle donne · pointillé : ce que votre voiture devrait accepter · vert : vous pouvez repartir</string>
     <string name="hql_live_hide">Voir l\'itinéraire</string>
+    <string name="hql_near_button">Près de moi</string>
+    <string name="hql_near_title">Bornes à proximité</string>
+    <string name="hql_near_count">%1$d à moins de %2$d km</string>
+    <string name="hql_near_line">à %1$.1f km</string>
+    <string name="hql_near_none">Aucune borne à moins de %1$d km avec ce filtre.</string>
+    <string name="hql_near_loading">Recherche des bornes à moins de %1$d km…</string>
+    <string name="hql_near_no_position">Pas encore de position GPS.</string>
+    <string name="hql_near_any_power">Toute puissance</string>
 </resources>

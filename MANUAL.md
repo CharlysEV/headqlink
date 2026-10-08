@@ -403,6 +403,9 @@ admite.
       todos sus puntos) se completa con OpenStreetMap, sin repetir los que ya están; fuera de España, todo sale de
       OpenStreetMap, donde la potencia o la red pueden faltar. **«Cargadores en ruta»** abre la lista con el distintivo
       de cada red, el km, la potencia, el voltaje («350 kW · 920 V») y los enchufes.
+    - **Cargadores cerca de ti:** «Cerca de mí» (junto a «Filtrar») busca los cargadores a 5, 10, 25 o 50 km de donde
+      estás, sin ruta, de más cerca a más lejos: eliges la red («los Wenea cerca de mí») y la potencia mínima, y ves a
+      cuánto están, su potencia, su voltaje, los enchufes y los puntos, con «Ir».
     - **Navegar con Google Maps o Waze:** en «Filtrar» → «Navegar con» (si Waze está instalado). El botón de guiar y
       los «Ir» abren el elegido. Waze no admite paradas intermedias: «Ir con las paradas» te lleva a la siguiente.
     - **Plan de carga (gratis, como ABRP):** si no llegas con el margen, la Ruta dice **dónde parar y hasta cuánto

@@ -755,4 +755,12 @@
     <string name="hql_live_slow_text">%1$.0f kW; erwartet ~%2$.0f kW</string>
     <string name="hql_live_legend">Durchgezogen: was geliefert wird · gestrichelt: was dein Auto aufnehmen sollte · grün: du kannst weiterfahren</string>
     <string name="hql_live_hide">Route zeigen</string>
+    <string name="hql_near_button">In der Nähe</string>
+    <string name="hql_near_title">Ladestationen in der Nähe</string>
+    <string name="hql_near_count">%1$d im Umkreis von %2$d km</string>
+    <string name="hql_near_line">%1$.1f km entfernt</string>
+    <string name="hql_near_none">Keine Ladestationen im Umkreis von %1$d km mit diesem Filter.</string>
+    <string name="hql_near_loading">Suche Ladestationen im Umkreis von %1$d km…</string>
+    <string name="hql_near_no_position">Noch keine GPS-Position.</string>
+    <string name="hql_near_any_power">Jede Leistung</string>
 </resources>

@@ -404,6 +404,9 @@ supporta.
       Spagna, tutto viene da OpenStreetMap, dove potenza o operatore possono mancare. **«Colonnine lungo il
       percorso»** apre l'elenco con il distintivo di ogni operatore, il km, la potenza, la tensione («350 kW · 920 V»)
       e le prese.
+    - **Colonnine vicino a te:** «Vicino a me» (accanto a «Filtra») cerca le colonnine a 5, 10, 25 o 50 km da dove
+      sei, senza percorso, dalla più vicina: scegli l'operatore («le Wenea vicino a me») e la potenza minima, e vedi a
+      che distanza sono, potenza, tensione, prese e punti, con «Vai».
     - **Navigare con Google Maps o Waze:** in «Filtra» → «Navigare con» (se Waze è installato). Il pulsante per
       guidare e i «Vai» aprono quello scelto. Waze non ammette soste intermedie: «Vai con le soste» ti porta alla
       prossima.

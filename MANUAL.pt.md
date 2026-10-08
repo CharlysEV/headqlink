@@ -414,6 +414,9 @@ admite.
       seus pontos) completa-se com o OpenStreetMap, sem repetir os que já lá estão; fora de Espanha, tudo vem do
       OpenStreetMap, onde a potência ou a rede podem faltar. **«Carregadores ao longo da rota»** abre a lista com o
       distintivo de cada rede, o km, a potência, a tensão («350 kW · 920 V») e as fichas.
+    - **Carregadores perto de si:** «Perto de mim» (ao lado de «Filtrar») procura os carregadores a 5, 10, 25 ou 50 km
+      de onde está, sem rota, do mais perto ao mais longe: escolhe a rede («os Wenea perto de mim») e a potência mínima,
+      e vê a que distância estão, a potência, a tensão, as fichas e os pontos, com «Ir».
     - **Navegar com o Google Maps ou o Waze:** em «Filtrar» → «Navegar com» (se o Waze estiver instalado). O botão
       de guiar e os «Ir» abrem o escolhido. O Waze não admite paragens intermédias: «Ir com as paragens» leva-o à
       seguinte.

@@ -756,4 +756,12 @@
     <string name="hql_live_slow_text">%1$.0f kW; esperaba ~%2$.0f kW</string>
     <string name="hql_live_legend">Llena: lo que va dando · discontinua: lo que debería admitir tu coche · verde: ya puedes seguir</string>
     <string name="hql_live_hide">Ver ruta</string>
+    <string name="hql_near_button">Cerca de mí</string>
+    <string name="hql_near_title">Cargadores cerca</string>
+    <string name="hql_near_count">%1$d a menos de %2$d km</string>
+    <string name="hql_near_line">a %1$.1f km</string>
+    <string name="hql_near_none">No hay cargadores a menos de %1$d km con este filtro.</string>
+    <string name="hql_near_loading">Buscando cargadores a menos de %1$d km…</string>
+    <string name="hql_near_no_position">Aún no hay posición del GPS.</string>
+    <string name="hql_near_any_power">Cualquier potencia</string>
 </resources>

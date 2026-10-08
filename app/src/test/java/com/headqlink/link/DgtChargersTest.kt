@@ -167,4 +167,16 @@ class DgtChargersTest {
         val out = RoutePlanner.mergeSources(listOf(dgtZunder, dgtIber), listOf(osmSame, osmNear, osmNew, osmNoise, osmNewTwice))
         assertEquals(listOf(dgtZunder, dgtIber, osmNew), out)
     }
+
+    @Test
+    fun theDistanceAndTheTilesAroundAPointAreRight() {
+        // Madrid (Sol) - Torija: ~67,6 km en línea recta; Madrid - Barcelona, ~505 km.
+        assertEquals(67.6, RoutePlanner.distanceKm(40.4168, -3.7038, 40.7436, -3.0300), 0.5)
+        assertEquals(505.0, RoutePlanner.distanceKm(40.4168, -3.7038, 41.3874, 2.1686), 3.0)
+        assertEquals(0.0, RoutePlanner.distanceKm(40.0, -3.0, 40.0, -3.0), 1e-9)
+        // 10 km alrededor: la cuadrícula del punto y las vecinas que toca el círculo.
+        val tiles = RoutePlanner.tilesAround(40.4168, -3.7038, 10.0)
+        assertTrue(tiles.contains(ChargerCache.tileOf(40.4168, -3.7038)))
+        assertTrue(tiles.size in 4..9)
+    }
 }

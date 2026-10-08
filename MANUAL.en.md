@@ -395,6 +395,9 @@ version). That tells us whether the C10 supports it.
       all their points) is filled in from OpenStreetMap, without repeating the ones already there; outside Spain,
       everything comes from OpenStreetMap, where power or network may be missing. **"Chargers along the route"** opens
       the list with each network's badge, the km, the power, the voltage ("350 kW · 920 V") and the sockets.
+    - **Chargers near you:** "Near me" (next to "Filter") finds the chargers 5, 10, 25 or 50 km from where you are,
+      without a route, nearest first: pick the network ("the Wenea ones near me") and the minimum power, and see how far
+      they are, their power, voltage, sockets and points, with "Go".
     - **Navigate with Google Maps or Waze:** in "Filter" → "Navigate with" (if Waze is installed). The guide button
       and the "Go" buttons open the chosen one. Waze has no intermediate stops: "Go with the stops" takes you to the
       next one.

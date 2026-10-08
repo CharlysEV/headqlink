@@ -756,4 +756,12 @@
     <string name="hql_live_slow_text">%1$.0f kW; attesi ~%2$.0f kW</string>
     <string name="hql_live_legend">Continua: quello che sta dando · tratteggiata: quello che la tua auto dovrebbe accettare · verde: puoi ripartire</string>
     <string name="hql_live_hide">Vedi percorso</string>
+    <string name="hql_near_button">Vicino a me</string>
+    <string name="hql_near_title">Colonnine vicine</string>
+    <string name="hql_near_count">%1$d entro %2$d km</string>
+    <string name="hql_near_line">a %1$.1f km</string>
+    <string name="hql_near_none">Nessuna colonnina entro %1$d km con questo filtro.</string>
+    <string name="hql_near_loading">Cerco colonnine entro %1$d km…</string>
+    <string name="hql_near_no_position">Ancora nessuna posizione GPS.</string>
+    <string name="hql_near_any_power">Qualsiasi potenza</string>
 </resources>

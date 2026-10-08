@@ -1127,6 +1127,88 @@ final class RoutePlanner {
         t.start();
     }
 
+    // ------------------------------------------------------------------ cargadores cerca (sin ruta)
+
+    /** Distancia en línea recta (km). */
+    static double distanceKm(double la1, double lo1, double la2, double lo2) {
+        double r = 6371.0;
+        double dLa = Math.toRadians(la2 - la1);
+        double dLo = Math.toRadians(lo2 - lo1);
+        double a = Math.sin(dLa / 2) * Math.sin(dLa / 2)
+                + Math.cos(Math.toRadians(la1)) * Math.cos(Math.toRadians(la2)) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+        return 2 * r * Math.asin(Math.min(1, Math.sqrt(a)));
+    }
+
+    /** Las cuadrículas (ChargerCache) que cubren un círculo de radiusKm alrededor de un punto. */
+    static List<String> tilesAround(double lat, double lon, double radiusKm) {
+        double dLat = radiusKm / 111.32;
+        double dLon = radiusKm / (111.32 * Math.max(0.2, Math.cos(Math.toRadians(lat))));
+        List<double[]> box = new ArrayList<>();
+        box.add(new double[]{lat - dLat, lon - dLon, lat + dLat, lon + dLon});
+        return ChargerCache.tilesFor(box);
+    }
+
+    /**
+     * Los cargadores a menos de radiusKm de un punto, de más cerca a más lejos, con la distancia en kmAlong: en España,
+     * los de la DGT (potencia y voltaje oficiales) más los de OpenStreetMap que no estén; fuera, los de OpenStreetMap que
+     * haya en el móvil (missing: las cuadrículas sin datos, para pedirlas con fetchNearby).
+     */
+    List<Charger> nearby(double lat, double lon, double radiusKm, List<String> missing) {
+        if (!demo) DgtChargers.sites(ctx);
+        long now = System.currentTimeMillis();
+        List<Charger> official = new ArrayList<>();
+        List<Charger> extra = new ArrayList<>();
+        List<Charger> list = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (String t : tilesAround(lat, lon, radiusKm)) {
+            List<DgtChargers.Site> dgt = DgtChargers.inTile(t);
+            if (dgt != null) {
+                for (DgtChargers.Site s : dgt) {
+                    double d = distanceKm(lat, lon, s.lat, s.lon);
+                    if (d > radiusKm) continue;
+                    Charger c = s.toCharger();
+                    c.kmAlong = d;
+                    official.add(c);
+                }
+            }
+            List<ChargerCache.Item> items = ChargerCache.get(ctx, t, now);
+            if (items == null) {
+                if (dgt == null && missing != null) missing.add(t);
+                continue;
+            }
+            for (ChargerCache.Item it : items) {
+                if (!it.id.isEmpty() && !seen.add(it.id)) continue;
+                double d = distanceKm(lat, lon, it.lat, it.lon);
+                if (d > radiusKm) continue;
+                Charger c = it.toCharger();
+                c.kmAlong = d;
+                (dgt != null ? extra : list).add(c);
+            }
+        }
+        list.addAll(mergeSources(official, extra));
+        java.util.Collections.sort(list, (a, b) -> Double.compare(a.kmAlong, b.kmAlong));
+        return list;
+    }
+
+    /** Pide a OpenStreetMap las cuadrículas que faltan (fuera de España), en otro hilo; luego, done en ese hilo. */
+    void fetchNearby(List<String> tiles, Runnable done) {
+        if (tiles.isEmpty() || demo) return;
+        Thread t = new Thread(() -> {
+            long now = System.currentTimeMillis();
+            for (int i = 0; i < tiles.size(); i += TILES_PER_QUERY) {
+                List<String> part = tiles.subList(i, Math.min(tiles.size(), i + TILES_PER_QUERY));
+                try {
+                    fetchTiles(part, now);
+                } catch (Exception e) {
+                    L.w("cargadores cerca: " + part.size() + " zonas sin respuesta de OpenStreetMap (" + Http.safeError(e) + ")");
+                }
+            }
+            done.run();
+        }, "hql-near");
+        t.setPriority(Thread.MIN_PRIORITY);
+        t.start();
+    }
+
     /** Un cargador de OpenStreetMap a menos de esto de uno de la DGT de la misma red es el mismo (km). */
     static final double SAME_SITE_NETWORK_KM = 0.4;
     /** …y a menos de esto, aunque no se sepa su red (km). */

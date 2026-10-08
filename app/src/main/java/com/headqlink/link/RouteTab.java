@@ -184,6 +184,9 @@ final class RouteTab implements CarScreen {
         TextView filter = CarKit.pill(ctx, Str.get(R.string.hql_charger_filter), false);
         filter.setOnClickListener(v -> openChargerFilter());
         fRow.addView(filter);
+        TextView near = CarKit.pill(ctx, Str.get(R.string.hql_near_button), false);
+        near.setOnClickListener(v -> openNearby());
+        fRow.addView(near, spaced());
         filterSummary = CarStyle.text(ctx, "", 20, CarKit.DIM);
         filterSummary.setSingleLine(true);
         filterSummary.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -844,6 +847,162 @@ final class RouteTab implements CarScreen {
         }
         count.setText(Str.get(R.string.hql_chargers_list_count, total, passing));
         root.addView(panel, CarStyle.match());
+    }
+
+    // ------------------------------------------------------------------ cargadores cerca
+
+    /** Radios del buscador (km), potencias mínimas (kW) y lo que se recuerda mientras dura la sesión. */
+    private static final int[] NEAR_RADII = {5, 10, 25, 50};
+    private static final int[] NEAR_MIN_KW = {0, 50, 100, 150};
+    private int nearRadius = 10;
+    private int nearMinKw;
+    private final java.util.Set<String> nearNets = new java.util.HashSet<>();
+    /** Con la búsqueda en OpenStreetMap en marcha (fuera de España): para no pedirla dos veces. */
+    private boolean nearFetching;
+
+    /**
+     * Buscador de cargadores cerca (sin ruta): los de la DGT (y OpenStreetMap) a menos del radio elegido, de más cerca a
+     * más lejos, con su red, a cuánto están, potencia, voltaje, enchufes y puntos, y «Ir». Se elige la red («los Wenea
+     * cerca de mí») y la potencia mínima.
+     */
+    private void openNearby() {
+        LinearLayout panel = new LinearLayout(ctx);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setBackgroundColor(CarKit.BG);
+        panel.setClickable(true);
+        panel.setPadding(CarKit.PAD, 18, CarKit.PAD, CarKit.PAD);
+        LinearLayout bar = CarKit.row(ctx);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = CarStyle.text(ctx, Str.get(R.string.hql_near_title), 34, CarKit.TEXT);
+        title.setTypeface(CarKit.MEDIUM);
+        bar.addView(title);
+        TextView count = CarStyle.text(ctx, "", 22, CarKit.DIM);
+        count.setPadding(20, 0, 0, 0);
+        bar.addView(count, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView done = CarKit.pill(ctx, Str.get(R.string.hql_close), true);
+        bar.addView(done);
+        panel.addView(bar);
+        LinearLayout body = CarKit.col(ctx);
+        ScrollView sv = new ScrollView(ctx);
+        sv.addView(body);
+        LinearLayout.LayoutParams svp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        svp.topMargin = 6;
+        panel.addView(sv, svp);
+        done.setOnClickListener(v -> root.removeView(panel));
+        Runnable[] build = new Runnable[1];
+        build[0] = () -> {
+            body.removeAllViews();
+            double[] pos = planner.position();
+            if (pos == null || Double.isNaN(pos[0])) {
+                count.setText("");
+                body.addView(hint(Str.get(R.string.hql_near_no_position)));
+                return;
+            }
+            java.util.List<String> missing = new java.util.ArrayList<>();
+            java.util.List<RoutePlanner.Charger> all = planner.nearby(pos[0], pos[1], nearRadius, missing);
+            if (!missing.isEmpty() && !nearFetching) {
+                nearFetching = true;
+                planner.fetchNearby(missing, () -> root.post(() -> {
+                    nearFetching = false;
+                    if (panel.getParent() != null) build[0].run();
+                }));
+            }
+            // Filtros: distancia, potencia mínima y redes (las que hay cerca, con cuántos tiene cada una).
+            LinearLayout rr = CarKit.row(ctx);
+            rr.setGravity(Gravity.CENTER_VERTICAL);
+            for (int r : NEAR_RADII) {
+                rr.addView(chip(r + " km", nearRadius == r, () -> {
+                    nearRadius = r;
+                    build[0].run();
+                }), chipParams());
+            }
+            TextView sep = CarStyle.text(ctx, "·", 22, CarKit.FAINT);
+            sep.setPadding(12, 0, 12, 0);
+            rr.addView(sep);
+            for (int k : NEAR_MIN_KW) {
+                String label = k == 0 ? Str.get(R.string.hql_near_any_power) : "≥" + k + " kW";
+                rr.addView(chip(label, nearMinKw == k, () -> {
+                    nearMinKw = k;
+                    build[0].run();
+                }), chipParams());
+            }
+            body.addView(rr);
+            java.util.List<String> keys = new java.util.ArrayList<>();
+            for (RoutePlanner.Charger c : all) keys.add(c.network == null ? ChargerFilter.OTHER : c.network);
+            java.util.List<java.util.Map.Entry<String, Integer>> found = ChargerFilter.counts(keys);
+            LinearLayout row = CarKit.row(ctx);
+            row.setPadding(0, 10, 0, 0);
+            row.addView(chip(Str.get(R.string.hql_charger_all_networks), nearNets.isEmpty(), () -> {
+                nearNets.clear();
+                build[0].run();
+            }), chipParams());
+            int i = 1;
+            for (java.util.Map.Entry<String, Integer> e : found) {
+                if (i % 6 == 0) {
+                    body.addView(row);
+                    row = CarKit.row(ctx);
+                    row.setPadding(0, 10, 0, 0);
+                }
+                String k = e.getKey();
+                String name = k.equals(ChargerFilter.OTHER) ? Str.get(R.string.hql_charger_other) : ChargerFilter.label(k);
+                row.addView(chip(name + " · " + e.getValue(), nearNets.contains(k), () -> {
+                    if (!nearNets.remove(k)) nearNets.add(k);
+                    build[0].run();
+                }), chipParams());
+                i++;
+            }
+            body.addView(row);
+            int shown = 0;
+            int passing = 0;
+            for (RoutePlanner.Charger c : all) {
+                String net = c.network == null ? ChargerFilter.OTHER : c.network;
+                if (!nearNets.isEmpty() && !nearNets.contains(net)) continue;
+                if (nearMinKw > 0 && !(c.maxKw >= nearMinKw && !c.acOnly)) continue;
+                passing++;
+                if (shown >= 80) continue;
+                shown++;
+                LinearLayout.LayoutParams lp = itemParams();
+                if (shown == 1) lp.topMargin = 16;
+                body.addView(nearbyRow(c), lp);
+            }
+            if (passing == 0) body.addView(hint(Str.get(nearFetching ? R.string.hql_near_loading : R.string.hql_near_none, nearRadius)));
+            count.setText(Str.get(R.string.hql_near_count, passing, nearRadius));
+            body.addView(hint(Str.get(DgtChargers.inTile(ChargerCache.tileOf(pos[0], pos[1])) != null
+                    ? R.string.hql_chargers_source_dgt : R.string.hql_chargers_source_osm)));
+        };
+        build[0].run();
+        root.addView(panel, CarStyle.match());
+    }
+
+    /** Una fila del buscador: red, nombre, a cuántos km, potencia y voltaje, enchufes y puntos, y «Ir». */
+    private View nearbyRow(RoutePlanner.Charger c) {
+        LinearLayout item = CarKit.row(ctx);
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setPadding(18, 12, 18, 12);
+        item.setBackground(CarKit.outlined(CarKit.SURFACE, CarKit.OUTLINE, 18));
+        item.addView(new ChargerDot(ctx, c.maxKw, c.network), new LinearLayout.LayoutParams(64, 64));
+        LinearLayout txt = CarKit.col(ctx);
+        txt.setPadding(20, 0, 12, 0);
+        TextView name = CarStyle.text(ctx, c.name, 26, CarKit.TEXT);
+        name.setTypeface(CarKit.MEDIUM);
+        name.setSingleLine(true);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        String net = c.network == null || c.network.equals(ChargerFilter.OTHER) ? "" : ChargerFilter.label(c.network) + " · ";
+        String sub = net + Str.get(R.string.hql_near_line, c.kmAlong) + " · " + kwText(c)
+                + (c.detail == null || c.detail.isEmpty() ? "" : " · " + c.detail);
+        TextView detail = CarStyle.text(ctx, sub, 21, CarKit.DIM);
+        detail.setMaxLines(2);
+        detail.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        txt.addView(name);
+        txt.addView(detail);
+        if (ChargePlanner.lowVolts(c, planner.carVolts())) {
+            txt.addView(CarStyle.text(ctx, Str.get(R.string.hql_charger_low_volts, c.maxVolts), 20, CarKit.AMBER));
+        }
+        item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView go = CarKit.pill(ctx, Str.get(R.string.hql_go), false);
+        go.setOnClickListener(v -> navigateTo(c.lat, c.lon));
+        item.addView(go);
+        return item;
     }
 
     /** Una fila de la ventana de cargadores. */

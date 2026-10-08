@@ -755,4 +755,12 @@
     <string name="hql_live_slow_text">%1$.0f kW; verwacht ~%2$.0f kW</string>
     <string name="hql_live_legend">Doorgetrokken: wat de laadpaal geeft · gestippeld: wat je auto zou moeten opnemen · groen: je kunt verder</string>
     <string name="hql_live_hide">Route tonen</string>
+    <string name="hql_near_button">In de buurt</string>
+    <string name="hql_near_title">Laadpalen in de buurt</string>
+    <string name="hql_near_count">%1$d binnen %2$d km</string>
+    <string name="hql_near_line">op %1$.1f km</string>
+    <string name="hql_near_none">Geen laadpalen binnen %1$d km met dit filter.</string>
+    <string name="hql_near_loading">Laadpalen zoeken binnen %1$d km…</string>
+    <string name="hql_near_no_position">Nog geen gps-positie.</string>
+    <string name="hql_near_any_power">Elk vermogen</string>
 </resources>

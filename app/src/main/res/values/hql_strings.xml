@@ -755,4 +755,12 @@
     <string name="hql_live_slow_text">%1$.0f kW; expected ~%2$.0f kW</string>
     <string name="hql_live_legend">Solid: what it is giving · dashed: what your car should take · green: you can go on</string>
     <string name="hql_live_hide">Show route</string>
+    <string name="hql_near_button">Near me</string>
+    <string name="hql_near_title">Chargers near me</string>
+    <string name="hql_near_count">%1$d within %2$d km</string>
+    <string name="hql_near_line">%1$.1f km away</string>
+    <string name="hql_near_none">No chargers within %1$d km with this filter.</string>
+    <string name="hql_near_loading">Looking for chargers within %1$d km…</string>
+    <string name="hql_near_no_position">No GPS position yet.</string>
+    <string name="hql_near_any_power">Any power</string>
 </resources>
