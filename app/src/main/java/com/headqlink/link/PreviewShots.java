@@ -40,6 +40,7 @@ final class PreviewShots {
             // Estado: datos reales del coche (la nube de Leapmotor; en la demostración, inventados).
             new Shot("coche_estado", "car-5", 300, 1800),
             new Shot("coche_estado_cargando", "car-5", 30, 1500, "cargando"),
+            new Shot("coche_ruta_cargando", "car-0", 300, 3000, "cargando"),
             new Shot("coche_estado_sin_cuenta", "car-5", 30, 1500, "sin_nube"),
             // Los estados vacíos: sin destino (Ruta y Conducción) y sin viajes guardados.
             new Shot("coche_ruta_sin_destino", "car-0", 30, 1500, "sin_ruta"),

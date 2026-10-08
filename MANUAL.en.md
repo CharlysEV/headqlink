@@ -409,6 +409,15 @@ version). That tells us whether the C10 supports it.
       stops at 800 V ones (or 150 kW and up, which almost always are, even if the registry does not say so) and keeps
       the 400–500 V ones in reserve: the list marks them in amber ("470 V: your 800 V car charges here at half power")
       and the plan says how many there are along the way. Tesla Superchargers in Spain are 400–500 V.
+    - **Live charging:** with the Leapmotor account, when you plug in a block over the route shows the kW, the % and
+      the target ("54 % → 64 %"), the time it will be ready and what you reach the next stop or the destination with;
+      if charging a little more saves you the next stop, it says so ("Up to 85 % saves you the stop at Lleida: +7 min
+      here, −23 min there"). The curve compares what the charger is giving (solid line) with what your car should take
+      there (dashed), and it warns if charging is much slower than expected. At the target: **"You can go on"** with a
+      sound on the phone and, if you are in the car, voice and a green card. On a trip or on a fast charger, the phone
+      keeps watching **even if the car's screen turns off** (you go for a coffee): an ongoing notification with the %
+      and the ready time, gone by itself when you unplug. Each charge is saved on the phone (real kW, % and minutes)
+      to learn the car's real curve.
     - **The plan redoes itself during the trip:** with the Leapmotor account it compares how much your battery really
       drops with what was expected for those km and adjusts the rest ("Adjusted to this trip's consumption: +12 %").
       Chosen stops are kept while you reach them with margin; if you are running short (or have extra), the plan changes

@@ -429,6 +429,15 @@ admite.
       diga) e deixa os de 400–500 V de reserva: a lista marca-os a âmbar («470 V: o seu carro de 800 V carrega aqui a
       metade da potência») e o plano diz quantos há pelo caminho. Os Supercharger da Tesla em Espanha são de
       400–500 V.
+    - **Carregamento em direto:** com a conta Leapmotor, ao ligar a ficha aparece por cima da rota um bloco com os kW,
+      a % e o objetivo («54 % → 64 %»), a hora a que estará pronto e com quanto chega à próxima paragem ou ao destino;
+      se carregar um pouco mais lhe poupa a próxima paragem, diz-lho («Até 85 % poupa a paragem em Lleida: +7 min
+      aqui, −23 min lá»). A curva compara o que está a dar (linha contínua) com o que o seu carro devia aceitar nesse
+      carregador (tracejada) e avisa se carrega muito mais devagar do que o esperado. Ao chegar ao objetivo: **«Já pode
+      seguir»** com som no telemóvel e, se estiver no carro, voz e um cartão verde. Numa viagem ou em carregamento
+      rápido, o telemóvel continua a vigiar **mesmo que o ecrã do carro se apague** (vai tomar um café): uma
+      notificação fixa com a % e a hora de pronto, que desaparece sozinha ao desligar. Cada carregamento fica guardado
+      no telemóvel (kW reais, % e minutos) para ir conhecendo a curva real do carro.
     - **O plano refaz-se sozinho durante a viagem:** com a conta Leapmotor compara o que a bateria desce de verdade com
       o previsto para esses km e ajusta o resto («Ajustado ao consumo desta viagem: +12 %»). As paragens escolhidas
       mantêm-se enquanto lá chegar com margem; se estiver a ficar sem bateria (ou sobrar), o plano muda e **avisa**: um

@@ -737,4 +737,22 @@
     <string name="hql_plan_low_volts">Onderweg zijn er ook %1$d laadpalen van 400–500 V (de eerste bij km %2$.0f): ze werken, maar je 800V-auto laadt er op half vermogen, dus het plan stopt bij 800V-laadpalen. Tik om ze te zien.</string>
     <string name="hql_chargers_source_dgt">Gegevens: in Spanje het officiële register van laadpunten (Ministerie voor de Ecologische Transitie, gepubliceerd door de DGT op nap.dgt.es, CC BY); elders © OpenStreetMap-bijdragers (ODbL).</string>
     <string name="hql_chargers_source_osm">Gegevens: © OpenStreetMap-bijdragers (ODbL).</string>
+    <string name="hql_live_block_title">Live laden</string>
+    <string name="hql_live_channel">Live laden</string>
+    <string name="hql_live_alert_channel">Laadmeldingen</string>
+    <string name="hql_live_title">Laden · %1$.0f %%</string>
+    <string name="hql_live_title_target">Laden · %1$.0f %% → %2$.0f %%</string>
+    <string name="hql_live_title_ready">Klaar: je kunt verder · %1$.0f %%</string>
+    <string name="hql_live_title_wait">Laden</string>
+    <string name="hql_live_ready_at">klaar ≈ %1$s (%2$s)</string>
+    <string name="hql_live_full_at">vol ≈ %1$s (volgens de auto)</string>
+    <string name="hql_live_ready_title">Je kunt verder</string>
+    <string name="hql_live_ready_text">%1$.0f %%: je bereikt %2$s met %3$.0f %%</string>
+    <string name="hql_live_ready_short">%1$.0f %%: genoeg voor de rest van het plan</string>
+    <string name="hql_live_next">Daarmee bereik je %1$s met %2$.0f %%</string>
+    <string name="hql_live_skip">Tot %1$.0f %% bespaar je de stop bij %2$s (+%3$s hier, −%4$s daar)</string>
+    <string name="hql_live_slow_title">Langzaam laden</string>
+    <string name="hql_live_slow_text">%1$.0f kW; verwacht ~%2$.0f kW</string>
+    <string name="hql_live_legend">Doorgetrokken: wat de laadpaal geeft · gestippeld: wat je auto zou moeten opnemen · groen: je kunt verder</string>
+    <string name="hql_live_hide">Route tonen</string>
 </resources>

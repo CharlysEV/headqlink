@@ -737,4 +737,22 @@
     <string name="hql_plan_low_volts">Along the way there are also %1$d 400–500 V chargers (the first at km %2$.0f): they work, but your 800 V car charges at half power on them, so the plan stops at 800 V ones. Tap to see them.</string>
     <string name="hql_chargers_source_dgt">Data: in Spain, the official charging point registry (Ministry for the Ecological Transition, published by the DGT at nap.dgt.es, CC BY); elsewhere, © OpenStreetMap contributors (ODbL).</string>
     <string name="hql_chargers_source_osm">Data: © OpenStreetMap contributors (ODbL).</string>
+    <string name="hql_live_block_title">Live charging</string>
+    <string name="hql_live_channel">Live charging</string>
+    <string name="hql_live_alert_channel">Charging alerts</string>
+    <string name="hql_live_title">Charging · %1$.0f %%</string>
+    <string name="hql_live_title_target">Charging · %1$.0f %% → %2$.0f %%</string>
+    <string name="hql_live_title_ready">Ready: you can go on · %1$.0f %%</string>
+    <string name="hql_live_title_wait">Charging</string>
+    <string name="hql_live_ready_at">ready ≈ %1$s (%2$s)</string>
+    <string name="hql_live_full_at">full ≈ %1$s (according to the car)</string>
+    <string name="hql_live_ready_title">You can go on</string>
+    <string name="hql_live_ready_text">%1$.0f %%: you reach %2$s with %3$.0f %%</string>
+    <string name="hql_live_ready_short">%1$.0f %%: enough for the rest of the plan</string>
+    <string name="hql_live_next">With that you reach %1$s with %2$.0f %%</string>
+    <string name="hql_live_skip">Up to %1$.0f %% saves you the stop at %2$s (+%3$s here, −%4$s there)</string>
+    <string name="hql_live_slow_title">Slow charging</string>
+    <string name="hql_live_slow_text">%1$.0f kW; expected ~%2$.0f kW</string>
+    <string name="hql_live_legend">Solid: what it is giving · dashed: what your car should take · green: you can go on</string>
+    <string name="hql_live_hide">Show route</string>
 </resources>

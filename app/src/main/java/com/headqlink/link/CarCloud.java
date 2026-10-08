@@ -192,6 +192,30 @@ final class CarCloud {
     private CarCloud() {
     }
 
+    /** Quién lo necesita: «ui» (CarUi: la sesión con el coche) y «charge» (ChargeWatchService: una carga en directo). */
+    private static final java.util.Set<String> owners = new java.util.HashSet<>();
+    /** Vigilando una carga: se lee como con la sección Coche a la vista. */
+    private static volatile boolean chargeWatch;
+
+    /** Lo pide alguien (el sondeo sigue mientras alguien lo tenga). */
+    static synchronized void acquire(Context ctx, String who) {
+        owners.add(who);
+        start(ctx);
+    }
+
+    /** Ya no lo necesita; sin nadie, se para. */
+    static synchronized void release(String who) {
+        owners.remove(who);
+        if (owners.isEmpty()) stop();
+    }
+
+    /** Vigilando una carga en directo (lecturas cada HUB_MS). */
+    static void setChargeWatch(boolean on) {
+        if (chargeWatch == on) return;
+        chargeWatch = on;
+        wake();
+    }
+
     /** Arranca el sondeo (CarUi.start: modo extendido con el coche o vista previa). */
     static synchronized void start(Context ctx) {
         if (running) return;
@@ -243,7 +267,7 @@ final class CarCloud {
     /** Lo último que se sabe (en la demostración, sus datos inventados si no hay reales). */
     static Snapshot snapshot() {
         Snapshot s = current;
-        if (DemoMode.active() && !s.hasData()) return DemoMode.cloudSnapshot();
+        if (DemoMode.active() && (!s.hasData() || DemoMode.overridesCloud())) return DemoMode.cloudSnapshot();
         return s;
     }
 
@@ -287,7 +311,7 @@ final class CarCloud {
                 failures = 0;
             }
             // Espera hasta que toque (se recalcula si la sección Coche aparece o desaparece).
-            long due = lastAttempt == 0 ? 0 : lastAttempt + Policy.delayMs(failures, hubVisible, staleReads);
+            long due = lastAttempt == 0 ? 0 : lastAttempt + Policy.delayMs(failures, hubVisible || chargeWatch, staleReads);
             long now = SystemClock.elapsedRealtime();
             if (now < due) {
                 sleep(due - now);

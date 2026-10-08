@@ -738,4 +738,22 @@
     <string name="hql_plan_low_volts">No caminho também há %1$d carregadores de 400–500 V (o primeiro no km %2$.0f): funcionam, mas seu carro de 800 V carrega neles na metade da potência, então o plano para nos de 800 V. Toque para vê-los.</string>
     <string name="hql_chargers_source_dgt">Dados: na Espanha, o registro oficial de pontos de recarga (Ministério para a Transição Ecológica, publicado pela DGT em nap.dgt.es, CC BY); fora, © colaboradores do OpenStreetMap (ODbL).</string>
     <string name="hql_chargers_source_osm">Dados: © colaboradores do OpenStreetMap (ODbL).</string>
+    <string name="hql_live_block_title">Carga ao vivo</string>
+    <string name="hql_live_channel">Carga ao vivo</string>
+    <string name="hql_live_alert_channel">Avisos de carga</string>
+    <string name="hql_live_title">Carregando · %1$.0f %%</string>
+    <string name="hql_live_title_target">Carregando · %1$.0f %% → %2$.0f %%</string>
+    <string name="hql_live_title_ready">Pronto: já pode seguir · %1$.0f %%</string>
+    <string name="hql_live_title_wait">Carregando</string>
+    <string name="hql_live_ready_at">pronto ≈ %1$s (%2$s)</string>
+    <string name="hql_live_full_at">cheio ≈ %1$s (segundo o carro)</string>
+    <string name="hql_live_ready_title">Já pode seguir</string>
+    <string name="hql_live_ready_text">%1$.0f %%: você chega a %2$s com %3$.0f %%</string>
+    <string name="hql_live_ready_short">%1$.0f %%: basta para o resto do plano</string>
+    <string name="hql_live_next">Com isso você chega a %1$s com %2$.0f %%</string>
+    <string name="hql_live_skip">Até %1$.0f %% você evita a parada em %2$s (+%3$s aqui, −%4$s lá)</string>
+    <string name="hql_live_slow_title">Carga lenta</string>
+    <string name="hql_live_slow_text">%1$.0f kW; esperado ~%2$.0f kW</string>
+    <string name="hql_live_legend">Contínua: o que está dando · tracejada: o que seu carro deveria aceitar · verde: já pode seguir</string>
+    <string name="hql_live_hide">Ver rota</string>
 </resources>

@@ -738,4 +738,22 @@
     <string name="hql_plan_low_volts">Il y a aussi sur le trajet %1$d bornes 400–500 V (la première au km %2$.0f) : elles marchent, mais votre voiture 800 V y charge à moitié puissance, donc le plan s\'arrête aux bornes 800 V. Touchez pour les voir.</string>
     <string name="hql_chargers_source_dgt">Données : en Espagne, le registre officiel des points de recharge (ministère de la Transition écologique, publié par la DGT sur nap.dgt.es, CC BY) ; ailleurs, © contributeurs d\'OpenStreetMap (ODbL).</string>
     <string name="hql_chargers_source_osm">Données : © contributeurs d\'OpenStreetMap (ODbL).</string>
+    <string name="hql_live_block_title">Recharge en direct</string>
+    <string name="hql_live_channel">Recharge en direct</string>
+    <string name="hql_live_alert_channel">Alertes de recharge</string>
+    <string name="hql_live_title">En charge · %1$.0f %%</string>
+    <string name="hql_live_title_target">En charge · %1$.0f %% → %2$.0f %%</string>
+    <string name="hql_live_title_ready">Prête : vous pouvez repartir · %1$.0f %%</string>
+    <string name="hql_live_title_wait">En charge</string>
+    <string name="hql_live_ready_at">prête ≈ %1$s (%2$s)</string>
+    <string name="hql_live_full_at">pleine ≈ %1$s (selon la voiture)</string>
+    <string name="hql_live_ready_title">Vous pouvez repartir</string>
+    <string name="hql_live_ready_text">%1$.0f %% : vous arrivez à %2$s avec %3$.0f %%</string>
+    <string name="hql_live_ready_short">%1$.0f %% : assez pour le reste du plan</string>
+    <string name="hql_live_next">Avec ça, vous arrivez à %1$s avec %2$.0f %%</string>
+    <string name="hql_live_skip">Jusqu\'à %1$.0f %%, vous évitez l\'arrêt à %2$s (+%3$s ici, −%4$s là-bas)</string>
+    <string name="hql_live_slow_title">Recharge lente</string>
+    <string name="hql_live_slow_text">%1$.0f kW ; attendu ~%2$.0f kW</string>
+    <string name="hql_live_legend">Plein : ce qu\'elle donne · pointillé : ce que votre voiture devrait accepter · vert : vous pouvez repartir</string>
+    <string name="hql_live_hide">Voir l\'itinéraire</string>
 </resources>

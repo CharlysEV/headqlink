@@ -738,4 +738,22 @@
     <string name="hql_plan_low_volts">Pelo caminho há também %1$d carregadores de 400–500 V (o primeiro ao km %2$.0f): servem, mas o seu carro de 800 V carrega neles a metade da potência, por isso o plano para nos de 800 V. Toque para os ver.</string>
     <string name="hql_chargers_source_dgt">Dados: em Espanha, o registo oficial de pontos de carregamento (Ministério para a Transição Ecológica, publicado pela DGT em nap.dgt.es, CC BY); fora, © colaboradores do OpenStreetMap (ODbL).</string>
     <string name="hql_chargers_source_osm">Dados: © colaboradores do OpenStreetMap (ODbL).</string>
+    <string name="hql_live_block_title">Carregamento em direto</string>
+    <string name="hql_live_channel">Carregamento em direto</string>
+    <string name="hql_live_alert_channel">Avisos de carregamento</string>
+    <string name="hql_live_title">A carregar · %1$.0f %%</string>
+    <string name="hql_live_title_target">A carregar · %1$.0f %% → %2$.0f %%</string>
+    <string name="hql_live_title_ready">Pronto: já pode seguir · %1$.0f %%</string>
+    <string name="hql_live_title_wait">A carregar</string>
+    <string name="hql_live_ready_at">pronto ≈ %1$s (%2$s)</string>
+    <string name="hql_live_full_at">cheio ≈ %1$s (segundo o carro)</string>
+    <string name="hql_live_ready_title">Já pode seguir</string>
+    <string name="hql_live_ready_text">%1$.0f %%: chega a %2$s com %3$.0f %%</string>
+    <string name="hql_live_ready_short">%1$.0f %%: chega para o resto do plano</string>
+    <string name="hql_live_next">Com isso chega a %1$s com %2$.0f %%</string>
+    <string name="hql_live_skip">Até %1$.0f %% poupa a paragem em %2$s (+%3$s aqui, −%4$s lá)</string>
+    <string name="hql_live_slow_title">Carregamento lento</string>
+    <string name="hql_live_slow_text">%1$.0f kW; esperava ~%2$.0f kW</string>
+    <string name="hql_live_legend">Contínua: o que está a dar · tracejada: o que o seu carro devia aceitar · verde: já pode seguir</string>
+    <string name="hql_live_hide">Ver rota</string>
 </resources>

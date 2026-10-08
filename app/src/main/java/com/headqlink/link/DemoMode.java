@@ -137,6 +137,56 @@ final class DemoMode {
         reev = "reev".equals(state);
         replan = "replan".equals(state);
         replanAsked = false;
+        if ("cargando".equals(state)) {
+            chargeT0Real = android.os.SystemClock.elapsedRealtime();
+            // En las capturas (reloj quieto) se ve una carga de CHARGE_STILL_MIN con el dato de hace 40 s.
+            chargeT0Ms = live ? nowMs() : nowMs() - Math.round(CHARGE_STILL_MIN * 60_000) - 40_000;
+        }
+    }
+
+    /** Estados que mandan sobre los datos reales de la nube (si la cuenta está configurada): «cargando» y «sin_nube». */
+    static boolean overridesCloud() {
+        return !cloudState.isEmpty();
+    }
+
+    // «cargando»: una carga rápida desde el CHARGE_SOC0 en un cargador de CHARGE_KW, por la curva del C10. En vivo va
+    // acelerada (×CHARGE_SPEEDUP: se ve entera en un par de minutos); en las capturas, a los CHARGE_STILL_MIN.
+    static final double CHARGE_SOC0 = 18;
+    static final double CHARGE_KW = 250;
+    static final double CHARGE_SPEEDUP = 20;
+    static final double CHARGE_STILL_MIN = 14;
+    private static volatile long chargeT0Real;
+    private static volatile long chargeT0Ms;
+
+    /** Minutos de carga de la demostración hasta ahora. */
+    static double chargeMinutesNow() {
+        if (!live) return CHARGE_STILL_MIN;
+        return (android.os.SystemClock.elapsedRealtime() - chargeT0Real) / 60_000.0 * CHARGE_SPEEDUP;
+    }
+
+    /** {%, kW que entran} a los minutos de carga de la demostración (la curva del C10 en el cargador de CHARGE_KW). */
+    static double[] chargeAt(double minutes) {
+        double cap = reev ? CarCloudStore.KWH_C10_REEV : CLOUD_CAP_KWH;
+        double peak = RoutePlanner.carPeakKw(cap);
+        double soc = CHARGE_SOC0;
+        double kw = Math.min(CHARGE_KW * ChargePlanner.CHARGE_EFF, ChargePlanner.carPowerKw(soc, peak));
+        double dt = 0.05;
+        for (double m = 0; m < minutes && soc < 100; m += dt) {
+            kw = Math.min(CHARGE_KW * ChargePlanner.CHARGE_EFF, ChargePlanner.carPowerKw(soc, peak));
+            soc = Math.min(100, soc + kw * dt / 60 / cap * 100);
+        }
+        return new double[]{soc, kw};
+    }
+
+    /** Las lecturas de la carga de la demostración hasta ahora, minuto a minuto ({hora, %, kW}): la curva de las capturas. */
+    static List<double[]> chargeHistory() {
+        List<double[]> out = new ArrayList<>();
+        double now = chargeMinutesNow();
+        for (double m = 0; m < now; m += 1) {
+            double[] x = chargeAt(m);
+            out.add(new double[]{chargeT0Ms + m * 60_000, x[0], x[1]});
+        }
+        return out;
     }
 
     /** Estado "replan": a mitad de la demostración se empieza a gastar un 45 % más (la parada del plan ya no se alcanza: se rehace y avisa). */
@@ -301,13 +351,15 @@ final class DemoMode {
         double speed = charging ? 0 : d.speedKmh[k];
         double cap = reev ? CarCloudStore.KWH_C10_REEV : CLOUD_CAP_KWH;
         // REEV: la batería baja hasta el 25 % y ahí la mantiene el generador (gastando gasolina).
-        double soc = charging ? 56.4 : Math.max(reev ? 25 : 0, CLOUD_SOC0 - km * CLOUD_KWH_PER_KM / cap * 100);
+        double chargeMin = charging ? chargeMinutesNow() : 0;
+        double[] ch = charging ? chargeAt(chargeMin) : null;
+        double soc = charging ? ch[0] : Math.max(reev ? 25 : 0, CLOUD_SOC0 - km * CLOUD_KWH_PER_KM / cap * 100);
         double volts = charging ? 412.6 : 398.6;
         // Potencia «medida»: la del modelo con la pendiente y la aceleración del trayecto, un 4 % más (otra fuente).
         int k0 = Math.max(0, k - 20);
         double dkm = d.distKm[k] - d.distKm[k0];
         double grade = dkm > 0.01 ? (d.altM[k] - d.altM[k0]) / (dkm * 1000) * 100 : 0;
-        double kw = charging ? 85.1 : new EnergyModel().compute(speed, grade, 0, DemoDrive.TEMP_C, d.longG[k]) * 1.04;
+        double kw = charging ? ch[1] : new EnergyModel().compute(speed, grade, 0, DemoDrive.TEMP_C, d.longG[k]) * 1.04;
         long now = nowMs();
         try {
             org.json.JSONObject sig = new org.json.JSONObject();
@@ -318,7 +370,7 @@ final class DemoMode {
             sig.put("47", 0);
             sig.put("1197", charging ? 1 : 0);
             sig.put("3736", 0);
-            sig.put("1200", charging ? 24 : 0);
+            sig.put("1200", charging ? (int) Math.round(ChargePlanner.minutes(soc, 100, CHARGE_KW, RoutePlanner.carPeakKw(cap), cap)) : 0);
             sig.put("1177", volts);
             sig.put("1178", Math.round(kw * 1000 / volts * 10) / 10.0);
             sig.put("1182", charging ? 31 : 27);
@@ -350,7 +402,7 @@ final class DemoMode {
                 sig.put("2188", Math.round(soc * 1.3));
             }
             org.json.JSONObject data = new org.json.JSONObject();
-            data.put("collectTime", now - 40_000);
+            data.put("collectTime", charging ? chargeT0Ms + Math.round(chargeMin * 60_000) : now - 40_000);
             data.put("signal", sig);
             return new CarCloud.Snapshot(CarCloud.State.OK, LeapStatus.parse(data), now - 12_000, 640, cap, "C10", 0, true);
         } catch (org.json.JSONException e) {

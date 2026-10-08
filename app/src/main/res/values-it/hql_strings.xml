@@ -738,4 +738,22 @@
     <string name="hql_plan_low_volts">Lungo il percorso ci sono anche %1$d colonnine a 400–500 V (la prima al km %2$.0f): funzionano, ma la tua auto a 800 V vi carica a metà potenza, quindi il piano si ferma a quelle a 800 V. Tocca per vederle.</string>
     <string name="hql_chargers_source_dgt">Dati: in Spagna, il registro ufficiale dei punti di ricarica (Ministero per la Transizione Ecologica, pubblicato dalla DGT su nap.dgt.es, CC BY); altrove, © contributori di OpenStreetMap (ODbL).</string>
     <string name="hql_chargers_source_osm">Dati: © contributori di OpenStreetMap (ODbL).</string>
+    <string name="hql_live_block_title">Ricarica in diretta</string>
+    <string name="hql_live_channel">Ricarica in diretta</string>
+    <string name="hql_live_alert_channel">Avvisi di ricarica</string>
+    <string name="hql_live_title">In ricarica · %1$.0f %%</string>
+    <string name="hql_live_title_target">In ricarica · %1$.0f %% → %2$.0f %%</string>
+    <string name="hql_live_title_ready">Pronta: puoi ripartire · %1$.0f %%</string>
+    <string name="hql_live_title_wait">In ricarica</string>
+    <string name="hql_live_ready_at">pronta ≈ %1$s (%2$s)</string>
+    <string name="hql_live_full_at">piena ≈ %1$s (secondo l\'auto)</string>
+    <string name="hql_live_ready_title">Puoi ripartire</string>
+    <string name="hql_live_ready_text">%1$.0f %%: arrivi a %2$s con %3$.0f %%</string>
+    <string name="hql_live_ready_short">%1$.0f %%: basta per il resto del piano</string>
+    <string name="hql_live_next">Così arrivi a %1$s con %2$.0f %%</string>
+    <string name="hql_live_skip">Fino al %1$.0f %% eviti la sosta a %2$s (+%3$s qui, −%4$s là)</string>
+    <string name="hql_live_slow_title">Ricarica lenta</string>
+    <string name="hql_live_slow_text">%1$.0f kW; attesi ~%2$.0f kW</string>
+    <string name="hql_live_legend">Continua: quello che sta dando · tratteggiata: quello che la tua auto dovrebbe accettare · verde: puoi ripartire</string>
+    <string name="hql_live_hide">Vedi percorso</string>
 </resources>

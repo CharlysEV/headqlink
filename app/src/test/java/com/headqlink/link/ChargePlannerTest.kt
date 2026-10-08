@@ -245,4 +245,22 @@ class ChargePlannerTest {
         assertEquals(290 * 0.15 / 70 * 100 + 22, r.stops[0].departPct, 1e-6)
         assertTrue(r.arrivalPct >= 20)
     }
+
+    // ------------------------------------------------------------------ carga en directo: ¿con cuánto sigo?
+
+    @Test
+    fun readyPctIsTheLeastToGoOnWithTheStopsThatWereLeft() {
+        val s = settings()
+        // Sin más paradas: desde el km 300 al 500 (40 kWh = 57,1 %) y llegar con el 15 %.
+        assertEquals(40 / 70.0 * 100 + 15, ChargePlanner.readyPct(km, kwh, 300.0, 0.0, emptyList(), s, 0), 0.25)
+        // Con una parada después (km 420): llegar a ella con el 10 % (44 kWh = 62,9 %).
+        val c420 = charger(420.0, 150.0)
+        val here = charger(200.8, 150.0) // donde se está cargando: no cuenta
+        val one = ChargePlanner.readyPct(km, kwh, 200.0, 0.0, listOf(here, c420), s, 1)
+        assertEquals(44 / 70.0 * 100 + 10, one, 0.25)
+        // Sin paradas desde el km 200 haría falta más del 100 %.
+        assertTrue(ChargePlanner.readyPct(km, kwh, 200.0, 0.0, listOf(here, c420), s, 0).isNaN())
+        // Con ya más de lo necesario, lo que hay.
+        assertEquals(95.0, ChargePlanner.readyPct(km, kwh, 300.0, 95.0, emptyList(), s, 0), 1e-9)
+    }
 }

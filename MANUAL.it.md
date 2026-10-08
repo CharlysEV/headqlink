@@ -420,6 +420,16 @@ supporta.
       lo dice) e tiene di riserva quelle a 400–500 V: l'elenco le segna in ambra («470 V: la tua auto a 800 V qui
       carica a metà potenza») e il piano dice quante ce ne sono lungo il percorso. I Supercharger Tesla in Spagna sono
       a 400–500 V.
+    - **Ricarica in diretta:** con l'account Leapmotor, quando colleghi la spina sopra il percorso compare un blocco
+      con i kW, la % e l'obiettivo («54 % → 64 %»), l'ora in cui sarà pronta e con quanto arrivi alla prossima sosta o a
+      destinazione; se ricaricando un po' di più eviti la prossima sosta, te lo dice («Fino al 85 % eviti la sosta a
+      Lleida: +7 min qui, −23 min là»). La curva confronta quello che sta dando (linea continua) con quello che la tua
+      auto dovrebbe accettare su quella colonnina (tratteggiata) e avvisa se ricarica molto più lentamente del
+      previsto. All'obiettivo: **«Puoi ripartire»** con un suono sul telefono e, se sei in auto, voce e una scheda
+      verde. In viaggio o su una colonnina rapida, il telefono continua a controllare **anche se lo schermo dell'auto si
+      spegne** (vai a prendere un caffè): una notifica fissa con la % e l'ora in cui sarà pronta, che sparisce da sola
+      quando stacchi. Ogni ricarica viene salvata sul telefono (kW reali, % e minuti) per conoscere la curva reale
+      dell'auto.
     - **Il piano si rifà da solo durante il viaggio:** con l'account Leapmotor confronta quanto scende davvero la
       batteria con quanto previsto per quei km e adatta il resto («Adattato al consumo di questo viaggio: +12 %»). Le
       soste scelte restano finché le raggiungi con margine; se stai restando senza batteria (o ne avanza), il piano cambia

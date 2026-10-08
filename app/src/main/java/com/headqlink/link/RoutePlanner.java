@@ -340,6 +340,7 @@ final class RoutePlanner {
         while (running) {
             try {
                 Plan p = plan();
+                followChargeSession(p);
                 if (p != null) followCharge(p);
             } catch (RuntimeException e) {
                 L.w("ruta: " + e.getClass().getSimpleName());
@@ -369,6 +370,7 @@ final class RoutePlanner {
             L.i("ruta: reintento los cargadores que faltan (" + p.missingTiles.size() + " zonas)");
             refreshChargers(p, false);
         }
+        followChargeSession(p);
         if (p != null) followCharge(p);
         // Destino: el de AA si lo manda; si no, el elegido aquí.
         Place m = manual;
@@ -410,8 +412,12 @@ final class RoutePlanner {
     // ------------------------------------------------------------------ plan de carga vivo
 
     /** Avisos del plan de carga: el panel del coche se apunta mientras está en pantalla. */
+    /** Tipos de aviso: el plan ha cambiado o la carga es lenta (ámbar); ya puedes seguir (verde). */
+    static final int ALERT_WARN = 0;
+    static final int ALERT_READY = 1;
+
     interface ChargeAlertListener {
-        void onChargeAlert(String title, String text);
+        void onChargeAlert(String title, String text, int kind);
     }
 
     static volatile ChargeAlertListener chargeAlerts;
@@ -488,19 +494,9 @@ final class RoutePlanner {
             String key = settings + "/" + prog + "/" + Math.round(soc * 2) + "/" + Math.round(f * 100) + "/" + charging;
             if (key.equals(chargeKey)) return charge;
             chargeKey = key;
-            ChargePlanner.Settings s = new ChargePlanner.Settings();
-            s.arriveMinPct = c.planArrivePct();
-            s.maxChargePct = c.planMaxPct();
-            s.capacityKwh = capKwh;
-            // La batería grande (81,9 kWh) carga más rápido que la de 69,9 (84 kW): ~130 kW de pico, lo que da los
-            // 28 min del 19 al 81 % de ABRP en un cargador de 400 kW.
-            s.carPeakKw = capKwh >= 80 ? 130 : 84;
-            // La de 81,9 kWh es de 800 V: en los cargadores de 400–500 V (Supercharger, los de 50 kW de antes) carga mal.
-            s.carVolts = carVolts(capKwh);
+            ChargePlanner.Settings s = planSettings(c, capKwh);
             lastCarVolts = s.carVolts;
-            java.util.Set<String> want = ChargerFilter.parseNetworks(nets);
-            List<Charger> list = new ArrayList<>();
-            for (Charger ch : pl.chargers) if (ChargerFilter.accepts(ch, minKw, want, c.chargerIncludeUnknown())) list.add(ch);
+            List<Charger> list = wantedChargers(pl, c);
             // Con los mismos ajustes, las paradas elegidas se mantienen mientras se lleguen (que el plan no baile).
             boolean same = settings.equals(chargeSettings) && charge != null;
             List<Charger> keep = new ArrayList<>();
@@ -523,6 +519,165 @@ final class RoutePlanner {
             if (change != ChargePlanner.Change.NONE) alert(change, before, r);
             return r;
         }
+    }
+
+    /** Los márgenes del plan y lo que se sabe del coche. */
+    private static ChargePlanner.Settings planSettings(Config c, double capKwh) {
+        ChargePlanner.Settings s = new ChargePlanner.Settings();
+        s.arriveMinPct = c.planArrivePct();
+        s.maxChargePct = c.planMaxPct();
+        s.capacityKwh = capKwh;
+        s.carPeakKw = carPeakKw(capKwh);
+        // La de 81,9 kWh es de 800 V: en los cargadores de 400–500 V (Supercharger, los de 50 kW de antes) carga a la mitad.
+        s.carVolts = carVolts(capKwh);
+        return s;
+    }
+
+    /** Los cargadores de la ruta que pasan el filtro. */
+    private static List<Charger> wantedChargers(Plan pl, Config c) {
+        java.util.Set<String> want = ChargerFilter.parseNetworks(c.chargerNetworks());
+        List<Charger> list = new ArrayList<>();
+        for (Charger ch : pl.chargers) {
+            if (ChargerFilter.accepts(ch, c.chargerMinKw(), want, c.chargerIncludeUnknown())) list.add(ch);
+        }
+        return list;
+    }
+
+    /**
+     * Pico de carga rápida del coche (kW): la batería grande (81,9 kWh) carga más rápido que la de 69,9 (84 kW), ~130 kW
+     * de pico, lo que da los 28 min del 19 al 81 % de ABRP en un cargador de 400 kW.
+     */
+    static double carPeakKw(double capKwh) {
+        return capKwh >= 80 ? 130 : 84;
+    }
+
+    // ------------------------------------------------------------------ carga en directo
+
+    /** El plan de justo antes de enchufar (para saber cuántas paradas quedaban después de esta). */
+    private ChargePlanner.Result beforePlug;
+    private String sessionKey = "";
+
+    /**
+     * La carga en directo: al ver que el coche carga empieza una (ChargeWatch), con el % para seguir según el plan, y
+     * le pasa cada lectura de la nube. p puede ser null (cargando sin ruta: sin objetivo).
+     */
+    private void followChargeSession(Plan p) {
+        CarCloud.Snapshot cs = CarCloud.snapshot();
+        if (cs == null || !cs.hasData()) return;
+        boolean charging = cs.status.charging();
+        ChargeSession s = ChargeWatch.session();
+        if (s == null && !charging) {
+            ChargePlanner.Result r = lastChargePlan();
+            synchronized (chargeLock) {
+                beforePlug = r;
+            }
+        }
+        if (s == null && charging && !Double.isNaN(cs.status.socBest())) {
+            double cap = cs.capacityKwh > 0 ? cs.capacityKwh : EnergyModel.USABLE_KWH;
+            Charger at = p == null ? null : chargerHere(p);
+            s = new ChargeSession(cs.dataTimeMs(), cs.status.socBest(), cs.status.dcPlugged(), at, cap, carPeakKw(cap), carVolts(cap));
+            sessionKey = "";
+            if (cs.demo) {
+                // Demostración: la carga desde el principio (en las capturas, para que se vea la curva).
+                List<double[]> hist = DemoMode.chargeHistory();
+                long t0 = hist.isEmpty() ? cs.dataTimeMs() : (long) hist.get(0)[0];
+                s = new ChargeSession(t0, DemoMode.CHARGE_SOC0, true, at, cap, carPeakKw(cap), carVolts(cap));
+                for (double[] x : hist) s.observe((long) x[0], x[1], x[2], true, false, Double.NaN, (long) x[0]);
+                s.demo = true;
+            }
+            // Fuera del coche solo en un viaje o en carga rápida (en casa, en alterna y sin ruta, no hace falta vigilar
+            // horas); en las capturas de la demostración, nunca.
+            ChargeWatch.begin(ctx, s, (p != null || s.dc) && (!cs.demo || DemoMode.live()));
+        }
+        if (s != null && p != null && p.n >= 2) sessionTarget(s, p);
+        ChargeWatch.tick(ctx, cs);
+    }
+
+    /** Capturas de la demostración (reloj quieto, sin bucle): la carga en directo al pintar. */
+    void demoChargeTick() {
+        if (demo && !DemoMode.live()) followChargeSession(plan());
+    }
+
+    /** El cargador en el que se carga: la parada del plan que está aquí o, si no, el más cercano al móvil (300 m). */
+    private Charger chargerHere(Plan p) {
+        double here = p.km[Math.min(p.progress, p.n - 1)];
+        ChargePlanner.Result before;
+        synchronized (chargeLock) {
+            before = beforePlug;
+        }
+        if (before != null) {
+            for (ChargePlanner.Stop st : before.stops) if (Math.abs(st.km - here) <= ChargePlanner.HERE_KM) return st.charger;
+        }
+        CarSensors.Snapshot g = sensors.snapshot();
+        if (Double.isNaN(g.lat)) return null;
+        Charger best = null;
+        double bestKm = 0.3;
+        for (Charger c : p.chargers) {
+            double km = segmentKm(c.lat, c.lon, c.lat, c.lon, g.lat, g.lon);
+            if (km < bestKm) {
+                bestKm = km;
+                best = c;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * El objetivo de la carga: el % mínimo (más un margen) para que el resto del viaje no necesite más paradas de las
+     * que quedaban, a qué parada (o al destino) se llega y con cuánto, y el % que ahorra la siguiente parada. Se rehace
+     * si cambia el plan, el filtro, la tendencia o el avance.
+     */
+    private void sessionTarget(ChargeSession s, Plan p) {
+        ChargePlanner.Result before;
+        synchronized (chargeLock) {
+            before = beforePlug != null ? beforePlug : charge;
+        }
+        Config c = new Config(ctx);
+        int prog = Math.min(p.progress, p.n - 1);
+        double here = p.km[prog];
+        double f = demo ? DemoMode.planTrend() : trend.factor();
+        int ahead = 0;
+        if (before != null) for (ChargePlanner.Stop st : before.stops) if (st.km > here + ChargePlanner.HERE_KM) ahead++;
+        String key = System.identityHashCode(p) + "/" + p.chargerVersion + "/" + c.chargerMinKw() + "/" + c.chargerNetworks() + "/"
+                + c.chargerIncludeUnknown() + "/" + c.planArrivePct() + "/" + c.planMaxPct() + "/" + Math.round(f * 100) + "/" + prog + "/"
+                + ahead;
+        if (key.equals(sessionKey)) return;
+        sessionKey = key;
+        ChargePlanner.Settings set = planSettings(c, s.capacityKwh);
+        List<Charger> all = wantedChargers(p, c);
+        List<Charger> list = new ArrayList<>();
+        for (Charger ch : all) if (Math.abs(ch.kmAlong - here) > ChargePlanner.HERE_KM) list.add(ch);
+        double[] kwh = ChargePlanner.scaled(p.km, p.kwhCum, here, f);
+        double ready = ChargePlanner.readyPct(p.km, kwh, here, 0, list, set, ahead);
+        if (Double.isNaN(ready)) {
+            s.setTarget(Double.NaN, Double.NaN, "");
+            s.setSkip(Double.NaN, "", Double.NaN, Double.NaN);
+            L.i("carga en directo: con el plan no hay % que valga (no se llega ni al 100 %)");
+            return;
+        }
+        double target = Math.min(100, ready + ChargeSession.READY_MARGIN_PCT);
+        ChargePlanner.Result after = ChargePlanner.plan(p.km, kwh, here, target, list, set);
+        String name = p.destination == null ? "" : p.destination;
+        double arrive = after.arrivalPct;
+        if (!after.stops.isEmpty()) {
+            name = after.stops.get(0).charger.name;
+            arrive = after.stops.get(0).arrivePct;
+        }
+        s.setTarget(ready, arrive, name);
+        double skipPct = Double.NaN;
+        if (ahead >= 1 && !after.stops.isEmpty()) {
+            double skip = ChargePlanner.readyPct(p.km, kwh, here, 0, list, set, ahead - 1);
+            if (!Double.isNaN(skip)) skipPct = Math.min(100, skip + ChargeSession.READY_MARGIN_PCT);
+        }
+        if (!Double.isNaN(skipPct) && skipPct > target + 1) {
+            ChargePlanner.Stop next = after.stops.get(0);
+            double extra = s.minutesTo(skipPct) - s.minutesTo(target);
+            s.setSkip(skipPct, next.charger.name, extra, next.minutes);
+        } else {
+            s.setSkip(Double.NaN, "", Double.NaN, Double.NaN);
+        }
+        L.i(String.format(Locale.US, "carga en directo: seguir con %.1f %% (%d paradas después; llegas a %s con %.0f %%)%s", target,
+                ahead, name, arrive, Double.isNaN(s.skipPct) ? "" : String.format(Locale.US, "; con %.0f %% te ahorras %s", s.skipPct, s.skipName)));
     }
 
     /** Voltaje de la batería según su capacidad: la de 81,9 kWh del C10 es de 800 V; la de 69,9, de 400. */
@@ -551,7 +706,7 @@ final class RoutePlanner {
         lastAlert = text;
         lastAlertAtMs = DemoMode.wallClockMs();
         ChargeAlertListener l = chargeAlerts;
-        if (l != null) l.onChargeAlert(title, text);
+        if (l != null) l.onChargeAlert(title, text, ALERT_WARN);
         long t = SystemClock.elapsedRealtime();
         boolean voice = new Config(ctx).planVoice() && (!demo || DemoMode.live());
         if (voice && (change == ChargePlanner.Change.NO_CHARGER || t - lastVoiceMs >= VOICE_GAP_MS)) {

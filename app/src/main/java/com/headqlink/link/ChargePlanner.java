@@ -163,7 +163,7 @@ final class ChargePlanner {
         return minutes(fromPct, toPct, c.maxKw, peak, s.capacityKwh);
     }
 
-    private static double minutes(double fromPct, double toPct, double chargerKw, double peakKw, double capKwh) {
+    static double minutes(double fromPct, double toPct, double chargerKw, double peakKw, double capKwh) {
         if (toPct <= fromPct) return 0;
         double kw = chargerKw > 0 ? chargerKw : UNKNOWN_KW;
         double minutes = 0;
@@ -277,6 +277,36 @@ final class ChargePlanner {
             if (c.kmAlong > fromKm && c.kmAlong <= toKm && lowVolts(c, carVolts)) out.add(c);
         }
         return out;
+    }
+
+    /**
+     * Cargando en km fromKm: el % mínimo con el que salir para que el resto del viaje no necesite más de maxStops
+     * paradas (y se llegue). NaN si ni con el 100 %. Los cargadores de aquí (a HERE_KM o menos) no cuentan: es donde se
+     * está cargando. Búsqueda binaria (más % nunca pide más paradas).
+     */
+    static double readyPct(double[] km, double[] kwhCum, double fromKm, double socNow, List<RoutePlanner.Charger> chargers,
+                           Settings s, int maxStops) {
+        List<RoutePlanner.Charger> ahead = new ArrayList<>();
+        for (RoutePlanner.Charger c : chargers) if (Math.abs(c.kmAlong - fromKm) > HERE_KM) ahead.add(c);
+        double lo = Math.max(0, Math.min(100, socNow));
+        if (fits(km, kwhCum, fromKm, lo, ahead, s, maxStops)) return lo;
+        double hi = 100;
+        if (!fits(km, kwhCum, fromKm, hi, ahead, s, maxStops)) return Double.NaN;
+        while (hi - lo > 0.25) {
+            double mid = (lo + hi) / 2;
+            if (fits(km, kwhCum, fromKm, mid, ahead, s, maxStops)) hi = mid;
+            else lo = mid;
+        }
+        return hi;
+    }
+
+    private static boolean fits(double[] km, double[] kwhCum, double fromKm, double soc, List<RoutePlanner.Charger> chargers,
+                                Settings s, int maxStops) {
+        Result r = planStops(km, kwhCum, fromKm, soc, chargers, s, Collections.<RoutePlanner.Charger>emptyList());
+        if (r.outcome == Outcome.NO_CHARGER || r.stops.size() > maxStops) return false;
+        // Llegando a cada parada con el mínimo (el plan, si no hay otra, admite llegar más justo: aquí no vale).
+        for (Stop st : r.stops) if (st.arrivePct < s.stopMinPct - 1e-9) return false;
+        return true;
     }
 
     /** La siguiente parada del plan anterior, si se sigue alcanzando (con un poco de holgura); null si no. */

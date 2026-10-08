@@ -737,4 +737,22 @@
     <string name="hql_plan_low_volts">Unterwegs gibt es außerdem %1$d Ladestationen mit 400–500 V (die erste bei km %2$.0f): Sie funktionieren, aber dein 800-V-Auto lädt dort nur mit halber Leistung, deshalb hält der Plan an 800-V-Stationen. Tippen, um sie zu sehen.</string>
     <string name="hql_chargers_source_dgt">Daten: in Spanien das offizielle Ladepunktregister (Ministerium für den ökologischen Wandel, veröffentlicht von der DGT auf nap.dgt.es, CC BY); sonst © OpenStreetMap-Mitwirkende (ODbL).</string>
     <string name="hql_chargers_source_osm">Daten: © OpenStreetMap-Mitwirkende (ODbL).</string>
+    <string name="hql_live_block_title">Laden live</string>
+    <string name="hql_live_channel">Laden live</string>
+    <string name="hql_live_alert_channel">Lade-Hinweise</string>
+    <string name="hql_live_title">Lädt · %1$.0f %%</string>
+    <string name="hql_live_title_target">Lädt · %1$.0f %% → %2$.0f %%</string>
+    <string name="hql_live_title_ready">Fertig: du kannst weiterfahren · %1$.0f %%</string>
+    <string name="hql_live_title_wait">Lädt</string>
+    <string name="hql_live_ready_at">fertig ≈ %1$s (%2$s)</string>
+    <string name="hql_live_full_at">voll ≈ %1$s (laut Auto)</string>
+    <string name="hql_live_ready_title">Du kannst weiterfahren</string>
+    <string name="hql_live_ready_text">%1$.0f %%: du erreichst %2$s mit %3$.0f %%</string>
+    <string name="hql_live_ready_short">%1$.0f %%: reicht für den Rest des Plans</string>
+    <string name="hql_live_next">Damit erreichst du %1$s mit %2$.0f %%</string>
+    <string name="hql_live_skip">Bis %1$.0f %% sparst du dir den Halt in %2$s (+%3$s hier, −%4$s dort)</string>
+    <string name="hql_live_slow_title">Langsames Laden</string>
+    <string name="hql_live_slow_text">%1$.0f kW; erwartet ~%2$.0f kW</string>
+    <string name="hql_live_legend">Durchgezogen: was geliefert wird · gestrichelt: was dein Auto aufnehmen sollte · grün: du kannst weiterfahren</string>
+    <string name="hql_live_hide">Route zeigen</string>
 </resources>

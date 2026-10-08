@@ -147,6 +147,15 @@ final class RouteTab implements CarScreen {
         cta.setPadding(44, 20, 44, 20);
         routeCard.addView(cta, CarKit.at(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0, 0, 90));
         cta.setOnClickListener(v -> openSearch(false));
+        // Cargando: la carga en directo encima del perfil de la ruta (con «Ver ruta» para volver a él).
+        routeCard.addView(buildLive(), new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        liveShow = CarKit.pill(ctx, Str.get(R.string.hql_live_block_title), true);
+        liveShow.setOnClickListener(v -> {
+            liveHiddenFor = null;
+            tick();
+        });
+        actions.addView(liveShow, 0);
+        actionsRow.bringToFront();
 
         LinearLayout right = CarKit.add(row, CarKit.col(ctx), 1f, 0);
         batteryCard = CarKit.add(right, new CarKit.Card(ctx, Str.get(R.string.hql_battery_arrival), this::paintBattery), 0, 290);
@@ -610,6 +619,8 @@ final class RouteTab implements CarScreen {
         routeCard.invalidate();
         batteryCard.invalidate();
         weatherCard.invalidate();
+        planner.demoChargeTick();
+        updateLive();
         if (have) {
             updateChargePlan();
             int key = ((System.identityHashCode(plan) * 31 + plan.progress / 10) * 31 + chargerMinKw * 7 + chargerNets.hashCode()) * 31
@@ -625,6 +636,114 @@ final class RouteTab implements CarScreen {
         }
         routeCard.removeCallbacks(tickTask);
         routeCard.postDelayed(tickTask, TICK_MS);
+    }
+
+    // ------------------------------------------------------------------ carga en directo
+
+    private LinearLayout livePanel;
+    private TextView liveTitle;
+    private TextView liveKw;
+    private TextView livePct;
+    private TextView liveWhen;
+    private TextView liveNext;
+    private TextView liveSkip;
+    private TextView liveWarn;
+    private ChargeCurve liveCurve;
+    private TextView liveShow;
+    /** La carga para la que se ha pulsado «Ver ruta» (no se vuelve a tapar la ruta hasta la siguiente). */
+    private ChargeSession liveHiddenFor;
+
+    /** El bloque de la carga en directo: kW, % → objetivo, hora de lista, a dónde se llega, ahorrar parada y la curva. */
+    private View buildLive() {
+        LinearLayout panel = CarKit.col(ctx);
+        panel.setBackground(CarStyle.round(CarKit.SURFACE, CarKit.RADIUS));
+        panel.setClickable(true);
+        panel.setPadding(CarKit.PAD, 92, CarKit.PAD, 16);
+        liveTitle = CarStyle.text(ctx, "", 20, CarKit.ACCENT);
+        liveTitle.setTypeface(CarKit.MEDIUM);
+        liveTitle.setLetterSpacing(0.08f);
+        liveTitle.setSingleLine(true);
+        liveTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        panel.addView(liveTitle);
+        LinearLayout top = CarKit.row(ctx);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout big = CarKit.col(ctx);
+        liveKw = CarStyle.text(ctx, "", 64, CarKit.TEXT);
+        liveKw.setTypeface(CarKit.REGULAR);
+        livePct = CarStyle.text(ctx, "", 30, CarKit.TEXT);
+        livePct.setTypeface(CarKit.MEDIUM);
+        big.addView(liveKw);
+        big.addView(livePct);
+        top.addView(big, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout info = CarKit.col(ctx);
+        info.setPadding(36, 0, 0, 0);
+        liveWhen = CarStyle.text(ctx, "", 26, CarKit.TEXT);
+        liveWhen.setTypeface(CarKit.MEDIUM);
+        liveNext = CarStyle.text(ctx, "", 22, CarKit.DIM);
+        liveSkip = CarStyle.text(ctx, "", 21, CarKit.ACCENT);
+        liveWarn = CarStyle.text(ctx, "", 21, CarKit.AMBER);
+        for (TextView t : new TextView[]{liveWhen, liveNext, liveSkip, liveWarn}) {
+            t.setMaxLines(2);
+            t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            info.addView(t);
+        }
+        top.addView(info, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        panel.addView(top);
+        liveCurve = new ChargeCurve(ctx);
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        cp.topMargin = 12;
+        panel.addView(liveCurve, cp);
+        LinearLayout bottom = CarKit.row(ctx);
+        bottom.setGravity(Gravity.CENTER_VERTICAL);
+        TextView legend = CarStyle.text(ctx, Str.get(R.string.hql_live_legend), 18, CarKit.FAINT);
+        bottom.addView(legend, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView hide = CarKit.pill(ctx, Str.get(R.string.hql_live_hide), false);
+        hide.setOnClickListener(v -> {
+            liveHiddenFor = ChargeWatch.session();
+            tick();
+        });
+        bottom.addView(hide);
+        panel.addView(bottom);
+        panel.setVisibility(View.GONE);
+        livePanel = panel;
+        return panel;
+    }
+
+    /** Cada tick: el bloque visible mientras se carga (salvo «Ver ruta») y al día. */
+    private void updateLive() {
+        ChargeSession s = ChargeWatch.session();
+        boolean show = s != null && s != liveHiddenFor;
+        livePanel.setVisibility(show ? View.VISIBLE : View.GONE);
+        liveShow.setVisibility(s != null && !show ? View.VISIBLE : View.GONE);
+        if (!show) return;
+        StringBuilder t = new StringBuilder(Str.get(R.string.hql_live_block_title).toUpperCase(Locale.getDefault()));
+        if (s.charger != null) t.append(" · ").append(s.charger.name).append(" · ").append(kwText(s.charger));
+        liveTitle.setText(t);
+        ChargeSession.Sample l = s.last();
+        liveKw.setText(l == null || Double.isNaN(l.kw) ? "— kW" : String.format(Locale.getDefault(), "%.0f kW", l.kw));
+        livePct.setText(Double.isNaN(s.targetPct) || s.readyFired
+                ? String.format(Locale.getDefault(), "%.0f %%", s.soc())
+                : String.format(Locale.getDefault(), "%.0f %% → %.0f %%", s.soc(), s.targetPct));
+        if (s.readyFired) {
+            liveWhen.setText(Str.get(R.string.hql_live_ready_title));
+            liveWhen.setTextColor(CarKit.GREEN);
+        } else {
+            liveWhen.setText(capital(ChargeWatch.when(s)));
+            liveWhen.setTextColor(CarKit.TEXT);
+        }
+        boolean next = !Double.isNaN(s.nextArrivePct) && !s.nextName.isEmpty();
+        liveNext.setText(next ? Str.get(R.string.hql_live_next, s.nextName, s.nextArrivePct) : "");
+        liveNext.setVisibility(next ? View.VISIBLE : View.GONE);
+        String skip = ChargeWatch.skipText(s);
+        liveSkip.setText(skip);
+        liveSkip.setTextColor(s.skipWorth() ? CarKit.ACCENT : CarKit.FAINT);
+        liveSkip.setVisibility(skip.isEmpty() ? View.GONE : View.VISIBLE);
+        String warn = "";
+        if (s.slowFired) warn = Str.get(R.string.hql_live_slow_title) + ": " + Str.get(R.string.hql_live_slow_text, s.slowKw, s.slowExpectedKw);
+        else if (s.lowVolts()) warn = Str.get(R.string.hql_charger_low_volts, s.charger.maxVolts);
+        liveWarn.setText(warn);
+        liveWarn.setVisibility(warn.isEmpty() ? View.GONE : View.VISIBLE);
+        liveCurve.setSession(s);
     }
 
     private TextView hint(String s) {
@@ -1295,6 +1414,8 @@ final class RouteTab implements CarScreen {
     // ------------------------------------------------------------------ ruta
 
     private void paintRoute(Canvas cv, RectF r, Paint p) {
+        // Con la carga en directo encima no se pinta la ruta (se colaba por las esquinas redondeadas).
+        if (livePanel != null && livePanel.getVisibility() == View.VISIBLE) return;
         RoutePlanner.Plan pl = plan;
         float x0 = r.left;
         float y0 = r.top;

@@ -94,6 +94,7 @@ final class CarUi {
     // Aviso del plan de carga (RoutePlanner): tarjeta ámbar abajo en el panel, por encima de Android Auto.
     private LinearLayout alertCard;
     private TextView alertTitle;
+    private AlertIcon alertIcon;
     private TextView alertText;
     private View alertGo;
     private boolean alertPending;
@@ -102,7 +103,7 @@ final class CarUi {
     /** Sin tocarlo, el aviso se quita pasado esto (sigue en la pestaña Ruta). */
     private static final long ALERT_KEEP_MS = 10 * 60_000L;
     private final Runnable alertExpire = this::clearAlert;
-    private final RoutePlanner.ChargeAlertListener chargeAlert = (title, text) -> main.post(() -> showAlert(title, text));
+    private final RoutePlanner.ChargeAlertListener chargeAlert = (title, text, kind) -> main.post(() -> showAlert(title, text, kind));
     private final Runnable hideTask = () -> setHidden(true);
     /** AA ya ha dado imagen; antes, en su zona se ve la animación de carga. */
     private boolean aaReady;
@@ -302,7 +303,7 @@ final class CarUi {
             current = this;
             // Sección Coche: viajes, ruta y datos de la vía, mientras dure el modo ampliado (y los datos reales del coche
             // de la cuenta de Leapmotor, si está configurada: CarCloud).
-            CarCloud.start(ctx);
+            CarCloud.acquire(ctx, "ui");
             // Coche virtual (sin coche): sin guardar viajes.
             if (!RoutePlanner.testMode()) TripLog.start(ctx);
             RoutePlanner.start(ctx);
@@ -329,7 +330,7 @@ final class CarUi {
             RadioPlayer.removeListener(radioChanged);
             RadioPlayer.stop();
             TripLog.stop();
-            CarCloud.stop();
+            CarCloud.release("ui");
             RoutePlanner.stop();
             RoadInfo.stop();
             if (pres != null) pres.dismiss();
@@ -377,7 +378,7 @@ final class CarUi {
     View attachOffscreen(Context c) {
         View r = buildRoot(c);
         current = this;
-        CarCloud.start(ctx);
+        CarCloud.acquire(ctx, "ui");
         TripLog.start(ctx);
         RoutePlanner.start(ctx);
         RoutePlanner.chargeAlerts = chargeAlert;
@@ -448,7 +449,8 @@ final class CarUi {
         LinearLayout top = new LinearLayout(c);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
-        top.addView(new AlertIcon(c), new LinearLayout.LayoutParams(40, 40));
+        alertIcon = new AlertIcon(c);
+        top.addView(alertIcon, new LinearLayout.LayoutParams(40, 40));
         alertTitle = CarStyle.text(c, "", 22, CarKit.AMBER);
         alertTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         alertTitle.setPadding(12, 0, 0, 0);
@@ -486,9 +488,16 @@ final class CarUi {
         return card;
     }
 
-    /** El plan de carga ha cambiado: se despliega el panel con el aviso un rato (y el botón Coche queda en ámbar). */
-    private void showAlert(String title, String text) {
+    /**
+     * El plan de carga ha cambiado o la carga es lenta (ámbar), o ya puedes seguir (verde): se despliega el panel con el
+     * aviso un rato (y el botón Coche queda en ámbar).
+     */
+    private void showAlert(String title, String text, int kind) {
         if (alertCard == null) return;
+        boolean ok = kind == RoutePlanner.ALERT_READY;
+        alertCard.setBackground(CarStyle.round(ok ? 0xFF133B2A : 0xFF3B2F14, 24));
+        alertTitle.setTextColor(ok ? CarKit.GREEN : CarKit.AMBER);
+        alertIcon.setColor(ok ? CarKit.GREEN : CarKit.AMBER);
         alertTitle.setText(title);
         alertText.setText(text);
         RoutePlanner r = RoutePlanner.get();
@@ -516,21 +525,27 @@ final class CarUi {
         if (alertCard != null) alertCard.setVisibility(alertPending && !rail() ? View.VISIBLE : View.GONE);
     }
 
-    /** Rayo ámbar en un círculo (icono del aviso). */
+    /** Rayo en un círculo (icono del aviso): ámbar, o verde si ya puedes seguir. */
     private static final class AlertIcon extends View {
         private final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private int color = CarKit.AMBER;
 
         AlertIcon(Context c) {
             super(c);
+        }
+
+        void setColor(int c) {
+            color = c;
+            invalidate();
         }
 
         @Override
         protected void onDraw(android.graphics.Canvas cv) {
             float r = Math.min(getWidth(), getHeight()) / 2f;
             p.setStyle(android.graphics.Paint.Style.FILL);
-            p.setColor(CarKit.alpha(CarKit.AMBER, 0.25f));
+            p.setColor(CarKit.alpha(color, 0.25f));
             cv.drawCircle(getWidth() / 2f, getHeight() / 2f, r, p);
-            CarIcons.bolt(cv, getWidth() / 2f, getHeight() / 2f, r * 1.2f, CarKit.AMBER, p);
+            CarIcons.bolt(cv, getWidth() / 2f, getHeight() / 2f, r * 1.2f, color, p);
         }
     }
 
