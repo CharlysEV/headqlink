@@ -139,7 +139,7 @@ final class InstrumentsScreen implements CarScreen {
                     CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.CENTER);
         }
         // Límite de la vía (marca blanca) y máxima del viaje (marca roja), por fuera del arco.
-        if (limit > 0) tick(cv, cx, cy, rad + stroke / 2 + 4, limit, 0xFFFFFFFF, p);
+        if (limit > 0) tick(cv, cx, cy, rad + stroke / 2 + 4, limit, CarKit.TEXT, p);
         if (s.maxSpeedKmh > 1) tick(cv, cx, cy, rad + stroke / 2 + 4, (float) s.maxSpeedKmh, CarKit.RED, p);
         String gpsNote = CarSensors.gpsNote(s);
         int color = gpsNote != null ? CarKit.MUTED : limit > 0 && s.speedKmh > limit * 1.1 + 2 ? CarKit.RED

@@ -24,28 +24,29 @@ import android.widget.TextView;
  * Medidas en píxeles de la pantalla del coche (1920x882, ~200 ppp). Pensado para el codificador de vídeo: colores
  * planos, sin sombras ni desenfoques, y los objetos de dibujo se reutilizan (nada se crea en cada fotograma).
  */
+/** Colores: los pone CarTheme (día o noche); no son constantes. */
 final class CarKit {
     // Fondo y superficies.
-    static final int BG = 0xFF0A0E14;
-    static final int SURFACE = 0xFF111821;
-    static final int SURFACE_HI = 0xFF17202B;
-    static final int SURFACE_TOP = 0xFF1E2935;
-    static final int OUTLINE = 0xFF243140;
-    static final int EDGE = 0xFF2E4256;
+    static int BG = 0xFF0A0E14;
+    static int SURFACE = 0xFF111821;
+    static int SURFACE_HI = 0xFF17202B;
+    static int SURFACE_TOP = 0xFF1E2935;
+    static int OUTLINE = 0xFF243140;
+    static int EDGE = 0xFF2E4256;
     // Texto.
-    static final int TEXT = 0xFFEAF2F7;
-    static final int DIM = 0xFFA3B3C2;
-    static final int FAINT = 0xFF8296A9;
-    static final int MUTED = 0xFF5B6B7C;
+    static int TEXT = 0xFFEAF2F7;
+    static int DIM = 0xFFA3B3C2;
+    static int FAINT = 0xFF8296A9;
+    static int MUTED = 0xFF5B6B7C;
     // Acento y estados.
-    static final int ACCENT = 0xFF00E5C7;
-    static final int ACCENT_2 = 0xFF4CFF9F;
-    static final int ON_ACCENT = 0xFF00211C;
-    static final int AMBER = 0xFFFFB547;
-    static final int RED = 0xFFFF6B7A;
-    static final int BLUE = 0xFF5AA9FF;
-    static final int VIOLET = 0xFFB69CFF;
-    static final int GREEN = 0xFF4CFF9F;
+    static int ACCENT = 0xFF00E5C7;
+    static int ACCENT_2 = 0xFF4CFF9F;
+    static int ON_ACCENT = 0xFF00211C;
+    static int AMBER = 0xFFFFB547;
+    static int RED = 0xFFFF6B7A;
+    static int BLUE = 0xFF5AA9FF;
+    static int VIOLET = 0xFFB69CFF;
+    static int GREEN = 0xFF4CFF9F;
 
     static final int PAD = 24;
     static final int GAP = 18;

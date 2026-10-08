@@ -69,7 +69,8 @@ final class CarIcons {
     /** Icono del código de tiempo WMO (Open-Meteo). */
     static void weather(Canvas cv, int code, float cx, float cy, float s, Paint p) {
         int sunC = CarKit.AMBER;
-        int cloudC = 0xFFC9D6E3;
+        // De día, nubes más oscuras (sobre blanco no se verían).
+        int cloudC = CarTheme.night() ? 0xFFC9D6E3 : 0xFF8FA0B3;
         if (code == 0) {
             sun(cv, cx, cy, s, sunC, p);
             return;
@@ -89,7 +90,7 @@ final class CarIcons {
         }
         boolean snow = (code >= 71 && code <= 77) || code == 85 || code == 86;
         boolean storm = code >= 95;
-        cloud(cv, cx, cy - s * 0.14f, s * 0.85f, storm ? 0xFF8FA0B3 : cloudC, p);
+        cloud(cv, cx, cy - s * 0.14f, s * 0.85f, storm ? (CarTheme.night() ? 0xFF8FA0B3 : 0xFF5E6E80) : cloudC, p);
         if (storm) {
             fill(p, CarKit.AMBER);
             PATH.rewind();

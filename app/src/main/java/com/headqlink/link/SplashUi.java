@@ -35,7 +35,7 @@ final class SplashUi {
                 @Override
                 protected void onCreate(Bundle b) {
                     super.onCreate(b);
-                    setContentView(new SplashView(getContext(), new Config(getContext()).panelColor()));
+                    setContentView(new SplashView(getContext(), CarTheme.panelColor(new Config(getContext()).panelColor())));
                 }
             };
             try {

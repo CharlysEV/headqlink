@@ -17,24 +17,25 @@ import com.andrerinas.openheadunit.R;
  * Estilo de la interfaz propia en la pantalla del coche. Las medidas son píxeles de esa pantalla
  * (1920x882, ~150 ppp): se diseña directamente para ella.
  */
+/** Colores: los pone CarTheme (día o noche); no son constantes. */
 final class CarStyle {
-    static final int BG = 0xFF0E1013;
-    static final int TEXT = 0xFFE8EAED;
-    static final int TEXT_DIM = 0xFF9AA0A6;
+    static int BG = 0xFF0E1013;
+    static int TEXT = 0xFFE8EAED;
+    static int TEXT_DIM = 0xFF9AA0A6;
     /** Acento «Eléctrico» (el mismo que en el móvil): cian que pasa a verde eléctrico en los degradados. */
-    static final int ACCENT = 0xFF00E5C7;
-    static final int ACCENT_2 = 0xFF4CFF9F;
+    static int ACCENT = 0xFF00E5C7;
+    static int ACCENT_2 = 0xFF4CFF9F;
     /** Texto e iconos sobre el acento. */
-    static final int ON_ACCENT = 0xFF00211C;
-    static final int ACCENT_BG = 0xFF0F3B38;
-    static final int ITEM_BG = 0xFF23272E;
+    static int ON_ACCENT = 0xFF00211C;
+    static int ACCENT_BG = 0xFF0F3B38;
+    static int ITEM_BG = 0xFF23272E;
     /** Tarjetas al estilo de AA (superficie elevada sobre el fondo). */
-    static final int CARD = 0xFF28292C;
-    static final int GOOD = 0xFF81C995;
-    static final int WARN = 0xFFFDD663;
-    static final int BAD = 0xFFF28B82;
+    static int CARD = 0xFF28292C;
+    static int GOOD = 0xFF81C995;
+    static int WARN = 0xFFFDD663;
+    static int BAD = 0xFFF28B82;
     /** Botones tonales al estilo de AA. */
-    static final int PILL_BG = 0xEE3C4043;
+    static int PILL_BG = 0xEE3C4043;
 
     private CarStyle() {
     }

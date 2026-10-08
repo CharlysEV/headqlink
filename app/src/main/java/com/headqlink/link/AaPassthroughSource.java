@@ -452,7 +452,7 @@ final class AaPassthroughSource implements VideoSource {
         relay.setSplashOnly(!extended);
         // La capa se diseña a la resolución de la pantalla del coche; el relay la escala al vídeo.
         relay.setOverlaySize(carW, carH);
-        relay.setBackgroundColor(new Config(ctx).panelColor());
+        relay.setBackgroundColor(CarTheme.panelColor(new Config(ctx).panelColor()));
         relay.setOnFirstAaFrame(() -> {
             CarUi ui = carUi;
             if (ui != null) ui.onAaReady();

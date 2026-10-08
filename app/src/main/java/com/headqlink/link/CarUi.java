@@ -73,6 +73,8 @@ final class CarUi {
     private FrameLayout content;
     private View panel;
     private int panelColor;
+    /** El gris del panel elegido en Ajustes (el de noche; de día el panel es claro: CarTheme.panelColor). */
+    private int panelGray;
     private TextView battery;
     private final List<LinearLayout> navButtons = new ArrayList<>();
     /** Ancho del panel reducido (solo iconos) mientras algo ocupa la pantalla grande. */
@@ -111,6 +113,36 @@ final class CarUi {
     private volatile boolean aaShown = true;
     private CarScreen screen;
     private String screenName = "aa";
+    /**
+     * Día o noche, como Android Auto: AapService avisa cada vez que le manda a AA el modo (NightModeManager). Al cambiar,
+     * la interfaz se rehace entera con la otra paleta (CarTheme) y vuelve a la misma pantalla.
+     */
+    private final BroadcastReceiver nightReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent i) {
+            boolean isNight = i.getBooleanExtra("isNight", true);
+            main.post(() -> applyNight(isNight));
+        }
+    };
+    private boolean nightRegistered;
+
+    private void applyNight(boolean isNight) {
+        if (!CarTheme.apply(isNight) || pres == null) return;
+        L.i("CarUi: modo " + (isNight ? "noche" : "día") + " (como Android Auto)");
+        panelColor = CarTheme.panelColor(panelGray);
+        listener.onPanelColor(panelColor);
+        String name = screenName == null ? "aa" : screenName;
+        boolean wasHidden = hidden;
+        if (screen != null) screen.destroy();
+        screen = null;
+        if (splash != null) splash.stop();
+        splash = null;
+        pres.setContentView(buildRoot(pres.getContext()));
+        open(name);
+        if (wasHidden && "aa".equals(name)) setHidden(true);
+        if (alertPending) renderAlert();
+    }
+
     private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context c, Intent i) {
@@ -129,7 +161,8 @@ final class CarUi {
         this.dpi = dpi;
         this.listener = listener;
         Config cfg = new Config(ctx);
-        this.panelColor = cfg.panelColor();
+        this.panelGray = cfg.panelColor();
+        this.panelColor = CarTheme.panelColor(panelGray);
         this.autoHide = cfg.panelAutoHide();
     }
 
@@ -137,10 +170,11 @@ final class CarUi {
     static void applyPanelColor(int color) {
         CarUi ui = current;
         if (ui != null) ui.main.post(() -> {
-            ui.panelColor = color;
-            if (ui.panel != null) ui.panel.setBackgroundColor(color);
-            if (ui.content != null) ui.content.setBackgroundColor(color);
-            ui.listener.onPanelColor(color);
+            ui.panelGray = color;
+            ui.panelColor = CarTheme.panelColor(color);
+            if (ui.panel != null) ui.panel.setBackgroundColor(ui.panelColor);
+            if (ui.content != null) ui.content.setBackgroundColor(ui.panelColor);
+            ui.listener.onPanelColor(ui.panelColor);
             ui.markNav();
         });
     }
@@ -299,6 +333,7 @@ final class CarUi {
                 return;
             }
             ctx.registerReceiver(batteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            listenNight();
             RadioPlayer.addListener(radioChanged);
             current = this;
             // Sección Coche: viajes, ruta y datos de la vía, mientras dure el modo ampliado (y los datos reales del coche
@@ -314,6 +349,17 @@ final class CarUi {
         });
     }
 
+    /** Escucha el día y la noche de AA y pide el estado de ahora (si AA ya está conectado, llega enseguida). */
+    private void listenNight() {
+        if (nightRegistered) return;
+        androidx.core.content.ContextCompat.registerReceiver(ctx, nightReceiver,
+                new IntentFilter(com.andrerinas.openheadunit.aap.AapService.ACTION_NIGHT_MODE_CHANGED),
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
+        nightRegistered = true;
+        ctx.sendBroadcast(new Intent(com.andrerinas.openheadunit.aap.AapService.ACTION_REQUEST_NIGHT_MODE_UPDATE)
+                .setPackage(ctx.getPackageName()));
+    }
+
     void stop() {
         main.post(() -> {
             if (current == this) current = null;
@@ -324,6 +370,13 @@ final class CarUi {
             try {
                 ctx.unregisterReceiver(batteryReceiver);
             } catch (IllegalArgumentException ignored) {
+            }
+            if (nightRegistered) {
+                try {
+                    ctx.unregisterReceiver(nightReceiver);
+                } catch (IllegalArgumentException ignored) {
+                }
+                nightRegistered = false;
             }
             if (screen != null) screen.destroy();
             screen = null;
@@ -444,7 +497,7 @@ final class CarUi {
         LinearLayout card = new LinearLayout(c);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(18, 16, 18, 16);
-        card.setBackground(CarStyle.round(0xFF3B2F14, 24));
+        card.setBackground(CarStyle.round(CarTheme.alertBg(false), 24));
         card.setClickable(true);
         LinearLayout top = new LinearLayout(c);
         top.setOrientation(LinearLayout.HORIZONTAL);
@@ -495,7 +548,7 @@ final class CarUi {
     private void showAlert(String title, String text, int kind) {
         if (alertCard == null) return;
         boolean ok = kind == RoutePlanner.ALERT_READY;
-        alertCard.setBackground(CarStyle.round(ok ? 0xFF133B2A : 0xFF3B2F14, 24));
+        alertCard.setBackground(CarStyle.round(CarTheme.alertBg(ok), 24));
         alertTitle.setTextColor(ok ? CarKit.GREEN : CarKit.AMBER);
         alertIcon.setColor(ok ? CarKit.GREEN : CarKit.AMBER);
         alertTitle.setText(title);
@@ -676,7 +729,7 @@ final class CarUi {
     private void markNav() {
         for (LinearLayout b : navButtons) {
             boolean on = screenName.equals(b.getTag());
-            int fg = on ? CarStyle.ON_ACCENT : alertPending && "car".equals(b.getTag()) ? CarKit.AMBER : 0xFFDADCE0;
+            int fg = on ? CarStyle.ON_ACCENT : alertPending && "car".equals(b.getTag()) ? CarKit.AMBER : CarTheme.navText();
             b.setBackground(on ? CarStyle.accent(36) : null);
             if (radioMini != null) radioMini.setBackground(CarStyle.round(CarStyle.lighter(panelColor, 14), 36));
             ((ImageView) b.getChildAt(0)).setImageTintList(ColorStateList.valueOf(fg));
