@@ -84,6 +84,11 @@ public final class AaServerStarter {
 
     /** Una sola automatización de los ajustes de AA a la vez (reentrante: el reinicio son dos seguidas). */
     private static final ReentrantLock RUN_LOCK = new ReentrantLock();
+
+    /** La automatización está en marcha (los ajustes de AA delante): el coche virtual no debe ponerse encima. */
+    static boolean automating() {
+        return RUN_LOCK.isLocked();
+    }
     /** Sube al pedir el servidor (arranque) o anular el apagado: un apagado en cola que la ve cambiada no se hace. */
     private static final AtomicLong stopEpoch = new AtomicLong();
     /** Arrancar el servidor al desbloquear (aviso «Desbloquea el móvil para iniciar Android Auto» puesto). */

@@ -273,9 +273,12 @@ final class RouteTab implements CarScreen {
 
             @Override
             public void onHide() {
+                // «Ocultar»: más sitio para los resultados; tocar la caja lo vuelve a sacar.
+                if (st.kb != null) st.kb.setVisibility(View.GONE);
             }
         });
         st.kb = kb;
+        query.setOnClickListener(v -> kb.setVisibility(View.VISIBLE));
         panel.addView(kb);
         find.setOnClickListener(v -> st.searchNow(true));
         mic.setOnClickListener(v -> st.listen());
@@ -1534,6 +1537,8 @@ final class RouteTab implements CarScreen {
             sc = CarKit.GREEN;
         }
         statusPara.color(sc);
+        // Con los botones ±5 debajo, dos líneas como mucho (la tercera caía encima de ellos).
+        statusPara.maxLines(socControls.getVisibility() == View.VISIBLE ? 2 : 3);
         statusPara.draw(cv, st, tx, r.top + 86, (int) (r.right - tx), false);
     }
 

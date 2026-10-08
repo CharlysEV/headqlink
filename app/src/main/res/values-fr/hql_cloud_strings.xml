@@ -142,7 +142,7 @@
     <string name="hql_cloud_server_key_dialog">Empreinte SHA-256 :\n%1$s\nExpiration : %2$s\n\nIl peut s\'agir d\'un changement normal de Leapmotor ou de quelqu\'un qui intercepte la connexion. Acceptez-le uniquement sur un réseau de confiance (données mobiles ou votre Wi-Fi à la maison).</string>
     <string name="hql_cloud_server_key_accept">Faire confiance à ce certificat</string>
     <string name="hql_cloud_unsupported_phone">Nécessite Android 6 ou plus récent (pour stocker le certificat chiffré).</string>
-    <string name="hql_cloud_credits">Protocole basé sur LMB10 de txurtxil (GPL-3.0) ; signaux du REEV et historique des trajets d\'après leapmotor-mate (ProtossBlaster) et leapmotor-api (markoceri), AGPL-3.0. API non officielle, sans lien avec Leapmotor.</string>
+    <string name="hql_cloud_credits">Protocole basé sur LMB10 de txurtxil (GPL-3.0) ; signaux du REEV et historique des trajets d\'après leapmotor-mate (ProtossBlaster) et leapmotor-api (markoceri ; aussi le mode sentinelle), AGPL-3.0. API non officielle, sans lien avec Leapmotor.</string>
     <string name="hql_cloud_err_network">pas de connexion au cloud Leapmotor</string>
     <string name="hql_cloud_err_expired">la session a expiré ; reconnectez-vous</string>
     <string name="hql_cloud_err_p12">impossible d\'ouvrir le certificat du compte (%1$s)</string>

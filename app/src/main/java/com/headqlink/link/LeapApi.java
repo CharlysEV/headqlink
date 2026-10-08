@@ -216,8 +216,13 @@ final class LeapApi {
     private byte[] signKey;
     private LeapTls.Identity accountIdentity;
     private String deviceId;
-    /** Solo dentro de remote(): se permiten las rutas de REMOTE_PATHS. */
-    private boolean remoteCall;
+    /** Solo dentro de remote() (y en su hilo): se permiten las rutas de REMOTE_PATHS, aquí y en la capa de red. */
+    private static final ThreadLocal<Boolean> REMOTE_NOW = new ThreadLocal<>();
+
+    /** Para la capa de red (LeapHttps): la ruta es de una orden pedida ahora desde remote(), en este hilo. */
+    static boolean remoteAllowedNow(String path) {
+        return Boolean.TRUE.equals(REMOTE_NOW.get()) && REMOTE_PATHS.contains(path);
+    }
     private boolean certSynced;
     /** Espera entre consultas del resultado de una orden (en las pruebas, ninguna). */
     interface Sleeper {
@@ -428,7 +433,7 @@ final class LeapApi {
     boolean remote(String vin, String cmdId, String cmdContent, String pin) throws IOException {
         if (!CMD_SENTRY.equals(cmdId)) throw new IOException("orden no permitida");
         if (pin == null || pin.isEmpty()) throw new IOException("sin PIN del coche");
-        remoteCall = true;
+        REMOTE_NOW.set(Boolean.TRUE);
         try {
             return withTokenRetry(() -> {
                 Session s = requireSession();
@@ -483,7 +488,7 @@ final class LeapApi {
                 return false;
             });
         } finally {
-            remoteCall = false;
+            REMOTE_NOW.remove();
         }
     }
 
@@ -493,7 +498,7 @@ final class LeapApi {
     }
 
     private Response call(LeapTls.Identity id, String path, Map<String, String> headers, String body) throws IOException {
-        if (!allowed(path) && !(remoteCall && REMOTE_PATHS.contains(path))) throw new IOException("ruta no permitida (solo lectura)");
+        if (!allowed(path) && !remoteAllowedNow(path)) throw new IOException("ruta no permitida (solo lectura)");
         return http.post(id, path, headers, body);
     }
 

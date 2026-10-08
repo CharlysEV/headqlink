@@ -273,6 +273,8 @@ class LeapApiTest {
     fun sentryGoesCertificatePinOrderAndResultSignedAndWithoutThePinInClear() {
         var polls = 0
         val (a, fake) = loggedIn { c ->
+            // La misma regla que la capa de red de verdad (LeapHttps): sin esto, la orden no salía del móvil.
+            assertTrue(c.path, LeapApi.allowed(c.path) || LeapApi.remoteAllowedNow(c.path))
             when (c.path) {
                 LeapApi.PATH_REMOTE_CTL -> ok("""{"remoteCtlId":"rc-9","queryRemoteCtlResultTimeout":6000,"queryInterval":2000}""")
                 LeapApi.PATH_REMOTE_RESULT -> {
@@ -298,11 +300,26 @@ class LeapApiTest {
         assertSigned(ctl, mapOf("vin" to "VIN000000000000A1", "cmdContent" to """{"value":"1"}""", "cmdId" to "220", "operatePassword" to op))
         assertSigned(fake.calls[3], mapOf("remoteCtlId" to "rc-9"))
         for (c in fake.calls) assertFalse(c.body, c.body.contains("1234"))
+        // Fuera de remote(), la capa de red vuelve a negarse.
+        for (p in LeapApi.REMOTE_PATHS) assertFalse(p, LeapApi.remoteAllowedNow(p))
         // La siguiente orden ya no vuelve a sincronizar el certificado.
         fake.calls.clear()
         a.remote("VIN000000000000A1", LeapApi.CMD_SENTRY, LeapApi.sentryContent(false), "1234")
         assertEquals(LeapApi.PATH_OPER_VERIFY, fake.calls.first().path)
         assertTrue(fake.calls[1].body.contains(LeapCrypto.encodeComponent("""{"value":"0"}""")))
+    }
+
+    @Test
+    fun theRealTransportRefusesOrderPathsOutsideRemote() {
+        val http = LeapHttps(LeapTls.PinTrust(emptySet()))
+        for (p in LeapApi.REMOTE_PATHS) {
+            try {
+                http.post(clientId, p, emptyMap(), "")
+                fail(p)
+            } catch (e: java.io.IOException) {
+                assertTrue(e.message, e.message!!.contains("ruta no permitida"))
+            }
+        }
     }
 
     @Test

@@ -698,7 +698,7 @@
     <string name="hql_plan_other_chargers">Outros carregadores na rota</string>
     <string name="hql_plan_arrive_min">Chegar com pelo menos</string>
     <string name="hql_plan_max_charge">Carregar no máximo até</string>
-    <string name="hql_route_battery_plan">Chega com o plano de carregamento (%1$s a carregar)</string>
+    <string name="hql_route_battery_plan">Com o plano: %1$s a carregar</string>
     <string name="hql_plan_alert_title">Plano de carregamento alterado</string>
     <string name="hql_plan_alert_fail_title">Não chega com o plano</string>
     <string name="hql_plan_alert_more">Está a gastar mais %1$.0f %% do que o previsto.</string>

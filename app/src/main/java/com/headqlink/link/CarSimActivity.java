@@ -45,6 +45,29 @@ public class CarSimActivity extends Activity {
     private volatile boolean visible;
     private boolean serverReady;
     private boolean closing;
+    /** El usuario se ha ido a propósito (inicio, recientes): entonces no se vuelve delante solo. */
+    private boolean userLeft;
+    /**
+     * Otra app se ha puesto delante sin que el usuario se fuera (la pantalla de Google Maps o Waze que abre Android Auto
+     * en el móvil, el navegador al guiar): el coche virtual vuelve delante, salvo con la automatización de AA en marcha.
+     */
+    private final Runnable bringBack = new Runnable() {
+        @Override
+        public void run() {
+            if (closing || visible || userLeft || source == null) return;
+            if (AaServerStarter.automating()) {
+                main.postDelayed(this, 1500);
+                return;
+            }
+            try {
+                startActivity(new android.content.Intent(CarSimActivity.this, CarSimActivity.class)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+                L.i("coche virtual: otra app se puso delante; vuelvo a la pantalla del coche");
+            } catch (RuntimeException e) {
+                L.w("coche virtual: no se pudo volver delante (" + e.getClass().getSimpleName() + ")");
+            }
+        }
+    };
     /** Si el coche de verdad se conecta, el virtual se aparta. */
     private final Runnable watchLink = new Runnable() {
         @Override
@@ -178,9 +201,17 @@ public class CarSimActivity extends Activity {
     // ------------------------------------------------------------------ ciclo de vida
 
     @Override
+    protected void onUserLeaveHint() {
+        userLeft = true;
+        super.onUserLeaveHint();
+    }
+
+    @Override
     protected void onStart() {
         super.onStart();
         visible = true;
+        userLeft = false;
+        main.removeCallbacks(bringBack);
         immersive();
         if (source != null) source.redraw();
     }
@@ -189,6 +220,7 @@ public class CarSimActivity extends Activity {
     protected void onStop() {
         visible = false;
         super.onStop();
+        if (!closing && !isFinishing() && source != null && !userLeft) main.postDelayed(bringBack, 1200);
     }
 
     @Override
@@ -213,6 +245,7 @@ public class CarSimActivity extends Activity {
     private void shutdown() {
         closing = true;
         main.removeCallbacks(watchLink);
+        main.removeCallbacks(bringBack);
         AaPassthroughSource s = source;
         source = null;
         if (s != null) {

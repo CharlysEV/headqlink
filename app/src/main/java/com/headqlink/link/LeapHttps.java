@@ -56,7 +56,8 @@ final class LeapHttps implements LeapApi.Transport {
 
     @Override
     public LeapApi.Response post(LeapTls.Identity id, String path, Map<String, String> headers, String body) throws IOException {
-        if (!LeapApi.allowed(path)) throw new IOException("ruta no permitida (solo lectura)");
+        // Lectura; o una orden (el centinela) pedida ahora mismo desde LeapApi.remote() en este hilo.
+        if (!LeapApi.allowed(path) && !LeapApi.remoteAllowedNow(path)) throw new IOException("ruta no permitida (solo lectura)");
         HttpsURLConnection c = (HttpsURLConnection) new URL(LeapApi.BASE_URL + path).openConnection();
         try {
             c.setSSLSocketFactory(factory(id));

@@ -697,7 +697,7 @@
     <string name="hql_plan_other_chargers">Andere laadpalen langs de route</string>
     <string name="hql_plan_arrive_min">Aankomen met minstens</string>
     <string name="hql_plan_max_charge">Maximaal laden tot</string>
-    <string name="hql_route_battery_plan">Aankomst met het laadplan (%1$s laden)</string>
+    <string name="hql_route_battery_plan">Met het plan: %1$s laden</string>
     <string name="hql_plan_alert_title">Laadplan gewijzigd</string>
     <string name="hql_plan_alert_fail_title">Met het plan red je het niet</string>
     <string name="hql_plan_alert_more">Je verbruikt %1$.0f %% meer dan verwacht.</string>

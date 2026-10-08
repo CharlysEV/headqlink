@@ -698,7 +698,7 @@
     <string name="hql_plan_other_chargers">Altre colonnine lungo il percorso</string>
     <string name="hql_plan_arrive_min">Arrivare con almeno</string>
     <string name="hql_plan_max_charge">Ricaricare al massimo fino a</string>
-    <string name="hql_route_battery_plan">Arrivi con il piano di ricarica (%1$s di ricarica)</string>
+    <string name="hql_route_battery_plan">Con il piano: %1$s di ricarica</string>
     <string name="hql_plan_alert_title">Piano di ricarica cambiato</string>
     <string name="hql_plan_alert_fail_title">Con il piano non arrivi</string>
     <string name="hql_plan_alert_more">Stai consumando il %1$.0f %% in più del previsto.</string>

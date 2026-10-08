@@ -697,7 +697,7 @@
     <string name="hql_plan_other_chargers">Other chargers on the route</string>
     <string name="hql_plan_arrive_min">Arrive with at least</string>
     <string name="hql_plan_max_charge">Charge at most to</string>
-    <string name="hql_route_battery_plan">You arrive with the charging plan (%1$s charging)</string>
+    <string name="hql_route_battery_plan">With the plan: %1$s charging</string>
     <string name="hql_plan_alert_title">Charging plan changed</string>
     <string name="hql_plan_alert_fail_title">You won\'t make it with the plan</string>
     <string name="hql_plan_alert_more">You\'re using %1$.0f %% more than expected.</string>

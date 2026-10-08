@@ -142,7 +142,7 @@
     <string name="hql_cloud_server_key_dialog">Huella SHA-256:\n%1$s\nCaduca: %2$s\n\nPuede ser un cambio normal de Leapmotor o alguien interceptando la conexión. Acéptalo solo en una red de confianza (datos móviles o el Wi-Fi de casa).</string>
     <string name="hql_cloud_server_key_accept">Confiar en este certificado</string>
     <string name="hql_cloud_unsupported_phone">Necesita Android 6 o superior (para guardar el certificado cifrado).</string>
-    <string name="hql_cloud_credits">Protocolo basado en LMB10, de txurtxil (GPL-3.0); señales del REEV e historial de viajes según leapmotor-mate (ProtossBlaster) y leapmotor-api (markoceri), AGPL-3.0. API no oficial, sin relación con Leapmotor.</string>
+    <string name="hql_cloud_credits">Protocolo basado en LMB10, de txurtxil (GPL-3.0); señales del REEV e historial de viajes según leapmotor-mate (ProtossBlaster) y leapmotor-api (markoceri; también el modo centinela), AGPL-3.0. API no oficial, sin relación con Leapmotor.</string>
     <string name="hql_cloud_err_network">sin conexión con la nube de Leapmotor</string>
     <string name="hql_cloud_err_expired">la sesión caducó; vuelve a entrar</string>
     <string name="hql_cloud_err_p12">no se pudo abrir el certificado de cuenta (%1$s)</string>

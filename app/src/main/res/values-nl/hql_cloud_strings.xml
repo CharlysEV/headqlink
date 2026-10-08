@@ -142,7 +142,7 @@
     <string name="hql_cloud_server_key_dialog">SHA-256-vingerafdruk:\n%1$s\nVerloopt: %2$s\n\nDit kan een normale wijziging door Leapmotor zijn, of iemand die de verbinding onderschept. Accepteer het alleen op een netwerk dat je vertrouwt (mobiele data of je Wi-Fi thuis).</string>
     <string name="hql_cloud_server_key_accept">Dit certificaat vertrouwen</string>
     <string name="hql_cloud_unsupported_phone">Vereist Android 6 of hoger (om het certificaat versleuteld op te slaan).</string>
-    <string name="hql_cloud_credits">Protocol gebaseerd op LMB10 van txurtxil (GPL-3.0); REEV-signalen en ritgeschiedenis volgens leapmotor-mate (ProtossBlaster) en leapmotor-api (markoceri), AGPL-3.0. Onofficiële API, niet gelieerd aan Leapmotor.</string>
+    <string name="hql_cloud_credits">Protocol gebaseerd op LMB10 van txurtxil (GPL-3.0); REEV-signalen en ritgeschiedenis volgens leapmotor-mate (ProtossBlaster) en leapmotor-api (markoceri; ook de schildwachtmodus), AGPL-3.0. Onofficiële API, niet gelieerd aan Leapmotor.</string>
     <string name="hql_cloud_err_network">geen verbinding met de Leapmotor-cloud</string>
     <string name="hql_cloud_err_expired">de sessie is verlopen; log opnieuw in</string>
     <string name="hql_cloud_err_p12">het accountcertificaat kon niet worden geopend (%1$s)</string>

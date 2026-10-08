@@ -73,7 +73,9 @@ final class NavApps {
 
     private static boolean start(Context ctx, String uri, String pkg, String label) {
         try {
-            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(uri)).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            // NO_USER_ACTION: no es que el usuario salga de la app (el coche virtual vuelve delante: el navegador va en AA).
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(uri)).setPackage(pkg)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_USER_ACTION);
             ctx.getApplicationContext().startActivity(i);
             CarUi.switchToAa();
             return true;

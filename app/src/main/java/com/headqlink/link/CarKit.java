@@ -221,6 +221,7 @@ final class CarKit {
         private StaticLayout layout;
         private String text = "";
         private int width = -1;
+        private int maxLines = Integer.MAX_VALUE;
 
         Para(float size, int color, Typeface tf) {
             tp.setTextSize(size);
@@ -232,6 +233,13 @@ final class CarKit {
             tp.setColor(c);
         }
 
+        /** Como mucho n líneas (la última, con «…»). */
+        void maxLines(int n) {
+            if (n == maxLines) return;
+            maxLines = n;
+            layout = null;
+        }
+
         /** Dibuja con la esquina superior izquierda en (x, y); alignCenter centra cada línea en el ancho. Devuelve el alto. */
         float draw(Canvas cv, String s, float x, float y, int w, boolean alignCenter) {
             if (s == null) s = "";
@@ -241,6 +249,8 @@ final class CarKit {
                 layout = StaticLayout.Builder.obtain(s, 0, s.length(), tp, width)
                         .setAlignment(alignCenter ? Layout.Alignment.ALIGN_CENTER : Layout.Alignment.ALIGN_NORMAL)
                         .setLineSpacing(0, 1.12f)
+                        .setMaxLines(maxLines)
+                        .setEllipsize(maxLines == Integer.MAX_VALUE ? null : android.text.TextUtils.TruncateAt.END)
                         .build();
             }
             cv.save();

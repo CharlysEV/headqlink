@@ -220,6 +220,8 @@ final class GlFrameRelay {
         aaOutX = x;
         aaOutW = w;
         if (h != null) h.post(() -> {
+            // La espera se mide desde aquí (si no, desde el último frame de AA, quizá de hace segundos).
+            if (!hasNew) frameNs = System.nanoTime();
             hasNew = true;
             tryDraw();
         });
@@ -229,6 +231,8 @@ final class GlFrameRelay {
     void setBackgroundColor(int argb) {
         bgColor = argb;
         if (h != null) h.post(() -> {
+            // La espera se mide desde aquí (si no, desde el último frame de AA, quizá de hace segundos).
+            if (!hasNew) frameNs = System.nanoTime();
             hasNew = true;
             tryDraw();
         });
@@ -238,6 +242,8 @@ final class GlFrameRelay {
     void setAaVisible(boolean v) {
         aaVisible = v;
         if (h != null) h.post(() -> {
+            // La espera se mide desde aquí (si no, desde el último frame de AA, quizá de hace segundos).
+            if (!hasNew) frameNs = System.nanoTime();
             hasNew = true;
             tryDraw();
         });
