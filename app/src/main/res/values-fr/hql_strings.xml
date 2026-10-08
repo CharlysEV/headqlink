@@ -727,4 +727,10 @@
     <string name="hql_charger_unknown_include">Inclure celles sans puissance</string>
     <string name="hql_charger_unknown_exclude">Seulement puissance confirmée</string>
     <string name="hql_charger_unknown_note">La plupart des bornes d\'OpenStreetMap n\'indiquent pas leur puissance. Tesla, Ionity, Zunder, Fastned, Electra et Atlante comptent avec leur puissance typique (≈) ; les autres seulement si vous les incluez, et le plan préfère celles confirmées.</string>
+    <string name="hql_chargers_list_title">Bornes sur l\'itinéraire</string>
+    <string name="hql_chargers_list_count">%1$d devant · %2$d passent le filtre</string>
+    <string name="hql_chargers_list_filtered">Filtrées</string>
+    <string name="hql_chargers_list_all">Toutes</string>
+    <string name="hql_chargers_list_stop">Arrêt %1$d</string>
+    <string name="hql_chargers_list_none">Aucune borne devant avec ce filtre.</string>
 </resources>

@@ -726,4 +726,10 @@
     <string name="hql_charger_unknown_include">Auch ohne Leistungsangabe</string>
     <string name="hql_charger_unknown_exclude">Nur bestätigte Leistung</string>
     <string name="hql_charger_unknown_note">Die meisten Ladestationen auf OpenStreetMap nennen ihre Leistung nicht. Tesla, Ionity, Zunder, Fastned, Electra und Atlante zählen mit ihrer typischen Leistung (≈); die anderen nur, wenn du sie einschließt, und der Plan bevorzugt die bestätigten.</string>
+    <string name="hql_chargers_list_title">Ladestationen an der Route</string>
+    <string name="hql_chargers_list_count">%1$d voraus · %2$d passen zum Filter</string>
+    <string name="hql_chargers_list_filtered">Gefiltert</string>
+    <string name="hql_chargers_list_all">Alle</string>
+    <string name="hql_chargers_list_stop">Stopp %1$d</string>
+    <string name="hql_chargers_list_none">Keine Ladestationen voraus mit diesem Filter.</string>
 </resources>

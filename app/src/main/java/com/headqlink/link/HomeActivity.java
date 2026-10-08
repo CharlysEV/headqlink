@@ -436,9 +436,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     startActivity(new Intent(this, CarCloudActivity.class));
                     break;
                 case 11:
-                    if (LinkState.running) {
+                    if (LinkState.running && (LinkState.car == LinkState.Car.CONNECTED || LinkState.car == LinkState.Car.RECONNECTING)) {
+                        // Con el coche de verdad conectado, no.
                         android.widget.Toast.makeText(this, Str.get(R.string.hql_preview_busy), android.widget.Toast.LENGTH_LONG).show();
                     } else {
+                        // Si solo está buscando el coche, el coche virtual para la búsqueda y entra.
                         startActivity(new Intent(this, CarSimActivity.class));
                     }
                     break;

@@ -472,6 +472,9 @@ final class RoutePlanner {
             s.arriveMinPct = c.planArrivePct();
             s.maxChargePct = c.planMaxPct();
             s.capacityKwh = capKwh;
+            // La batería grande (81,9 kWh) carga más rápido que la de 69,9 (84 kW): ~130 kW de pico, lo que da los
+            // 28 min del 19 al 81 % de ABRP en un cargador de 400 kW.
+            s.carPeakKw = capKwh >= 80 ? 130 : 84;
             java.util.Set<String> want = ChargerFilter.parseNetworks(nets);
             List<Charger> list = new ArrayList<>();
             for (Charger ch : pl.chargers) if (ChargerFilter.accepts(ch, minKw, want, c.chargerIncludeUnknown())) list.add(ch);

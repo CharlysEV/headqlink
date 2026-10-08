@@ -128,6 +128,41 @@ final class ChargerFilter {
         return new double[]{0, KW_UNKNOWN};
     }
 
+    /**
+     * Distintivo propio de cada red para las listas: su color y sus iniciales (no son sus logotipos, que son marcas
+     * registradas). {color ARGB, iniciales, texto oscuro (1) o claro (0)}; null para OTHER.
+     */
+    static Object[] badge(String network) {
+        return BADGES.get(network);
+    }
+
+    private static final Map<String, Object[]> BADGES = new LinkedHashMap<>();
+
+    static {
+        BADGES.put("tesla", new Object[]{0xFFE31937, "T", 0});
+        BADGES.put("zunder", new Object[]{0xFF00B37E, "Z", 0});
+        BADGES.put("ionity", new Object[]{0xFF2E2A6E, "IO", 0});
+        BADGES.put("iberdrola", new Object[]{0xFF5CB615, "IB", 0});
+        BADGES.put("endesa", new Object[]{0xFF0075BE, "EX", 0});
+        BADGES.put("repsol", new Object[]{0xFFFF8200, "R", 0});
+        BADGES.put("wenea", new Object[]{0xFF00A3E0, "W", 0});
+        BADGES.put("moeve", new Object[]{0xFF00857C, "M", 0});
+        BADGES.put("galp", new Object[]{0xFFFF6A13, "G", 0});
+        BADGES.put("fastned", new Object[]{0xFFFFD400, "F", 1});
+        BADGES.put("electra", new Object[]{0xFF14D3A0, "E", 1});
+        BADGES.put("allego", new Object[]{0xFFFF7E1F, "A", 0});
+        BADGES.put("powerdot", new Object[]{0xFFFFC72C, "P", 1});
+        BADGES.put("atlante", new Object[]{0xFF00AEEF, "AT", 0});
+        BADGES.put("easycharger", new Object[]{0xFF3DBE6A, "EC", 0});
+        BADGES.put("plenitude", new Object[]{0xFFFFD100, "BC", 1});
+        BADGES.put("lidl", new Object[]{0xFF0050AA, "L", 0});
+        BADGES.put("ewiva", new Object[]{0xFF0062A8, "EW", 0});
+        BADGES.put("enel", new Object[]{0xFF008C5A, "EN", 0});
+        BADGES.put("totalenergies", new Object[]{0xFFED0000, "TE", 0});
+        BADGES.put("shell", new Object[]{0xFFFBCE07, "S", 1});
+        BADGES.put("bp", new Object[]{0xFF009900, "bp", 0});
+    }
+
     /** Redes que solo montan carga rápida, con su potencia típica por lo bajo (kW). */
     private static final Map<String, Double> FAST_ONLY = new LinkedHashMap<>();
 

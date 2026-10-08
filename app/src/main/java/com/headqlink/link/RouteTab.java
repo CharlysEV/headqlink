@@ -118,6 +118,7 @@ final class RouteTab implements CarScreen {
         originPill = CarKit.pill(ctx, "", false);
         originPill.setOnClickListener(v -> openSearch(true));
         if (RoutePlanner.testMode()) {
+            search.setText(Str.get(R.string.hql_search));
             actions.addView(originPill);
             actions.addView(search, spaced());
         } else {
@@ -188,6 +189,8 @@ final class RouteTab implements CarScreen {
         svp.topMargin = 6;
         chCol.addView(sv, svp);
         ch.addView(chCol, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        // Tocar la tarjeta (su título o una fila): la ventana con todos los cargadores de la ruta.
+        ch.setOnClickListener(v -> openChargerList(false));
         updateFilterSummary();
 
         running = true;
@@ -662,6 +665,114 @@ final class RouteTab implements CarScreen {
     }
 
     /**
+     * Ventana con los cargadores de la ruta por delante, con el distintivo de su red, km, potencia, enchufes, si son
+     * parada del plan e «Ir». all: también los que no pasan el filtro.
+     */
+    private void openChargerList(boolean all) {
+        RoutePlanner.Plan pl = plan;
+        LinearLayout panel = new LinearLayout(ctx);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setBackgroundColor(CarKit.BG);
+        panel.setClickable(true);
+        panel.setPadding(CarKit.PAD, 18, CarKit.PAD, CarKit.PAD);
+        LinearLayout bar = CarKit.row(ctx);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = CarStyle.text(ctx, Str.get(R.string.hql_chargers_list_title), 34, CarKit.TEXT);
+        title.setTypeface(CarKit.MEDIUM);
+        bar.addView(title);
+        TextView count = CarStyle.text(ctx, "", 22, CarKit.DIM);
+        count.setPadding(20, 0, 0, 0);
+        bar.addView(count, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView onlyF = chip(Str.get(R.string.hql_chargers_list_filtered), !all, () -> {
+            root.removeViewAt(root.getChildCount() - 1);
+            openChargerList(false);
+        });
+        TextView every = chip(Str.get(R.string.hql_chargers_list_all), all, () -> {
+            root.removeViewAt(root.getChildCount() - 1);
+            openChargerList(true);
+        });
+        bar.addView(onlyF, chipParams());
+        bar.addView(every, chipParams());
+        TextView done = CarKit.pill(ctx, Str.get(R.string.hql_close), true);
+        bar.addView(done);
+        panel.addView(bar);
+        LinearLayout body = CarKit.col(ctx);
+        ScrollView sv = new ScrollView(ctx);
+        sv.addView(body);
+        LinearLayout.LayoutParams svp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        svp.topMargin = 10;
+        panel.addView(sv, svp);
+        done.setOnClickListener(v -> root.removeView(panel));
+        int total = 0;
+        int passing = 0;
+        if (pl == null) {
+            body.addView(hint(Str.get(R.string.hql_route_chargers_hint)));
+        } else {
+            double here = pl.km[Math.min(pl.progress, pl.n - 1)];
+            java.util.Map<RoutePlanner.Charger, Integer> stopNo = new java.util.HashMap<>();
+            ChargePlanner.Result cp = chargePlan;
+            if (cp != null) for (int i = 0; i < cp.stops.size(); i++) stopNo.put(cp.stops.get(i).charger, i + 1);
+            for (RoutePlanner.Charger c : pl.chargers) {
+                if (c.kmAlong < here - 0.5) continue;
+                total++;
+                boolean ok = wanted(c);
+                if (ok) passing++;
+                if (!ok && !all) continue;
+                body.addView(chargerRow(c, here, stopNo.get(c), ok), itemParams());
+            }
+            if (body.getChildCount() == 0) body.addView(hint(Str.get(R.string.hql_chargers_list_none)));
+        }
+        count.setText(Str.get(R.string.hql_chargers_list_count, total, passing));
+        root.addView(panel, CarStyle.match());
+    }
+
+    /** Una fila de la ventana de cargadores. */
+    private View chargerRow(RoutePlanner.Charger c, double here, Integer stop, boolean passes) {
+        LinearLayout item = CarKit.row(ctx);
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setPadding(18, 12, 18, 12);
+        item.setBackground(CarKit.outlined(CarKit.SURFACE, stop != null ? CarKit.ACCENT : CarKit.OUTLINE, 18));
+        ChargerDot dot = new ChargerDot(ctx, c.maxKw, c.network);
+        item.addView(dot, new LinearLayout.LayoutParams(64, 64));
+        LinearLayout txt = CarKit.col(ctx);
+        txt.setPadding(20, 0, 12, 0);
+        TextView name = CarStyle.text(ctx, c.name, 26, passes ? CarKit.TEXT : CarKit.DIM);
+        name.setTypeface(CarKit.MEDIUM);
+        name.setSingleLine(true);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        String net = c.network == null || c.network.equals(ChargerFilter.OTHER) ? "" : ChargerFilter.label(c.network) + " · ";
+        // Sin repetir la red en el detalle (su operador suele ser ella misma: «Iberdrola», «Tesla, Inc.»).
+        String detailText = c.detail;
+        if (!net.isEmpty()) {
+            String brand = ChargerFilter.label(c.network).toLowerCase(Locale.ROOT);
+            StringBuilder kept = new StringBuilder();
+            for (String part : c.detail.split(" · ")) {
+                if (part.isEmpty() || part.toLowerCase(Locale.ROOT).contains(brand)) continue;
+                kept.append(kept.length() > 0 ? " · " : "").append(part);
+            }
+            detailText = kept.toString();
+        }
+        String sub = net + Str.get(R.string.hql_charger_line, c.kmAlong, Math.max(0, c.kmAlong - here)) + " · " + kwText(c)
+                + (detailText.isEmpty() ? "" : " · " + detailText);
+        TextView detail = CarStyle.text(ctx, sub, 21, CarKit.DIM);
+        detail.setMaxLines(2);
+        detail.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        txt.addView(name);
+        txt.addView(detail);
+        item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        if (stop != null) {
+            TextView tag = CarStyle.text(ctx, Str.get(R.string.hql_chargers_list_stop, stop), 21, CarKit.ACCENT);
+            tag.setTypeface(CarKit.MEDIUM);
+            tag.setPadding(0, 0, 16, 0);
+            item.addView(tag);
+        }
+        TextView go = CarKit.pill(ctx, Str.get(R.string.hql_go), false);
+        go.setOnClickListener(v -> navigateTo(c.lat, c.lon));
+        item.addView(go);
+        return item;
+    }
+
+    /**
      * Panel del filtro de cargadores: potencia mínima (una) y redes (varias; ninguna marcada = todas), con las redes que
      * hay en esta ruta y cuántos cargadores tiene cada una.
      */
@@ -889,7 +1000,7 @@ final class RouteTab implements CarScreen {
             LinearLayout item = CarKit.row(ctx);
             item.setGravity(Gravity.CENTER_VERTICAL);
             item.setPadding(0, 10, 0, 10);
-            ChargerDot dot = new ChargerDot(ctx, st.charger.maxKw);
+            ChargerDot dot = new ChargerDot(ctx, st.charger.maxKw, st.charger.network);
             item.addView(dot, new LinearLayout.LayoutParams(52, 52));
             LinearLayout txt = CarKit.col(ctx);
             txt.setPadding(16, 0, 10, 0);
@@ -968,8 +1079,9 @@ final class RouteTab implements CarScreen {
             LinearLayout item = CarKit.row(ctx);
             item.setGravity(Gravity.CENTER_VERTICAL);
             item.setPadding(0, 10, 0, 10);
-            ChargerDot dot = new ChargerDot(ctx, c.maxKw);
+            ChargerDot dot = new ChargerDot(ctx, c.maxKw, c.network);
             item.addView(dot, new LinearLayout.LayoutParams(52, 52));
+            item.setOnClickListener(v -> openChargerList(false));
             LinearLayout txt = CarKit.col(ctx);
             txt.setPadding(16, 0, 10, 0);
             TextView name = CarStyle.text(ctx, c.name, 24, CarKit.TEXT);
@@ -1013,18 +1125,45 @@ final class RouteTab implements CarScreen {
     private static final class ChargerDot extends View {
         private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final int color;
+        private final Object[] badge;
 
         ChargerDot(Context c, double kw) {
+            this(c, kw, null);
+        }
+
+        /** Con red conocida, su distintivo (color e iniciales) y, en la esquina, el color de la potencia. */
+        ChargerDot(Context c, double kw, String network) {
             super(c);
             color = kw >= 150 ? CarKit.GREEN : kw >= 50 ? CarKit.ACCENT : CarKit.DIM;
+            badge = network == null ? null : ChargerFilter.badge(network);
         }
 
         @Override
         protected void onDraw(Canvas cv) {
             float r = Math.min(getWidth(), getHeight()) / 2f;
-            p.setColor(CarKit.alpha(color, 0.14f));
-            cv.drawCircle(getWidth() / 2f, getHeight() / 2f, r, p);
-            CarIcons.bolt(cv, getWidth() / 2f, getHeight() / 2f, r * 1.1f, color, p);
+            float cx = getWidth() / 2f;
+            float cy = getHeight() / 2f;
+            if (badge == null) {
+                p.setColor(CarKit.alpha(color, 0.14f));
+                cv.drawCircle(cx, cy, r, p);
+                CarIcons.bolt(cv, cx, cy, r * 1.1f, color, p);
+                return;
+            }
+            p.setStyle(Paint.Style.FILL);
+            p.setColor((Integer) badge[0]);
+            cv.drawCircle(cx, cy, r * 0.92f, p);
+            String ini = (String) badge[1];
+            p.setTypeface(CarKit.MEDIUM);
+            p.setTextSize(r * (ini.length() > 1 ? 0.78f : 1.0f));
+            p.setTextAlign(Paint.Align.CENTER);
+            p.setColor(((Integer) badge[2]) == 1 ? 0xFF15181C : 0xFFFFFFFF);
+            Paint.FontMetrics fm = p.getFontMetrics();
+            cv.drawText(ini, cx, cy - (fm.ascent + fm.descent) / 2, p);
+            // La potencia, en un punto abajo a la derecha (verde ≥ 150 kW, acento ≥ 50, gris lento o sin saber).
+            p.setColor(CarKit.SURFACE);
+            cv.drawCircle(cx + r * 0.68f, cy + r * 0.68f, r * 0.34f, p);
+            p.setColor(color);
+            cv.drawCircle(cx + r * 0.68f, cy + r * 0.68f, r * 0.24f, p);
         }
     }
 

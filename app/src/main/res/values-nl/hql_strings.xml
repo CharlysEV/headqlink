@@ -726,4 +726,10 @@
     <string name="hql_charger_unknown_include">Ook zonder vermogen</string>
     <string name="hql_charger_unknown_exclude">Alleen bevestigd vermogen</string>
     <string name="hql_charger_unknown_note">De meeste laadpalen op OpenStreetMap vermelden hun vermogen niet. Tesla, Ionity, Zunder, Fastned, Electra en Atlante tellen met hun gebruikelijke vermogen (≈); de rest alleen als je ze meeneemt, en het plan geeft de voorkeur aan bevestigde.</string>
+    <string name="hql_chargers_list_title">Laadpalen langs de route</string>
+    <string name="hql_chargers_list_count">%1$d verderop · %2$d passen bij het filter</string>
+    <string name="hql_chargers_list_filtered">Gefilterd</string>
+    <string name="hql_chargers_list_all">Alle</string>
+    <string name="hql_chargers_list_stop">Stop %1$d</string>
+    <string name="hql_chargers_list_none">Geen laadpalen verderop met dit filter.</string>
 </resources>

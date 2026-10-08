@@ -15,6 +15,11 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!-- headqlink: el escritorio (el coche virtual sabe si el usuario se ha ido a él o le ha tapado otra app) -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
         <package android:name="com.google.android.projection.gearhead" />
         <!-- headqlink: QDLink (ocupa el UDP 18463; la comprobación de requisitos avisa de cerrarlo) -->
         <package android:name="com.neusoft.qdrivelink" />

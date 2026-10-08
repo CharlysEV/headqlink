@@ -54,7 +54,11 @@ public class CarSimActivity extends Activity {
     private final Runnable bringBack = new Runnable() {
         @Override
         public void run() {
-            if (closing || visible || userLeft || source == null) return;
+            if (closing || visible || source == null) return;
+            // Qué hay delante (con la accesibilidad de HeadQLink): el escritorio, el usuario se ha ido; otra app (Maps o
+            // Waze al guiar), se vuelve. Sin accesibilidad, lo dice onUserLeaveHint.
+            String top = topPackage();
+            if (top != null ? top.equals(launcherPackage()) : userLeft) return;
             if (AaServerStarter.automating()) {
                 main.postDelayed(this, 1500);
                 return;
@@ -95,10 +99,36 @@ public class CarSimActivity extends Activity {
         root.addView(status, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
         immersive();
-        if (LinkState.running) {
+        if (LinkState.running && (LinkState.car == LinkState.Car.CONNECTED || LinkState.car == LinkState.Car.RECONNECTING)) {
             status.setText(Str.get(R.string.hql_preview_busy));
             return;
         }
+        if (LinkState.running) {
+            // Solo buscando el coche (al abrir la app en casa): se para la búsqueda y, cuando se cierra, se arranca.
+            L.i("coche virtual: paro la búsqueda del coche para arrancar");
+            LinkControl.stop(this, "coche virtual");
+            status.setText(Str.get(R.string.hql_sim_starting));
+            waitLinkThenBegin(0);
+            return;
+        }
+        begin();
+    }
+
+    /** Espera a que el enlace se cierre (hasta ~6 s) y arranca. */
+    private void waitLinkThenBegin(int tries) {
+        if (closing || isFinishing()) return;
+        if (!LinkState.running) {
+            begin();
+            return;
+        }
+        if (tries >= 20) {
+            status.setText(Str.get(R.string.hql_preview_busy));
+            return;
+        }
+        main.postDelayed(() -> waitLinkThenBegin(tries + 1), 300);
+    }
+
+    private void begin() {
         RoutePlanner.setTestMode(true);
         status.setText(Str.get(R.string.hql_sim_starting));
         L.i("coche virtual: arranco (Android Auto y la interfaz del coche en el móvil)");
@@ -149,6 +179,25 @@ public class CarSimActivity extends Activity {
         view.setOnTouchListener(this::onTouch);
         status.setVisibility(View.GONE);
         ToastUtils.showToast(this, Str.get(R.string.hql_sim_toast), Toast.LENGTH_LONG, true);
+    }
+
+    /** Paquete de la ventana activa (con la accesibilidad de HeadQLink), o null si no se sabe. */
+    private static String topPackage() {
+        TouchService ts = TouchService.instance;
+        if (ts == null) return null;
+        try {
+            android.view.accessibility.AccessibilityNodeInfo root = ts.getRootInActiveWindow();
+            return root == null || root.getPackageName() == null ? null : root.getPackageName().toString();
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** El escritorio del móvil. */
+    private String launcherPackage() {
+        android.content.Intent home = new android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME);
+        android.content.pm.ResolveInfo ri = getPackageManager().resolveActivity(home, 0);
+        return ri == null || ri.activityInfo == null ? "" : ri.activityInfo.packageName;
     }
 
     private void startSource() {
@@ -220,7 +269,7 @@ public class CarSimActivity extends Activity {
     protected void onStop() {
         visible = false;
         super.onStop();
-        if (!closing && !isFinishing() && source != null && !userLeft) main.postDelayed(bringBack, 1200);
+        if (!closing && !isFinishing() && source != null) main.postDelayed(bringBack, 1200);
     }
 
     @Override
@@ -269,16 +318,21 @@ public class CarSimActivity extends Activity {
         }
     }
 
-    /** La pantalla del coche, lo más grande posible con su proporción, centrada. */
+    /**
+     * La pantalla del coche, lo más grande posible con su proporción, centrada. La vista mide siempre 1920x882 y se
+     * escala: al volver de otra app, la vista rehace su búfer con su tamaño, y si no fuera el del coche el motor (que
+     * pinta a 1920x882) dejaría el resto con basura.
+     */
     private static void fit(View v, int w, int h) {
         if (v == null || w <= 0 || h <= 0) return;
         float scale = Math.min(w / (float) W, h / (float) H);
-        int vw = Math.round(W * scale);
-        int vh = Math.round(H * scale);
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) v.getLayoutParams();
-        if (lp.width == vw && lp.height == vh) return;
-        lp.width = vw;
-        lp.height = vh;
-        v.post(() -> v.setLayoutParams(lp));
+        if (lp.width != W || lp.height != H) {
+            lp.width = W;
+            lp.height = H;
+            v.post(() -> v.setLayoutParams(lp));
+        }
+        v.setScaleX(scale);
+        v.setScaleY(scale);
     }
 }

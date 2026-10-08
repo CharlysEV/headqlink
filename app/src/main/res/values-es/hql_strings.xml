@@ -727,4 +727,10 @@
     <string name="hql_charger_unknown_include">Incluir los que no dicen su potencia</string>
     <string name="hql_charger_unknown_exclude">Solo con potencia confirmada</string>
     <string name="hql_charger_unknown_note">La mayoría de los cargadores de OpenStreetMap no dicen su potencia. Tesla, Ionity, Zunder, Fastned, Electra y Atlante cuentan con su potencia típica (≈); los demás, solo si los incluyes, y el plan prefiere los confirmados.</string>
+    <string name="hql_chargers_list_title">Cargadores en ruta</string>
+    <string name="hql_chargers_list_count">%1$d por delante · %2$d pasan el filtro</string>
+    <string name="hql_chargers_list_filtered">Los del filtro</string>
+    <string name="hql_chargers_list_all">Todos</string>
+    <string name="hql_chargers_list_stop">Parada %1$d</string>
+    <string name="hql_chargers_list_none">No hay cargadores por delante con este filtro.</string>
 </resources>
