@@ -244,6 +244,17 @@ final class Config {
     }
 
     static final String PANEL_GRAY = "panel_gray";
+    /** Tema de la pantalla del C10 (Global/DarkModeOn): -1 sin saber, 0 claro, 1 oscuro. */
+    static final String CAR_DARK = "car_dark";
+
+    /** El último tema que dijo el coche (-1 si nunca lo ha dicho). */
+    int carDark() {
+        return sp.getInt(CAR_DARK, -1);
+    }
+
+    void setCarDark(boolean dark) {
+        sp.edit().putInt(CAR_DARK, dark ? 1 : 0).apply();
+    }
     /** "Optimizaciones de latencia" (LowLatency); apagado = comportamiento anterior. */
     static final String LOW_LATENCY = "low_latency";
     /** Enviar Mirror/WhitelistAppOn cada segundo (qué se muestra, para la restricción en marcha del coche). */

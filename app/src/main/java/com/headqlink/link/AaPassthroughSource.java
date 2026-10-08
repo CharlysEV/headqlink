@@ -161,9 +161,14 @@ final class AaPassthroughSource implements VideoSource {
         return videoW - aaVideoX();
     }
 
-    /** Modo día/noche del coche → sensor de noche de Android Auto. */
+    /**
+     * Tema de la pantalla del C10 (Global/DarkModeOn) → modo noche de Android Auto y, con él, el panel del modo
+     * extendido (CarUi lo sigue): todo como los ajustes del coche. Se recuerda, porque el coche no lo manda en todas las
+     * sesiones; al arrancar se aplica el último (applyRememberedCarTheme).
+     */
     @Override
     public void onCarDarkMode(boolean dark) {
+        new Config(ctx).setCarDark(dark);
         Settings settings = App.Companion.provide(ctx).getSettings();
         settings.setNightMode(dark ? Settings.NightMode.NIGHT : Settings.NightMode.DAY);
         L.i("AA: modo " + (dark ? "noche" : "día") + " del coche");
@@ -196,8 +201,17 @@ final class AaPassthroughSource implements VideoSource {
         }
     }
 
+    /** Al arrancar: el último tema que dijo el coche, si alguna vez lo dijo (si no, AA sigue con su día y noche). */
+    private void applyRememberedCarTheme() {
+        int d = new Config(ctx).carDark();
+        if (d < 0) return;
+        App.Companion.provide(ctx).getSettings().setNightMode(d == 1 ? Settings.NightMode.NIGHT : Settings.NightMode.DAY);
+        L.i("AA: modo " + (d == 1 ? "noche" : "día") + " como la pantalla del coche (el último que dijo)");
+    }
+
     @Override
     public void startPassthrough(EncodedSink sink) {
+        applyRememberedCarTheme();
         HeadUnitScreenConfig sc = HeadUnitScreenConfig.INSTANCE;
         L.i("AA: vídeo negociado " + sc.getNegotiatedWidth() + "x" + sc.getNegotiatedHeight() + " márgenes "
                 + sc.getWidthMargin() + "x" + sc.getHeightMargin() + "; abre Android Auto (Self-Mode) si no está conectado");
@@ -422,6 +436,7 @@ final class AaPassthroughSource implements VideoSource {
     @Override
     public void start(Surface surface, int width, int height, int fps, String info) {
         if (!reencode) return;
+        applyRememberedCarTheme();
         configureAa();
         HeadUnitScreenConfig sc = HeadUnitScreenConfig.INSTANCE;
         int nw = sc.getNegotiatedWidth();
