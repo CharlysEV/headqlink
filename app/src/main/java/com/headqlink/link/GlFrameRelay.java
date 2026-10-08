@@ -162,7 +162,10 @@ final class GlFrameRelay {
                 statKeep++;
                 tryDraw();
             }
-            h.postDelayed(this, Math.max(4, period / 2_000_000));
+            // La siguiente comprobación, justo cuando toque (comprobando cada medio periodo salía uno de cada periodo y
+            // medio: 21 fps en vez de 30).
+            long due = lastDrawNs + gap - System.nanoTime();
+            h.postDelayed(this, Math.max(2, Math.min(gap, due) / 1_000_000 + 1));
         }
     };
 
