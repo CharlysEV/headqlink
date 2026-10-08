@@ -129,10 +129,50 @@ final class GlFrameRelay {
     private long gateHoldSinceNs;
     private boolean scheduled;
     private boolean released;
+    /** Último dibujo (ns), para el flujo constante del modo extendido. */
+    private long lastDrawNs;
+
+    /**
+     * Modo extendido: como mucho a esto se manda la imagen aunque no cambie nada (fps). Con una pantalla nuestra
+     * delante (Coche, Web, TV…) solo se dibujaba al cambiar algo; el codificador repite el último frame 10 veces (1 s)
+     * y luego se calla, y el C10 por USB (que pide 60 fps) se quedaba con la imagen congelada y tardaba en enseñar cada
+     * toque (en el viaje del 2026-10-08, 6,8 s sin un solo frame tocando la pantalla). En modo Auto, AA ya dibuja
+     * siempre a 30.
+     */
+    static final int KEEPALIVE_MAX_FPS = 30;
+
+    /** Periodo del flujo constante (ns) para unos fps máximos (0: sin límite → KEEPALIVE_MAX_FPS). */
+    static long keepAlivePeriodNs(int fps) {
+        int f = fps <= 0 ? KEEPALIVE_MAX_FPS : Math.min(fps, KEEPALIVE_MAX_FPS);
+        return 1_000_000_000L / f;
+    }
+
+    private final Runnable keepAlive = new Runnable() {
+        @Override
+        public void run() {
+            if (released) return;
+            long period = keepAlivePeriodNs(pacer.fps());
+            long now = System.nanoTime();
+            // Con AA a la vista sus frames ya marcan el ritmo: solo se rellenan huecos de verdad (tres periodos), para no
+            // meter un frame repetido justo antes del siguiente de AA (saldría a saltos).
+            long gap = ownScreenOnTop() || !aaHasFrame ? period : 3 * period;
+            if (!hasNew && now - lastDrawNs >= gap) {
+                frameNs = now;
+                hasNew = true;
+                statKeep++;
+                tryDraw();
+            }
+            h.postDelayed(this, Math.max(4, period / 2_000_000));
+        }
+    };
 
     // Estadística por segundo (hilo GL).
     private int statDecoded;
     private int statDrawn;
+    /** Frames de nuestra interfaz recibidos (capa propia). */
+    private int statOverlay;
+    /** Dibujos sin nada nuevo (flujo constante del modo extendido). */
+    private int statKeep;
     private long statMaxWaitMs;
     private long statMaxHoldMs;
     private int statDenyInterval;
@@ -358,6 +398,8 @@ final class GlFrameRelay {
             ovSt.setDefaultBufferSize(ovW, ovH);
             ovSt.setOnFrameAvailableListener(s -> onOverlayFrame(), h);
             ovInput = new Surface(ovSt);
+            // Modo extendido: flujo constante hacia el coche (ver KEEPALIVE_MAX_FPS).
+            h.postDelayed(keepAlive, 100);
         }
     }
 
@@ -375,6 +417,7 @@ final class GlFrameRelay {
     /** Nuevo frame de nuestra interfaz: también hay que recomponer. */
     private void onOverlayFrame() {
         if (released) return;
+        statOverlay++;
         ovSt.updateTexImage();
         // La animación de carga ya no se ve: sus últimos frames no provocan dibujos.
         if (splashOnly && aaHasFrame) return;
@@ -446,6 +489,7 @@ final class GlFrameRelay {
             return;
         }
         draw(now);
+        lastDrawNs = now;
         if (g != null) g.submitted();
         long waitedMs = (now - frameNs) / 1_000_000;
         statMaxWaitMs = Math.max(statMaxWaitMs, waitedMs);
@@ -525,14 +569,16 @@ final class GlFrameRelay {
     private void maybeLogStats() {
         long now = SystemClock.elapsedRealtime();
         if (now - statStart < 5000) return;
-        L.i(String.format(java.util.Locale.US, "GL relay: AA %d frames, enviados %d (descartados %d por ir atrasados), espera máx %d ms · esperas por ritmo %d, por enlace %d%s",
-                statDecoded, statDrawn, Math.max(0, statDecoded - statDrawn), statMaxWaitMs, statDenyInterval, statDenyGate,
-                statMaxHoldMs > 0 ? " (puerta cerrada máx " + statMaxHoldMs + " ms)" : ""));
+        L.i(String.format(java.util.Locale.US, "GL relay: AA %d frames, interfaz %d, enviados %d (%d sin cambios), descartados %d por ir atrasados, espera máx %d ms · esperas por ritmo %d, por enlace %d · ritmo %d fps%s%s",
+                statDecoded, statOverlay, statDrawn, statKeep, Math.max(0, statDecoded - (statDrawn - statKeep)), statMaxWaitMs, statDenyInterval, statDenyGate,
+                pacer.fps(), paced() ? " en rejilla" : "", statMaxHoldMs > 0 ? " (puerta cerrada máx " + statMaxHoldMs + " ms)" : ""));
         statDenyInterval = 0;
         statDenyGate = 0;
         statStart = now;
         statDecoded = 0;
         statDrawn = 0;
+        statOverlay = 0;
+        statKeep = 0;
         statMaxWaitMs = 0;
         statMaxHoldMs = 0;
     }

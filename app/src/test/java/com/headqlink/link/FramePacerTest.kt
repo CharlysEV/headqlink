@@ -79,4 +79,12 @@ class FramePacerTest {
         assertTrue(p.waitNs(t1 + 1 * ms, false) > 0)
         assertEquals(0L, FramePacer(0).waitNs(t1, false))
     }
+
+    @Test
+    fun theExtendedModeKeepsAtLeastThirtyFramesASecondButNeverMoreThanAsked() {
+        // El C10 por USB pide 60: el flujo constante va a 30 (como AA en modo Auto); a 24 (térmica), a 24.
+        assertEquals(1_000_000_000L / 30, GlFrameRelay.keepAlivePeriodNs(60))
+        assertEquals(1_000_000_000L / 24, GlFrameRelay.keepAlivePeriodNs(24))
+        assertEquals(1_000_000_000L / 30, GlFrameRelay.keepAlivePeriodNs(0))
+    }
 }
