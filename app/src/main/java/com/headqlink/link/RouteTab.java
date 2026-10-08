@@ -53,6 +53,8 @@ final class RouteTab implements CarScreen {
     /** Filtro de los cargadores (ChargerFilter): potencia mínima y redes; y su resumen junto al botón. */
     private int chargerMinKw;
     private java.util.Set<String> chargerNets = new java.util.LinkedHashSet<>();
+    /** Con potencia mínima, también los cargadores sin potencia confirmada (Config.chargerIncludeUnknown). */
+    private boolean chargerUnknown = true;
     private TextView filterSummary;
     /** Coche virtual: «Desde: GPS» / «Desde: Sevilla». */
     private TextView originPill;
@@ -127,7 +129,12 @@ final class RouteTab implements CarScreen {
         search.setOnClickListener(v -> openSearch(false));
         goMaps.setOnClickListener(v -> {
             RoutePlanner.Place m = RoutePlanner.manualDestination();
-            if (m != null) navigateTo(m.lat, m.lon);
+            if (m == null) return;
+            // Con plan de carga, el navegador lleva sus paradas (si quedan por delante); si no, directo al destino.
+            ChargePlanner.Result cp = chargePlan;
+            RoutePlanner.Plan pl = plan;
+            if (cp != null && pl != null && cp.next() != null) RoutePlanner.navigateWithStops(ctx, pl, cp);
+            else navigateTo(m.lat, m.lon);
         });
         clear.setOnClickListener(v -> {
             RoutePlanner.setManualDestination(null);
@@ -158,6 +165,7 @@ final class RouteTab implements CarScreen {
         CarKit.Card ch = CarKit.add(right, new CarKit.Card(ctx, Str.get(R.string.hql_route_chargers), null), 1f, 0);
         Config cfg0 = new Config(ctx);
         chargerMinKw = cfg0.chargerMinKw();
+        chargerUnknown = cfg0.chargerIncludeUnknown();
         chargerNets = ChargerFilter.parseNetworks(cfg0.chargerNetworks());
         LinearLayout chCol = CarKit.col(ctx);
         // Filtro: potencia mínima y redes (como en los planificadores de rutas).
@@ -624,7 +632,7 @@ final class RouteTab implements CarScreen {
 
     /** El cargador pasa el filtro elegido. */
     private boolean wanted(RoutePlanner.Charger c) {
-        return ChargerFilter.accepts(c.maxKw, c.network, chargerMinKw, chargerNets);
+        return ChargerFilter.accepts(c, chargerMinKw, chargerNets, chargerUnknown);
     }
 
     /** «Todos los cargadores» o «≥ 100 kW · Tesla, Zunder». */
@@ -689,6 +697,25 @@ final class RouteTab implements CarScreen {
                 }), chipParams());
             }
             body.addView(kw);
+            // Casi ningún cargador de OpenStreetMap dice su potencia: con potencia mínima, ¿se cuentan esos también?
+            if (chargerMinKw > 0) {
+                Config ic = new Config(ctx);
+                LinearLayout un = CarKit.row(ctx);
+                un.addView(chip(Str.get(R.string.hql_charger_unknown_include), ic.chargerIncludeUnknown(), () -> {
+                    ic.setChargerIncludeUnknown(true);
+                    chargerUnknown = true;
+                    filterChanged();
+                    build[0].run();
+                }), chipParams());
+                un.addView(chip(Str.get(R.string.hql_charger_unknown_exclude), !ic.chargerIncludeUnknown(), () -> {
+                    ic.setChargerIncludeUnknown(false);
+                    chargerUnknown = false;
+                    filterChanged();
+                    build[0].run();
+                }), chipParams());
+                body.addView(un);
+                body.addView(hint(Str.get(R.string.hql_charger_unknown_note)));
+            }
             body.addView(section(Str.get(R.string.hql_plan_arrive_min)));
             Config pc = new Config(ctx);
             LinearLayout arr = CarKit.row(ctx);
@@ -798,6 +825,13 @@ final class RouteTab implements CarScreen {
         return t;
     }
 
+    /** «150 kW», «≈150 kW» (típica de su red) o «potencia sin confirmar» (OpenStreetMap no la dice). */
+    static String kwText(RoutePlanner.Charger c) {
+        if (c.kwSource == ChargerFilter.KW_TAGGED && c.maxKw > 0) return String.format(Locale.getDefault(), "%.0f kW", c.maxKw);
+        if (c.kwSource == ChargerFilter.KW_NETWORK || c.acOnly) return String.format(Locale.getDefault(), "≈%.0f kW", c.maxKw);
+        return Str.get(R.string.hql_charger_kw_unknown);
+    }
+
     private static String capital(String t) {
         return t.isEmpty() ? t : t.substring(0, 1).toUpperCase(Locale.getDefault()) + t.substring(1);
     }
@@ -864,8 +898,7 @@ final class RouteTab implements CarScreen {
             name.setSingleLine(true);
             name.setEllipsize(android.text.TextUtils.TruncateAt.END);
             TextView line = CarStyle.text(ctx, Str.get(R.string.hql_plan_stop_line, st.km, st.arrivePct, st.departPct,
-                    DriveTab.duration(Math.round(st.minutes * 60))) + (st.charger.maxKw > 0
-                    ? String.format(Locale.getDefault(), " · %.0f kW", st.charger.maxKw) : ""), 20, CarKit.ACCENT);
+                    DriveTab.duration(Math.round(st.minutes * 60))) + " · " + kwText(st.charger), 20, CarKit.ACCENT);
             line.setMaxLines(2);
             txt.addView(name);
             txt.addView(line);
@@ -944,7 +977,7 @@ final class RouteTab implements CarScreen {
             name.setSingleLine(true);
             name.setEllipsize(android.text.TextUtils.TruncateAt.END);
             String sub = Str.get(R.string.hql_charger_line, c.kmAlong, Math.max(0, c.kmAlong - here))
-                    + (c.maxKw > 0 ? String.format(Locale.getDefault(), " · %.0f kW", c.maxKw) : "")
+                    + " · " + kwText(c)
                     + (c.detail.isEmpty() ? "" : " · " + c.detail);
             TextView detail = CarStyle.text(ctx, sub, 20, CarKit.DIM);
             // Dos renglones: con la potencia y el detalle, uno solo cortaba el texto («350 k…»).

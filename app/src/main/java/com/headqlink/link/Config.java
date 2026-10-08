@@ -411,6 +411,15 @@ final class Config {
         sp.edit().putInt("charger_min_kw", ChargerFilter.snapMinKw(kw)).apply();
     }
 
+    /** Con potencia mínima, incluir también los cargadores sin potencia confirmada en OpenStreetMap (la mayoría). */
+    boolean chargerIncludeUnknown() {
+        return sp.getBoolean("charger_include_unknown", true);
+    }
+
+    void setChargerIncludeUnknown(boolean on) {
+        sp.edit().putBoolean("charger_include_unknown", on).apply();
+    }
+
     String chargerNetworks() {
         return sp.getString("charger_networks", "");
     }

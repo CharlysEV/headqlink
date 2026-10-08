@@ -36,7 +36,12 @@ final class RoutePlanner {
         double lat;
         double lon;
         double kmAlong;
+        /** Potencia para el plan y la pantalla: la de OpenStreetMap o, si falta, la estimada (kwSource). 0: desconocida. */
         double maxKw;
+        /** De dónde sale maxKw: ChargerFilter.KW_TAGGED, KW_NETWORK, KW_SOCKETS o KW_UNKNOWN. */
+        int kwSource = ChargerFilter.KW_TAGGED;
+        /** Solo enchufes de alterna (Tipo 2, Schuko…): lento seguro. */
+        boolean acOnly;
         /** Red (ChargerFilter: «tesla», «zunder»… u OTHER). */
         String network = ChargerFilter.OTHER;
     }
@@ -57,6 +62,9 @@ final class RoutePlanner {
         double[] gravCum;
         /** Factor de ajuste a la conducción real con el que se calculó (RouteCalibration). */
         double factor = 1.0;
+        /** Gasto extra del coche que lleva la previsión: kW por hora y kWh fijos al salir. */
+        double overheadKw;
+        double overheadTripKwh;
         double totalKm;
         long totalSeconds;
         double destTemp = Double.NaN;
@@ -369,8 +377,9 @@ final class RoutePlanner {
             failedDestination = null;
             status = "";
             // Sin el nombre del destino: el log se exporta y no lleva ubicaciones (qdauto §7.5).
-            L.i(String.format(Locale.US, "ruta: %.1f km · %.1f kWh estimados (%.1f por las cuestas, ajuste a la conducción ×%.2f) · "
-                    + "%d cargadores", np.totalKm, np.kwhCum[np.n - 1], np.gravCum[np.n - 1], np.factor, np.chargers.size()));
+            L.i(String.format(Locale.US, "ruta: %.1f km · %.1f kWh estimados (%.1f por las cuestas; extra del coche %.1f kW y %.1f kWh al salir; "
+                    + "corrección ×%.2f) · %d cargadores", np.totalKm, np.kwhCum[np.n - 1], np.gravCum[np.n - 1], np.overheadKw,
+                    np.overheadTripKwh, np.factor, np.chargers.size()));
         } catch (Exception e) {
             failedDestination = dest;
             status = Str.get(R.string.hql_route_failed, e.getMessage());
@@ -452,7 +461,7 @@ final class RoutePlanner {
             Config c = new Config(ctx);
             int minKw = c.chargerMinKw();
             String nets = c.chargerNetworks();
-            String settings = minKw + "/" + nets + "/" + c.planArrivePct() + "/" + c.planMaxPct() + "/" + Math.round(capKwh * 10)
+            String settings = minKw + "/" + nets + "/" + c.chargerIncludeUnknown() + "/" + c.planArrivePct() + "/" + c.planMaxPct() + "/" + Math.round(capKwh * 10)
                     + (realSoc ? "/real" : "/indicado") + "/c" + pl.chargerVersion;
             int prog = Math.min(pl.progress, pl.n - 1);
             double f = demo ? DemoMode.planTrend() : trend.factor();
@@ -465,7 +474,7 @@ final class RoutePlanner {
             s.capacityKwh = capKwh;
             java.util.Set<String> want = ChargerFilter.parseNetworks(nets);
             List<Charger> list = new ArrayList<>();
-            for (Charger ch : pl.chargers) if (ChargerFilter.accepts(ch.maxKw, ch.network, minKw, want)) list.add(ch);
+            for (Charger ch : pl.chargers) if (ChargerFilter.accepts(ch, minKw, want, c.chargerIncludeUnknown())) list.add(ch);
             // Con los mismos ajustes, las paradas elegidas se mantienen mientras se lleguen (que el plan no baile).
             boolean same = settings.equals(chargeSettings) && charge != null;
             List<Charger> keep = new ArrayList<>();
@@ -596,7 +605,7 @@ final class RoutePlanner {
             java.util.List<RouteCalibration.Sample> all = RouteCalibration.add(RouteCalibration.fromJson(c.routeCalibration()),
                     new RouteCalibration.Sample(predicted, real, km, System.currentTimeMillis()));
             c.setRouteCalibration(RouteCalibration.toJson(all));
-            note = String.format(Locale.US, "; el ajuste a la conducción pasa a ×%.2f (%d rutas)", RouteCalibration.factor(all), all.size());
+            note = String.format(Locale.US, "; la corrección pasa a ×%.2f (%d rutas)", RouteCalibration.residual(all), all.size());
         }
         L.i(String.format(Locale.US, "ruta: llegada: previsto %.2f kWh, real %s (nube Leapmotor, %.0f km)%s", predicted,
                 generator ? "sin medir (el generador del REEV cargó)" : String.format(Locale.US, "%.2f kWh", real), km, note));
@@ -606,10 +615,16 @@ final class RoutePlanner {
      * Factor de ajuste a la conducción real: parte del historial del coche (su consumo de los últimos viajes, según la
      * nube) y lo afinan las llegadas medidas. 1 sin nada de eso.
      */
-    private double calibrationFactor() {
-        if (demo) return 1.0;
-        double prior = RouteCalibration.historyFactor(CarCloud.history(), 15);
-        return RouteCalibration.factor(RouteCalibration.fromJson(new Config(ctx).routeCalibration()), prior);
+    /** Gasto extra del coche (por viaje y por hora) según su historial de la nube; NONE sin él. */
+    private RouteCalibration.Overhead overhead() {
+        if (demo) return RouteCalibration.Overhead.NONE;
+        return RouteCalibration.overhead(CarCloud.history(), 15);
+    }
+
+    /** Corrección que queda según las llegadas medidas con el modelo de ahora (1 sin ellas). */
+    private double residualFactor() {
+        if (demo) return 1;
+        return RouteCalibration.residual(RouteCalibration.fromJson(new Config(ctx).routeCalibration()));
     }
 
     /**
@@ -749,8 +764,12 @@ final class RoutePlanner {
 
         // 5. Energía estimada por tramo: la de la conducción (ajustada a lo real) y la de las cuestas (física).
         EnergyModel m = new EnergyModel();
-        double f = calibrationFactor();
+        // La conducción, con la corrección que queda; aparte, el gasto extra del coche (fijo al salir y por hora).
+        double f = residualFactor();
+        RouteCalibration.Overhead oh = overhead();
         p.factor = f;
+        p.overheadKw = oh.kw;
+        p.overheadTripKwh = oh.perTripKwh;
         p.kwhCum = new double[n];
         p.gravCum = new double[n];
         for (int i = 1; i < n; i++) {
@@ -763,7 +782,7 @@ final class RoutePlanner {
             double flat = m.compute(v, 0, p.headwind[i], p.temp[i], 0);
             double drive = flat * h + stopAndGoKwh(v, dkm);
             double hills = (kw - flat) * h;
-            p.kwhCum[i] = p.kwhCum[i - 1] + drive * f + hills;
+            p.kwhCum[i] = p.kwhCum[i - 1] + drive * f + oh.kw * h + hills + (i == 1 ? oh.perTripKwh : 0);
             p.gravCum[i] = p.gravCum[i - 1] + hills;
         }
 
@@ -984,6 +1003,7 @@ final class RoutePlanner {
                 if (sockets.indexOf(name) < 0) sockets.append(sockets.length() > 0 ? " · " : "").append(name);
             }
             if (key.endsWith(":output") || key.equals("maxpower")) c.kw = Math.max(c.kw, parseKw(val));
+            if (key.matches("socket:[a-z0-9_]+") && !val.equals("no")) c.sockets |= ChargerFilter.socketKind(key.substring(7));
         }
         String op = tags.optString("operator");
         c.detail = sockets + (op.isEmpty() || op.equals(c.name) ? "" : (sockets.length() > 0 ? " · " : "") + op);

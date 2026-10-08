@@ -723,4 +723,8 @@
     <string name="hql_route_charger_gap">Sin datos de cargadores del km %1$.0f al %2$.0f (OpenStreetMap no ha respondido): el plan puede no ser el mejor. Vuelve a elegir el destino para reintentarlo.</string>
     <string name="hql_route_guide_waze">Guiar con Waze</string>
     <string name="hql_nav_app">Navegar con</string>
+    <string name="hql_charger_kw_unknown">potencia sin confirmar</string>
+    <string name="hql_charger_unknown_include">Incluir los que no dicen su potencia</string>
+    <string name="hql_charger_unknown_exclude">Solo con potencia confirmada</string>
+    <string name="hql_charger_unknown_note">La mayoría de los cargadores de OpenStreetMap no dicen su potencia. Tesla, Ionity, Zunder, Fastned, Electra y Atlante cuentan con su potencia típica (≈); los demás, solo si los incluyes, y el plan prefiere los confirmados.</string>
 </resources>

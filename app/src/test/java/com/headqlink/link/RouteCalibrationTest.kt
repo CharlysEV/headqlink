@@ -89,4 +89,42 @@ class RouteCalibrationTest {
         assertTrue(RouteCalibration.historyFactor(null, 15.0).isNaN())
         assertEquals(1.0, RouteCalibration.factor(emptyList(), Double.NaN), 0.0)
     }
+
+    private fun trip(km: Double, minutes: Double, kwh: Double) =
+        CloudHistory.Trip(0L, (minutes * 60_000).toLong(), km, kwh, Double.NaN, Double.NaN)
+
+    @Test
+    fun theCarOverheadIsAFixedPartPerTripAndAPartPerHour() {
+        // Viajes urbanos que el modelo deja cortos: lo que sobra crece con el tiempo de viaje, no con los km.
+        val m = EnergyModel()
+        fun model(km: Double, h: Double): Double {
+            val v = km / h
+            return m.compute(v, 0.0, 0.0, 15.0, 0.0) * h + RoutePlanner.stopAndGoKwh(v, km)
+        }
+        val trips = listOf(5.0 to 15.0, 8.0 to 22.0, 12.0 to 30.0, 20.0 to 40.0, 6.0 to 18.0).map { (km, min) ->
+            trip(km, min, model(km, min / 60) + 0.4 + 1.5 * min / 60)
+        }
+        val oh = RouteCalibration.overhead(trips, 15.0)
+        assertEquals(0.4, oh.perTripKwh, 0.05)
+        assertEquals(1.5, oh.kw, 0.1)
+        assertEquals(5, oh.trips)
+        // Acotado: nunca negativo ni desmedido.
+        val wild = trips.map { trip(it.km, (it.endMs / 60_000.0), it.kwh * 4) }
+        val w = RouteCalibration.overhead(wild, 15.0)
+        assertTrue(w.kw <= RouteCalibration.MAX_OVERHEAD_KW && w.perTripKwh <= RouteCalibration.MAX_PER_TRIP_KWH)
+        assertEquals(0.0, RouteCalibration.overhead(listOf(trip(1.0, 5.0, 0.5)), 15.0).kw, 0.0)
+    }
+
+    @Test
+    fun onlyArrivalsOfTheCurrentModelCorrectIt() {
+        // Llegadas del modelo viejo (factor ×1,5): no corrigen el nuevo.
+        val old = RouteCalibration.Sample(10.0, 6.0, 40.0, 1, 1)
+        assertEquals(1.0, RouteCalibration.residual(listOf(old)), 1e-9)
+        val now = RouteCalibration.Sample(10.0, 11.0, 40.0, 2)
+        assertEquals((11.0 + 1) / (10.0 + 1), RouteCalibration.residual(listOf(old, now)), 1e-9)
+        // Y el JSON guarda la versión (las de antes, sin ella, cuentan como 1).
+        val back = RouteCalibration.fromJson(RouteCalibration.toJson(listOf(now)))
+        assertEquals(RouteCalibration.MODEL_VERSION, back[0].version)
+        assertEquals(1, RouteCalibration.fromJson("""[{"p":1,"r":1,"km":5,"t":1}]""")[0].version)
+    }
 }

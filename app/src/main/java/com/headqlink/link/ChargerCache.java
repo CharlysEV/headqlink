@@ -23,7 +23,8 @@ final class ChargerCache {
     static final double TILE_DEG = 0.2;
     static final long TTL_MS = 30L * 86_400_000L;
     static final int MAX_TILES = 600;
-    private static final String FILE = "chargers-cache.json";
+    /** v2: con los enchufes de cada cargador (para estimar la potencia); la v1 no los tenía y se vuelve a pedir. */
+    private static final String FILE = "chargers-cache-v2.json";
 
     /** Un cargador tal como se guarda. */
     static final class Item {
@@ -34,15 +35,26 @@ final class ChargerCache {
         String detail = "";
         String network = ChargerFilter.OTHER;
         double kw;
+        /** Enchufes (ChargerFilter.SOCKET_DC | SOCKET_AC), 0 si OpenStreetMap no los dice. */
+        int sockets;
 
+        /** Con la potencia de OpenStreetMap o, si falta, la estimada por la red o los enchufes. */
         RoutePlanner.Charger toCharger() {
             RoutePlanner.Charger c = new RoutePlanner.Charger();
             c.name = name;
             c.detail = detail;
             c.lat = lat;
             c.lon = lon;
-            c.maxKw = kw;
             c.network = network;
+            c.acOnly = sockets == ChargerFilter.SOCKET_AC;
+            if (kw > 0) {
+                c.maxKw = kw;
+                c.kwSource = ChargerFilter.KW_TAGGED;
+            } else {
+                double[] e = ChargerFilter.estimateKw(network, name, sockets);
+                c.maxKw = e[0];
+                c.kwSource = (int) e[1];
+            }
             return c;
         }
     }
@@ -119,12 +131,12 @@ final class ChargerCache {
                 JSONArray a = new JSONArray();
                 for (Item it : e.getValue()) {
                     a.put(new JSONObject().put("i", it.id).put("la", it.lat).put("lo", it.lon).put("n", it.name).put("d", it.detail)
-                            .put("w", it.network).put("k", it.kw));
+                            .put("w", it.network).put("k", it.kw).put("s", it.sockets));
                 }
                 Long when = at.get(e.getKey());
                 t.put(e.getKey(), new JSONObject().put("at", when == null ? 0 : when).put("items", a));
             }
-            return new JSONObject().put("v", 1).put("tiles", t).toString();
+            return new JSONObject().put("v", 2).put("tiles", t).toString();
         } catch (org.json.JSONException e) {
             return "{}";
         }
@@ -152,6 +164,7 @@ final class ChargerCache {
                         it.detail = x.optString("d");
                         it.network = x.optString("w", ChargerFilter.OTHER);
                         it.kw = x.optDouble("k", 0);
+                        it.sockets = x.optInt("s", 0);
                         list.add(it);
                     }
                 }

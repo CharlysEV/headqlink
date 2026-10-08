@@ -82,6 +82,76 @@ final class ChargerFilter {
     }
 
     /** ¿Pasa el filtro? minKw 0: cualquiera (un cargador sin potencia conocida solo pasa así); networks vacío: todas. */
+    // De dónde sale la potencia de un cargador: OpenStreetMap la dice; se estima por la red (las que solo tienen carga
+    // rápida: un Supercharger, un hub de Zunder o de Ionity); por los enchufes (CCS o CHAdeMO: continua, pero no se
+    // sabe cuánta; solo Tipo 2: alterna); o nada.
+    static final int KW_TAGGED = 0;
+    static final int KW_NETWORK = 1;
+    static final int KW_SOCKETS = 2;
+    static final int KW_UNKNOWN = 3;
+    static final int SOCKET_DC = 1;
+    static final int SOCKET_AC = 2;
+
+    /** Tipo de enchufe de una clave socket:* de OpenStreetMap (sin «socket:»): continua, alterna o 0 si no se sabe. */
+    static int socketKind(String socket) {
+        String s = socket.toLowerCase(Locale.ROOT);
+        if (s.contains(":")) s = s.substring(0, s.indexOf(':'));
+        if (s.equals("type2_combo") || s.equals("chademo") || s.equals("type1_combo") || s.equals("tesla_supercharger")
+                || s.equals("tesla_supercharger_ccs") || s.equals("gb_dc") || s.equals("nacs")) {
+            return SOCKET_DC;
+        }
+        if (s.equals("type2") || s.equals("type2_cable") || s.equals("type1") || s.equals("schuko") || s.equals("cee_blue")
+                || s.equals("cee_red_16a") || s.equals("cee_red_32a") || s.equals("tesla_destination") || s.equals("type3c")) {
+            return SOCKET_AC;
+        }
+        return 0;
+    }
+
+    /**
+     * Potencia probable de un cargador sin potencia en OpenStreetMap: {kW, origen (KW_*)}. Las redes que solo montan carga
+     * rápida tienen su potencia típica (por lo bajo); si no, los enchufes dicen si es continua (≈50 kW, sin confirmar) o
+     * alterna (22 kW); si no se sabe nada, 0.
+     */
+    static double[] estimateKw(String network, String name, int sockets) {
+        boolean dc = (sockets & SOCKET_DC) != 0;
+        boolean ac = (sockets & SOCKET_AC) != 0;
+        String n = name == null ? "" : name.toLowerCase(Locale.ROOT);
+        if ("tesla".equals(network)) {
+            // Los «Destination» (hoteles, restaurantes) son de alterna.
+            if (n.contains("destination") || (ac && !dc)) return new double[]{11, KW_NETWORK};
+            return new double[]{150, KW_NETWORK};
+        }
+        Double typical = FAST_ONLY.get(network);
+        if (typical != null) return new double[]{typical, KW_NETWORK};
+        if (dc) return new double[]{50, KW_SOCKETS};
+        if (ac) return new double[]{22, KW_SOCKETS};
+        return new double[]{0, KW_UNKNOWN};
+    }
+
+    /** Redes que solo montan carga rápida, con su potencia típica por lo bajo (kW). */
+    private static final Map<String, Double> FAST_ONLY = new LinkedHashMap<>();
+
+    static {
+        FAST_ONLY.put("ionity", 350.0);
+        FAST_ONLY.put("zunder", 180.0);
+        FAST_ONLY.put("fastned", 300.0);
+        FAST_ONLY.put("electra", 300.0);
+        FAST_ONLY.put("atlante", 150.0);
+    }
+
+    /**
+     * El cargador pasa el filtro. Con potencia mínima: la de OpenStreetMap o la típica de su red; los demás (potencia sin
+     * confirmar) solo si includeUnknown, y nunca los de solo alterna si piden más de lo que dan.
+     */
+    static boolean accepts(RoutePlanner.Charger c, int minKw, Set<String> networks, boolean includeUnknown) {
+        boolean netOk = networks == null || networks.isEmpty()
+                || networks.contains(c.network == null || c.network.isEmpty() ? OTHER : c.network);
+        if (!netOk) return false;
+        if (minKw <= 0) return true;
+        if (c.kwSource == KW_TAGGED || c.kwSource == KW_NETWORK || c.acOnly) return c.maxKw >= minKw;
+        return includeUnknown;
+    }
+
     static boolean accepts(double maxKw, String network, int minKw, Set<String> networks) {
         if (minKw > 0 && !(maxKw >= minKw)) return false;
         return networks == null || networks.isEmpty() || networks.contains(network == null || network.isEmpty() ? OTHER : network);

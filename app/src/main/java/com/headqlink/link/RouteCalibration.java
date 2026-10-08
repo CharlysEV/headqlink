@@ -20,13 +20,114 @@ final class RouteCalibration {
         final double realKwh;
         final double km;
         final long atMs;
+        /** Con qué modelo se previó (las de antes de MODEL_VERSION no sirven para corregir el de ahora). */
+        final int version;
 
         Sample(double predictedKwh, double realKwh, double km, long atMs) {
+            this(predictedKwh, realKwh, km, atMs, MODEL_VERSION);
+        }
+
+        Sample(double predictedKwh, double realKwh, double km, long atMs, int version) {
             this.predictedKwh = predictedKwh;
             this.realKwh = realKwh;
             this.km = km;
             this.atMs = atMs;
+            this.version = version;
         }
+    }
+
+    /**
+     * 2: la previsión lleva el gasto extra del coche (Overhead: por viaje y por hora) en lugar de multiplicar toda la
+     * conducción; las llegadas medidas con el modelo de antes (1) no corrigen este.
+     */
+    static final int MODEL_VERSION = 2;
+
+    /**
+     * Lo que el modelo físico (aire, rodadura, cuestas, arranques) no ve y el coche sí gasta: un fijo por viaje (kWh:
+     * arrancar, enfriar o calentar al principio) y uno por hora (kW: climatización, electrónica). Sale del historial del
+     * coche; en ciudad pesa mucho (viajes cortos y lentos) y en autovía poco, al revés que un factor que lo multiplica
+     * todo (con el de 1,5 de los viajes cortos, un viaje de 300 km por autovía salía un 24 % por encima de ABRP).
+     */
+    static final class Overhead {
+        final double perTripKwh;
+        final double kw;
+        final int trips;
+
+        Overhead(double perTripKwh, double kw, int trips) {
+            this.perTripKwh = perTripKwh;
+            this.kw = kw;
+            this.trips = trips;
+        }
+
+        static final Overhead NONE = new Overhead(0, 0, 0);
+    }
+
+    static final double MAX_PER_TRIP_KWH = 1.0;
+    static final double MAX_OVERHEAD_KW = 2.5;
+    /** Corrección que queda con las llegadas del modelo de ahora (acotada: el grueso ya lo explica Overhead). */
+    static final double RESIDUAL_MIN = 0.85;
+    static final double RESIDUAL_MAX = 1.25;
+
+    /**
+     * El gasto extra del coche con su historial: el exceso de cada viaje sobre el modelo (lo que dice el coche menos lo
+     * que da el modelo en llano a su velocidad media, con arranques y frenadas) se ajusta a «fijo + kW × horas» por
+     * mínimos cuadrados, acotado. NONE con poco recorrido.
+     */
+    static Overhead overhead(List<CloudHistory.Trip> trips, double tempC) {
+        if (trips == null) return Overhead.NONE;
+        EnergyModel m = new EnergyModel();
+        int n = 0;
+        double km = 0;
+        double sh = 0;
+        double shh = 0;
+        double se = 0;
+        double she = 0;
+        for (CloudHistory.Trip t : trips) {
+            double h = (t.endMs - t.startMs) / 3_600_000.0;
+            if (t.km < HISTORY_MIN_KM || h < 0.05 || t.kwh <= 0) continue;
+            double v = Math.max(5, Math.min(130, t.km / h));
+            double model = m.compute(v, 0, 0, tempC, 0) * h + RoutePlanner.stopAndGoKwh(v, t.km);
+            double e = t.kwh - model;
+            n++;
+            km += t.km;
+            sh += h;
+            shh += h * h;
+            se += e;
+            she += h * e;
+        }
+        if (n < 3 || km < HISTORY_MIN_TOTAL_KM || sh <= 0) return Overhead.NONE;
+        double det = n * shh - sh * sh;
+        double a;
+        double b;
+        if (det > 1e-9 * n * n) {
+            b = (n * she - sh * se) / det;
+            a = (se - b * sh) / n;
+        } else {
+            a = 0;
+            b = se / sh;
+        }
+        // Acotados; si el fijo se sale, el de por hora se rehace con el fijo en su tope.
+        if (a < 0 || a > MAX_PER_TRIP_KWH) {
+            a = Math.max(0, Math.min(MAX_PER_TRIP_KWH, a));
+            b = (se - n * a) / sh;
+        }
+        b = Math.max(0, Math.min(MAX_OVERHEAD_KW, b));
+        return new Overhead(a, b, n);
+    }
+
+    /** La corrección que queda: lo real entre lo previsto de las llegadas del modelo de ahora, prudente y acotada. */
+    static double residual(List<Sample> samples) {
+        double real = 0;
+        double pred = 0;
+        if (samples != null) {
+            for (Sample s : samples) {
+                if (s.version < MODEL_VERSION) continue;
+                real += s.realKwh;
+                pred += s.predictedKwh;
+            }
+        }
+        double f = (real + PRIOR_KWH) / (pred + PRIOR_KWH);
+        return Math.max(RESIDUAL_MIN, Math.min(RESIDUAL_MAX, f));
     }
 
     /** Las últimas rutas que cuentan. */
@@ -112,7 +213,7 @@ final class RouteCalibration {
         JSONArray a = new JSONArray();
         try {
             for (Sample s : samples) {
-                a.put(new JSONObject().put("p", s.predictedKwh).put("r", s.realKwh).put("km", s.km).put("t", s.atMs));
+                a.put(new JSONObject().put("p", s.predictedKwh).put("r", s.realKwh).put("km", s.km).put("t", s.atMs).put("v", s.version));
             }
         } catch (JSONException ignored) {
             // Números finitos: no pasa.
@@ -127,7 +228,7 @@ final class RouteCalibration {
             JSONArray a = new JSONArray(json);
             for (int i = 0; i < a.length(); i++) {
                 JSONObject o = a.getJSONObject(i);
-                out.add(new Sample(o.getDouble("p"), o.getDouble("r"), o.getDouble("km"), o.optLong("t")));
+                out.add(new Sample(o.getDouble("p"), o.getDouble("r"), o.getDouble("km"), o.optLong("t"), o.optInt("v", 1)));
             }
         } catch (JSONException e) {
             return new ArrayList<>();
