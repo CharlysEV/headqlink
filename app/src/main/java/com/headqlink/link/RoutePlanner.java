@@ -44,6 +44,12 @@ final class RoutePlanner {
         boolean acOnly;
         /** Red (ChargerFilter: «tesla», «zunder»… u OTHER). */
         String network = ChargerFilter.OTHER;
+        /** Voltaje máximo en continua (V): 920, 1000 en los de alto voltaje; 400–500 en los de antes. 0: no se sabe. */
+        double maxVolts;
+        /** De dónde sale: OpenStreetMap o el registro oficial de la DGT (SOURCE_*). */
+        int source = SOURCE_OSM;
+        static final int SOURCE_OSM = 0;
+        static final int SOURCE_DGT = 1;
     }
 
     static final class Plan {
@@ -79,6 +85,12 @@ final class RoutePlanner {
         List<String> routeTiles = new ArrayList<>();
         volatile List<String> missingTiles = new ArrayList<>();
         volatile int chargerVersion;
+        /** Versión de los puntos de la DGT con la que se hizo la lista (DgtChargers.version). */
+        int dgtVersion = -1;
+        /** Cuántos cargadores de la lista salen de la DGT. */
+        volatile int dgtCount;
+        /** Cuadrículas con datos de la DGT a las que aún les faltan los de OpenStreetMap (se piden en segundo plano). */
+        volatile List<String> osmPending = new ArrayList<>();
         /** Índice del punto de la ruta más cercano a la posición actual. */
         volatile int progress;
         /** Hora (de pared) a la que se calculó. */
@@ -344,6 +356,14 @@ final class RoutePlanner {
         Plan p = plan;
         if (p != null && origin == null && !Double.isNaN(s.lat)) p.progress = nearest(p, s.lat, s.lon, p.progress);
         if (p != null) compareOnArrival(p, s);
+        if (p != null && !demo && !p.routeTiles.isEmpty() && p.dgtVersion != DgtChargers.version) {
+            // Han llegado (o se han renovado) los puntos de la DGT: la lista de la ruta, con ellos.
+            rebuildChargers(p);
+            L.i("ruta: cargadores con los datos de la DGT: " + p.chargers.size() + " junto a la ruta (" + p.dgtCount + " de la DGT)");
+        }
+        if (p != null && !p.osmPending.isEmpty() && SystemClock.elapsedRealtime() - lastOsmExtraMs > OSM_EXTRA_RETRY_MS) {
+            fetchOsmInBackground(p);
+        }
         if (p != null && !p.missingTiles.isEmpty() && SystemClock.elapsedRealtime() - lastChargerRetryMs > CHARGER_RETRY_MS) {
             lastChargerRetryMs = SystemClock.elapsedRealtime();
             L.i("ruta: reintento los cargadores que faltan (" + p.missingTiles.size() + " zonas)");
@@ -475,6 +495,9 @@ final class RoutePlanner {
             // La batería grande (81,9 kWh) carga más rápido que la de 69,9 (84 kW): ~130 kW de pico, lo que da los
             // 28 min del 19 al 81 % de ABRP en un cargador de 400 kW.
             s.carPeakKw = capKwh >= 80 ? 130 : 84;
+            // La de 81,9 kWh es de 800 V: en los cargadores de 400–500 V (Supercharger, los de 50 kW de antes) carga mal.
+            s.carVolts = carVolts(capKwh);
+            lastCarVolts = s.carVolts;
             java.util.Set<String> want = ChargerFilter.parseNetworks(nets);
             List<Charger> list = new ArrayList<>();
             for (Charger ch : pl.chargers) if (ChargerFilter.accepts(ch, minKw, want, c.chargerIncludeUnknown())) list.add(ch);
@@ -500,6 +523,18 @@ final class RoutePlanner {
             if (change != ChargePlanner.Change.NONE) alert(change, before, r);
             return r;
         }
+    }
+
+    /** Voltaje de la batería según su capacidad: la de 81,9 kWh del C10 es de 800 V; la de 69,9, de 400. */
+    static double carVolts(double capKwh) {
+        return capKwh >= 80 ? 800 : 400;
+    }
+
+    private volatile double lastCarVolts = 400;
+
+    /** Voltaje de la batería del coche con el que se hizo el último plan (400 si aún no hay). */
+    double carVolts() {
+        return lastCarVolts;
     }
 
     /** El plan de carga ya calculado (sin rehacerlo), o null. */
@@ -855,17 +890,28 @@ final class RoutePlanner {
 
     private void findChargers(Plan p) {
         p.routeTiles = ChargerCache.tilesFor(routeBoxes(p.lat, p.lon, p.km, ROUTE_BOX_KM, CHARGER_RADIUS_KM));
+        // En España, los del registro oficial (con potencia y voltaje); si aún no están en el móvil o son viejos, se
+        // descargan aparte y, mientras, valen los de OpenStreetMap.
+        if (!demo && DgtChargers.nearSpain(p.lat, p.lon)) {
+            // La primera vez se esperan (unos segundos: ~3 MB): mejor que pedir toda la ruta a Overpass, que se satura.
+            if (DgtChargers.sites(ctx) == null) {
+                if (DgtChargers.stale(ctx)) DgtChargers.refresh(ctx);
+            } else {
+                DgtChargers.refreshIfStale(ctx);
+            }
+        }
         refreshChargers(p, true);
     }
 
     /**
-     * Pide a Overpass las cuadrículas de la ruta que no están en la caché (all: todas las tandas; si no, hasta el
-     * primer fallo) y rehace la lista de cargadores de la ruta desde la caché.
+     * Pide a Overpass las cuadrículas de la ruta sin ningún dato (ni de la DGT ni en la caché; all: todas las tandas; si
+     * no, hasta el primer fallo) y rehace la lista de cargadores de la ruta. Las que ya tienen los de la DGT se completan
+     * con OpenStreetMap en segundo plano (sin esperar a Overpass, que se satura a ratos).
      */
     private void refreshChargers(Plan p, boolean all) {
         long now = System.currentTimeMillis();
         List<String> missing = new ArrayList<>();
-        for (String t : p.routeTiles) if (ChargerCache.get(ctx, t, now) == null) missing.add(t);
+        for (String t : p.routeTiles) if (DgtChargers.inTile(t) == null && ChargerCache.get(ctx, t, now) == null) missing.add(t);
         int cached = p.routeTiles.size() - missing.size();
         int fetched = 0;
         for (int i = 0; i < missing.size(); i += TILES_PER_QUERY) {
@@ -879,20 +925,114 @@ final class RoutePlanner {
             }
         }
         rebuildChargers(p);
-        L.i(String.format(Locale.US, "ruta: cargadores: %d zonas de la caché, %d pedidas ahora, %d sin datos · %d junto a la ruta",
-                cached, fetched, p.missingTiles.size(), p.chargers.size()));
+        L.i(String.format(Locale.US, "ruta: cargadores: %d zonas con datos, %d pedidas ahora, %d sin datos · %d junto a la ruta "
+                + "(%d de la DGT; %d zonas por completar con OpenStreetMap)", cached, fetched, p.missingTiles.size(), p.chargers.size(),
+                p.dgtCount, p.osmPending.size()));
+        if (!p.osmPending.isEmpty()) fetchOsmInBackground(p);
     }
 
-    /** La lista de cargadores de la ruta (a menos de CHARGER_RADIUS_KM) con lo que haya en la caché, y los huecos. */
+    /** Si falló, se vuelven a pedir los de OpenStreetMap que completan los de la DGT pasado esto. */
+    static final long OSM_EXTRA_RETRY_MS = 120_000;
+    private volatile boolean osmBusy;
+    private volatile long lastOsmExtraMs;
+
+    /** Los cargadores de OpenStreetMap de las cuadrículas que ya tienen los de la DGT, en otro hilo; luego, la lista. */
+    private void fetchOsmInBackground(Plan p) {
+        if (osmBusy || demo) return;
+        List<String> tiles = new ArrayList<>(p.osmPending);
+        if (tiles.isEmpty()) return;
+        osmBusy = true;
+        lastOsmExtraMs = SystemClock.elapsedRealtime();
+        Thread t = new Thread(() -> {
+            long now = System.currentTimeMillis();
+            int ok = 0;
+            try {
+                for (int i = 0; i < tiles.size(); i += TILES_PER_QUERY) {
+                    List<String> part = tiles.subList(i, Math.min(tiles.size(), i + TILES_PER_QUERY));
+                    try {
+                        fetchTiles(part, now);
+                        ok += part.size();
+                    } catch (Exception e) {
+                        L.w("ruta: cargadores de OpenStreetMap (además de la DGT): " + part.size() + " zonas sin respuesta ("
+                                + Http.safeError(e) + ")");
+                    }
+                }
+                if (ok > 0) {
+                    synchronized (RoutePlanner.this) {
+                        if (plan == p) rebuildChargers(p);
+                    }
+                    L.i(String.format(Locale.US, "ruta: cargadores con OpenStreetMap: %d zonas · %d junto a la ruta (%d de la DGT)", ok,
+                            p.chargers.size(), p.dgtCount));
+                }
+            } finally {
+                osmBusy = false;
+            }
+        }, "hql-osm");
+        t.setPriority(Thread.MIN_PRIORITY);
+        t.start();
+    }
+
+    /** Un cargador de OpenStreetMap a menos de esto de uno de la DGT de la misma red es el mismo (km). */
+    static final double SAME_SITE_NETWORK_KM = 0.4;
+    /** …y a menos de esto, aunque no se sepa su red (km). */
+    static final double SAME_SITE_KM = 0.12;
+
+    /**
+     * Junta los de la DGT (mandan: potencia y voltaje oficiales) con los de OpenStreetMap de las mismas zonas: de estos,
+     * solo los que no están ya (el mismo sitio, también entre ellos) y dicen algo útil (su potencia o su red); los demás son el ruido de
+     * «potencia sin confirmar». Hay operadores que no han dado de alta todos sus puntos en el registro (un hub de Zunder
+     * de 250 kW en la A-2 no está) y OpenStreetMap sí los tiene.
+     */
+    static List<Charger> mergeSources(List<Charger> official, List<Charger> osm) {
+        List<Charger> out = new ArrayList<>(official);
+        for (Charger o : osm) {
+            boolean useful = (o.kwSource == ChargerFilter.KW_TAGGED && o.maxKw > 0) || o.kwSource == ChargerFilter.KW_NETWORK
+                    || !ChargerFilter.OTHER.equals(o.network);
+            if (!useful) continue;
+            boolean dup = false;
+            // Contra los de la DGT y contra los ya añadidos (OpenStreetMap repite a veces una estación: nodo y área).
+            for (Charger d : out) {
+                if (Math.abs(d.lat - o.lat) > 0.01 || Math.abs(d.lon - o.lon) > 0.015) continue;
+                double km = segmentKm(d.lat, d.lon, d.lat, d.lon, o.lat, o.lon);
+                boolean sameNet = !ChargerFilter.OTHER.equals(o.network) && o.network.equals(d.network);
+                if (km < SAME_SITE_KM || (sameNet && km < SAME_SITE_NETWORK_KM)) {
+                    dup = true;
+                    break;
+                }
+            }
+            if (!dup) out.add(o);
+        }
+        return out;
+    }
+
+    /**
+     * La lista de cargadores de la ruta (a menos de CHARGER_RADIUS_KM) y los huecos: en cada cuadrícula, los de la DGT si
+     * tiene alguno (España), completados con los de OpenStreetMap que falten (mergeSources); si no, los de OpenStreetMap.
+     */
     private void rebuildChargers(Plan p) {
         long now = System.currentTimeMillis();
         List<Charger> list = new ArrayList<>();
+        List<Charger> official = new ArrayList<>();
+        List<Charger> extra = new ArrayList<>();
         java.util.Set<String> missing = new java.util.LinkedHashSet<>();
+        List<String> osmPending = new ArrayList<>();
         java.util.Set<String> seen = new java.util.HashSet<>();
+        int dgtVersion = DgtChargers.version;
         for (String t : p.routeTiles) {
+            List<DgtChargers.Site> dgt = DgtChargers.inTile(t);
+            if (dgt != null) {
+                for (DgtChargers.Site s : dgt) {
+                    int idx = nearest(p, s.lat, s.lon, -1);
+                    if (distToRouteKm(p.lat, p.lon, idx, s.lat, s.lon) > CHARGER_RADIUS_KM) continue;
+                    Charger c = s.toCharger();
+                    c.kmAlong = p.km[idx];
+                    official.add(c);
+                }
+            }
             List<ChargerCache.Item> items = ChargerCache.get(ctx, t, now);
             if (items == null) {
-                missing.add(t);
+                if (dgt == null) missing.add(t);
+                else osmPending.add(t);
                 continue;
             }
             for (ChargerCache.Item it : items) {
@@ -901,11 +1041,15 @@ final class RoutePlanner {
                 if (distToRouteKm(p.lat, p.lon, idx, it.lat, it.lon) > CHARGER_RADIUS_KM) continue;
                 Charger c = it.toCharger();
                 c.kmAlong = p.km[idx];
-                list.add(c);
+                (dgt != null ? extra : list).add(c);
             }
         }
+        list.addAll(mergeSources(official, extra));
         java.util.Collections.sort(list, (a, b) -> Double.compare(a.kmAlong, b.kmAlong));
         p.chargers = list;
+        p.dgtVersion = dgtVersion;
+        p.dgtCount = official.size();
+        p.osmPending = osmPending;
         p.missingTiles = new ArrayList<>(missing);
         p.chargerGaps = ChargerCache.gaps(p.lat, p.lon, p.km, missing);
         p.chargerVersion++;
@@ -950,7 +1094,7 @@ final class RoutePlanner {
     }
 
     /** Distancia (km) del punto (la, lo) al tramo a-b, en plano local (vale para unos pocos km). */
-    private static double segmentKm(double laA, double loA, double laB, double loB, double la, double lo) {
+    static double segmentKm(double laA, double loA, double laB, double loB, double la, double lo) {
         double cos = Math.cos(Math.toRadians(la));
         double ax = (loA - lo) * cos * 111.32, ay = (laA - la) * 111.32;
         double bx = (loB - lo) * cos * 111.32, by = (laB - la) * 111.32;
@@ -1006,11 +1150,21 @@ final class RoutePlanner {
                 if (sockets.indexOf(name) < 0) sockets.append(sockets.length() > 0 ? " · " : "").append(name);
             }
             if (key.endsWith(":output") || key.equals("maxpower")) c.kw = Math.max(c.kw, parseKw(val));
+            if (key.matches("socket:(type2_combo|chademo|type1_combo|tesla_supercharger|tesla_supercharger_ccs|nacs):voltage")) {
+                c.volts = Math.max(c.volts, parseVolts(val));
+            }
             if (key.matches("socket:[a-z0-9_]+") && !val.equals("no")) c.sockets |= ChargerFilter.socketKind(key.substring(7));
         }
         String op = tags.optString("operator");
         c.detail = sockets + (op.isEmpty() || op.equals(c.name) ? "" : (sockets.length() > 0 ? " · " : "") + op);
         return c;
+    }
+
+    private static double parseVolts(String v) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("([0-9]+(?:[.,][0-9]+)?)").matcher(v);
+        double best = 0;
+        while (m.find()) best = Math.max(best, Double.parseDouble(m.group(1).replace(',', '.')));
+        return best > 1500 ? 0 : best;
     }
 
     private static double parseKw(String v) {

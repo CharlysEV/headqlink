@@ -225,7 +225,7 @@
     <string name="hql_rolling">Rollwiderstand</string>
     <string name="hql_roundabout_exit">%1$d. Ausfahrt</string>
     <string name="hql_route_calculating">Berechne Route nach %1$s…</string>
-    <string name="hql_route_chargers">Ladestationen an der Route (OpenStreetMap)</string>
+    <string name="hql_route_chargers">Ladestationen an der Route</string>
     <string name="hql_route_failed">Route konnte nicht berechnet werden (%1$s). Neuer Versuch folgt.</string>
     <string name="hql_route_guide_maps">Mit Google Maps navigieren</string>
     <string name="hql_route_no_chargers">Keine in der Nähe der Route.</string>
@@ -681,7 +681,7 @@
     <string name="hql_charger_networks">Ladenetze</string>
     <string name="hql_charger_all_networks">Alle</string>
     <string name="hql_charger_other">Andere</string>
-    <string name="hql_charger_filter_note">Die Daten der Ladestationen stammen aus OpenStreetMap: Leistung oder Ladenetz können fehlen oder veraltet sein. Ist kein Ladenetz ausgewählt, werden alle angezeigt.</string>
+    <string name="hql_charger_filter_note">In Spanien stammen die Ladestationen aus dem offiziellen Register der DGT (Leistung und Spannung jeder Station); sonst aus OpenStreetMap, wo Leistung oder Ladenetz fehlen oder veraltet sein können. Ist kein Ladenetz ausgewählt, werden alle angezeigt.</string>
     <string name="hql_charger_summary_all">Alle Ladestationen</string>
     <string name="hql_charger_summary_kw">≥ %1$d kW</string>
     <string name="hql_charger_none_filtered">Keine Ladestation an der Route passt zu diesen Filtern.</string>
@@ -725,11 +725,16 @@
     <string name="hql_charger_kw_unknown">Leistung unbestätigt</string>
     <string name="hql_charger_unknown_include">Auch ohne Leistungsangabe</string>
     <string name="hql_charger_unknown_exclude">Nur bestätigte Leistung</string>
-    <string name="hql_charger_unknown_note">Die meisten Ladestationen auf OpenStreetMap nennen ihre Leistung nicht. Tesla, Ionity, Zunder, Fastned, Electra und Atlante zählen mit ihrer typischen Leistung (≈); die anderen nur, wenn du sie einschließt, und der Plan bevorzugt die bestätigten.</string>
+    <string name="hql_charger_unknown_note">In Spanien stammen die Ladestationen aus dem offiziellen Register der DGT, mit Leistung und Spannung jeder Station. Sonst aus OpenStreetMap, wo die meisten ihre Leistung nicht nennen: Tesla, Ionity, Zunder, Fastned, Electra und Atlante zählen mit ihrer typischen Leistung (≈); die anderen nur, wenn du sie einschließt, und der Plan bevorzugt die bestätigten.</string>
     <string name="hql_chargers_list_title">Ladestationen an der Route</string>
     <string name="hql_chargers_list_count">%1$d voraus · %2$d passen zum Filter</string>
     <string name="hql_chargers_list_filtered">Gefiltert</string>
     <string name="hql_chargers_list_all">Alle</string>
     <string name="hql_chargers_list_stop">Stopp %1$d</string>
     <string name="hql_chargers_list_none">Keine Ladestationen voraus mit diesem Filter.</string>
+    <string name="hql_charger_points">%1$d Ladepunkte</string>
+    <string name="hql_charger_low_volts">%1$.0f V: dein 800-V-Auto lädt hier mit halber Leistung</string>
+    <string name="hql_plan_low_volts">Unterwegs gibt es außerdem %1$d Ladestationen mit 400–500 V (die erste bei km %2$.0f): Sie funktionieren, aber dein 800-V-Auto lädt dort nur mit halber Leistung, deshalb hält der Plan an 800-V-Stationen. Tippen, um sie zu sehen.</string>
+    <string name="hql_chargers_source_dgt">Daten: in Spanien das offizielle Ladepunktregister (Ministerium für den ökologischen Wandel, veröffentlicht von der DGT auf nap.dgt.es, CC BY); sonst © OpenStreetMap-Mitwirkende (ODbL).</string>
+    <string name="hql_chargers_source_osm">Daten: © OpenStreetMap-Mitwirkende (ODbL).</string>
 </resources>

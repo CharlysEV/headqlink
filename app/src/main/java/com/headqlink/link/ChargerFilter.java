@@ -47,6 +47,10 @@ final class ChargerFilter {
         NETWORKS.put("totalenergies", new String[]{"TotalEnergies", "totalenergies", "total energies"});
         NETWORKS.put("shell", new String[]{"Shell Recharge", "shell"});
         NETWORKS.put("bp", new String[]{"bp pulse", "bp pulse", "aral pulse"});
+        NETWORKS.put("plenoil", new String[]{"Plenoil", "plenoil"});
+        NETWORKS.put("acciona", new String[]{"Acciona", "acciona"});
+        NETWORKS.put("edp", new String[]{"EDP", "edp"});
+        NETWORKS.put("instavolt", new String[]{"InstaVolt", "instavolt"});
     }
 
     private ChargerFilter() {
@@ -161,6 +165,24 @@ final class ChargerFilter {
         BADGES.put("totalenergies", new Object[]{0xFFED0000, "TE", 0});
         BADGES.put("shell", new Object[]{0xFFFBCE07, "S", 1});
         BADGES.put("bp", new Object[]{0xFF009900, "bp", 0});
+        BADGES.put("plenoil", new Object[]{0xFF1E9E3E, "PL", 0});
+        BADGES.put("acciona", new Object[]{0xFFE2001A, "AC", 0});
+        BADGES.put("edp", new Object[]{0xFFE32119, "EDP", 0});
+        BADGES.put("instavolt", new Object[]{0xFF00A0DF, "IV", 0});
+    }
+
+    /**
+     * Voltaje típico (V) de un cargador de continua sin el dato: los Supercharger de Europa son de 400–500 V (en España,
+     * los 80 del registro de la DGT); Ionity, de 920 V. 0 si no se sabe.
+     */
+    static double typicalVolts(String network, String name, int sockets) {
+        if ((sockets & SOCKET_DC) == 0 && sockets != 0) return 0;
+        if ("tesla".equals(network)) {
+            String n = name == null ? "" : name.toLowerCase(Locale.ROOT);
+            return n.contains("destination") ? 0 : 500;
+        }
+        if ("ionity".equals(network)) return 920;
+        return 0;
     }
 
     /** Redes que solo montan carga rápida, con su potencia típica por lo bajo (kW). */

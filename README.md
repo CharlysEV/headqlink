@@ -73,8 +73,9 @@ With **AA ≥ 17.4**, Google removed the direct launch path. The only viable rou
 - For **AA ≥ 17.4**: AA developer mode enabled and the HeadQLink accessibility service active.
 - To build from source: JDK 17 and the Android SDK (compileSdk 36). Dependencies (AndroidX, Media3,
   Glide, protobuf…) are downloaded by Gradle.
-- Internet for features that use it: OpenStreetMap (Nominatim, Overpass), OSRM, Open-Meteo and
-  radio-browser.info. The app does not send telemetry.
+- Internet for features that use it: OpenStreetMap (Nominatim, Overpass), OSRM, Open-Meteo,
+  radio-browser.info and, for chargers in Spain, the DGT's National Access Point (nap.dgt.es). The
+  app does not send telemetry.
 
 ## Installation
 

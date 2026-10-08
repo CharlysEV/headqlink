@@ -388,7 +388,13 @@ version). That tells us whether the C10 supports it.
       is fitted to your real consumption; on arrival it shows "expected … · real …".
     - **Filter chargers:** "Filter" picks the minimum power (any, 22, 50, 100 or 150 kW) and the networks (Tesla, Zunder,
       Ionity, Iberdrola, Endesa X, Repsol, Wenea…, those on the route, with how many chargers each has). It is saved,
-      and the bolts on the profile follow it too. The data comes from OpenStreetMap: power or network may be missing.
+      and the bolts on the profile follow it too.
+    - **Where the chargers come from:** in Spain, from the **official registry** of charging points (Ministry for the
+      Ecological Transition, published by the DGT at nap.dgt.es): the power and **voltage** of each one. It is
+      downloaded on the phone once a week (about 3 MB). What the registry lacks (some operators have not registered
+      all their points) is filled in from OpenStreetMap, without repeating the ones already there; outside Spain,
+      everything comes from OpenStreetMap, where power or network may be missing. **"Chargers along the route"** opens
+      the list with each network's badge, the km, the power, the voltage ("350 kW · 920 V") and the sockets.
     - **Navigate with Google Maps or Waze:** in "Filter" → "Navigate with" (if Waze is installed). The guide button
       and the "Go" buttons open the chosen one. Waze has no intermediate stops: "Go with the stops" takes you to the
       next one.
@@ -397,7 +403,12 @@ version). That tells us whether the C10 supports it.
       needed (the C10 charges more slowly above 50 %: two short stops beat one long one to 100 %). Each stop shows the
       km, what you arrive with, how far to charge and the minutes; the battery line jumps up at each stop. "Go with the
       stops" opens Google Maps with them (up to 3). In "Filter" you choose what to arrive with (10-30 %) and the most to
-      charge to (70-100 %). There is no plan on a REEV: the generator covers the rest.
+      charge to (70-100 %); if a little more than the maximum gets you to the destination, it charges that instead of
+      adding a stop a few km from the end. There is no plan on a REEV: the generator covers the rest.
+    - **800 V (81.9 kWh C10):** the big battery is 800 V and charges on 400–500 V chargers, but at half power. The plan
+      stops at 800 V ones (or 150 kW and up, which almost always are, even if the registry does not say so) and keeps
+      the 400–500 V ones in reserve: the list marks them in amber ("470 V: your 800 V car charges here at half power")
+      and the plan says how many there are along the way. Tesla Superchargers in Spain are 400–500 V.
     - **The plan redoes itself during the trip:** with the Leapmotor account it compares how much your battery really
       drops with what was expected for those km and adjusts the rest ("Adjusted to this trip's consumption: +12 %").
       Chosen stops are kept while you reach them with margin; if you are running short (or have extra), the plan changes

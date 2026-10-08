@@ -721,6 +721,7 @@ final class RouteTab implements CarScreen {
                 body.addView(chargerRow(c, here, stopNo.get(c), ok), itemParams());
             }
             if (body.getChildCount() == 0) body.addView(hint(Str.get(R.string.hql_chargers_list_none)));
+            body.addView(hint(Str.get(pl.dgtCount > 0 ? R.string.hql_chargers_source_dgt : R.string.hql_chargers_source_osm)));
         }
         count.setText(Str.get(R.string.hql_chargers_list_count, total, passing));
         root.addView(panel, CarStyle.match());
@@ -759,6 +760,9 @@ final class RouteTab implements CarScreen {
         detail.setEllipsize(android.text.TextUtils.TruncateAt.END);
         txt.addView(name);
         txt.addView(detail);
+        if (ChargePlanner.lowVolts(c, planner.carVolts())) {
+            txt.addView(CarStyle.text(ctx, Str.get(R.string.hql_charger_low_volts, c.maxVolts), 20, CarKit.AMBER));
+        }
         item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         if (stop != null) {
             TextView tag = CarStyle.text(ctx, Str.get(R.string.hql_chargers_list_stop, stop), 21, CarKit.ACCENT);
@@ -936,11 +940,32 @@ final class RouteTab implements CarScreen {
         return t;
     }
 
-    /** «150 kW», «≈150 kW» (típica de su red) o «potencia sin confirmar» (OpenStreetMap no la dice). */
+    /**
+     * Con un coche de 800 V, los cargadores de 400–500 V que pasan el filtro por delante (el plan para en los de alto
+     * voltaje; en estos también carga, a la mitad): cuántos y dónde está el primero. Toca para verlos en la lista.
+     */
+    private void addLowVoltsNote(RoutePlanner.Plan p, ChargePlanner.Result cp) {
+        if (cp.carVolts < ChargePlanner.HIGH_VOLTS) return;
+        double here = p.km[Math.min(p.progress, p.n - 1)];
+        java.util.List<RoutePlanner.Charger> ahead = new java.util.ArrayList<>();
+        for (RoutePlanner.Charger c : p.chargers) if (wanted(c)) ahead.add(c);
+        java.util.List<RoutePlanner.Charger> low = ChargePlanner.lowVoltsBetween(ahead, here, p.km[p.n - 1], cp.carVolts);
+        if (low.isEmpty()) return;
+        TextView t = CarStyle.text(ctx, Str.get(R.string.hql_plan_low_volts, low.size(), low.get(0).kmAlong), 20, CarKit.AMBER);
+        t.setPadding(0, 8, 0, 4);
+        t.setOnClickListener(v -> openChargerList(false));
+        chargers.addView(t);
+    }
+
+    /**
+     * «150 kW», «≈150 kW» (típica de su red) o «potencia sin confirmar» (OpenStreetMap no la dice); con el voltaje en
+     * continua si se sabe («350 kW · 920 V»).
+     */
     static String kwText(RoutePlanner.Charger c) {
-        if (c.kwSource == ChargerFilter.KW_TAGGED && c.maxKw > 0) return String.format(Locale.getDefault(), "%.0f kW", c.maxKw);
-        if (c.kwSource == ChargerFilter.KW_NETWORK || c.acOnly) return String.format(Locale.getDefault(), "≈%.0f kW", c.maxKw);
-        return Str.get(R.string.hql_charger_kw_unknown);
+        String v = c.maxVolts > 0 && !c.acOnly ? String.format(Locale.getDefault(), " · %.0f V", c.maxVolts) : "";
+        if (c.kwSource == ChargerFilter.KW_TAGGED && c.maxKw > 0) return String.format(Locale.getDefault(), "%.0f kW", c.maxKw) + v;
+        if (c.kwSource == ChargerFilter.KW_NETWORK || c.acOnly) return String.format(Locale.getDefault(), "≈%.0f kW", c.maxKw) + v;
+        return Str.get(R.string.hql_charger_kw_unknown) + v;
     }
 
     private static String capital(String t) {
@@ -1008,8 +1033,10 @@ final class RouteTab implements CarScreen {
             name.setTypeface(CarKit.MEDIUM);
             name.setSingleLine(true);
             name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            boolean low = ChargePlanner.lowVolts(st.charger, cp.carVolts);
             TextView line = CarStyle.text(ctx, Str.get(R.string.hql_plan_stop_line, st.km, st.arrivePct, st.departPct,
-                    DriveTab.duration(Math.round(st.minutes * 60))) + " · " + kwText(st.charger), 20, CarKit.ACCENT);
+                    DriveTab.duration(Math.round(st.minutes * 60))) + " · " + kwText(st.charger)
+                    + (low ? " · " + Str.get(R.string.hql_charger_low_volts, st.charger.maxVolts) : ""), 20, low ? CarKit.AMBER : CarKit.ACCENT);
             line.setMaxLines(2);
             txt.addView(name);
             txt.addView(line);
@@ -1019,6 +1046,7 @@ final class RouteTab implements CarScreen {
             item.addView(go);
             chargers.addView(item);
         }
+        addLowVoltsNote(p, cp);
         TextView all = CarKit.pill(ctx, Str.get(R.string.hql_plan_go), true);
         all.setOnClickListener(v -> RoutePlanner.navigateWithStops(ctx, p, cp));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);

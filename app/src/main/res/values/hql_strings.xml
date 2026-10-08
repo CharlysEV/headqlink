@@ -225,7 +225,7 @@
     <string name="hql_rolling">Rolling</string>
     <string name="hql_roundabout_exit">Exit %1$d</string>
     <string name="hql_route_calculating">Calculating the route to %1$s…</string>
-    <string name="hql_route_chargers">Chargers along the route (OpenStreetMap)</string>
+    <string name="hql_route_chargers">Chargers along the route</string>
     <string name="hql_route_failed">Could not calculate the route (%1$s). It will be retried.</string>
     <string name="hql_route_guide_maps">Navigate with Google Maps</string>
     <string name="hql_route_no_chargers">None near the route.</string>
@@ -681,7 +681,7 @@
     <string name="hql_charger_networks">Networks</string>
     <string name="hql_charger_all_networks">All</string>
     <string name="hql_charger_other">Other</string>
-    <string name="hql_charger_filter_note">Charger data comes from OpenStreetMap: power or network may be missing or out of date. With no network ticked, all are shown.</string>
+    <string name="hql_charger_filter_note">In Spain, charger data comes from the official DGT registry (power and voltage of each one); elsewhere, from OpenStreetMap, where power or network may be missing or out of date. With no network ticked, all are shown.</string>
     <string name="hql_charger_summary_all">All chargers</string>
     <string name="hql_charger_summary_kw">≥ %1$d kW</string>
     <string name="hql_charger_none_filtered">No chargers on the route match these filters.</string>
@@ -725,11 +725,16 @@
     <string name="hql_charger_kw_unknown">power not confirmed</string>
     <string name="hql_charger_unknown_include">Include those without power data</string>
     <string name="hql_charger_unknown_exclude">Only confirmed power</string>
-    <string name="hql_charger_unknown_note">Most chargers on OpenStreetMap do not state their power. Tesla, Ionity, Zunder, Fastned, Electra and Atlante count with their typical power (≈); the rest, only if you include them, and the plan prefers the confirmed ones.</string>
+    <string name="hql_charger_unknown_note">In Spain, chargers come from the official DGT registry, with the power and voltage of each one. Elsewhere they come from OpenStreetMap, where most do not state their power: Tesla, Ionity, Zunder, Fastned, Electra and Atlante count with their typical power (≈); the rest, only if you include them, and the plan prefers the confirmed ones.</string>
     <string name="hql_chargers_list_title">Chargers on the route</string>
     <string name="hql_chargers_list_count">%1$d ahead · %2$d match the filter</string>
     <string name="hql_chargers_list_filtered">Filtered</string>
     <string name="hql_chargers_list_all">All</string>
     <string name="hql_chargers_list_stop">Stop %1$d</string>
     <string name="hql_chargers_list_none">No chargers ahead with this filter.</string>
+    <string name="hql_charger_points">%1$d points</string>
+    <string name="hql_charger_low_volts">%1$.0f V: your 800 V car charges here at half power</string>
+    <string name="hql_plan_low_volts">Along the way there are also %1$d 400–500 V chargers (the first at km %2$.0f): they work, but your 800 V car charges at half power on them, so the plan stops at 800 V ones. Tap to see them.</string>
+    <string name="hql_chargers_source_dgt">Data: in Spain, the official charging point registry (Ministry for the Ecological Transition, published by the DGT at nap.dgt.es, CC BY); elsewhere, © OpenStreetMap contributors (ODbL).</string>
+    <string name="hql_chargers_source_osm">Data: © OpenStreetMap contributors (ODbL).</string>
 </resources>

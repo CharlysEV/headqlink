@@ -225,7 +225,7 @@
     <string name="hql_rolling">Rotolamento</string>
     <string name="hql_roundabout_exit">%1$dª uscita</string>
     <string name="hql_route_calculating">Calcolo del percorso verso %1$s…</string>
-    <string name="hql_route_chargers">Colonnine lungo il percorso (OpenStreetMap)</string>
+    <string name="hql_route_chargers">Colonnine lungo il percorso</string>
     <string name="hql_route_failed">Impossibile calcolare il percorso (%1$s). Verrà ritentato.</string>
     <string name="hql_route_guide_maps">Naviga con Google Maps</string>
     <string name="hql_route_no_chargers">Nessuna vicino al percorso.</string>
@@ -682,7 +682,7 @@
     <string name="hql_charger_networks">Operatori</string>
     <string name="hql_charger_all_networks">Tutti</string>
     <string name="hql_charger_other">Altri</string>
-    <string name="hql_charger_filter_note">I dati delle colonnine vengono da OpenStreetMap: la potenza o l\'operatore possono mancare o non essere aggiornati. Se non selezioni nessun operatore, li vedi tutti.</string>
+    <string name="hql_charger_filter_note">In Spagna le colonnine vengono dal registro ufficiale della DGT (potenza e tensione di ognuna); altrove da OpenStreetMap, dove la potenza o l\'operatore possono mancare o non essere aggiornati. Se non selezioni nessun operatore, li vedi tutti.</string>
     <string name="hql_charger_summary_all">Tutte le colonnine</string>
     <string name="hql_charger_summary_kw">≥ %1$d kW</string>
     <string name="hql_charger_none_filtered">Nessuna colonnina sul percorso corrisponde a questi filtri.</string>
@@ -726,11 +726,16 @@
     <string name="hql_charger_kw_unknown">potenza non confermata</string>
     <string name="hql_charger_unknown_include">Includi quelle senza potenza</string>
     <string name="hql_charger_unknown_exclude">Solo con potenza confermata</string>
-    <string name="hql_charger_unknown_note">La maggior parte delle colonnine su OpenStreetMap non indica la potenza. Tesla, Ionity, Zunder, Fastned, Electra e Atlante contano con la potenza tipica (≈); le altre solo se le includi, e il piano preferisce quelle confermate.</string>
+    <string name="hql_charger_unknown_note">In Spagna le colonnine vengono dal registro ufficiale della DGT, con potenza e tensione di ognuna. Altrove da OpenStreetMap, dove la maggior parte non indica la potenza: Tesla, Ionity, Zunder, Fastned, Electra e Atlante contano con la potenza tipica (≈); le altre solo se le includi, e il piano preferisce quelle confermate.</string>
     <string name="hql_chargers_list_title">Colonnine sul percorso</string>
     <string name="hql_chargers_list_count">%1$d più avanti · %2$d passano il filtro</string>
     <string name="hql_chargers_list_filtered">Quelle del filtro</string>
     <string name="hql_chargers_list_all">Tutte</string>
     <string name="hql_chargers_list_stop">Sosta %1$d</string>
     <string name="hql_chargers_list_none">Nessuna colonnina più avanti con questo filtro.</string>
+    <string name="hql_charger_points">%1$d punti</string>
+    <string name="hql_charger_low_volts">%1$.0f V: la tua auto a 800 V qui carica a metà potenza</string>
+    <string name="hql_plan_low_volts">Lungo il percorso ci sono anche %1$d colonnine a 400–500 V (la prima al km %2$.0f): funzionano, ma la tua auto a 800 V vi carica a metà potenza, quindi il piano si ferma a quelle a 800 V. Tocca per vederle.</string>
+    <string name="hql_chargers_source_dgt">Dati: in Spagna, il registro ufficiale dei punti di ricarica (Ministero per la Transizione Ecologica, pubblicato dalla DGT su nap.dgt.es, CC BY); altrove, © contributori di OpenStreetMap (ODbL).</string>
+    <string name="hql_chargers_source_osm">Dati: © contributori di OpenStreetMap (ODbL).</string>
 </resources>

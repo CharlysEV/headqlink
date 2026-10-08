@@ -396,8 +396,14 @@ supporta.
       compare «previsti … · reali …».
     - **Filtrare le colonnine:** «Filtra» sceglie la potenza minima (qualsiasi, 22, 50, 100 o 150 kW) e gli operatori
       (Tesla, Zunder, Ionity, Iberdrola, Endesa X, Repsol, Wenea…, quelli presenti sul percorso, con quante colonnine ha
-      ciascuno). La scelta viene salvata, e la seguono anche le icone a fulmine sul profilo. I dati vengono da
-      OpenStreetMap: potenza o operatore possono mancare.
+      ciascuno). La scelta viene salvata, e la seguono anche le icone a fulmine sul profilo.
+    - **Da dove vengono le colonnine:** in Spagna, dal **registro ufficiale** dei punti di ricarica (Ministero per la
+      Transizione Ecologica, pubblicato dalla DGT su nap.dgt.es): potenza e **tensione** di ognuna. Si scarica sul
+      telefono una volta alla settimana (circa 3 MB). Quello che manca nel registro (alcuni operatori non hanno
+      registrato tutti i loro punti) si completa con OpenStreetMap, senza ripetere quelle già presenti; fuori dalla
+      Spagna, tutto viene da OpenStreetMap, dove potenza o operatore possono mancare. **«Colonnine lungo il
+      percorso»** apre l'elenco con il distintivo di ogni operatore, il km, la potenza, la tensione («350 kW · 920 V»)
+      e le prese.
     - **Navigare con Google Maps o Waze:** in «Filtra» → «Navigare con» (se Waze è installato). Il pulsante per
       guidare e i «Vai» aprono quello scelto. Waze non ammette soste intermedie: «Vai con le soste» ti porta alla
       prossima.
@@ -406,8 +412,14 @@ supporta.
       solo quello che serve (la C10 ricarica più lentamente sopra il 50 %: meglio due soste brevi che una lunga fino al
       100 %). Ogni sosta mostra il km, con quanto arrivi, fino a quanto ricaricare e i minuti; la linea della batteria
       sale a ogni sosta. «Vai con le soste» apre Google Maps con le soste (fino a 3). In «Filtra» scegli con quanto
-      arrivare (10-30 %) e fino a quanto ricaricare al massimo (70-100 %). Su una REEV non c'è piano: il generatore
-      mette quello che manca.
+      arrivare (10-30 %) e fino a quanto ricaricare al massimo (70-100 %); se con poco più del massimo arrivi a
+      destinazione, ricarica quello invece di fare un'altra sosta a pochi km dalla fine. Su una REEV non c'è piano: il
+      generatore mette quello che manca.
+    - **800 V (C10 da 81,9 kWh):** la batteria grande è a 800 V e sulle colonnine a 400–500 V ricarica, ma a metà
+      potenza. Il piano si ferma a quelle a 800 V (o da 150 kW in su, che quasi sempre lo sono anche se il registro non
+      lo dice) e tiene di riserva quelle a 400–500 V: l'elenco le segna in ambra («470 V: la tua auto a 800 V qui
+      carica a metà potenza») e il piano dice quante ce ne sono lungo il percorso. I Supercharger Tesla in Spagna sono
+      a 400–500 V.
     - **Il piano si rifà da solo durante il viaggio:** con l'account Leapmotor confronta quanto scende davvero la
       batteria con quanto previsto per quei km e adatta il resto («Adattato al consumo di questo viaggio: +12 %»). Le
       soste scelte restano finché le raggiungi con margine; se stai restando senza batteria (o ne avanza), il piano cambia

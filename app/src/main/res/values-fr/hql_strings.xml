@@ -225,7 +225,7 @@
     <string name="hql_rolling">Roulement</string>
     <string name="hql_roundabout_exit">Sortie %1$d</string>
     <string name="hql_route_calculating">Calcul de l\'itinéraire vers %1$s…</string>
-    <string name="hql_route_chargers">Bornes sur l\'itinéraire (OpenStreetMap)</string>
+    <string name="hql_route_chargers">Bornes sur l\'itinéraire</string>
     <string name="hql_route_failed">Impossible de calculer l\'itinéraire (%1$s). Nouvel essai bientôt.</string>
     <string name="hql_route_guide_maps">Google Maps</string>
     <string name="hql_route_no_chargers">Aucune borne près de l\'itinéraire.</string>
@@ -682,7 +682,7 @@
     <string name="hql_charger_networks">Réseaux</string>
     <string name="hql_charger_all_networks">Tous</string>
     <string name="hql_charger_other">Autres</string>
-    <string name="hql_charger_filter_note">Les données des bornes viennent d\'OpenStreetMap : la puissance ou le réseau peuvent manquer ou ne pas être à jour. Si aucun réseau n\'est coché, toutes les bornes s\'affichent.</string>
+    <string name="hql_charger_filter_note">En Espagne, les bornes viennent du registre officiel de la DGT (puissance et tension de chacune) ; ailleurs, d\'OpenStreetMap, où la puissance ou le réseau peuvent manquer ou ne pas être à jour. Si aucun réseau n\'est coché, toutes les bornes s\'affichent.</string>
     <string name="hql_charger_summary_all">Toutes les bornes</string>
     <string name="hql_charger_summary_kw">≥ %1$d kW</string>
     <string name="hql_charger_none_filtered">Aucune borne de l\'itinéraire ne correspond à ces filtres.</string>
@@ -726,11 +726,16 @@
     <string name="hql_charger_kw_unknown">puissance non confirmée</string>
     <string name="hql_charger_unknown_include">Inclure celles sans puissance</string>
     <string name="hql_charger_unknown_exclude">Seulement puissance confirmée</string>
-    <string name="hql_charger_unknown_note">La plupart des bornes d\'OpenStreetMap n\'indiquent pas leur puissance. Tesla, Ionity, Zunder, Fastned, Electra et Atlante comptent avec leur puissance typique (≈) ; les autres seulement si vous les incluez, et le plan préfère celles confirmées.</string>
+    <string name="hql_charger_unknown_note">En Espagne, les bornes viennent du registre officiel de la DGT, avec la puissance et la tension de chacune. Ailleurs, d\'OpenStreetMap, où la plupart n\'indiquent pas leur puissance : Tesla, Ionity, Zunder, Fastned, Electra et Atlante comptent avec leur puissance typique (≈) ; les autres seulement si vous les incluez, et le plan préfère celles confirmées.</string>
     <string name="hql_chargers_list_title">Bornes sur l\'itinéraire</string>
     <string name="hql_chargers_list_count">%1$d devant · %2$d passent le filtre</string>
     <string name="hql_chargers_list_filtered">Filtrées</string>
     <string name="hql_chargers_list_all">Toutes</string>
     <string name="hql_chargers_list_stop">Arrêt %1$d</string>
     <string name="hql_chargers_list_none">Aucune borne devant avec ce filtre.</string>
+    <string name="hql_charger_points">%1$d points</string>
+    <string name="hql_charger_low_volts">%1$.0f V : votre voiture 800 V y charge à moitié puissance</string>
+    <string name="hql_plan_low_volts">Il y a aussi sur le trajet %1$d bornes 400–500 V (la première au km %2$.0f) : elles marchent, mais votre voiture 800 V y charge à moitié puissance, donc le plan s\'arrête aux bornes 800 V. Touchez pour les voir.</string>
+    <string name="hql_chargers_source_dgt">Données : en Espagne, le registre officiel des points de recharge (ministère de la Transition écologique, publié par la DGT sur nap.dgt.es, CC BY) ; ailleurs, © contributeurs d\'OpenStreetMap (ODbL).</string>
+    <string name="hql_chargers_source_osm">Données : © contributeurs d\'OpenStreetMap (ODbL).</string>
 </resources>

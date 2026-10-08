@@ -396,8 +396,13 @@ admite.
       «previsto … · real …».
     - **Filtrar cargadores:** «Filtrar» elige la potencia mínima (cualquiera, 22, 50, 100 o 150 kW) y las redes (Tesla,
       Zunder, Ionity, Iberdrola, Endesa X, Repsol, Wenea…, las que haya en la ruta, con cuántos cargadores tiene cada
-      una). Se guarda, y los rayos del perfil también lo siguen. Los datos son de OpenStreetMap: la potencia o la red
-      pueden faltar.
+      una). Se guarda, y los rayos del perfil también lo siguen.
+    - **De dónde salen los cargadores:** en España, del **registro oficial** de puntos de recarga (Ministerio para la
+      Transición Ecológica, publicado por la DGT en nap.dgt.es): la potencia y el **voltaje** de cada uno. Se descarga
+      en el móvil una vez por semana (unos 3 MB). Lo que falta en el registro (hay operadores que no han dado de alta
+      todos sus puntos) se completa con OpenStreetMap, sin repetir los que ya están; fuera de España, todo sale de
+      OpenStreetMap, donde la potencia o la red pueden faltar. **«Cargadores en ruta»** abre la lista con el distintivo
+      de cada red, el km, la potencia, el voltaje («350 kW · 920 V») y los enchufes.
     - **Navegar con Google Maps o Waze:** en «Filtrar» → «Navegar con» (si Waze está instalado). El botón de guiar y
       los «Ir» abren el elegido. Waze no admite paradas intermedias: «Ir con las paradas» te lleva a la siguiente.
     - **Plan de carga (gratis, como ABRP):** si no llegas con el margen, la Ruta dice **dónde parar y hasta cuánto
@@ -405,7 +410,12 @@ admite.
       hace falta (el C10 carga más despacio por encima del 50 %: mejor dos paradas cortas que una larga hasta el 100 %).
       Cada parada lleva el km, con cuánto llegas, hasta cuánto cargar y los minutos; la línea de la batería sube en cada
       parada. «Ir con las paradas» abre Google Maps con ellas (hasta 3). En «Filtrar» eliges con cuánto llegar (10-30 %)
-      y hasta cuánto cargar como mucho (70-100 %). En un REEV no hay plan: el generador pone lo que falte.
+      y hasta cuánto cargar como mucho (70-100 %); si con algo más del máximo llegas al destino, carga eso en vez de
+      hacer otra parada a pocos km del final. En un REEV no hay plan: el generador pone lo que falte.
+    - **800 V (C10 de 81,9 kWh):** la batería grande es de 800 V y en los cargadores de 400–500 V carga, pero a la
+      mitad. El plan para en los de 800 V (o de 150 kW o más, que casi siempre lo son aunque el registro no lo diga) y
+      deja los de 400–500 V de reserva: la lista los marca en ámbar («470 V: tu coche de 800 V carga aquí a la mitad»)
+      y el plan dice cuántos hay por el camino. Los Supercharger de Tesla en España son de 400–500 V.
     - **El plan se rehace solo durante el viaje:** con la cuenta de Leapmotor compara lo que baja tu batería de verdad
       con lo previsto para esos km y ajusta lo que queda («Ajustado a lo que gastas en este viaje: +12 %»). Las paradas
       elegidas se mantienen mientras llegues a ellas con margen; si te vas quedando sin batería (o te sobra), el plan

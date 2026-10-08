@@ -28,6 +28,8 @@ final class ChargePlanner {
         /** Potencia de carga rápida máxima del coche (kW) y su capacidad (kWh). */
         double carPeakKw = 84;
         double capacityKwh = 69.9;
+        /** Voltaje de la batería (V): 800 en la de 81,9 kWh. */
+        double carVolts = 400;
     }
 
     static final class Stop {
@@ -71,6 +73,8 @@ final class ChargePlanner {
         final double capacityKwh;
         /** Cómo se está gastando frente a lo previsto (1 = como se preveía; 1,12 = un 12 % más). */
         double trend = 1;
+        /** Voltaje de la batería del coche con el que se calculó (V). */
+        double carVolts = 400;
 
         Result(Outcome outcome, List<Stop> stops, double arrivalPct, double[] km, double[] kwhCum, double fromKm, double socNow,
                double capacityKwh) {
@@ -113,6 +117,24 @@ final class ChargePlanner {
     /** Eficiencia de la carga (lo que entra en la batería de lo que da el cargador). */
     static final double CHARGE_EFF = 0.93;
     static final int MAX_STOPS = 8;
+    /**
+     * Si cargando hasta FINAL_EXTRA_PCT por encima del máximo se llega al destino, se carga eso en vez de hacer otra
+     * parada (antes salía una de 4 min a 3 km del destino para subir del 19 al 23 %).
+     */
+    static final double FINAL_EXTRA_PCT = 10;
+    /** Desde aquí un cargador es de alto voltaje (800 V: 920, 1000…); por debajo, de 400–500 V (V). */
+    static final double HIGH_VOLTS = 700;
+    /**
+     * Un coche de 800 V en un cargador de 400–500 V carga, pero el coche tiene que elevar el voltaje y lo hace más
+     * despacio: el C10 de 800 V, a la mitad de lo que admite.
+     */
+    static final double LOW_VOLTS_FACTOR = 0.5;
+    /**
+     * Desde aquí un cargador de continua se da por bueno para un coche de 800 V aunque no diga su voltaje o diga 400 V
+     * (kW): casi todos los de 150 kW o más admiten 800 V (en el registro de la DGT, los «400 V» o «230 V» de cargadores
+     * de 150 kW son la tensión de la red mal puesta). Los Supercharger no: son de 500 V de verdad (464–470 V declarados).
+     */
+    static final double GOOD_KW = 150;
     /** Desde aquí un cargador cuenta como rápido (kW). */
     static final double FAST_KW = 40;
     /** Una parada ya elegida se mantiene aunque se llegue con hasta este % menos del mínimo (que no baile el plan). */
@@ -132,14 +154,24 @@ final class ChargePlanner {
 
     /** Minutos para cargar de fromPct a toPct en un cargador de chargerKw (sin la parada fija). */
     static double chargeMinutes(double fromPct, double toPct, double chargerKw, Settings s) {
+        return minutes(fromPct, toPct, chargerKw, s.carPeakKw, s.capacityKwh);
+    }
+
+    /** Minutos en ese cargador: en uno de 400–500 V, un coche de 800 V admite la mitad (LOW_VOLTS_FACTOR). */
+    static double chargeMinutes(double fromPct, double toPct, RoutePlanner.Charger c, Settings s) {
+        double peak = s.carPeakKw * (lowVolts(c, s.carVolts) ? LOW_VOLTS_FACTOR : 1);
+        return minutes(fromPct, toPct, c.maxKw, peak, s.capacityKwh);
+    }
+
+    private static double minutes(double fromPct, double toPct, double chargerKw, double peakKw, double capKwh) {
         if (toPct <= fromPct) return 0;
         double kw = chargerKw > 0 ? chargerKw : UNKNOWN_KW;
         double minutes = 0;
         double step = 0.5;
         for (double p = fromPct; p < toPct; p += step) {
             double d = Math.min(step, toPct - p);
-            double power = Math.min(kw * CHARGE_EFF, carPowerKw(p + d / 2, s.carPeakKw));
-            minutes += s.capacityKwh * d / 100 / power * 60;
+            double power = Math.min(kw * CHARGE_EFF, carPowerKw(p + d / 2, peakKw));
+            minutes += capKwh * d / 100 / power * 60;
         }
         return minutes;
     }
@@ -179,11 +211,19 @@ final class ChargePlanner {
      */
     static Result plan(double[] km, double[] kwhCum, double fromKm, double socNow, List<RoutePlanner.Charger> chargers, Settings s,
                        List<RoutePlanner.Charger> keep) {
+        Result r = planStops(km, kwhCum, fromKm, socNow, chargers, s, keep);
+        r.carVolts = s.carVolts;
+        return r;
+    }
+
+    private static Result planStops(double[] km, double[] kwhCum, double fromKm, double socNow, List<RoutePlanner.Charger> chargers,
+                                    Settings s, List<RoutePlanner.Charger> keep) {
         double end = km[km.length - 1];
         double cap = s.capacityKwh;
         double cur = fromKm;
         double soc = socNow;
         List<Stop> stops = new ArrayList<>();
+        List<RoutePlanner.Charger> preferred = preferred(chargers, s);
         for (int k = 0; k <= MAX_STOPS; k++) {
             double toEnd = (kwhAt(km, kwhCum, end) - kwhAt(km, kwhCum, cur)) / cap * 100;
             if (soc - toEnd >= s.arriveMinPct - 1e-9) {
@@ -191,21 +231,52 @@ final class ChargePlanner {
             }
             if (k == MAX_STOPS) break;
             RoutePlanner.Charger best = kept(km, kwhCum, cur, soc, end, keep, s);
+            if (best == null && preferred != chargers) best = pick(km, kwhCum, cur, soc, end, preferred, s, s.stopMinPct);
             if (best == null) best = pick(km, kwhCum, cur, soc, end, chargers, s, s.stopMinPct);
             // Ya justo de batería: el que se alcance aunque se llegue con menos del mínimo.
+            if (best == null && preferred != chargers) best = pick(km, kwhCum, cur, soc, end, preferred, s, 3);
             if (best == null) best = pick(km, kwhCum, cur, soc, end, chargers, s, 3);
             if (best == null) return new Result(Outcome.NO_CHARGER, stops, soc - toEnd, km, kwhCum, fromKm, socNow, cap);
             double arrive = soc - (kwhAt(km, kwhCum, best.kmAlong) - kwhAt(km, kwhCum, cur)) / cap * 100;
             double need = (kwhAt(km, kwhCum, end) - kwhAt(km, kwhCum, best.kmAlong)) / cap * 100 + s.arriveMinPct + 2;
-            double target = Math.min(s.maxChargePct, Math.max(arrive, need));
+            double top = s.maxChargePct;
+            if (need > top && need <= Math.min(100, top + FINAL_EXTRA_PCT)) top = need;
+            double target = Math.min(top, Math.max(arrive, need));
             if (target <= arrive + 0.5) target = Math.min(100, arrive + 5); // por si acaso: que la parada sirva de algo
-            double min = chargeMinutes(arrive, target, best.maxKw, s) + STOP_OVERHEAD_MIN;
+            double min = chargeMinutes(arrive, target, best, s) + STOP_OVERHEAD_MIN;
             stops.add(new Stop(best, best.kmAlong, arrive, target, min, (target - arrive) / 100 * cap));
             cur = best.kmAlong;
             soc = target;
         }
         double toEnd = (kwhAt(km, kwhCum, end) - kwhAt(km, kwhCum, cur)) / cap * 100;
         return new Result(Outcome.NO_CHARGER, stops, soc - toEnd, km, kwhCum, fromKm, socNow, cap);
+    }
+
+    /**
+     * Los cargadores para las paradas: en un coche de 800 V, los que cargan bien (highVolts: 800 V declarados, o 150 kW
+     * o más); los demás quedan de reserva (los de 400–500 V, a la mitad). En uno de 400 V, todos (la misma lista).
+     */
+    static List<RoutePlanner.Charger> preferred(List<RoutePlanner.Charger> chargers, Settings s) {
+        if (s.carVolts < HIGH_VOLTS) return chargers;
+        List<RoutePlanner.Charger> out = new ArrayList<>();
+        for (RoutePlanner.Charger c : chargers) if (highVolts(c)) out.add(c);
+        return out.size() == chargers.size() ? chargers : out;
+    }
+
+    /** ¿Carga bien un coche de 800 V? De continua y de 800 V declarados, o de GOOD_KW o más (salvo los de Tesla). */
+    static boolean highVolts(RoutePlanner.Charger c) {
+        if (c.acOnly) return false;
+        if (c.maxVolts >= HIGH_VOLTS) return true;
+        return c.maxKw >= GOOD_KW && !"tesla".equals(c.network);
+    }
+
+    /** Los cargadores de 400–500 V entre fromKm y toKm (para un coche de 800 V; vacío en uno de 400 V). */
+    static List<RoutePlanner.Charger> lowVoltsBetween(List<RoutePlanner.Charger> chargers, double fromKm, double toKm, double carVolts) {
+        List<RoutePlanner.Charger> out = new ArrayList<>();
+        for (RoutePlanner.Charger c : chargers) {
+            if (c.kmAlong > fromKm && c.kmAlong <= toKm && lowVolts(c, carVolts)) out.add(c);
+        }
+        return out;
     }
 
     /** La siguiente parada del plan anterior, si se sigue alcanzando (con un poco de holgura); null si no. */
@@ -257,8 +328,19 @@ final class ChargePlanner {
         return best;
     }
 
-    private static double effKw(RoutePlanner.Charger c, Settings s) {
-        return Math.min(c.maxKw > 0 ? c.maxKw : UNKNOWN_KW, s.carPeakKw);
+    /** Lo que da el cargador a este coche (kW): lo menos de los dos, a la mitad si es de 400–500 V y el coche de 800 V. */
+    static double effKw(RoutePlanner.Charger c, Settings s) {
+        double kw = Math.min(c.maxKw > 0 ? c.maxKw : UNKNOWN_KW, s.carPeakKw);
+        return lowVolts(c, s.carVolts) ? kw * LOW_VOLTS_FACTOR : kw;
+    }
+
+    /**
+     * ¿Es un cargador de 400–500 V para un coche de 800 V? Solo si lo dice (sin voltaje conocido, no) y no es de
+     * GOOD_KW o más (salvo Tesla): ahí carga, pero a la mitad.
+     */
+    static boolean lowVolts(RoutePlanner.Charger c, double carVolts) {
+        if (carVolts < HIGH_VOLTS || c.acOnly || c.maxVolts <= 0 || c.maxVolts >= HIGH_VOLTS) return false;
+        return c.maxKw < GOOD_KW || "tesla".equals(c.network);
     }
 
     // ------------------------------------------------------------------ cambios del plan (para avisar)

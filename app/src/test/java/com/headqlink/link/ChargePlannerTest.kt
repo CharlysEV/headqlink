@@ -2,6 +2,7 @@ package com.headqlink.link
 
 import android.app.Application
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -47,16 +48,16 @@ class ChargePlannerTest {
     fun aLongTripStopsLateAtTheFastestChargerAndOnlyChargesWhatItNeeds() {
         val r = ChargePlanner.plan(km, kwh, 0.0, 90.0, all, settings())
         assertEquals(ChargePlanner.Outcome.PLANNED, r.outcome)
-        assertEquals(listOf(c260, c420), r.stops.map { it.charger })
-        // Al primero se llega con ~16 % y se carga hasta el máximo (80 %); en el último, solo lo justo para llegar con 15 + 2.
+        // Una parada: al llegar con ~16 % se carga lo justo para llegar con 15 + 2 (85,6 %, algo más del máximo del 80 %,
+        // mejor que otra parada en el km 420 para un 6 %).
+        assertEquals(listOf(c260), r.stops.map { it.charger })
         assertEquals(90 - 52 / 70.0 * 100, r.stops[0].arrivePct, 1e-6)
-        assertEquals(80.0, r.stops[0].departPct, 1e-6)
-        assertEquals(16 / 70.0 * 100 + 17, r.stops[1].departPct, 1e-6)
+        assertEquals(48 / 70.0 * 100 + 17, r.stops[0].departPct, 1e-6)
         assertEquals(17.0, r.arrivalPct, 1e-6)
         assertTrue(r.arrivalPct >= 15)
         // La línea del % sube en la parada.
         assertEquals(r.stops[0].arrivePct, r.pctAt(260.0 - 1e-9), 1e-3)
-        assertEquals(80 - 0.2 / 70 * 100, r.pctAt(261.0), 1e-6)
+        assertEquals(r.stops[0].departPct - 0.2 / 70 * 100, r.pctAt(261.0), 1e-6)
     }
 
     @Test
@@ -179,5 +180,69 @@ class ChargePlannerTest {
         assertEquals(0.0, ChargePlanner.kwhAt(km, kwh, -5.0), 0.0)
         assertEquals(25.1, ChargePlanner.kwhAt(km, kwh, 125.5), 1e-9)
         assertEquals(100.0, ChargePlanner.kwhAt(km, kwh, 900.0), 1e-9)
+    }
+
+    // ------------------------------------------------------------------ 800 V
+
+    private fun volts(at: Double, kw: Double, v: Double) = charger(at, kw).apply { maxVolts = v }
+
+    @Test
+    fun an800VoltCarStopsAtHighVoltageChargersAndKeepsTheOthersInReserve() {
+        val s = settings().apply { carVolts = 800.0; carPeakKw = 130.0 }
+        val tesla = volts(270.0, 250.0, 470.0).apply { network = "tesla" }
+        val hpc = volts(240.0, 350.0, 920.0)
+        val r = ChargePlanner.plan(km.copyOf(401), kwh.copyOf(401), 0.0, 90.0, listOf(hpc, tesla), s)
+        assertSame(hpc, r.stops[0].charger)
+        assertEquals(800.0, r.carVolts, 0.0)
+        assertEquals(listOf(tesla), ChargePlanner.lowVoltsBetween(listOf(hpc, tesla), 0.0, 400.0, 800.0))
+        // Sin uno de 800 V a mano, el de 500 V sirve, a la mitad de potencia (más minutos).
+        val only = ChargePlanner.plan(km.copyOf(401), kwh.copyOf(401), 0.0, 90.0, listOf(tesla), s)
+        assertSame(tesla, only.stops[0].charger)
+        val half = ChargePlanner.chargeMinutes(20.0, 60.0, tesla, s)
+        val full = ChargePlanner.chargeMinutes(20.0, 60.0, hpc, s)
+        assertTrue("$half vs $full", half > full * 1.8)
+        // Un coche de 400 V no distingue: el Supercharger, más tarde y igual de rápido para él, gana.
+        val r400 = ChargePlanner.plan(km.copyOf(401), kwh.copyOf(401), 0.0, 90.0, listOf(hpc, tesla), settings())
+        assertSame(tesla, r400.stops[0].charger)
+        assertTrue(ChargePlanner.lowVoltsBetween(listOf(hpc, tesla), 0.0, 400.0, 400.0).isEmpty())
+    }
+
+    @Test
+    fun from150KilowattsAChargerCountsAsGoodForAn800VoltCarExceptTesla() {
+        // «400 V» en uno de 150 kW: la tensión de la red mal puesta; carga bien. Uno de 50 kW a 400 V, a la mitad.
+        val big = volts(200.0, 150.0, 400.0)
+        val small = volts(200.0, 50.0, 400.0)
+        val sc = volts(200.0, 250.0, 470.0).apply { network = "tesla" }
+        assertTrue(ChargePlanner.highVolts(big))
+        assertFalse(ChargePlanner.lowVolts(big, 800.0))
+        assertTrue(ChargePlanner.lowVolts(small, 800.0))
+        assertFalse(ChargePlanner.highVolts(small))
+        assertTrue(ChargePlanner.lowVolts(sc, 800.0))
+        assertFalse(ChargePlanner.highVolts(sc))
+        // Sin voltaje: bueno desde 150 kW; por debajo, de reserva pero sin penalizar su potencia.
+        assertTrue(ChargePlanner.highVolts(charger(200.0, 150.0)))
+        assertFalse(ChargePlanner.highVolts(charger(200.0, 100.0)))
+        assertFalse(ChargePlanner.lowVolts(charger(200.0, 100.0), 800.0))
+    }
+
+    @Test
+    fun withoutAKnownVoltageAChargerIsNotPenalised() {
+        val s = settings().apply { carVolts = 800.0 }
+        val unknown = charger(260.0, 150.0)
+        assertFalse(ChargePlanner.lowVolts(unknown, 800.0))
+        assertSame(unknown, ChargePlanner.plan(km.copyOf(401), kwh.copyOf(401), 0.0, 90.0, listOf(unknown), s).stops[0].charger)
+    }
+
+    @Test
+    fun aLittleMoreAtTheLastStopBeatsAnotherStopNextToTheDestination() {
+        // 15 kWh/100 km en 500 km; llegar con el 20 %: desde el km 210 hacen falta ~84 %, un poco más del máximo (80 %).
+        val k = DoubleArray(501) { it * 0.15 }
+        val s = settings().apply { arriveMinPct = 20.0 }
+        val mid = charger(210.0, 150.0)
+        val nearEnd = charger(495.0, 150.0)
+        val r = ChargePlanner.plan(km, k, 0.0, 76.0, listOf(mid, nearEnd), s)
+        assertEquals(listOf(mid), r.stops.map { it.charger })
+        assertEquals(290 * 0.15 / 70 * 100 + 22, r.stops[0].departPct, 1e-6)
+        assertTrue(r.arrivalPct >= 20)
     }
 }

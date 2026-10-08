@@ -37,6 +37,8 @@ final class ChargerCache {
         double kw;
         /** Enchufes (ChargerFilter.SOCKET_DC | SOCKET_AC), 0 si OpenStreetMap no los dice. */
         int sockets;
+        /** Voltaje máximo en continua si OpenStreetMap lo dice (casi nunca), o 0. */
+        double volts;
 
         /** Con la potencia de OpenStreetMap o, si falta, la estimada por la red o los enchufes. */
         RoutePlanner.Charger toCharger() {
@@ -55,6 +57,7 @@ final class ChargerCache {
                 c.maxKw = e[0];
                 c.kwSource = (int) e[1];
             }
+            c.maxVolts = c.acOnly ? 0 : volts > 0 ? volts : ChargerFilter.typicalVolts(network, name, sockets);
             return c;
         }
     }
@@ -131,7 +134,7 @@ final class ChargerCache {
                 JSONArray a = new JSONArray();
                 for (Item it : e.getValue()) {
                     a.put(new JSONObject().put("i", it.id).put("la", it.lat).put("lo", it.lon).put("n", it.name).put("d", it.detail)
-                            .put("w", it.network).put("k", it.kw).put("s", it.sockets));
+                            .put("w", it.network).put("k", it.kw).put("s", it.sockets).put("v", it.volts));
                 }
                 Long when = at.get(e.getKey());
                 t.put(e.getKey(), new JSONObject().put("at", when == null ? 0 : when).put("items", a));
@@ -165,6 +168,7 @@ final class ChargerCache {
                         it.network = x.optString("w", ChargerFilter.OTHER);
                         it.kw = x.optDouble("k", 0);
                         it.sockets = x.optInt("s", 0);
+                        it.volts = x.optDouble("v", 0);
                         list.add(it);
                     }
                 }

@@ -225,7 +225,7 @@
     <string name="hql_rolling">Rolamento</string>
     <string name="hql_roundabout_exit">%1$dª saída</string>
     <string name="hql_route_calculating">A calcular a rota para %1$s…</string>
-    <string name="hql_route_chargers">Carregadores ao longo da rota (OpenStreetMap)</string>
+    <string name="hql_route_chargers">Carregadores ao longo da rota</string>
     <string name="hql_route_failed">Não foi possível calcular a rota (%1$s). Será tentado novamente.</string>
     <string name="hql_route_guide_maps">Navegar com o Google Maps</string>
     <string name="hql_route_no_chargers">Nenhum perto da rota.</string>
@@ -682,7 +682,7 @@
     <string name="hql_charger_networks">Redes</string>
     <string name="hql_charger_all_networks">Todas</string>
     <string name="hql_charger_other">Outras</string>
-    <string name="hql_charger_filter_note">Os dados dos carregadores são do OpenStreetMap: a potência ou a rede podem faltar ou estar desatualizadas. Sem nenhuma rede marcada, aparecem todas.</string>
+    <string name="hql_charger_filter_note">Em Espanha, os carregadores vêm do registo oficial da DGT (potência e tensão de cada um); fora, do OpenStreetMap, onde a potência ou a rede podem faltar ou estar desatualizadas. Sem nenhuma rede marcada, aparecem todas.</string>
     <string name="hql_charger_summary_all">Todos os carregadores</string>
     <string name="hql_charger_summary_kw">≥ %1$d kW</string>
     <string name="hql_charger_none_filtered">Nenhum carregador na rota com estes filtros.</string>
@@ -726,11 +726,16 @@
     <string name="hql_charger_kw_unknown">potência por confirmar</string>
     <string name="hql_charger_unknown_include">Incluir os que não indicam a potência</string>
     <string name="hql_charger_unknown_exclude">Só com potência confirmada</string>
-    <string name="hql_charger_unknown_note">A maioria dos carregadores do OpenStreetMap não indica a potência. Tesla, Ionity, Zunder, Fastned, Electra e Atlante contam com a potência típica (≈); os restantes, só se os incluir, e o plano prefere os confirmados.</string>
+    <string name="hql_charger_unknown_note">Em Espanha, os carregadores vêm do registo oficial da DGT, com a potência e a tensão de cada um. Fora, do OpenStreetMap, onde a maioria não indica a potência: Tesla, Ionity, Zunder, Fastned, Electra e Atlante contam com a potência típica (≈); os restantes, só se os incluir, e o plano prefere os confirmados.</string>
     <string name="hql_chargers_list_title">Carregadores na rota</string>
     <string name="hql_chargers_list_count">%1$d à frente · %2$d passam no filtro</string>
     <string name="hql_chargers_list_filtered">Os do filtro</string>
     <string name="hql_chargers_list_all">Todos</string>
     <string name="hql_chargers_list_stop">Paragem %1$d</string>
     <string name="hql_chargers_list_none">Não há carregadores à frente com este filtro.</string>
+    <string name="hql_charger_points">%1$d pontos</string>
+    <string name="hql_charger_low_volts">%1$.0f V: o seu carro de 800 V carrega aqui a metade da potência</string>
+    <string name="hql_plan_low_volts">Pelo caminho há também %1$d carregadores de 400–500 V (o primeiro ao km %2$.0f): servem, mas o seu carro de 800 V carrega neles a metade da potência, por isso o plano para nos de 800 V. Toque para os ver.</string>
+    <string name="hql_chargers_source_dgt">Dados: em Espanha, o registo oficial de pontos de carregamento (Ministério para a Transição Ecológica, publicado pela DGT em nap.dgt.es, CC BY); fora, © colaboradores do OpenStreetMap (ODbL).</string>
+    <string name="hql_chargers_source_osm">Dados: © colaboradores do OpenStreetMap (ODbL).</string>
 </resources>

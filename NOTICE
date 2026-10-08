@@ -22,6 +22,14 @@ Range-extender (REEV) signals and the Leapmotor cloud trip history:
   follows leapmotor-api's flow (certificate sync, AES-encrypted PIN verify, remote/ctl cmdId 220, result
   query; sentry status signal 3636), reimplemented in LeapApi.remote() and LeapCrypto.operatePassword().
 
+Charging point data (Route tab and charge plan):
+  In Spain, chargers come from the official registry of public charging points of the Ministry for the
+  Ecological Transition (MITECO), published by the DGT on Spain's National Access Point (nap.dgt.es,
+  DATEX II "electrolineras" publication) under a Creative Commons Attribution licence. HeadQLink
+  downloads it on the phone at most once a week and keeps a compact copy (DgtChargers.java). Elsewhere,
+  and for points missing from the registry, chargers come from OpenStreetMap (© OpenStreetMap
+  contributors, ODbL) through the public Overpass servers.
+
 three.js (3D car in the Status tab):
   app/src/main/assets/three/three.min.js is three.js r149 (https://threejs.org), Copyright 2010-2023
   three.js authors, MIT License (app/src/main/assets/three/LICENSE).

@@ -225,7 +225,7 @@
     <string name="hql_rolling">Rolweerstand</string>
     <string name="hql_roundabout_exit">%1$de afslag</string>
     <string name="hql_route_calculating">Route naar %1$s berekenen…</string>
-    <string name="hql_route_chargers">Laadpalen langs de route (OpenStreetMap)</string>
+    <string name="hql_route_chargers">Laadpalen langs de route</string>
     <string name="hql_route_failed">Kon de route niet berekenen (%1$s). Er volgt een nieuwe poging.</string>
     <string name="hql_route_guide_maps">Navigeren met Google Maps</string>
     <string name="hql_route_no_chargers">Geen laadpalen langs de route.</string>
@@ -681,7 +681,7 @@
     <string name="hql_charger_networks">Netwerken</string>
     <string name="hql_charger_all_networks">Alle</string>
     <string name="hql_charger_other">Overige</string>
-    <string name="hql_charger_filter_note">De gegevens van laadpalen komen van OpenStreetMap: vermogen of netwerk kunnen ontbreken of verouderd zijn. Is er geen netwerk aangevinkt, dan worden ze allemaal getoond.</string>
+    <string name="hql_charger_filter_note">In Spanje komen de laadpalen uit het officiële register van de DGT (vermogen en spanning van elke laadpaal); elders uit OpenStreetMap, waar vermogen of netwerk kunnen ontbreken of verouderd zijn. Is er geen netwerk aangevinkt, dan worden ze allemaal getoond.</string>
     <string name="hql_charger_summary_all">Alle laadpalen</string>
     <string name="hql_charger_summary_kw">≥ %1$d kW</string>
     <string name="hql_charger_none_filtered">Geen laadpalen langs de route die aan deze filters voldoen.</string>
@@ -725,11 +725,16 @@
     <string name="hql_charger_kw_unknown">vermogen onbevestigd</string>
     <string name="hql_charger_unknown_include">Ook zonder vermogen</string>
     <string name="hql_charger_unknown_exclude">Alleen bevestigd vermogen</string>
-    <string name="hql_charger_unknown_note">De meeste laadpalen op OpenStreetMap vermelden hun vermogen niet. Tesla, Ionity, Zunder, Fastned, Electra en Atlante tellen met hun gebruikelijke vermogen (≈); de rest alleen als je ze meeneemt, en het plan geeft de voorkeur aan bevestigde.</string>
+    <string name="hql_charger_unknown_note">In Spanje komen de laadpalen uit het officiële register van de DGT, met het vermogen en de spanning van elke laadpaal. Elders uit OpenStreetMap, waar de meeste hun vermogen niet vermelden: Tesla, Ionity, Zunder, Fastned, Electra en Atlante tellen met hun gebruikelijke vermogen (≈); de rest alleen als je ze meeneemt, en het plan geeft de voorkeur aan bevestigde.</string>
     <string name="hql_chargers_list_title">Laadpalen langs de route</string>
     <string name="hql_chargers_list_count">%1$d verderop · %2$d passen bij het filter</string>
     <string name="hql_chargers_list_filtered">Gefilterd</string>
     <string name="hql_chargers_list_all">Alle</string>
     <string name="hql_chargers_list_stop">Stop %1$d</string>
     <string name="hql_chargers_list_none">Geen laadpalen verderop met dit filter.</string>
+    <string name="hql_charger_points">%1$d laadpunten</string>
+    <string name="hql_charger_low_volts">%1$.0f V: je 800V-auto laadt hier op half vermogen</string>
+    <string name="hql_plan_low_volts">Onderweg zijn er ook %1$d laadpalen van 400–500 V (de eerste bij km %2$.0f): ze werken, maar je 800V-auto laadt er op half vermogen, dus het plan stopt bij 800V-laadpalen. Tik om ze te zien.</string>
+    <string name="hql_chargers_source_dgt">Gegevens: in Spanje het officiële register van laadpunten (Ministerie voor de Ecologische Transitie, gepubliceerd door de DGT op nap.dgt.es, CC BY); elders © OpenStreetMap-bijdragers (ODbL).</string>
+    <string name="hql_chargers_source_osm">Gegevens: © OpenStreetMap-bijdragers (ODbL).</string>
 </resources>
