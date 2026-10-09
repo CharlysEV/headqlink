@@ -458,12 +458,12 @@
 
     <!-- headqlink: cable USB del coche (experimental) -->
     <string name="hql_link_usb">Cabo USB</string>
-    <string name="hql_link_usb_detail">O celular se conecta à porta USB de dados do carro com um cabo de dados, sem Wi-Fi. Experimental: só funciona se o carro colocar o celular em modo acessório (nem todos os modelos fazem isso).</string>
+    <string name="hql_link_usb_detail">O celular se conecta à porta USB de dados do carro com um cabo de dados, sem Wi-Fi. Só funciona se o carro colocar o celular em modo acessório, como faz o C10.</string>
     <string name="hql_experimental">Experimental</string>
     <string name="hql_req_usb">Cabo USB de dados</string>
     <string name="hql_req_usb_why">Conecte o celular à porta USB de dados do carro com um cabo de dados (não um só de carga). O carro precisa colocar o celular em modo acessório: se nada acontecer, exporte o log e envie para nós (linhas HQL/USB).</string>
     <string name="hql_req_usb_chooser">Com o QDLink instalado, o Android pode perguntar qual app abre «QDriveLink» ao conectar o cabo: escolha o HeadQLink e «Sempre», ou desinstale o QDLink.</string>
-    <string name="hql_usb_guide_title">Conexão por cabo USB (experimental)</string>
+    <string name="hql_usb_guide_title">Conexão por cabo USB</string>
     <string name="hql_usb_guide">1. Conecte o celular à porta USB de dados do carro com um cabo de dados.\n2. Abra o app de espelhamento na tela do carro.\n3. Se o Android perguntar qual app abre «QDriveLink», escolha o HeadQLink e «Sempre».\nO HeadQLink inicia sozinho quando o carro coloca o celular em modo acessório, qualquer que seja a conexão escolhida; ao tirar o cabo, volta ao Wi-Fi. Se nada acontecer, exporte o log (Diagnóstico) e envie para nós.</string>
     <string name="hql_usb_net_waiting">Cabo USB: aguardando o carro (cabo de dados na porta USB de dados do carro)</string>
     <string name="hql_usb_net_connected">Cabo USB: %1$s</string>

@@ -62,6 +62,15 @@ final class Config {
     static final String DEFAULT_LINK = LINK_HOTSPOT;
 
     /**
+     * La conexión con la marca «Recomendado» en el asistente, según el modo: en Auto extendido, el cable USB (el más
+     * estable para la imagen compuesta: 60 fps y sin cortes de radio); en Auto, el punto de acceso del móvil, el probado
+     * en el C10 (decisión del 2026-10-09).
+     */
+    static String recommendedLink(String mode) {
+        return MODE_AA_EXT.equals(mode) ? LINK_USB : LINK_HOTSPOT;
+    }
+
+    /**
      * Motor de protocolo (qdauto §4.3): QDAuto (núcleo validado en el C10) u original (SspSession). Se lee al arrancar el
      * transporte: un cambio se aplica al desconectar y volver a conectar.
      */

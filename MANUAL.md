@@ -130,13 +130,13 @@ Pantalla «Tu móvil, en la pantalla del C10», con lo que hace falta «Antes de
 
 | Opción | Cómo funciona | Recomendación |
 |---|---|---|
-| «Punto de acceso del móvil» | El coche se conecta a la zona Wi-Fi de tu móvil. | **Recomendada**: es la que se ha probado en el C10, también con la pantalla apagada. |
+| «Punto de acceso del móvil» | El coche se conecta a la zona Wi-Fi de tu móvil. | **Recomendada con «Auto»**: es la que se ha probado en el C10, también con la pantalla apagada. |
 | «Wi-Fi Direct» | El coche crea la red y el móvil se une. La zona Wi-Fi del móvil tiene que estar apagada. | Es la conexión del HeadQLink original. Con el motor QDAuto aún no se ha probado en el coche. |
-| «Cable USB» (etiqueta «Experimental») | El móvil va por cable al puerto USB de datos del coche, sin Wi-Fi. | **Experimental**: solo funciona si el coche pone el móvil en modo accesorio, y aún no se sabe si el C10 lo hace. Ver [Conexión por cable USB (experimental)](#conexión-por-cable-usb-experimental). |
+| «Cable USB» | El móvil va por cable al puerto USB de datos del coche, sin Wi-Fi. | **Recomendada con «Auto extendido»**: imagen a 60 fps y sin cortes de radio, y el móvil carga. Solo funciona si el coche pone el móvil en modo accesorio, como hace el C10. Ver [Conexión por cable USB](#conexión-por-cable-usb). |
 
 > [!TIP]
-> La app marca por defecto «Punto de acceso del móvil», con la etiqueta «Recomendado». Si prefieres «Wi-Fi Direct»,
-> tócala antes de pulsar «Continuar».
+> La etiqueta «Recomendado» cambia con el modo: «Punto de acceso del móvil» con «Auto» y «Cable USB» con «Auto
+> extendido». Elige la que quieras antes de pulsar «Continuar».
 
 Pulsa «Continuar». Podrás cambiar el modo y la conexión cuando quieras con el botón «Cambiar» de la pantalla principal.
 
@@ -322,7 +322,7 @@ Si una versión nueva deja de funcionar:
 
 - Un texto de ayuda y el botón grande «Conectar» / «Desconectar».
 
-### Paso a paso con «Punto de acceso del móvil» (recomendado)
+### Paso a paso con «Punto de acceso del móvil» (recomendado con «Auto»)
 
 1. **Activa la zona Wi-Fi del móvil**, mejor en 5 GHz y sin apagado automático.
 2. **Solo la primera vez:** en el coche, ve a Ajustes › Wi-Fi y elige la zona Wi-Fi de tu móvil. Después el coche se
@@ -344,11 +344,11 @@ HeadQLink. La fila «Red» pasará de «Wi-Fi Direct: buscando el coche» a «Wi
 > Si QDLink está instalada en el móvil, **fuerza su detención antes de conectar**. Si está abierta, ocupa el puerto que
 > necesita HeadQLink y el coche no la encuentra.
 
-### Conexión por cable USB (experimental)
+### Conexión por cable USB
 
 Como la app original del coche, HeadQLink puede llevar la imagen **por cable** en vez de por Wi-Fi: el coche pone el
 móvil en «modo accesorio» y la sesión de siempre va por el cable. **Probado en el C10 (2026-10-06): 5 minutos a 40 fps,
-sin un solo corte**, y además el móvil carga. Sigue marcado como experimental hasta tener más viajes.
+sin un solo corte**, y además el móvil carga. Tras muchos viajes, es la conexión recomendada para «Auto extendido».
 
 1. Usa un **cable de datos** (no uno solo de carga) y conéctalo al **puerto USB de datos** del coche (el de la música o
    de Android Auto/CarPlay, no uno solo de carga).

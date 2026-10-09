@@ -69,6 +69,8 @@ final class CarUi {
     private final Handler main = new Handler(Looper.getMainLooper());
 
     private VirtualDisplay vd;
+    /** Dibuja la interfaz en el vídeo con la pantalla del móvil apagada (Android deja de componer la pantalla virtual). */
+    private PhoneOffRenderer phoneOff;
     private Presentation pres;
     private FrameLayout content;
     private View panel;
@@ -314,7 +316,16 @@ final class CarUi {
         return dm.createVirtualDisplay(name, w, h, dpi, surface, flags);
     }
 
+    /** Sin el dibujo propio con la pantalla del móvil apagada (vista previa). */
     void start(Surface surface) {
+        start(surface, null, null);
+    }
+
+    /**
+     * surface: entrada normal de la capa (la pantalla virtual compone ahí). manual y useManual: entrada y conmutador de la
+     * capa dibujada por HeadQLink con la pantalla del móvil apagada (PhoneOffRenderer); null sin ese modo.
+     */
+    void start(Surface surface, Surface manual, java.util.function.Consumer<Boolean> useManual) {
         main.post(() -> {
             vd = createDisplay(ctx, "HeadQLink-ui", width, height, dpi, surface, refreshHz);
             Display d = vd.getDisplay();
@@ -331,6 +342,12 @@ final class CarUi {
             } catch (RuntimeException e) {
                 L.e("CarUi: no se pudo mostrar la interfaz propia", e);
                 return;
+            }
+            if (manual != null && useManual != null) {
+                Presentation shown = pres;
+                phoneOff = new PhoneOffRenderer(ctx, main, manual, useManual, width, height,
+                        () -> shown.getWindow() != null ? shown.getWindow().getDecorView() : null);
+                phoneOff.start();
             }
             ctx.registerReceiver(batteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
             listenNight();
@@ -386,6 +403,8 @@ final class CarUi {
             CarCloud.release("ui");
             RoutePlanner.stop();
             RoadInfo.stop();
+            if (phoneOff != null) phoneOff.stop();
+            phoneOff = null;
             if (pres != null) pres.dismiss();
             if (vd != null) vd.release();
             pres = null;

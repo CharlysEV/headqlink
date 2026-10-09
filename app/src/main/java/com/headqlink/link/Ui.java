@@ -144,6 +144,22 @@ final class Ui {
     }
 
     /** Versión de Android Auto instalada, o null si no está. */
+    /** «v0.2.9» para la cabecera: la versión instalada de HeadQLink, sin el sufijo del motor («-qdauto»). */
+    static String appVersionLabel(Context ctx) {
+        try {
+            return versionLabel(ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0).versionName);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** Puro: «0.2.9-qdauto» → «v0.2.9». */
+    static String versionLabel(String versionName) {
+        if (versionName == null || versionName.isEmpty()) return "";
+        int dash = versionName.indexOf('-');
+        return "v" + (dash > 0 ? versionName.substring(0, dash) : versionName);
+    }
+
     static String aaVersion(Context ctx) {
         try {
             return ctx.getPackageManager().getPackageInfo(AaServerStarter.AA_PKG, 0).versionName;

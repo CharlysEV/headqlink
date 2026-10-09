@@ -108,6 +108,16 @@ final class GlFrameRelay {
     private SurfaceTexture ovSt;
     private Surface ovInput;
     private final float[] ovM = new float[16];
+    /**
+     * Segunda entrada de la capa, para la interfaz dibujada por HeadQLink con la pantalla del móvil apagada
+     * (PhoneOffRenderer): Android deja de componer la pantalla virtual y la interfaz llega por aquí. Superficie propia
+     * (nadie más la usa), así que no hay que quitársela a la pantalla virtual.
+     */
+    private int ov2Tex;
+    private SurfaceTexture ov2St;
+    private Surface ov2Input;
+    private final float[] ov2M = new float[16];
+    private volatile boolean manualOverlay;
     private volatile Gate gate;
 
     private EGLDisplay dpy = EGL14.EGL_NO_DISPLAY;
@@ -242,6 +252,25 @@ final class GlFrameRelay {
         return ovInput;
     }
 
+    /** Surface de la capa dibujada por HeadQLink con la pantalla del móvil apagada (PhoneOffRenderer), o null sin capa. */
+    Surface manualOverlayInput() {
+        return ov2Input;
+    }
+
+    /** true: la capa sale de manualOverlayInput (pantalla del móvil apagada); false: de la pantalla virtual. */
+    void setManualOverlay(boolean on) {
+        Handler hh = h;
+        if (hh == null) return;
+        hh.post(() -> {
+            if (manualOverlay == on) return;
+            manualOverlay = on;
+            L.i("GL relay: capa de la interfaz " + (on ? "dibujada por HeadQLink (pantalla del móvil apagada)" : "de la pantalla virtual"));
+            if (!hasNew) frameNs = System.nanoTime();
+            hasNew = true;
+            tryDraw();
+        });
+    }
+
     /** Tamaño de la capa de nuestra interfaz (llamar antes de start; por defecto, el de la salida). */
     void setOverlaySize(int w, int h) {
         ovW = w;
@@ -348,6 +377,8 @@ final class GlFrameRelay {
             if (input != null) input.release();
             if (ovSt != null) ovSt.release();
             if (ovInput != null) ovInput.release();
+            if (ov2St != null) ov2St.release();
+            if (ov2Input != null) ov2Input.release();
             if (dpy != EGL14.EGL_NO_DISPLAY) {
                 EGL14.eglMakeCurrent(dpy, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT);
                 if (eglSurface != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(dpy, eglSurface);
@@ -401,6 +432,12 @@ final class GlFrameRelay {
             ovSt.setDefaultBufferSize(ovW, ovH);
             ovSt.setOnFrameAvailableListener(s -> onOverlayFrame(), h);
             ovInput = new Surface(ovSt);
+            ov2Tex = newOesTexture();
+            android.opengl.Matrix.setIdentityM(ov2M, 0);
+            ov2St = new SurfaceTexture(ov2Tex);
+            ov2St.setDefaultBufferSize(ovW, ovH);
+            ov2St.setOnFrameAvailableListener(s -> onManualOverlayFrame(), h);
+            ov2Input = new Surface(ov2St);
             // Modo extendido: flujo constante hacia el coche (ver KEEPALIVE_MAX_FPS).
             h.postDelayed(keepAlive, 100);
         }
@@ -417,9 +454,28 @@ final class GlFrameRelay {
         return t[0];
     }
 
+    /** Nuevo frame de nuestra interfaz dibujado por HeadQLink (pantalla del móvil apagada). */
+    private void onManualOverlayFrame() {
+        if (released) return;
+        ov2St.updateTexImage();
+        if (!manualOverlay) return;
+        statOverlay++;
+        if (splashOnly && aaHasFrame) return;
+        ov2St.getTransformMatrix(ov2M);
+        if (!hasNew) frameNs = System.nanoTime();
+        hasNew = true;
+        tryDraw();
+    }
+
     /** Nuevo frame de nuestra interfaz: también hay que recomponer. */
     private void onOverlayFrame() {
         if (released) return;
+        if (manualOverlay) {
+            // La pantalla virtual vuelve a componer antes de que se deje de dibujar a mano: se consume sin usarlo.
+            ovSt.updateTexImage();
+            ovSt.getTransformMatrix(ovM);
+            return;
+        }
         statOverlay++;
         ovSt.updateTexImage();
         // La animación de carga ya no se ve: sus últimos frames no provocan dibujos.
@@ -513,15 +569,17 @@ final class GlFrameRelay {
 
     private void draw(long now) {
         GLES20.glUseProgram(program);
+        int layer = manualOverlay ? ov2Tex : ovTex;
+        float[] layerM = manualOverlay ? ov2M : ovM;
         if (withOverlay && splashOnly) {
             // Animación de carga hasta que AA da su primer frame; después, solo AA.
             if (aaHasFrame) drawAa(0, outW, 0f);
-            else drawLayer(ovTex, ovM, 0, 0, outW, outH, 0f, 0f, 1f, 1f, 0f);
+            else drawLayer(layer, layerM, 0, 0, outW, outH, 0f, 0f, 1f, 1f, 0f);
         } else if (withOverlay) {
             // Fondo: nuestra interfaz a pantalla completa (escalada a la salida); encima, AA en su
             // zona si está visible (y ya ha dado imagen: antes se ve la animación de carga), con
             // las esquinas redondeadas sobre el gris del panel.
-            drawLayer(ovTex, ovM, 0, 0, outW, outH, 0f, 0f, 1f, 1f, 0f);
+            drawLayer(layer, layerM, 0, 0, outW, outH, 0f, 0f, 1f, 1f, 0f);
             if (aaVisible && aaHasFrame) drawAa(aaOutX, aaOutW, AA_CORNER_RADIUS * outW / (float) ovW);
         } else {
             drawAa(0, outW, 0f);

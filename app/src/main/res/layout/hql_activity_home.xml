@@ -31,11 +31,21 @@
 
             <TextView
                 style="@style/HQL.Text.Brand"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
-                android:layout_weight="1"
                 android:text="HeadQLink" />
+
+            <!-- headqlink: la versión instalada, al lado del nombre -->
+            <TextView
+                android:id="@+id/hql_home_version"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:fontFamily="sans-serif-condensed"
+                android:textColor="@color/hql_text_dim"
+                android:textSize="13sp" />
 
             <ImageButton
                 android:id="@+id/hql_home_menu"

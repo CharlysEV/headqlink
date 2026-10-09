@@ -457,12 +457,12 @@
 
     <!-- headqlink: cable USB del coche (experimental) -->
     <string name="hql_link_usb">USB-Kabel</string>
-    <string name="hql_link_usb_detail">Das Handy wird per Datenkabel mit dem USB-Datenanschluss des Fahrzeugs verbunden, ohne Wi-Fi. Experimentell: Funktioniert nur, wenn das Fahrzeug das Handy in den Zubehörmodus schaltet (nicht jedes Modell tut das).</string>
+    <string name="hql_link_usb_detail">Das Handy wird per Datenkabel mit dem USB-Datenanschluss des Fahrzeugs verbunden, ohne Wi-Fi. Funktioniert nur, wenn das Fahrzeug das Handy in den Zubehörmodus schaltet, wie der C10.</string>
     <string name="hql_experimental">Experimentell</string>
     <string name="hql_req_usb">USB-Datenkabel</string>
     <string name="hql_req_usb_why">Verbinde das Handy per Datenkabel (kein reines Ladekabel) mit dem USB-Datenanschluss des Fahrzeugs. Das Fahrzeug muss das Handy in den Zubehörmodus schalten: Passiert nichts, exportiere das Log und schick es uns (Zeilen HQL/USB).</string>
     <string name="hql_req_usb_chooser">Ist QDLink installiert, fragt Android beim Einstecken eventuell, welche App „QDriveLink“ öffnen soll: Wähle HeadQLink und „Immer“, oder deinstalliere QDLink.</string>
-    <string name="hql_usb_guide_title">Verbindung per USB-Kabel (experimentell)</string>
+    <string name="hql_usb_guide_title">Verbindung per USB-Kabel</string>
     <string name="hql_usb_guide">1. Verbinde das Handy per Datenkabel mit dem USB-Datenanschluss des Fahrzeugs.\n2. Öffne die Spiegelungs-App auf dem Fahrzeugdisplay.\n3. Fragt Android, welche App „QDriveLink“ öffnen soll, wähle HeadQLink und „Immer“.\nHeadQLink startet von selbst, sobald das Fahrzeug das Handy in den Zubehörmodus schaltet, egal welche Verbindung gewählt ist; ziehst du das Kabel ab, geht es zurück zu Wi-Fi. Passiert nichts, exportiere das Log (Diagnose) und schick es uns.</string>
     <string name="hql_usb_net_waiting">USB-Kabel: warte auf das Fahrzeug (Datenkabel im USB-Datenanschluss des Fahrzeugs)</string>
     <string name="hql_usb_net_connected">USB-Kabel: %1$s</string>

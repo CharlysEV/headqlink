@@ -457,12 +457,12 @@
 
     <!-- headqlink: cable USB del coche (experimental) -->
     <string name="hql_link_usb">USB-kabel</string>
-    <string name="hql_link_usb_detail">De telefoon wordt met een datakabel aangesloten op de USB-datapoort van de auto, zonder Wi-Fi. Experimenteel: werkt alleen als de auto de telefoon in accessoiremodus zet (niet elk model doet dat).</string>
+    <string name="hql_link_usb_detail">De telefoon wordt met een datakabel aangesloten op de USB-datapoort van de auto, zonder Wi-Fi. Werkt alleen als de auto de telefoon in accessoiremodus zet, zoals de C10.</string>
     <string name="hql_experimental">Experimenteel</string>
     <string name="hql_req_usb">USB-datakabel</string>
     <string name="hql_req_usb_why">Sluit de telefoon met een datakabel (geen kabel die alleen oplaadt) aan op de USB-datapoort van de auto. De auto moet de telefoon in accessoiremodus zetten: gebeurt er niets, exporteer dan het logbestand en stuur het naar ons (regels HQL/USB).</string>
     <string name="hql_req_usb_chooser">Met QDLink geïnstalleerd kan Android bij het aansluiten van de kabel vragen welke app ‘QDriveLink’ opent: kies HeadQLink en ‘Altijd’, of verwijder QDLink.</string>
-    <string name="hql_usb_guide_title">Verbinding via USB-kabel (experimenteel)</string>
+    <string name="hql_usb_guide_title">Verbinding via USB-kabel</string>
     <string name="hql_usb_guide">1. Sluit de telefoon met een datakabel aan op de USB-datapoort van de auto.\n2. Open de spiegelapp op het autoscherm.\n3. Vraagt Android welke app ‘QDriveLink’ opent, kies dan HeadQLink en ‘Altijd’.\nHeadQLink start vanzelf zodra de auto de telefoon in accessoiremodus zet, welke verbinding je ook hebt gekozen; als je de kabel loskoppelt, gaat het terug naar Wi-Fi. Gebeurt er niets, exporteer dan het logbestand (Diagnose) en stuur het naar ons.</string>
     <string name="hql_usb_net_waiting">USB-kabel: wachten op de auto (datakabel in de USB-datapoort van de auto)</string>
     <string name="hql_usb_net_connected">USB-kabel: %1$s</string>

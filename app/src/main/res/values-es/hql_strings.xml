@@ -458,12 +458,12 @@
 
     <!-- headqlink: cable USB del coche (experimental) -->
     <string name="hql_link_usb">Cable USB</string>
-    <string name="hql_link_usb_detail">El móvil se conecta al puerto USB de datos del coche con un cable de datos, sin Wi-Fi. Experimental: solo funciona si el coche pone el móvil en modo accesorio (no todos los modelos lo hacen).</string>
+    <string name="hql_link_usb_detail">El móvil se conecta al puerto USB de datos del coche con un cable de datos, sin Wi-Fi. Solo funciona si el coche pone el móvil en modo accesorio, como hace el C10.</string>
     <string name="hql_experimental">Experimental</string>
     <string name="hql_req_usb">Cable USB de datos</string>
     <string name="hql_req_usb_why">Conecta el móvil al puerto USB de datos del coche con un cable de datos (no uno solo de carga). El coche tiene que poner el móvil en modo accesorio: si no pasa nada, exporta el log y envíanoslo (líneas HQL/USB).</string>
     <string name="hql_req_usb_chooser">Con QDLink instalada, Android puede preguntar qué app abre «QDriveLink» al conectar el cable: elige HeadQLink y «Siempre», o desinstala QDLink.</string>
-    <string name="hql_usb_guide_title">Conexión por cable USB (experimental)</string>
+    <string name="hql_usb_guide_title">Conexión por cable USB</string>
     <string name="hql_usb_guide">1. Conecta el móvil al puerto USB de datos del coche con un cable de datos.\n2. Abre la app de espejo en la pantalla del coche.\n3. Si Android pregunta qué app abre «QDriveLink», elige HeadQLink y «Siempre».\nHeadQLink arranca solo cuando el coche pone el móvil en modo accesorio, sea cual sea la conexión elegida; al quitar el cable vuelve al Wi-Fi. Si no pasa nada, exporta el log (Diagnóstico) y envíanoslo.</string>
     <string name="hql_usb_net_waiting">Cable USB: esperando al coche (cable de datos en el puerto USB de datos del coche)</string>
     <string name="hql_usb_net_connected">Cable USB: %1$s</string>

@@ -195,7 +195,7 @@ final class IptvScreen implements CarScreen {
         FrameLayout f = new FrameLayout(c);
         f.setBackgroundColor(Color.BLACK);
         player = new ExoPlayer.Builder(c.getApplicationContext()).build();
-        PlayerView pv = new PlayerView(c);
+        PlayerView pv = CarStyle.player(c);
         pv.setPlayer(player);
         f.addView(pv, CarStyle.match());
         TextView status = CarStyle.text(c, ch.name, 26, CarStyle.TEXT);

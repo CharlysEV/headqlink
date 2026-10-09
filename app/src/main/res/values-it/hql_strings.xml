@@ -458,12 +458,12 @@
 
     <!-- headqlink: cable USB del coche (experimental) -->
     <string name="hql_link_usb">Cavo USB</string>
-    <string name="hql_link_usb_detail">Il telefono si collega alla porta USB dati dell\'auto con un cavo dati, senza Wi-Fi. Sperimentale: funziona solo se l\'auto mette il telefono in modalità accessorio (non tutti i modelli lo fanno).</string>
+    <string name="hql_link_usb_detail">Il telefono si collega alla porta USB dati dell\'auto con un cavo dati, senza Wi-Fi. Funziona solo se l\'auto mette il telefono in modalità accessorio, come fa la C10.</string>
     <string name="hql_experimental">Sperimentale</string>
     <string name="hql_req_usb">Cavo USB dati</string>
     <string name="hql_req_usb_why">Collega il telefono alla porta USB dati dell\'auto con un cavo dati (non uno solo di ricarica). L\'auto deve mettere il telefono in modalità accessorio: se non succede nulla, esporta il log e inviacelo (righe HQL/USB).</string>
     <string name="hql_req_usb_chooser">Con QDLink installata, Android può chiedere quale app apre «QDriveLink» quando colleghi il cavo: scegli HeadQLink e «Sempre», oppure disinstalla QDLink.</string>
-    <string name="hql_usb_guide_title">Connessione via cavo USB (sperimentale)</string>
+    <string name="hql_usb_guide_title">Connessione via cavo USB</string>
     <string name="hql_usb_guide">1. Collega il telefono alla porta USB dati dell\'auto con un cavo dati.\n2. Apri l\'app di mirroring sullo schermo dell\'auto.\n3. Se Android chiede quale app apre «QDriveLink», scegli HeadQLink e «Sempre».\nHeadQLink si avvia da solo quando l\'auto mette il telefono in modalità accessorio, qualunque sia la connessione scelta; quando scolleghi il cavo torna al Wi-Fi. Se non succede nulla, esporta il log (Diagnostica) e inviacelo.</string>
     <string name="hql_usb_net_waiting">Cavo USB: in attesa dell\'auto (cavo dati nella porta USB dati dell\'auto)</string>
     <string name="hql_usb_net_connected">Cavo USB: %1$s</string>

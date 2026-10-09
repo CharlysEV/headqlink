@@ -130,13 +130,13 @@ La schermata «Il tuo telefono, sullo schermo della C10», con quello che serve 
 
 | Opzione | Come funziona | Consiglio |
 |---|---|---|
-| «Hotspot del telefono» | L'auto si collega all'hotspot del tuo telefono. | **Consigliata**: è quella provata sulla C10, anche con lo schermo spento. |
+| «Hotspot del telefono» | L'auto si collega all'hotspot del tuo telefono. | **Consigliata con «Auto»**: è quella provata sulla C10, anche con lo schermo spento. |
 | «Wi-Fi Direct» | L'auto crea la rete e il telefono si collega. L'hotspot del telefono deve essere spento. | È la connessione dell'HeadQLink originale. Con il motore QDAuto non è ancora stata provata in auto. |
-| «Cavo USB» (etichetta «Sperimentale») | Il telefono si collega con un cavo alla porta USB dati dell'auto, senza Wi-Fi. | **Sperimentale**: funziona solo se l'auto mette il telefono in modalità accessorio, e non si sa ancora se la C10 lo fa. Vedi [Connessione via cavo USB (sperimentale)](#connessione-via-cavo-usb-sperimentale). |
+| «Cavo USB» | Il telefono si collega con un cavo alla porta USB dati dell'auto, senza Wi-Fi. | **Consigliata con «Auto esteso»**: immagine a 60 fps senza interruzioni radio, e il telefono si ricarica. Funziona solo se l'auto mette il telefono in modalità accessorio, come fa la C10. Vedi [Connessione via cavo USB](#connessione-via-cavo-usb). |
 
 > [!TIP]
-> L'app seleziona «Hotspot del telefono» di default, con l'etichetta «Consigliato». Se preferisci «Wi-Fi Direct»,
-> toccalo prima di toccare «Continua».
+> L'etichetta «Consigliato» cambia con la modalità: «Hotspot del telefono» con «Auto» e «Cavo USB» con «Auto
+> esteso». Scegli quella che vuoi prima di toccare «Continua».
 
 Tocca «Continua». Puoi cambiare la modalità e la connessione quando vuoi con il pulsante «Cambia» della schermata
 principale.
@@ -322,7 +322,7 @@ Se una nuova versione smette di funzionare:
 
 - Un testo di aiuto e il grande pulsante «Connetti» / «Disconnetti».
 
-### Passo per passo con «Hotspot del telefono» (consigliato)
+### Passo per passo con «Hotspot del telefono» (consigliato con «Auto»)
 
 1. **Attiva l'hotspot del telefono**, meglio a 5 GHz e senza spegnimento automatico.
 2. **Solo la prima volta:** in auto, vai in Impostazioni › Wi-Fi e scegli l'hotspot del tuo telefono. Da lì in poi
@@ -344,13 +344,13 @@ riga «Rete» passa da «Wi-Fi Direct: ricerca dell'auto» a «Wi-Fi Direct: nel
 > Se sul telefono è installata QDLink, **forzane l'interruzione prima di connetterti**. Se è aperta, occupa la porta che
 > serve a HeadQLink e l'auto non trova HeadQLink.
 
-### Connessione via cavo USB (sperimentale)
+### Connessione via cavo USB
 
 > **Provata sulla C10 (2026-10-06): 5 minuti a 40 fps senza cadute**, e intanto il telefono si ricarica. Se l'auto non risponde entro pochi secondi, **scollega e ricollega il cavo**: l'auto parla solo nei primi secondi dopo il collegamento.
 
 Come l'app originale dell'auto, HeadQLink può portare l'immagine **via cavo** invece che via Wi-Fi: l'auto mette il
-telefono in «modalità accessorio» e la solita sessione passa dal cavo. **Non si sa ancora se la C10 lo fa** (l'app
-originale dice che lo fanno solo alcuni modelli), quindi è sperimentale.
+telefono in «modalità accessorio» e la solita sessione passa dal cavo. La C10 lo fa (l'app originale dice che lo fanno
+solo alcuni modelli), e dopo molti viaggi è la connessione consigliata per «Auto esteso».
 
 1. Usa un **cavo dati** (non uno solo di ricarica) e collegalo alla **porta USB dati** dell'auto (quella per la musica o
    per Android Auto/CarPlay, non una porta solo di ricarica).

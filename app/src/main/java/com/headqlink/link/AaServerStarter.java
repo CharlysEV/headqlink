@@ -609,10 +609,19 @@ public final class AaServerStarter {
         }
     }
 
+    /** Esta automatización puso la capa (y por tanto la quita al terminar). */
+    private boolean coverHeld;
+
     private void begin(Context ctx) {
         appCtx = ctx;
         TouchService cover = TouchService.instance;
-        if (cover != null) cover.acquireCover(coverText(wantRunning), !wantRunning && !checkOnly);
+        // Al apagar el servidor, sin capa: «Cerrando Auto…» tapaba el móvil entero justo cuando el usuario lo coge (al
+        // desconectar o al desbloquear); se prefiere ver el menú de AA abrirse y cerrarse 1-2 s (decisión del 2026-10-09).
+        boolean stopping = !wantRunning && !checkOnly;
+        if (cover != null && !stopping) {
+            cover.acquireCover(coverText(wantRunning), false);
+            coverHeld = true;
+        }
         L.i("AA server: abriendo ajustes de Android Auto");
         Intent i = new Intent().setClassName(AA_PKG, AA_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
@@ -921,7 +930,8 @@ public final class AaServerStarter {
 
     private void complete(boolean success) {
         TouchService cover = TouchService.instance;
-        if (cover != null) cover.releaseCover(1200); // tapa también las animaciones de vuelta
+        if (cover != null && coverHeld) cover.releaseCover(1200); // tapa también las animaciones de vuelta
+        coverHeld = false;
         ok.set(success);
         done.countDown();
     }

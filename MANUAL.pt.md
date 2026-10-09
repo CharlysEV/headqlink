@@ -146,13 +146,13 @@ Ecrã «O seu telemóvel, no ecrã do C10», com o que é preciso «Antes de com
 
 | Opção | Como funciona | Recomendação |
 |---|---|---|
-| «Hotspot do telemóvel» | O carro liga-se ao hotspot do seu telemóvel. | **Recomendada**: é a que foi testada no C10, também com o ecrã desligado. |
+| «Hotspot do telemóvel» | O carro liga-se ao hotspot do seu telemóvel. | **Recomendada com «Auto»**: é a que foi testada no C10, também com o ecrã desligado. |
 | «Wi-Fi Direct» | O carro cria a rede e o telemóvel liga-se a ela. O hotspot do telemóvel tem de estar desligado. | É a ligação do HeadQLink original. Com o motor QDAuto ainda não foi testada no carro. |
-| «Cabo USB» (etiqueta «Experimental») | O telemóvel liga-se por cabo à porta USB de dados do carro, sem Wi-Fi. | **Experimental**: só funciona se o carro puser o telemóvel em modo acessório, e ainda não se sabe se o C10 o faz. Veja [Ligação por cabo USB (experimental)](#ligação-por-cabo-usb-experimental). |
+| «Cabo USB» | O telemóvel liga-se por cabo à porta USB de dados do carro, sem Wi-Fi. | **Recomendada com «Auto estendido»**: imagem a 60 fps sem cortes de rádio, e o telemóvel carrega. Só funciona se o carro puser o telemóvel em modo acessório, como faz o C10. Veja [Ligação por cabo USB](#ligação-por-cabo-usb). |
 
 > [!TIP]
-> A aplicação vem com «Hotspot do telemóvel» selecionado, com a etiqueta «Recomendado». Se preferir «Wi-Fi Direct»,
-> toque nele antes de tocar em «Continuar».
+> A etiqueta «Recomendado» muda com o modo: «Hotspot do telemóvel» com «Auto» e «Cabo USB» com «Auto
+> estendido». Escolha a que quiser antes de tocar em «Continuar».
 
 Toque em «Continuar». Pode alterar o modo e a ligação quando quiser com o botão «Alterar» do ecrã principal.
 
@@ -335,7 +335,7 @@ Se uma versão nova deixar de funcionar:
 
 - Um texto de ajuda e o botão grande «Ligar» / «Desligar».
 
-### Passo a passo com «Hotspot do telemóvel» (recomendado)
+### Passo a passo com «Hotspot do telemóvel» (recomendado com «Auto»)
 
 1. **Ative o hotspot do telemóvel**, de preferência em 5 GHz e sem desativação automática.
 2. **Só da primeira vez:** no carro, vá a Definições › Wi-Fi e escolha o hotspot do seu telemóvel. Depois o carro
@@ -356,13 +356,13 @@ depois o HeadQLink. A linha «Rede» passa de «Wi-Fi Direct: a procurar o carro
 > Se o QDLink estiver instalado no telemóvel, **force a paragem dele antes de ligar**. Se estiver aberto, ocupa a porta
 > de que o HeadQLink precisa e o carro não o encontra.
 
-### Ligação por cabo USB (experimental)
+### Ligação por cabo USB
 
 > **Testado no C10 (2026-10-06): 5 minutos a 40 fps sem cortes**, e o telemóvel carrega. Se o carro não responder em poucos segundos, **desligue e volte a ligar o cabo**: o carro só fala nos primeiros segundos depois de ligar o cabo.
 
 Tal como a aplicação original do carro, o HeadQLink pode levar a imagem **por cabo** em vez de por Wi-Fi: o carro põe o
-telemóvel em «modo acessório» e a sessão de sempre passa pelo cabo. **Ainda não se sabe se o C10 o faz** (a aplicação
-original diz que só alguns modelos), por isso é experimental.
+telemóvel em «modo acessório» e a sessão de sempre passa pelo cabo. O C10 fá-lo (a aplicação original diz que só
+alguns modelos), e depois de muitas viagens é a ligação recomendada para «Auto estendido».
 
 1. Use um **cabo de dados** (não um só de carregamento) e ligue-o à **porta USB de dados** do carro (a da música ou do
    Android Auto/CarPlay, não uma só de carregamento).

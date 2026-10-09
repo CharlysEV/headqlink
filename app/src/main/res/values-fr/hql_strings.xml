@@ -458,12 +458,12 @@
 
     <!-- headqlink: cable USB del coche (experimental) -->
     <string name="hql_link_usb">Câble USB</string>
-    <string name="hql_link_usb_detail">Le téléphone se branche sur le port USB de données de la voiture avec un câble de données, sans Wi-Fi. Expérimental : ne fonctionne que si la voiture fait passer le téléphone en mode accessoire (ce n\'est pas le cas de tous les modèles).</string>
+    <string name="hql_link_usb_detail">Le téléphone se branche sur le port USB de données de la voiture avec un câble de données, sans Wi-Fi. Ne fonctionne que si la voiture fait passer le téléphone en mode accessoire, comme la C10.</string>
     <string name="hql_experimental">Expérimental</string>
     <string name="hql_req_usb">Câble USB de données</string>
     <string name="hql_req_usb_why">Branchez le téléphone sur le port USB de données de la voiture avec un câble de données (pas un câble de charge seule). La voiture doit faire passer le téléphone en mode accessoire : s\'il ne se passe rien, exportez le journal et envoyez-le-nous (lignes HQL/USB).</string>
     <string name="hql_req_usb_chooser">Si QDLink est installé, Android peut demander quelle appli ouvre « QDriveLink » au branchement du câble : choisissez HeadQLink et « Toujours », ou désinstallez QDLink.</string>
-    <string name="hql_usb_guide_title">Connexion par câble USB (expérimental)</string>
+    <string name="hql_usb_guide_title">Connexion par câble USB</string>
     <string name="hql_usb_guide">1. Branchez le téléphone sur le port USB de données de la voiture avec un câble de données.\n2. Ouvrez l\'appli de duplication d\'écran de la voiture.\n3. Si Android demande quelle appli ouvre « QDriveLink », choisissez HeadQLink et « Toujours ».\nHeadQLink démarre tout seul quand la voiture fait passer le téléphone en mode accessoire, quelle que soit la connexion choisie ; quand vous débranchez le câble, il repasse en Wi-Fi. S\'il ne se passe rien, exportez le journal (Diagnostic) et envoyez-le-nous.</string>
     <string name="hql_usb_net_waiting">Câble USB : en attente de la voiture (câble de données dans le port USB de données de la voiture)</string>
     <string name="hql_usb_net_connected">Câble USB : %1$s</string>

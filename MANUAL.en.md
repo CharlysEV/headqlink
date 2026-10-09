@@ -129,13 +129,13 @@ The "Your phone, on the C10's screen" screen, with what you need "Before you sta
 
 | Option | How it works | Recommendation |
 |---|---|---|
-| "Phone hotspot" | The car joins your phone's hotspot. | **Recommended**: it's the one tested on the C10, also with the screen off. |
+| "Phone hotspot" | The car joins your phone's hotspot. | **Recommended with "Auto"**: it's the one tested on the C10, also with the screen off. |
 | "Wi-Fi Direct" | The car creates the network and the phone joins it. The phone's hotspot must be off. | The original HeadQLink's connection. Not yet tested in the car with the QDAuto engine. |
-| "USB cable" ("Experimental" tag) | The phone connects with a cable to the car's USB data port, without Wi-Fi. | **Experimental**: it only works if the car switches the phone to accessory mode, and it's not yet known whether the C10 does. See [USB cable connection (experimental)](#usb-cable-connection-experimental). |
+| "USB cable" | The phone connects with a cable to the car's USB data port, without Wi-Fi. | **Recommended with "Auto extended"**: picture at 60 fps without radio dropouts, and the phone charges. It only works if the car switches the phone to accessory mode, as the C10 does. See [USB cable connection](#usb-cable-connection). |
 
 > [!TIP]
-> The app selects "Phone hotspot" by default, with the "Recommended" tag. If you prefer "Wi-Fi Direct", tap it before
-> tapping "Continue".
+> The "Recommended" tag follows the mode: "Phone hotspot" with "Auto" and "USB cable" with "Auto extended". Pick the
+> one you want before tapping "Continue".
 
 Tap "Continue". You can change the mode and the connection at any time with the "Change" button on the main screen.
 
@@ -317,7 +317,7 @@ If a new version stops working:
 
 - A help text and the big "Connect" / "Disconnect" button.
 
-### Step by step with "Phone hotspot" (recommended)
+### Step by step with "Phone hotspot" (recommended with "Auto")
 
 1. **Turn on the phone's hotspot**, preferably on 5 GHz and with no auto-off.
 2. **First time only:** in the car, go to Settings › Wi-Fi and pick your phone's hotspot. After that the car joins by
@@ -338,13 +338,13 @@ If a new version stops working:
 > If QDLink is installed on the phone, **force stop it before connecting**. If it's open, it takes the port HeadQLink
 > needs and the car can't find HeadQLink.
 
-### USB cable connection (experimental)
+### USB cable connection
 
 > **Tested on the C10 (2026-10-06): 5 minutes at 40 fps with no drops**, and the phone charges. If the car doesn't answer within a few seconds, **unplug and plug the cable back in**: the car only talks during the first seconds after plugging in.
 
 Like the car's original app, HeadQLink can carry the picture **over a cable** instead of Wi-Fi: the car switches the
-phone to "accessory mode" and the usual session goes over the cable. **It's not yet known whether the C10 does this**
-(the original app says only some models do), so it's experimental.
+phone to "accessory mode" and the usual session goes over the cable. The C10 does it (the original app says only some
+models do), and after many trips it's the recommended connection for "Auto extended".
 
 1. Use a **data cable** (not a charge-only one) and plug it into the car's **USB data port** (the one for music or
    Android Auto/CarPlay, not a charge-only port).

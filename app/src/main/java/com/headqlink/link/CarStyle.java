@@ -156,6 +156,14 @@ final class CarStyle {
         t.setTextColor(on ? ON_ACCENT : CarKit.DIM);
     }
 
+    /**
+     * Reproductor de vídeo con TextureView: el vídeo va dentro del árbol de vistas y también se ve cuando HeadQLink dibuja
+     * la interfaz él mismo con la pantalla del móvil apagada (PhoneOffRenderer); una SurfaceView la compone Android aparte.
+     */
+    static androidx.media3.ui.PlayerView player(Context c) {
+        return (androidx.media3.ui.PlayerView) android.view.LayoutInflater.from(c).inflate(R.layout.hql_player_texture, null, false);
+    }
+
     static FrameLayout.LayoutParams match() {
         return new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
     }

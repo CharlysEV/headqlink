@@ -2264,3 +2264,52 @@ Líneas nuevas:
 |---|---|
 | `AapProjectionActivity: headqlink - la proyección no se abre en el móvil (va al coche); se cierra` | Alguien intentó abrirla |
 | `SelfMode: AA no conectó; con el coche conectado no abro su pantalla de permisos en el móvil` | Self-Mode caducado en plena sesión |
+
+## 25. Modo extendido con la pantalla del móvil apagada, día y noche por luz y otros retoques (2026-10-09)
+
+### 25.1 El panel se congelaba con la pantalla del móvil apagada (a batería)
+
+**Síntoma.** Por Wi-Fi, al bloquear el móvil, la parte del extendido se quedaba congelada en el coche (Android Auto seguía). Volvía al desbloquear y se congelaba otra vez a los 5-6 s de bloquear. El móvil se bloquea 5 s después de apagar la pantalla (`lock_screen_lock_after_timeout = 5000`).
+
+**Causa.** Prueba con el coche simulado y el móvil a batería:
+- Con la pantalla del móvil en OFF, la Presentation de CarUi sigue dibujando (`gfxinfo`: de 10209 a 10307 fotogramas en 15 s), pero al relay no le llega ni un fotograma de la capa.
+- Android deja de componer nuestra pantalla virtual porque va en el grupo de la del móvil.
+- Android Auto, con su propia pantalla de sistema, seguía a 30 fps.
+- Cargando no pasaba: Samsung deja la pantalla en reposo para el AOD de la carga.
+- Una app no puede crear su pantalla virtual en otro grupo (`VIRTUAL_DISPLAY_FLAG_OWN_DISPLAY_GROUP` pide `ADD_TRUSTED_DISPLAY`).
+
+**Arreglo** (`PhoneOffRenderer`):
+- Con la pantalla del móvil en OFF o DOZE_SUSPEND (se vigila con `DisplayListener` y, por si acaso, cada 1 s), HeadQLink dibuja él mismo el árbol de vistas de la Presentation.
+  - Usa un `HardwareRenderer` propio y redibuja cada vez que la Presentation dibuja (`OnDrawListener`).
+  - Dibuja en una segunda entrada del relay que solo usa él (`GlFrameRelay.manualOverlayInput`), y el relay toma la capa de ahí (`setManualOverlay`).
+- La pantalla virtual no se toca. Quitarle la superficie con Android aún conectado tumbaba la app en el RenderThread («getFrame() called on a context with no surface!»).
+- Los reproductores (Vídeos, TV) pasan a `TextureView` (`CarStyle.player`, `app:surface_type="texture_view"`), porque una SurfaceView la compone Android aparte y no saldría.
+- Probado: con la pantalla apagada y el coche simulado cambiando de pantalla cada 4 s, 38 fotogramas dibujados por HeadQLink en 42 s y sin cierres.
+
+### 25.2 Día y noche con el sensor de luz del móvil
+
+En túneles, en el garaje y en días nublados, Android Auto y la pantalla del coche se oscurecían y la barra del extendido no. Le mandábamos a AA amanecer y atardecer (`NightMode.AUTO`), y el coche no avisa cuando cambia su tema automático (hoy, ni un `Global/DarkModeOn`).
+
+Ahora, al empezar la sesión, `AaPassthroughSource.sessionNightMode` elige:
+- el tema que dijo el coche, si alguna vez lo dijo;
+- si no, el sensor de luz del móvil (`LIGHT_SENSOR`, 100 lux con margen);
+- sin sensor de luz, `AUTO`.
+
+Android Auto y el panel siguen la misma señal.
+
+### 25.3 Otros cambios
+
+- **«Cerrando Auto…» sin capa.** Al apagar el servidor de head unit, la automatización ya no pone la capa: tapaba el móvil justo al desconectar o al desbloquear. Se ve el menú de AA 1-2 s. El arranque mantiene «Arrancando Auto…».
+- **Recomendado según el modo** (`Config.recommendedLink`): cable USB en Auto extendido y punto de acceso en Auto. El cable deja de llevar la marca «Experimental».
+- **Versión en la cabecera** de la pantalla principal («HEADQLINK v0.2.9», `Ui.versionLabel`).
+
+Líneas nuevas:
+
+| Línea | Significado |
+|---|---|
+| `CarUi: pantalla del móvil apagada: dibujo yo la interfaz (Android no compone la pantalla virtual)` | Empieza el dibujo propio |
+| `GL relay: capa de la interfaz dibujada por HeadQLink (pantalla del móvil apagada)` / `… de la pantalla virtual` | El relay cambia de entrada |
+| `CarUi: pantalla del móvil encendida: vuelve la composición de Android (N fotogramas dibujados por HeadQLink)` | Fin del dibujo propio |
+| `AA: día y noche con el sensor de luz del móvil (túneles, garajes)` | Día y noche de la sesión |
+
+Pruebas: `PhoneOffRendererTest`, `SessionNightModeTest` y `VersionLabelTest`.

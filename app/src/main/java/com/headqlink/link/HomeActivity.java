@@ -79,6 +79,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         modeDetail = findViewById(R.id.hql_home_mode_detail);
         hint = findViewById(R.id.hql_home_hint);
         toggle = findViewById(R.id.hql_home_toggle);
+        ((TextView) findViewById(R.id.hql_home_version)).setText(Ui.appVersionLabel(this));
         View menu = findViewById(R.id.hql_home_menu);
         menu.setOnClickListener(v -> showMenu(menu));
         btAuto = findViewById(R.id.hql_home_bt_auto);

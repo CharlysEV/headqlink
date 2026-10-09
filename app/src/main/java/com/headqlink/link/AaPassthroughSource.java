@@ -206,12 +206,34 @@ final class AaPassthroughSource implements VideoSource {
         }
     }
 
-    /** Al arrancar: el último tema que dijo el coche, si alguna vez lo dijo (si no, AA sigue con su día y noche). */
+    /**
+     * Día o noche de la sesión (lo que Open Headunit le manda a AA y lo que sigue nuestro panel, CarTheme), pura:
+     * - si el coche dijo alguna vez su tema (Global/DarkModeOn), ese;
+     * - si no, el sensor de luz del móvil (como hace el propio Android Auto: viaje del 2026-10-09, en túneles, en el
+     *   garaje y en días nublados AA y la pantalla del coche se oscurecían y nuestra barra no, porque le mandábamos
+     *   amanecer y atardecer). El coche no avisa cuando cambia su tema automático;
+     * - sin sensor de luz, amanecer y atardecer.
+     */
+    static Settings.NightMode sessionNightMode(int carDark, boolean hasLightSensor) {
+        if (carDark >= 0) return carDark == 1 ? Settings.NightMode.NIGHT : Settings.NightMode.DAY;
+        return hasLightSensor ? Settings.NightMode.LIGHT_SENSOR : Settings.NightMode.AUTO;
+    }
+
+    /** Al arrancar: el día y la noche de la sesión (sessionNightMode). */
     private void applyRememberedCarTheme() {
         int d = new Config(ctx).carDark();
-        if (d < 0) return;
-        App.Companion.provide(ctx).getSettings().setNightMode(d == 1 ? Settings.NightMode.NIGHT : Settings.NightMode.DAY);
-        L.i("AA: modo " + (d == 1 ? "noche" : "día") + " como la pantalla del coche (el último que dijo)");
+        android.hardware.SensorManager sm = ctx.getSystemService(android.hardware.SensorManager.class);
+        boolean light = sm != null && sm.getDefaultSensor(android.hardware.Sensor.TYPE_LIGHT) != null;
+        Settings.NightMode m = sessionNightMode(d, light);
+        App.Companion.provide(ctx).getSettings().setNightMode(m);
+        if (d >= 0) {
+            L.i("AA: modo " + (d == 1 ? "noche" : "día") + " como la pantalla del coche (el último que dijo)");
+        } else {
+            L.i("AA: día y noche " + (light ? "con el sensor de luz del móvil (túneles, garajes)" : "por el amanecer y el atardecer (sin sensor de luz)"));
+        }
+        if (comm().isConnected()) {
+            ctx.startForegroundService(new Intent(ctx, AapService.class).setAction(AapService.ACTION_REQUEST_NIGHT_MODE_UPDATE));
+        }
     }
 
     @Override
@@ -527,7 +549,7 @@ final class AaPassthroughSource implements VideoSource {
                 }
             });
             carUi.setRefreshRate(fps);
-            carUi.start(r.overlayInput());
+            carUi.start(r.overlayInput(), r.manualOverlayInput(), r::setManualOverlay);
         }
         App.Companion.provide(ctx).getVideoDecoder().setSurface(relayInput);
         HeadlessDriver.start(ctx);
