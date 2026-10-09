@@ -47,6 +47,11 @@ final class AaPassthroughSource implements VideoSource {
     private final Context ctx;
     private final int dpi;
     private final Handler main = new Handler(Looper.getMainLooper());
+
+    /** La fuente en marcha (para relanzar AA si se cae a mitad de sesión, {@link #onAaDropped}), o null. */
+    private static volatile AaPassthroughSource active;
+    /** Espera antes de relanzar AA cuando se cae solo: deja pasar el cambio de USB o de red que lo tiró. */
+    static final long DROP_RELAUNCH_MS = 1500;
     /** Pantalla del coche (CAR_INFO): en ella llegan los toques y se diseña la interfaz propia. */
     private int carW = 1920;
     private int carH = 882;
@@ -251,6 +256,7 @@ final class AaPassthroughSource implements VideoSource {
         });
         attachOffscreenSurface();
         HeadlessDriver.start(ctx);
+        active = this;
         ensureAaConnected();
         requestKeyFrameAfterStart();
     }
@@ -325,6 +331,26 @@ final class AaPassthroughSource implements VideoSource {
         Intent i = new Intent(ctx, AapService.class).setAction(AapService.ACTION_START_SELF_MODE);
         ctx.startForegroundService(i);
     }
+
+    /**
+     * Android Auto se ha desconectado solo con el enlace en marcha (lo avisa {@link AaFlapWatch}). Viaje del 2026-10-09: al
+     * pasar del cable a la zona Wi-Fi, el aviso de accesorio USB desconectado hizo que AA cerrara su sesión 1 s después de
+     * empezar la del coche, y nadie lo relanzó (Open Headunit: «Self Mode disconnected. Not restarting»): 64 s con la zona
+     * de AA congelada en el coche, hasta pulsar Desconectar y Conectar. Si hay sesión con el coche esperando el vídeo de
+     * AA, se relanza a los {@link #DROP_RELAUNCH_MS} ms; si se corta una y otra vez, con el freno de AaFlapWatch.
+     */
+    static void onAaDropped() {
+        AaPassthroughSource s = active;
+        if (s == null) return;
+        s.main.removeCallbacks(s.dropRelaunch);
+        s.main.postDelayed(s.dropRelaunch, DROP_RELAUNCH_MS);
+    }
+
+    private final Runnable dropRelaunch = () -> {
+        if (active != this || VideoTap.getSink() == null || aaAlive()) return;
+        L.lifeWarn("AA: Android Auto se ha desconectado solo con el coche conectado; lo relanzo");
+        ensureAaConnected();
+    };
 
     /** Un relanzamiento aplazado por {@link AaFlapWatch#relaunchHoldMs} está pendiente. */
     private volatile boolean relaunchHeld;
@@ -505,6 +531,7 @@ final class AaPassthroughSource implements VideoSource {
         }
         App.Companion.provide(ctx).getVideoDecoder().setSurface(relayInput);
         HeadlessDriver.start(ctx);
+        active = this;
         ensureAaConnected();
         requestKeyFrameAfterStart();
     }
@@ -648,6 +675,8 @@ final class AaPassthroughSource implements VideoSource {
     public void stop() {
         main.removeCallbacks(heldRelaunch);
         relaunchHeld = false;
+        if (active == this) active = null;
+        main.removeCallbacks(dropRelaunch);
         HeadlessDriver.stop();
         App.Companion.provide(ctx).getSettings().setNightMode(Settings.NightMode.AUTO);
         VideoTap.setSink(null);

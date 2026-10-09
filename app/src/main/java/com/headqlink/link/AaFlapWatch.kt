@@ -37,6 +37,10 @@ internal object AaFlapWatch {
     @Volatile
     private var job: Job? = null
 
+    /** Hubo sesión con AA (transporte o handshake) desde el último corte: solo entonces un corte es «AA se ha caído». */
+    @Volatile
+    private var up = false
+
     /** Empieza a escuchar (una vez por proceso; idempotente). */
     @JvmStatic
     fun ensure(ctx: Context) {
@@ -62,12 +66,22 @@ internal object AaFlapWatch {
     private fun onState(app: Context, st: CommManager.ConnectionState) {
         val now = SystemClock.elapsedRealtime()
         when (st) {
-            CommManager.ConnectionState.HandshakeComplete, CommManager.ConnectionState.TransportStarted ->
+            CommManager.ConnectionState.HandshakeComplete, CommManager.ConnectionState.TransportStarted -> {
+                up = true
                 synchronized(detector) { detector.onConnected(now) }
+            }
             is CommManager.ConnectionState.Disconnected, is CommManager.ConnectionState.Error -> {
                 // Lo cerró HeadQLink (Desconectar, fin del viaje, cambio de perfil, apagado del servidor) o el enlace no
                 // está en marcha: no es el síntoma.
                 val ours = AaClose.ownCloseRecent() || !LinkState.running
+                val wasUp = up
+                up = false
+                // AA se ha caído solo con el enlace en marcha (sesión perdida, sin despedida: no es salir de AA a propósito):
+                // si hay sesión con el coche esperando su vídeo, se relanza (AaPassthroughSource.onAaDropped; con racha de
+                // cortes, con el freno de relaunchHoldMs).
+                val lost = st is CommManager.ConnectionState.Error ||
+                    (st is CommManager.ConnectionState.Disconnected && !st.isClean && !st.isUserExit)
+                if (!ours && wasUp && lost) AaPassthroughSource.onAaDropped()
                 val result: AaFlapDetector.Result
                 val durationMs: Long
                 val streak: Int

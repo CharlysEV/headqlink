@@ -2214,3 +2214,29 @@ solo cuenta el primer P-frame tras un IDR; uno más grande que su IDR da una lí
 el suelo el resumen dice 0; sesión nueva conserva el IDR pendiente e ignora IDR vacíos; `qpPMinFor` nunca baja del suelo
 y sin suelo deja el de siempre). `PFrameSizeControllerTest` con los textos nuevos del suelo. Sin probar en el móvil ni
 en el coche.
+
+---
+
+## 24. Android Auto en el modo extendido: arranque sin esperas y relanzamiento si se cae (2026-10-09)
+
+Quejas del viaje: «por Wi-Fi en extendido, apagas la pantalla y se para la imagen en el coche, y AA va muy lento: pulsas
+algo y funciona a los 5 s». Lo que dicen los registros:
+
+| Qué pasaba | Causa | Arreglo |
+|---|---|---|
+| Cada arranque de Android Auto (al conectar, al volver tras un corte, al cambiar de modo) tardaba ~12 s en dar imagen, con la zona de AA en negro | El Self-Mode de Open Headunit (AA 17.4+, `SelfLauncherV17_4`) manda primero el aviso START_WIRELESS_PROJECTION y espera 12 s. En el S25 Ultra con AA 17.7 no contestó nunca (52 de 52 arranques del 4 al 9 de octubre), y el servidor de head unit (127.0.0.1:5277) entraba a la primera | `SelfModeShortcut`: si el aviso caduca y el servidor conecta, se recuerda para esa versión de AA (`self_mode_direct_aa`) y los arranques siguientes van directos al servidor. Con otra versión de AA se vuelve a probar el aviso, y si contesta se olvida. Probado en el móvil: el primer arranque aprende |
+| Al pasar del cable a la zona Wi-Fi (o al enchufar el cable con el Wi-Fi), la zona de AA se quedaba congelada en el coche hasta pulsar Desconectar y Conectar (S22 del 9: 64 s; S8 del 8; S28 del 7) | Android Auto cierra su sesión con los avisos de USB (accesorio desconectado o alimentación conectada) y Open Headunit no la relanza («Self Mode disconnected. Not restarting»). La pantalla del móvil se apagaba a la vez, por eso parecía cosa de la pantalla | `AaFlapWatch` avisa a `AaPassthroughSource.onAaDropped` cuando AA se cae solo con el enlace en marcha (sesión perdida, sin despedida: salir de AA a propósito no cuenta). Si hay sesión con el coche esperando su vídeo, se relanza a los 1,5 s, con el freno de un relanzamiento cada 10 s si se corta en bucle. Sin probar todavía en el coche |
+
+- **Pantalla apagada:** prueba en casa con el coche simulado por la Wi-Fi de casa, la pantalla apagada 60 s y el móvil desenchufado (simulado con `dumpsys battery unplug`). AA siguió a 30 fps, el coche recibió 30 fps y los toques respondieron. En los registros, todas las imágenes congeladas «al apagar la pantalla» coinciden con enchufar el cable.
+- **Toques:** en la sesión por zona Wi-Fi del 9 (S23), el móvil tarda 0,2-0,3 s desde que recibe un toque hasta mandar la imagen nueva. Los 5 s eran los 12 s de arranque de AA y la zona congelada sin relanzar.
+- **Escaneos Wi-Fi (pendiente):** Google Play Services busca redes Wi-Fi cada ~8,5 s durante ~3,6 s para la ubicación por red, porque Waze y AA piden posición continuamente (`dumpsys wifiscanner`: `network_location_provider`). Con la zona Wi-Fi del móvil, el enlace con el coche se para 0,1-0,3 s varias veces en cada escaneo (`gate_hold_ms` en la traza). Por probar en el coche: desactivar «Precisión de la ubicación de Google».
+
+Líneas nuevas:
+
+| Línea | Significado |
+|---|---|
+| `AA: el aviso de proyección no contestó en 12 s y el servidor de head unit sí: los próximos arranques con AA 177663654 van directos al servidor` | Atajo aprendido |
+| `AA: arranque directo al servidor de head unit (con AA … el aviso de proyección no contestó nunca en este móvil: 12 s menos)` | Atajo usado |
+| `AA: Android Auto se ha desconectado solo con el coche conectado; lo relanzo` | Relanzamiento tras una caída |
+
+Pruebas: `SelfModeShortcutTest` (la misma versión de AA, otra versión, nada aprendido).

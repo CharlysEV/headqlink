@@ -27,11 +27,21 @@ class SelfLauncherV17_4(
     override suspend fun run(): Boolean {
         AppLog.i("SelfMode: === v17.4+ launcher starting ===")
         diagnostics.clear()
+        broadcastTimedOut = false
 
+        // headqlink: on this phone, with this AA version, the broadcast (Path 2) never answered and the dev server did:
+        // straight to the dev server instead of waiting 12 s for nothing on every start (SelfModeShortcut).
+        if (com.headqlink.link.SelfModeShortcut.direct(services.aap)) {
+            diag("shortcut", "dev server first (the broadcast never answered with this AA version)")
+            return tryDevServer()
+        }
         if (tryWirelessStartupReceiver()) return true
         if (tryWirelessProjectionBroadcast()) return true
         return tryDevServer()
     }
+
+    /** headqlink: Path 2 timed out in this run (if the dev server then connects, SelfModeShortcut learns it). */
+    private var broadcastTimedOut = false
 
     // ── Path 1: WirelessStartupReceiver broadcast ──────────────────────────
 
@@ -82,6 +92,7 @@ class SelfLauncherV17_4(
 
         val connected = waitForConnection(PROJECTION_TIMEOUT_MS)
         diag("Path2:result", if (connected) "CONNECTED" else "TIMEOUT ${PROJECTION_TIMEOUT_MS}ms")
+        if (connected) com.headqlink.link.SelfModeShortcut.forget(services.aap) else broadcastTimedOut = true
         return connected
     }
 
@@ -135,6 +146,7 @@ class SelfLauncherV17_4(
 
         diag("Path3:result", "CONNECTED via dev server")
         dumpDiagnostics()
+        if (broadcastTimedOut) com.headqlink.link.SelfModeShortcut.learn(services.aap)
         return true
     }
 

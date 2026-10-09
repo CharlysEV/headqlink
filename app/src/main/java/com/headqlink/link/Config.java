@@ -255,6 +255,17 @@ final class Config {
     void setCarDark(boolean dark) {
         sp.edit().putInt(CAR_DARK, dark ? 1 : 0).apply();
     }
+
+    /** versionCode de AA con el que el Self-Mode va directo al servidor de head unit (SelfModeShortcut); -1 = no. */
+    static final String SELF_MODE_DIRECT_AA = "self_mode_direct_aa";
+
+    long selfModeDirectAa() {
+        return sp.getLong(SELF_MODE_DIRECT_AA, -1);
+    }
+
+    void setSelfModeDirectAa(long aaCode) {
+        sp.edit().putLong(SELF_MODE_DIRECT_AA, aaCode).apply();
+    }
     /** "Optimizaciones de latencia" (LowLatency); apagado = comportamiento anterior. */
     static final String LOW_LATENCY = "low_latency";
     /** Enviar Mirror/WhitelistAppOn cada segundo (qué se muestra, para la restricción en marcha del coche). */
