@@ -215,7 +215,10 @@ class PhoneSession(
         reader = r
         log.i(tag, "sesión con ${transport.describe()}")
         // AppStatus nada más conectar (LC/a.java:1697-1698), antes que cualquier respuesta: se encola antes del lector.
-        if (config.sendAppStatus) enqueueRaw(BinBlock.appStatus(config.phone.sdkInt), "!BIN AppStatus")
+        if (config.sendAppStatus) {
+            appStatusAtNanos = System.nanoTime()
+            enqueueRaw(BinBlock.appStatus(config.phone.sdkInt), "!BIN AppStatus")
+        }
         writerThread = startThread("qd-s$id-writer", ThreadRole.WRITER) { writer.run(output) }
         readerThread = startThread("qd-s$id-reader", ThreadRole.READER) { readLoop(r) }
         if (config.heartbeatEnabled) {
@@ -556,11 +559,47 @@ class PhoneSession(
     @Volatile
     private var stalledWriteStart = 0L
 
+    // hql: AppStatus repetido mientras el coche habla sin empezar la sesión (SessionConfig.appStatusResendMax).
+    @Volatile
+    private var appStatusAtNanos = 0L
+    private val appStatusResends = java.util.concurrent.atomic.AtomicInteger()
+
+    /** AppStatus repetidos en esta sesión (para el resumen y las pruebas). */
+    val appStatusResent: Int get() = appStatusResends.get()
+
+    /**
+     * Lector: llegó un HEARTBEAT. Si la sesión aún no ha empezado (sin `CAR_INFO`), el coche está vivo pero no vio
+     * nuestro AppStatus: se repite (con un mínimo de tiempo entre uno y otro y un máximo de veces).
+     */
+    internal fun onCarHeartbeat() {
+        if (!config.sendAppStatus || config.appStatusResendMax <= 0 || closed.get()) return
+        if (currentState != SessionState.CONNECTED) return
+        val now = System.nanoTime()
+        if ((now - appStatusAtNanos) / 1_000_000 < config.appStatusResendIntervalMs) return
+        val n = appStatusResends.get()
+        if (n >= config.appStatusResendMax) return
+        if (!appStatusResends.compareAndSet(n, n + 1)) return
+        appStatusAtNanos = now
+        log.w(tag, "el coche habla (HEARTBEAT) pero no ha empezado la sesión (sin CAR_INFO): repito el AppStatus (${n + 1}/${config.appStatusResendMax})")
+        enqueueRaw(BinBlock.appStatus(config.phone.sdkInt), "!BIN AppStatus (repetido ${n + 1})")
+    }
+
     /** Watchdog de recepción (QDLink: LC/a.java:689-703) y detector de `write()` bloqueado. */
     private fun watchdogTick() {
         if (closed.get()) return
         val now = System.nanoTime()
         if (checkWriteStall(now)) return
+        if (config.handshakeTimeoutMs > 0 && currentState == SessionState.CONNECTED &&
+            (now - startedAtNanos) / 1_000_000 >= config.handshakeTimeoutMs
+        ) {
+            closeWith(
+                CloseReason(
+                    CloseReason.Kind.WATCHDOG,
+                    "${(now - startedAtNanos) / 1_000_000} ms sin CAR_INFO del coche (AppStatus repetido ${appStatusResends.get()} veces)",
+                ),
+            )
+            return
+        }
         if (!config.watchdogEnabled) return
         val r = reader ?: return
         val silentMs = (now - r.lastActivityNanos) / 1_000_000

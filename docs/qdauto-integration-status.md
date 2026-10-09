@@ -1017,7 +1017,7 @@ usa el retraso del vídeo en la cola de la sesión (`videoQueueLagMs` ≥ 66 ms 
   mutable en Android 12+ y explícito); el mismo `QdSessionBridge`, `VideoHub` y ciclo de vida que por Wi-Fi (arranque
   con disparador `USB`, que pide el servidor de AA como el Bluetooth del coche). Al quitar el cable o perder la
   alimentación: cierre de la sesión y «coche perdido»; al volver a enchufarlo, se reanuda al instante. Si la sesión
-  termina con el cable puesto, se vuelve a abrir con espera creciente (1, 2, 5, 10, 30 s).
+  termina con el cable puesto, se vuelve a abrir con espera creciente (6, 6, 10, 30, 60 s; § 14.2).
 - Ajustes aplicados con el cable: no se cierra la sesión (no se sabe si el coche repite el saludo por el cable); se
   rehace el vídeo (`QdSessionBridge.restartVideo`).
 - Open Headunit: `UsbLauncherListener.onUsbAccessoryDetach` ya no corta la sesión de Android Auto en Self Mode (el
@@ -1082,6 +1082,27 @@ Líneas nuevas (etiqueta `HQL/USB`):
 Pruebas: `UsbReopenPolicyTest` (5: espera creciente con sesiones calladas, reinicio solo con CAR_INFO de ≥ 10 s, 20 min de
 coche callado, ENODEV/EIO hasta que vuelve, detección de ENODEV/EIO sin falsos positivos) y un caso nuevo en
 `StallDetectorTest` (textos «CABLE: el coche no lee» y resumen «cable»).
+
+### 14.2 Viaje por cable (2026-10-09): el coche no ve el primer saludo
+
+28 sesiones en dos días, 24 por cable. Las que llegan a tener imagen van bien (30–40 fps, sin descartes), pero 14 por
+cable se quedan sin imagen: ~4 min sin imagen en una mañana.
+
+| Qué pasó | Causa | Arreglo |
+|---|---|---|
+| 6 sesiones en las que el coche manda heartbeats (uno cada ~3 s) y nunca `CAR_INFO`; a los ~18 s se calla y el watchdog corta a los ~30 s. Al reabrir, `CAR_INFO` llega en milisegundos | El coche empieza a leer unos segundos después de poner el móvil en modo accesorio y no ve el AppStatus, que se manda al abrir (en una, su primer heartbeat llegó 3 s después del AppStatus) | Por cable, si llega un HEARTBEAT sin `CAR_INFO` y hace ≥ 2,5 s del último AppStatus, **se repite el AppStatus** (como mucho 3 veces): `SessionConfig.appStatusResendMax`/`appStatusResendIntervalMs`. Si a los **12 s** sigue sin `CAR_INFO`, se cierra para volver a abrir (`handshakeTimeoutMs`, `UsbLink.USB_HANDSHAKE_TIMEOUT_MS`). Por Wi-Fi, como QDLink: un solo AppStatus y sin límite |
+| 5 sesiones en las que el coche ni lee («CABLE: el coche no lee»), tras reabrir a 1–2 s de una fallida | QDLink no arranca por cable antes de 6 s desde la última desconexión (LC/a.java:1690-1707, `e.f9715s`) | `UsbReopenPolicy`: **6, 6, 10, 30, 60 s** (nunca menos de 6 s) |
+| 3 sesiones con `write failed: ENODEV` en 0 s | Cable quitado | Nada nuevo (accesorio desaparecido, § 14.1) |
+
+Líneas nuevas:
+
+| Línea | Significado |
+|---|---|
+| `W el coche habla (HEARTBEAT) pero no ha empezado la sesión (sin CAR_INFO): repito el AppStatus (1/3)` | Saludo repetido |
+| `cerrando: WATCHDOG: 12010 ms sin CAR_INFO del coche (AppStatus repetido 3 veces)` | Límite del saludo por cable |
+
+Pruebas: `AppStatusResendTest` (5: repetición pasado el intervalo y no antes, tope, una sola vez por defecto, cierre sin
+`CAR_INFO` y sin cierre una vez saludado) y `UsbReopenPolicyTest` con las esperas nuevas.
 
 ---
 

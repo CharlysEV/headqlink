@@ -7,9 +7,11 @@ package com.headqlink.link
  * Prueba real por cable (2026-10-06): con el accesorio abierto pero el coche aún sin hablar, cada sesión moría por el
  * watchdog a los 10 s y se reabría en 1 s; como duraba ≥ 10 s «no era corta» y la espera no crecía nunca (115 sesiones
  * en 20 min). Y al quitar el cable, `write failed: ENODEV` encadenaba sesiones en milisegundos. Reglas:
- * - **Espera creciente** 1, 2, 5, 10, 30, 60 s por cada sesión fallida seguida: sin ningún mensaje del coche, sin
+ * - **Espera creciente** 6, 6, 10, 30, 60 s por cada sesión fallida seguida: sin ningún mensaje del coche, sin
  *   `CAR_INFO`, o con `CAR_INFO` pero muy corta (< [QUICK_END_MS]). Solo una sesión con `CAR_INFO` que duró al menos
- *   [QUICK_END_MS] la reinicia.
+ *   [QUICK_END_MS] la reinicia. Nunca menos de 6 s, como QDLink (no arranca por cable antes de 6 s desde la última
+ *   desconexión: LC/a.java:1690-1707, `e.f9715s`): en el viaje del 2026-10-09, reabrir a 1-2 s de una sesión fallida
+ *   daba sesiones en las que el coche ni leía (S17-S19).
  * - **Accesorio desaparecido**: una sesión que termina con ENODEV o EIO en el descriptor (el cable se quitó o el coche
  *   se fue) no se reabre hasta que el coche vuelva a poner el móvil en modo accesorio (`USB_STATE accessory=true` nuevo
  *   o `USB_ACCESSORY_ATTACHED`: [onAccessoryArrived]).
@@ -59,7 +61,7 @@ internal class UsbReopenPolicy {
         return Decision(
             delay,
             "la sesión terminó con el cable puesto ($lived, $why): no reinicia la espera; fallida $failures seguida, " +
-                "vuelvo a abrir en ${delay / 1000} s (1, 2, 5, 10, 30, 60 s)",
+                "vuelvo a abrir en ${delay / 1000} s (6, 6, 10, 30, 60 s)",
         )
     }
 
@@ -77,7 +79,7 @@ internal class UsbReopenPolicy {
     companion object {
         /** Una sesión con CAR_INFO más corta que esto cuenta como fallida (el coche saluda y se va). */
         const val QUICK_END_MS = 10_000L
-        val BACKOFF_MS = longArrayOf(1_000, 2_000, 5_000, 10_000, 30_000, 60_000)
+        val BACKOFF_MS = longArrayOf(6_000, 6_000, 10_000, 30_000, 60_000)
 
         private val GONE = Regex("""\b(ENODEV|EIO)\b|No such device|I/O error""", RegexOption.IGNORE_CASE)
 

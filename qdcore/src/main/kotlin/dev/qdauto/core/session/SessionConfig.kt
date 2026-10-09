@@ -93,6 +93,20 @@ data class SessionConfig(
     // ---- Arranque y mantenimiento ----
     /** AppStatus `!BIN` de 512 B nada más conectar (LC/a.java:1344-1352). */
     val sendAppStatus: Boolean = true,
+    /**
+     * hql: el coche habla (HEARTBEAT) pero no empieza la sesión (sin `CAR_INFO`): se repite el AppStatus, como mucho
+     * [appStatusResendMax] veces y no más a menudo que [appStatusResendIntervalMs]. Por cable, el C10 a veces empieza a
+     * leer unos segundos después de poner el móvil en modo accesorio: el primer AppStatus se perdía y el coche mandaba
+     * heartbeats sin saludar hasta rendirse (viaje del 2026-10-09: 6 sesiones así, ~4 min sin imagen). 0 = no repetir
+     * (lo de QDLink, que lo manda una vez); por cable lo activa la app.
+     */
+    val appStatusResendMax: Int = 0,
+    val appStatusResendIntervalMs: Long = 2_500,
+    /**
+     * hql: sin `CAR_INFO` pasado esto desde que empezó la sesión, se cierra (para volver a abrir, en vez de esperar al
+     * watchdog mientras el coche manda heartbeats). 0 = sin límite (lo de QDLink).
+     */
+    val handshakeTimeoutMs: Long = 0,
     /** `{"CMD":"HEARTBEAT"}` a 1 s y luego cada 3 s con retardo fijo (LC/a.java:1761). */
     val heartbeatEnabled: Boolean = true,
     val heartbeatInitialDelayMs: Long = 1_000,

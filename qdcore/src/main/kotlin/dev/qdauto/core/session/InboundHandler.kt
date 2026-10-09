@@ -109,7 +109,10 @@ internal class InboundHandler(private val s: PhoneSession) {
             }
             Cmd.GO_IN_LINK_APP -> s.post { listener.onGoInLinkApp(msg) }
             Cmd.DISCONNECT_REQ -> onDisconnectRequest(msg)
-            Cmd.HEARTBEAT -> s.counters.carHeartbeat() // QDLink no responde (LC/a.java:2070-2071)
+            Cmd.HEARTBEAT -> {
+                s.counters.carHeartbeat() // QDLink no responde (LC/a.java:2070-2071)
+                s.onCarHeartbeat() // hql: si aún no hay CAR_INFO, el coche no vio el AppStatus
+            }
             else -> unknown(
                 msg.header,
                 if (msg.cmd.isEmpty()) "mensaje de control sin CMD legible" else "CMD desconocido '${msg.cmd}' (QDLink no lo atiende)",

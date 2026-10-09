@@ -18,7 +18,9 @@ class UsbReopenPolicyTest {
         val p = UsbReopenPolicy()
         // Lo del log real: el coche no habla, el watchdog cierra a los 10 s (≥ 10 s: antes reiniciaba la espera).
         val delays = (1..8).map { p.onSessionEnd(0, false, 10_050, watchdog) }
-        assertEquals(listOf(1_000L, 2_000L, 5_000L, 10_000L, 30_000L, 60_000L, 60_000L, 60_000L), delays.map { it.delayMs })
+        assertEquals(listOf(6_000L, 6_000L, 10_000L, 30_000L, 60_000L, 60_000L, 60_000L, 60_000L), delays.map { it.delayMs })
+        // Nunca antes de 6 s, como QDLink: reabrir a 1-2 s daba sesiones en las que el coche ni leía.
+        assertTrue(UsbReopenPolicy.BACKOFF_MS.all { it >= 6_000 })
         assertTrue(delays.all { it.reopen })
         assertTrue(delays[0].text, delays[0].text.contains("sin ningún mensaje del coche"))
         assertTrue(delays[0].text, delays[0].text.contains("no reinicia la espera"))
@@ -31,17 +33,17 @@ class UsbReopenPolicyTest {
         repeat(3) { p.onSessionEnd(0, false, 10_050, watchdog) }
         // Mensajes, pero sin CAR_INFO: sigue creciendo.
         val noInfo = p.onSessionEnd(12, false, 45_000, watchdog)
-        assertEquals(10_000L, noInfo.delayMs)
+        assertEquals(30_000L, noInfo.delayMs)
         assertTrue(noInfo.text, noInfo.text.contains("sin CAR_INFO del coche (12 mensajes)"))
         // CAR_INFO pero 3 s (el coche saluda y se va): sigue creciendo.
         val quick = p.onSessionEnd(30, true, 3_000, "EOF: el coche cerró la conexión")
-        assertEquals(30_000L, quick.delayMs)
+        assertEquals(60_000L, quick.delayMs)
         // Una sesión de verdad: vuelta a empezar.
         val good = p.onSessionEnd(5_000, true, 600_000, watchdog)
-        assertEquals(1_000L, good.delayMs)
+        assertEquals(6_000L, good.delayMs)
         assertEquals(0, p.failures)
         assertTrue(good.text, good.text.contains("reiniciada"))
-        assertEquals(listOf(1_000L, 2_000L), (1..2).map { p.onSessionEnd(0, false, 10_050, watchdog).delayMs })
+        assertEquals(listOf(6_000L, 6_000L), (1..2).map { p.onSessionEnd(0, false, 10_050, watchdog).delayMs })
     }
 
     @Test
