@@ -766,4 +766,7 @@
     <string name="hql_near_any_power">Qualsiasi potenza</string>
     <string name="hql_split_on">Dividi schermo</string>
     <string name="hql_split_off">Schermo intero</string>
+    <string name="hql_split_warn_title">Schermo diviso</string>
+    <string name="hql_split_warn_text">Si consiglia di usarlo a veicolo fermo: durante la guida, video e web distraggono. Lo usi sotto la tua responsabilità.</string>
+    <string name="hql_split_accept">Accetto</string>
 </resources>

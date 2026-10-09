@@ -128,6 +128,8 @@ final class CarUi {
      */
     private static volatile boolean split;
     private LinearLayout splitButton;
+    /** Aviso de la pantalla partida abierto (o null). */
+    private View splitWarning;
     private CarScreen screen;
     private String screenName = "aa";
     /**
@@ -228,7 +230,7 @@ final class CarUi {
 
     int contentWidth() {
         int pw = layoutPanelW();
-        return width - pw - (splitActive() ? splitAaWidth(width, pw) : 0);
+        return width - pw - (splitActive() ? splitAaWidth(width, height, pw, dpi) : 0);
     }
 
     /** Pantallas que se pueden poner junto a AA. */
@@ -236,9 +238,22 @@ final class CarUi {
         return "web".equals(name) || "videos".equals(name) || "tv".equals(name);
     }
 
-    /** Ancho de AA con la pantalla partida: la mitad de lo que deja la barra (puro). */
-    static int splitAaWidth(int width, int railW) {
-        return (width - railW) / 2;
+    /**
+     * Ancho mínimo de AA con la pantalla partida. Más estrecho, AA pasa a su diseño de tarjetas (mapa arriba, tiempo y
+     * música debajo) y Google Maps se queda en modo reducido: no se mueve ni deja buscar, porque cada toque solo le pide a
+     * AA más sitio (requestIncreaseContentArea) y AA no se lo da. Medido en el C10 (1920x882, 200 dpi): falla a 912 px y
+     * va bien a 950. Con margen: 800 dp y 1,15 veces el alto.
+     */
+    static final int SPLIT_MIN_AA_DP = 800;
+    static final float SPLIT_MIN_AA_ASPECT = 1.15f;
+    /** Lo mínimo que se deja a nuestra pantalla al lado. */
+    static final int SPLIT_MIN_SCREEN_W = 560;
+
+    /** Ancho de AA con la pantalla partida: la mitad de lo que deja la barra, sin bajar del mínimo de Maps (puro). */
+    static int splitAaWidth(int width, int height, int railW, int dpi) {
+        int free = width - railW;
+        int min = Math.max(Math.round(SPLIT_MIN_AA_DP * dpi / 160f), Math.round(height * SPLIT_MIN_AA_ASPECT));
+        return Math.min(Math.max(free / 2, min), Math.max(free / 2, free - SPLIT_MIN_SCREEN_W));
     }
 
     /** ¿Se ve ahora la pantalla partida? (pedida y con una pantalla que la admite abierta) */
@@ -282,7 +297,7 @@ final class CarUi {
         renderAlert();
         panel.setPadding(rail ? 12 : 20, 20, rail ? 12 : 20, 20);
         renderRadioMini();
-        int aaW = sp ? splitAaWidth(width, pw) : 0;
+        int aaW = sp ? splitAaWidth(width, height, pw, dpi) : 0;
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) content.getLayoutParams();
         lp.leftMargin = pw + aaW;
         lp.width = width - pw - aaW;
@@ -313,10 +328,71 @@ final class CarUi {
 
     /** El botón de la barra: AA junto a nuestra pantalla, o nuestra pantalla sola otra vez. */
     private void toggleSplit() {
+        if (!split && !new Config(ctx).splitAccepted()) {
+            showSplitWarning();
+            return;
+        }
         split = !split;
         L.i("CarUi: pantalla partida " + (split ? "sí" : "no") + " (" + screenName + ")");
         applyLayout();
         listener.onAaVisible(aaVisible());
+    }
+
+    /**
+     * Aviso de la pantalla partida, antes de usarla por primera vez: mejor con el coche parado, y bajo la
+     * responsabilidad de quien la usa. Hay que aceptarlo; «Cancelar» deja la pantalla como estaba.
+     */
+    private void showSplitWarning() {
+        if (splitWarning != null || root == null) return;
+        Context c = root.getContext();
+        FrameLayout scrim = new FrameLayout(c);
+        scrim.setBackgroundColor(0xB3000000);
+        // Se queda con todos los toques mientras está abierto.
+        scrim.setClickable(true);
+        LinearLayout card = new LinearLayout(c);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(36, 32, 36, 28);
+        card.setBackground(CarStyle.round(CarTheme.alertBg(false), 28));
+        card.setClickable(true);
+        TextView title = CarStyle.text(c, Str.get(R.string.hql_split_warn_title), 28, CarKit.AMBER);
+        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        card.addView(title);
+        TextView text = CarStyle.text(c, Str.get(R.string.hql_split_warn_text), 23, CarStyle.TEXT);
+        text.setPadding(0, 18, 0, 26);
+        card.addView(text);
+        LinearLayout btns = new LinearLayout(c);
+        btns.setOrientation(LinearLayout.HORIZONTAL);
+        btns.setGravity(Gravity.END);
+        TextView cancel = CarKit.pill(c, Str.get(R.string.hql_cancel), false);
+        cancel.setOnClickListener(v -> {
+            L.i("CarUi: aviso de la pantalla partida: cancelado");
+            dismissSplitWarning();
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        clp.rightMargin = 14;
+        btns.addView(cancel, clp);
+        TextView accept = CarKit.pill(c, Str.get(R.string.hql_split_accept), true);
+        accept.setOnClickListener(v -> {
+            L.i("CarUi: aviso de la pantalla partida: aceptado");
+            new Config(ctx).setSplitAccepted();
+            dismissSplitWarning();
+            toggleSplit();
+        });
+        btns.addView(accept);
+        card.addView(btns);
+        scrim.addView(card, new FrameLayout.LayoutParams(Math.min(780, width - 80), ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER));
+        root.addView(scrim, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        splitWarning = scrim;
+        L.i("CarUi: aviso de la pantalla partida");
+    }
+
+    private void dismissSplitWarning() {
+        View w = splitWarning;
+        splitWarning = null;
+        if (w != null && root != null) root.removeView(w);
     }
 
     /**

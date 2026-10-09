@@ -765,4 +765,7 @@
     <string name="hql_near_any_power">Elk vermogen</string>
     <string name="hql_split_on">Scherm splitsen</string>
     <string name="hql_split_off">Volledig scherm</string>
+    <string name="hql_split_warn_title">Gesplitst scherm</string>
+    <string name="hql_split_warn_text">We raden aan het alleen te gebruiken als de auto stilstaat: video en het web leiden af tijdens het rijden. Gebruik is op eigen risico.</string>
+    <string name="hql_split_accept">Ik ga akkoord</string>
 </resources>

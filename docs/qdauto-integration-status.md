@@ -2316,7 +2316,7 @@ Pruebas: `PhoneOffRendererTest`, `SessionNightModeTest` y `VersionLabelTest`.
 
 ## 26. Pantalla partida en el modo extendido y versión 0.2.30 (2026-10-09)
 
-En «Web», «Vídeos» y «TV», el botón «Partir pantalla» del panel pone Android Auto a la izquierda, junto al panel (compacto), y esa pantalla a la derecha, mitad y mitad. «Pantalla completa» la deja sola otra vez. El estado se guarda en `CarUi.split` (estático) mientras viva el proceso.
+En «Web», «Vídeos» y «TV», el botón «Partir pantalla» del panel pone Android Auto a la izquierda, junto al panel (compacto), y esa pantalla a la derecha (al principio, mitad y mitad; ver §26.1). «Pantalla completa» la deja sola otra vez. El estado se guarda en `CarUi.split` (estático) mientras viva el proceso.
 
 - `CarUi.splitAaWidth(width, railW)` = `(width − railW) / 2` (912 px en 1920 con el panel de 96 px). La pantalla ocupa el resto, a la derecha de AA.
 - `CarUi.Listener.onAaRegion(x, w)` sustituye a `onPanelWidth` (por defecto llama a esta). `AaPassthroughSource.setAaRegion` mueve AA a esa franja: el margen derecho que se anuncia a AA es `R = ancho negociado − ancho del vídeo de AA` y el relay coloca AA en `x`.
@@ -2335,3 +2335,18 @@ Probado con el coche simulado: AA en la mitad izquierda, Wikipedia en la derecha
 La versión pasa a **0.2.30** (`versionCode` 12): «0.2.3» se vería como anterior a 0.2.9 al comparar versiones para avisar de actualizaciones.
 
 Pruebas: `SplitScreenTest`.
+
+### 26.1 Maps sin toques con la pantalla partida, y el aviso (0.2.31)
+
+Con AA a la mitad (912 px en el C10), Google Maps no se movía ni dejaba buscar; la barra de AA y las tarjetas sí respondían. Probado en el coche virtual:
+- Maps recibe los toques (`ViewPostIme` en su proceso), pero AA ha pasado a su diseño de tarjetas (mapa arriba, tiempo y música debajo) y Maps está en modo reducido, sin zoom ni botones. Cada toque solo pide más sitio (`ADU.AppDecorService: requestIncreaseContentArea`), y AA no lo da. Abrir Maps desde la barra de AA no lo arregla.
+- Un ciclo de foco de vídeo tras el cambio tampoco lo arregla.
+- Con 950, 1000, 1100 y 1300 px, AA usa el diseño normal y el mapa se mueve («Centrar»).
+
+Ahora `CarUi.splitAaWidth(width, height, railW, dpi)` da la mitad, pero nunca menos de 800 dp ni de 1,15 veces el alto, y deja al menos 560 px a nuestra pantalla. En el C10, AA 1014 px y la web 810.
+
+**Aviso:** la primera vez que se pulsa «Partir pantalla» sale un aviso que hay que aceptar: se recomienda usarla con el coche parado, y se usa bajo la responsabilidad de quien la usa. Botones «Cancelar» y «Acepto». Se guarda en `Config.splitAccepted`.
+
+| Línea | Significado |
+|---|---|
+| `CarUi: aviso de la pantalla partida` / `…: aceptado` / `…: cancelado` | El aviso |

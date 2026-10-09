@@ -379,8 +379,9 @@ supporta.
   Auto sullo schermo, il pannello si nasconde da solo dopo qualche secondo; tocca il bordo sinistro per farlo
   ricomparire. Foto, video, web, TV e giochi sono **solo per quando l'auto è ferma**.
 - **Schermo diviso («Auto esteso»):** in «Web», «Video» e «TV», il pulsante «Dividi schermo» del pannello mette
-  Android Auto a sinistra, accanto al pannello, e quella schermata a destra, metà e metà. Ogni metà risponde ai suoi
-  tocchi. «Schermo intero» la lascia di nuovo da sola. Resta così finché l'app resta aperta.
+  Android Auto a sinistra, accanto al pannello, e quella schermata a destra. Android Auto tiene un po' più della metà,
+  quanto basta perché Google Maps si possa spostare e cercare. Ogni lato risponde ai suoi tocchi. «Schermo intero» la lascia di nuovo da sola. Resta così finché l'app resta aperta. La prima volta
+  compare un avviso da accettare: si consiglia di usarlo a veicolo fermo, e lo usi sotto la tua responsabilità.
 - **Sezione «Veicolo»** (stime dai sensori del telefono e da servizi aperti; con l'account Leapmotor, anche dati reali
   dell'auto: vedi [Dati reali dell'auto](#dati-reali-dellauto-account-leapmotor)):
   - «Percorso»: destinazione, arrivo, energia e consumo previsti; il profilo altimetrico colorato in base alla pendenza

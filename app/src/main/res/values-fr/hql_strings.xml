@@ -766,4 +766,7 @@
     <string name="hql_near_any_power">Toute puissance</string>
     <string name="hql_split_on">Partager l\'écran</string>
     <string name="hql_split_off">Plein écran</string>
+    <string name="hql_split_warn_title">Écran partagé</string>
+    <string name="hql_split_warn_text">Il est recommandé de l\'utiliser à l\'arrêt : en conduisant, la vidéo et le web distraient. Vous l\'utilisez sous votre responsabilité.</string>
+    <string name="hql_split_accept">J\'accepte</string>
 </resources>

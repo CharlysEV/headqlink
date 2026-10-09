@@ -765,4 +765,7 @@
     <string name="hql_near_any_power">Any power</string>
     <string name="hql_split_on">Split screen</string>
     <string name="hql_split_off">Full screen</string>
+    <string name="hql_split_warn_title">Split screen</string>
+    <string name="hql_split_warn_text">We recommend using it only with the car stopped: video and the web are distracting while driving. You use it at your own risk.</string>
+    <string name="hql_split_accept">I accept</string>
 </resources>

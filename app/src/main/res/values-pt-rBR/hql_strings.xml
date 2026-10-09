@@ -766,4 +766,7 @@
     <string name="hql_near_any_power">Qualquer potência</string>
     <string name="hql_split_on">Dividir tela</string>
     <string name="hql_split_off">Tela cheia</string>
+    <string name="hql_split_warn_title">Tela dividida</string>
+    <string name="hql_split_warn_text">Recomendamos usar com o carro parado: vídeo e web distraem enquanto você dirige. O uso é de sua responsabilidade.</string>
+    <string name="hql_split_accept">Aceito</string>
 </resources>

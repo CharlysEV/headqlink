@@ -379,8 +379,9 @@ admite.
   Android Auto en pantalla, el panel se oculta solo a los pocos segundos; toca el borde izquierdo para que vuelva.
   Fotos, vídeos, web, TV y juegos son **solo para cuando el coche está parado**.
 - **Pantalla partida («Auto extendido»):** en «Web», «Vídeos» y «TV», el botón «Partir pantalla» del panel pone
-  Android Auto a la izquierda, junto al panel, y esa pantalla a la derecha, mitad y mitad. Cada mitad responde a sus
-  toques. «Pantalla completa» la deja sola otra vez. Se recuerda mientras la app siga abierta.
+  Android Auto a la izquierda, junto al panel, y esa pantalla a la derecha. Android Auto se queda con algo más de la
+  mitad, lo justo para que Google Maps se pueda mover y buscar. Cada lado responde a sus toques. «Pantalla completa» la deja sola otra vez. Se recuerda mientras la app siga abierta. La primera vez sale
+  un aviso que hay que aceptar: se recomienda usarla con el coche parado, y se usa bajo tu responsabilidad.
 - **Sección «Coche»** (estimado con los sensores del móvil y servicios abiertos; con la cuenta de Leapmotor, también
   con datos reales del coche: ver [Datos reales del coche](#datos-reales-del-coche-cuenta-leapmotor)):
   - «Ruta»: destino, llegada, energía y consumo previstos; el perfil de elevación coloreado por la pendiente (en verde

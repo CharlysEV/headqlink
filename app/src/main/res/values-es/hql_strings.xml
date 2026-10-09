@@ -766,4 +766,7 @@
     <string name="hql_near_any_power">Cualquier potencia</string>
     <string name="hql_split_on">Partir pantalla</string>
     <string name="hql_split_off">Pantalla completa</string>
+    <string name="hql_split_warn_title">Pantalla partida</string>
+    <string name="hql_split_warn_text">Se recomienda usarla con el coche parado: mientras conduces, el vídeo y la web distraen. Si la usas, es bajo tu responsabilidad.</string>
+    <string name="hql_split_accept">Acepto</string>
 </resources>

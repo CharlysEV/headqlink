@@ -765,4 +765,7 @@
     <string name="hql_near_any_power">Jede Leistung</string>
     <string name="hql_split_on">Bildschirm teilen</string>
     <string name="hql_split_off">Vollbild</string>
+    <string name="hql_split_warn_title">Geteilter Bildschirm</string>
+    <string name="hql_split_warn_text">Wir empfehlen, ihn nur im Stand zu verwenden: Videos und das Web lenken beim Fahren ab. Die Nutzung erfolgt auf eigene Verantwortung.</string>
+    <string name="hql_split_accept">Ich akzeptiere</string>
 </resources>
