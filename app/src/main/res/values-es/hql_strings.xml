@@ -764,4 +764,6 @@
     <string name="hql_near_loading">Buscando cargadores a menos de %1$d km…</string>
     <string name="hql_near_no_position">Aún no hay posición del GPS.</string>
     <string name="hql_near_any_power">Cualquier potencia</string>
+    <string name="hql_split_on">Partir pantalla</string>
+    <string name="hql_split_off">Pantalla completa</string>
 </resources>

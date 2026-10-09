@@ -52,6 +52,14 @@ final class CarUi {
         default void onPanelWidth(int width) {
         }
 
+        /**
+         * Zona de AA en la pantalla del coche: desde x, w de ancho (hasta el borde derecho, o la mitad con la pantalla
+         * partida).
+         */
+        default void onAaRegion(int x, int w) {
+            onPanelWidth(x);
+        }
+
         /** Color del panel (fondo de las esquinas redondeadas de AA). */
         default void onPanelColor(int color) {
         }
@@ -113,6 +121,13 @@ final class CarUi {
     private boolean aaReady;
     private SplashView splash;
     private volatile boolean aaShown = true;
+    /**
+     * Pantalla partida (lo pide el usuario con el botón de la barra en Web, Vídeos o TV): AA a la izquierda, junto a la
+     * barra, y nuestra pantalla a la derecha, mitad y mitad. Se recuerda mientras viva la app: al volver a una de esas
+     * pantallas, sigue partida.
+     */
+    private static volatile boolean split;
+    private LinearLayout splitButton;
     private CarScreen screen;
     private String screenName = "aa";
     /**
@@ -212,7 +227,33 @@ final class CarUi {
     }
 
     int contentWidth() {
-        return width - currentPanelW();
+        int pw = layoutPanelW();
+        return width - pw - (splitActive() ? splitAaWidth(width, pw) : 0);
+    }
+
+    /** Pantallas que se pueden poner junto a AA. */
+    static boolean splitCapable(String name) {
+        return "web".equals(name) || "videos".equals(name) || "tv".equals(name);
+    }
+
+    /** Ancho de AA con la pantalla partida: la mitad de lo que deja la barra (puro). */
+    static int splitAaWidth(int width, int railW) {
+        return (width - railW) / 2;
+    }
+
+    /** ¿Se ve ahora la pantalla partida? (pedida y con una pantalla que la admite abierta) */
+    private boolean splitActive() {
+        return split && screen != null && splitCapable(screenName);
+    }
+
+    /** ¿Se ve AA? Sola o junto a nuestra pantalla (partida). */
+    boolean aaVisible() {
+        return aaShown || splitActive();
+    }
+
+    /** Ancho de la barra o del panel tal como se colocan ahora (con la pantalla partida, la barra de iconos). */
+    private int layoutPanelW() {
+        return splitActive() ? COMPACT_W : currentPanelW();
     }
 
     /** Barra de iconos: con una pantalla propia a lo grande (compact) o con el panel minimizado (hidden). */
@@ -226,8 +267,9 @@ final class CarUi {
 
     /** Recoloca panel y contenido y pone el panel como barra de iconos o completo. */
     private void applyLayout() {
-        int pw = currentPanelW();
-        boolean rail = rail();
+        boolean sp = splitActive();
+        int pw = layoutPanelW();
+        boolean rail = sp || rail();
         panel.getLayoutParams().width = pw;
         panel.requestLayout();
         for (LinearLayout b : navButtons) {
@@ -240,12 +282,41 @@ final class CarUi {
         renderAlert();
         panel.setPadding(rail ? 12 : 20, 20, rail ? 12 : 20, 20);
         renderRadioMini();
+        int aaW = sp ? splitAaWidth(width, pw) : 0;
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) content.getLayoutParams();
-        lp.leftMargin = pw;
-        lp.width = width - pw;
+        lp.leftMargin = pw + aaW;
+        lp.width = width - pw - aaW;
         content.setLayoutParams(lp);
+        renderSplitButton(rail);
         // Solo importa a AA cuando se ve (el modo compacto es de nuestras pantallas).
-        if (!compact) listener.onPanelWidth(pw);
+        if (sp) {
+            listener.onAaRegion(pw, aaW);
+        } else if (!compact) {
+            listener.onAaRegion(pw, width - pw);
+        }
+    }
+
+    /** Botón «Partir pantalla» de la barra: solo en las pantallas que lo admiten; marcado con la pantalla partida. */
+    private void renderSplitButton(boolean rail) {
+        LinearLayout b = splitButton;
+        if (b == null) return;
+        b.setVisibility(splitCapable(screenName) && screen != null ? View.VISIBLE : View.GONE);
+        b.getChildAt(1).setVisibility(rail ? View.GONE : View.VISIBLE);
+        b.setGravity(rail ? Gravity.CENTER : Gravity.CENTER_VERTICAL);
+        b.setPadding(rail ? 0 : 18, 0, rail ? 0 : 18, 0);
+        ((TextView) b.getChildAt(1)).setText(Str.get(split ? R.string.hql_split_off : R.string.hql_split_on));
+        int fg = split ? CarStyle.ON_ACCENT : CarTheme.navText();
+        b.setBackground(split ? CarStyle.accent(36) : null);
+        ((ImageView) b.getChildAt(0)).setImageTintList(ColorStateList.valueOf(fg));
+        ((TextView) b.getChildAt(1)).setTextColor(fg);
+    }
+
+    /** El botón de la barra: AA junto a nuestra pantalla, o nuestra pantalla sola otra vez. */
+    private void toggleSplit() {
+        split = !split;
+        L.i("CarUi: pantalla partida " + (split ? "sí" : "no") + " (" + screenName + ")");
+        applyLayout();
+        listener.onAaVisible(aaVisible());
     }
 
     /**
@@ -636,6 +707,7 @@ final class CarUi {
         p.addView(navButton(c, Str.get(R.string.hql_radio), "radio", R.drawable.hql_ic_radio));
         p.addView(buildRadioMini(c));
         p.addView(navButton(c, Str.get(R.string.hql_games), "games", R.drawable.hql_ic_games));
+        p.addView(buildSplitButton(c));
 
         View spacer = new View(c);
         p.addView(spacer, new LinearLayout.LayoutParams(1, 0, 1f));
@@ -662,6 +734,30 @@ final class CarUi {
     }
 
     /** Elemento del panel al estilo de AA: icono + texto; el activo, en una píldora de color. */
+    /** «Partir pantalla» (Web, Vídeos y TV): como un botón de la barra, pero no abre una pantalla. */
+    private View buildSplitButton(Context c) {
+        LinearLayout b = new LinearLayout(c);
+        b.setOrientation(LinearLayout.HORIZONTAL);
+        b.setGravity(Gravity.CENTER_VERTICAL);
+        b.setPadding(18, 0, 18, 0);
+        ImageView iv = new ImageView(c);
+        iv.setImageResource(R.drawable.hql_ic_split);
+        b.addView(iv, new LinearLayout.LayoutParams(40, 40));
+        TextView t = CarStyle.text(c, Str.get(R.string.hql_split_on), 25, CarStyle.TEXT);
+        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        t.setPadding(20, 0, 0, 0);
+        t.setSingleLine(true);
+        b.addView(t);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 72);
+        lp.topMargin = 12;
+        lp.bottomMargin = 6;
+        b.setLayoutParams(lp);
+        b.setOnClickListener(v -> toggleSplit());
+        b.setVisibility(View.GONE);
+        splitButton = b;
+        return b;
+    }
+
     private LinearLayout navButton(Context c, String label, String target, int icon) {
         LinearLayout b = new LinearLayout(c);
         b.setOrientation(LinearLayout.HORIZONTAL);
@@ -784,9 +880,11 @@ final class CarUi {
         }
         aaShown = factory == null;
         markNav();
-        listener.onAaVisible(aaShown);
+        // La pantalla partida depende de la pantalla abierta: se recoloca todo y AA se ve si va sola o al lado.
+        applyLayout();
+        listener.onAaVisible(aaVisible());
         scheduleHide();
-        L.i("CarUi: pantalla " + name);
+        L.i("CarUi: pantalla " + name + (splitActive() ? " (partida, con AA)" : ""));
     }
 
     private static Supplier<CarScreen> factory(String name) {

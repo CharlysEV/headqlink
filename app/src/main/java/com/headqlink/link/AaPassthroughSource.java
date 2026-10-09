@@ -60,6 +60,8 @@ final class AaPassthroughSource implements VideoSource {
     private int videoH = 882;
     /** Ancho actual del panel propio en píxeles del coche (modo ampliado; menor si está oculto). */
     private volatile int panelCarW = PANEL_W;
+    /** Ancho de AA en la pantalla del coche con la pantalla partida; 0 = hasta el borde derecho. */
+    private volatile int aaCarW;
     private int logTouches = 20;
     private int logCrops = 3;
     private int targetFps = 30;
@@ -162,8 +164,15 @@ final class AaPassthroughSource implements VideoSource {
         return Math.round(aaCarX() * scale());
     }
 
+    /** Ancho de la zona de AA en la pantalla del coche: hasta el borde derecho o, con la pantalla partida, su mitad. */
+    private int aaCarW() {
+        return extended && aaCarW > 0 ? aaCarW : carW - aaCarX();
+    }
+
     private int aaVideoW() {
-        return videoW - aaVideoX();
+        int full = videoW - aaVideoX();
+        if (!extended || aaCarW <= 0) return full;
+        return Math.min(full, Math.round(aaCarW * scale()));
     }
 
     /**
@@ -539,8 +548,8 @@ final class AaPassthroughSource implements VideoSource {
                 }
 
                 @Override
-                public void onPanelWidth(int w) {
-                    setPanelWidth(w);
+                public void onAaRegion(int x, int w) {
+                    setAaRegion(x, w);
                 }
 
                 @Override
@@ -559,16 +568,20 @@ final class AaPassthroughSource implements VideoSource {
     }
 
     /**
-     * El panel propio cambia de ancho (se oculta solo o vuelve): AA se recoloca sobre la marcha con
-     * nuevos márgenes (UpdateUiConfigRequest) y el relay mueve su zona; los toques usan el nuevo origen.
+     * La zona de AA cambia (el panel se oculta solo o vuelve, o la pantalla se parte): AA se recoloca sobre la marcha
+     * con nuevos márgenes (UpdateUiConfigRequest) y el relay mueve su zona; los toques usan el nuevo origen y ancho.
      */
-    private void setPanelWidth(int w) {
-        if (w == panelCarW) return;
-        panelCarW = w;
+    private void setAaRegion(int x, int w) {
+        // Hasta el borde derecho: 0 (sin pantalla partida).
+        int aw = x + w >= carW ? 0 : w;
+        if (x == panelCarW && aw == aaCarW) return;
+        panelCarW = x;
+        aaCarW = aw;
         GlFrameRelay r = relay;
         if (r != null) r.setAaRegion(aaVideoX(), aaVideoW());
         announceTopAlignedMargins();
-        L.i("AA: panel " + w + " px -> AA en x=" + aaVideoX() + " ancho " + aaVideoW() + " (vídeo)");
+        L.i("AA: panel " + x + " px -> AA en x=" + aaVideoX() + " ancho " + aaVideoW() + " (vídeo)"
+                + (aw > 0 ? " · pantalla partida" : ""));
     }
 
     @Override
@@ -606,7 +619,9 @@ final class AaPassthroughSource implements VideoSource {
         CarUi ui = carUi;
         if (ui != null) {
             if (aaDown.isEmpty() && first.action == 1) {
-                touchToUi = ui.ownScreenActive() || first.x < aaCarX();
+                // A nuestra interfaz si AA no se ve, o si el toque cae fuera de su zona (la barra, o la otra mitad con la
+                // pantalla partida).
+                touchToUi = !ui.aaVisible() || first.x < aaCarX() || first.x >= aaCarX() + aaCarW();
                 ui.noteTouch(touchToUi);
             }
             if (touchToUi) {

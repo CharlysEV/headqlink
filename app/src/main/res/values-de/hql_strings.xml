@@ -763,4 +763,6 @@
     <string name="hql_near_loading">Suche Ladestationen im Umkreis von %1$d km…</string>
     <string name="hql_near_no_position">Noch keine GPS-Position.</string>
     <string name="hql_near_any_power">Jede Leistung</string>
+    <string name="hql_split_on">Bildschirm teilen</string>
+    <string name="hql_split_off">Vollbild</string>
 </resources>

@@ -764,4 +764,6 @@
     <string name="hql_near_loading">Cerco colonnine entro %1$d km…</string>
     <string name="hql_near_no_position">Ancora nessuna posizione GPS.</string>
     <string name="hql_near_any_power">Qualsiasi potenza</string>
+    <string name="hql_split_on">Dividi schermo</string>
+    <string name="hql_split_off">Schermo intero</string>
 </resources>

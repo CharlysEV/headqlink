@@ -764,4 +764,6 @@
     <string name="hql_near_loading">Recherche des bornes à moins de %1$d km…</string>
     <string name="hql_near_no_position">Pas encore de position GPS.</string>
     <string name="hql_near_any_power">Toute puissance</string>
+    <string name="hql_split_on">Partager l\'écran</string>
+    <string name="hql_split_off">Plein écran</string>
 </resources>

@@ -390,6 +390,9 @@ admite.
   Viagens, Instrumentos, Eficiência e Estado), «Fotos», «Vídeos», «Web», «TV», «Rádio», «Jogos» e «Definições». Com o Android
   Auto no ecrã, o painel esconde-se sozinho ao fim de alguns segundos; toque na margem esquerda para que volte. Fotos,
   vídeos, web, TV e jogos são **só para quando o carro está parado**.
+- **Ecrã dividido («Auto estendido»):** em «Web», «Vídeos» e «TV», o botão «Dividir ecrã» do painel põe o Android
+  Auto à esquerda, junto ao painel, e esse ecrã à direita, metade e metade. Cada metade responde aos seus toques.
+  «Ecrã inteiro» deixa-o sozinho outra vez. Fica assim enquanto a aplicação estiver aberta.
 - **Secção «Carro»** (estimado com os sensores do telemóvel e serviços abertos; com a conta Leapmotor, também com dados
   reais do carro: ver [Dados reais do carro](#dados-reais-do-carro-conta-leapmotor)):
   - «Rota»: destino, chegada, energia e consumo previstos; o perfil de elevação colorido pela inclinação (a verde as

@@ -2313,3 +2313,25 @@ Líneas nuevas:
 | `AA: día y noche con el sensor de luz del móvil (túneles, garajes)` | Día y noche de la sesión |
 
 Pruebas: `PhoneOffRendererTest`, `SessionNightModeTest` y `VersionLabelTest`.
+
+## 26. Pantalla partida en el modo extendido y versión 0.2.30 (2026-10-09)
+
+En «Web», «Vídeos» y «TV», el botón «Partir pantalla» del panel pone Android Auto a la izquierda, junto al panel (compacto), y esa pantalla a la derecha, mitad y mitad. «Pantalla completa» la deja sola otra vez. El estado se guarda en `CarUi.split` (estático) mientras viva el proceso.
+
+- `CarUi.splitAaWidth(width, railW)` = `(width − railW) / 2` (912 px en 1920 con el panel de 96 px). La pantalla ocupa el resto, a la derecha de AA.
+- `CarUi.Listener.onAaRegion(x, w)` sustituye a `onPanelWidth` (por defecto llama a esta). `AaPassthroughSource.setAaRegion` mueve AA a esa franja: el margen derecho que se anuncia a AA es `R = ancho negociado − ancho del vídeo de AA` y el relay coloca AA en `x`.
+- `CarUi.aaVisible()` es cierto también con la pantalla partida, así que AA sigue a la vista aunque haya una pantalla abierta.
+- Toques: los que caen dentro de `[aaCarX, aaCarX + aaCarW)` van a AA y el resto a la interfaz.
+
+Líneas nuevas:
+
+| Línea | Significado |
+|---|---|
+| `CarUi: pantalla partida sí (web)` / `… no` | Se parte o se une la pantalla |
+| `AA: panel 96 px -> AA en x=96 ancho 912 (vídeo) · pantalla partida` | AA en su mitad |
+
+Probado con el coche simulado: AA en la mitad izquierda, Wikipedia en la derecha; los toques abren el lanzador de AA y la web responde a los suyos.
+
+La versión pasa a **0.2.30** (`versionCode` 12): «0.2.3» se vería como anterior a 0.2.9 al comparar versiones para avisar de actualizaciones.
+
+Pruebas: `SplitScreenTest`.

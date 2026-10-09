@@ -763,4 +763,6 @@
     <string name="hql_near_loading">Laadpalen zoeken binnen %1$d km…</string>
     <string name="hql_near_no_position">Nog geen gps-positie.</string>
     <string name="hql_near_any_power">Elk vermogen</string>
+    <string name="hql_split_on">Scherm splitsen</string>
+    <string name="hql_split_off">Volledig scherm</string>
 </resources>

@@ -371,6 +371,9 @@ version). That tells us whether the C10 supports it.
   Efficiency and Status tabs), "Photos", "Videos", "Web", "TV", "Radio", "Games" and "Settings". With Android Auto on screen, the
   panel hides by itself after a few seconds; tap the left edge to bring it back. Photos, videos, web, TV and games are
   **only for when the car is stopped**.
+- **Split screen ("Auto extended"):** in "Web", "Videos" and "TV", the panel's "Split screen" button puts Android Auto
+  on the left, next to the panel, and that screen on the right, half and half. Each half takes its own touches. "Full
+  screen" shows it alone again. It is remembered while the app stays open.
 - **"Car" section** (estimated from the phone's sensors and open services; with the Leapmotor account, also with real
   car data: see [Real car data](#real-car-data-leapmotor-account)):
   - "Route": destination, arrival, expected energy and consumption; the elevation profile coloured by slope (descents
