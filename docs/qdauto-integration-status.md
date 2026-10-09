@@ -2316,7 +2316,7 @@ Pruebas: `PhoneOffRendererTest`, `SessionNightModeTest` y `VersionLabelTest`.
 
 ## 26. Pantalla partida en el modo extendido y versión 0.2.30 (2026-10-09)
 
-En «Web», «Vídeos» y «TV», el botón «Partir pantalla» del panel pone Android Auto a la izquierda, junto al panel (compacto), y esa pantalla a la derecha (al principio, mitad y mitad; ver §26.1). «Pantalla completa» la deja sola otra vez. El estado se guarda en `CarUi.split` (estático) mientras viva el proceso.
+En «Web», «Vídeos» y «TV», el botón «Partir pantalla» del panel pone Android Auto a la izquierda, junto al panel (compacto), y esa pantalla a la derecha (al principio, mitad y mitad; ver §26.1). «Pantalla completa» la deja sola otra vez. El estado se guarda en `CarUi.split` durante la sesión con el coche (desde la 0.2.32 empieza sin partir en cada sesión).
 
 - `CarUi.splitAaWidth(width, railW)` = `(width − railW) / 2` (912 px en 1920 con el panel de 96 px). La pantalla ocupa el resto, a la derecha de AA.
 - `CarUi.Listener.onAaRegion(x, w)` sustituye a `onPanelWidth` (por defecto llama a esta). `AaPassthroughSource.setAaRegion` mueve AA a esa franja: el margen derecho que se anuncia a AA es `R = ancho negociado − ancho del vídeo de AA` y el relay coloca AA en `x`.
@@ -2345,7 +2345,7 @@ Con AA a la mitad (912 px en el C10), Google Maps no se movía ni dejaba buscar;
 
 Ahora `CarUi.splitAaWidth(width, height, railW, dpi)` da la mitad, pero nunca menos de 800 dp ni de 1,15 veces el alto, y deja al menos 560 px a nuestra pantalla. En el C10, AA 1014 px y la web 810.
 
-**Aviso:** la primera vez que se pulsa «Partir pantalla» sale un aviso que hay que aceptar: se recomienda usarla con el coche parado, y se usa bajo la responsabilidad de quien la usa. Botones «Cancelar» y «Acepto». Se guarda en `Config.splitAccepted`.
+**Aviso:** la primera vez que se pulsa «Partir pantalla» sale un aviso que hay que aceptar: se recomienda usarla con el coche parado, y se usa bajo la responsabilidad de quien la usa. Botones «Cancelar» y «Acepto». En la 0.2.31 se aceptaba una vez para siempre; desde la 0.2.32 se pide la primera vez de cada sesión con el coche (`CarUi.splitAccepted`, por sesión), y la pantalla partida también empieza sin partir en cada sesión.
 
 | Línea | Significado |
 |---|---|

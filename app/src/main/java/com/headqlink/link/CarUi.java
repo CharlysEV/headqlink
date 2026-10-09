@@ -123,13 +123,15 @@ final class CarUi {
     private volatile boolean aaShown = true;
     /**
      * Pantalla partida (lo pide el usuario con el botón de la barra en Web, Vídeos o TV): AA a la izquierda, junto a la
-     * barra, y nuestra pantalla a la derecha, mitad y mitad. Se recuerda mientras viva la app: al volver a una de esas
-     * pantallas, sigue partida.
+     * barra, y nuestra pantalla a la derecha (splitAaWidth). Dura la sesión con el coche: al volver a una de esas
+     * pantallas, sigue partida; en la sesión siguiente empieza sin partir.
      */
     private static volatile boolean split;
     private LinearLayout splitButton;
     /** Aviso de la pantalla partida abierto (o null). */
     private View splitWarning;
+    /** Aviso aceptado en esta sesión: se pide una vez por sesión con el coche. */
+    private boolean splitAccepted;
     private CarScreen screen;
     private String screenName = "aa";
     /**
@@ -156,6 +158,8 @@ final class CarUi {
         screen = null;
         if (splash != null) splash.stop();
         splash = null;
+        // El aviso abierto se va con la interfaz vieja.
+        splitWarning = null;
         pres.setContentView(buildRoot(pres.getContext()));
         open(name);
         if (wasHidden && "aa".equals(name)) setHidden(true);
@@ -183,6 +187,8 @@ final class CarUi {
         this.panelGray = cfg.panelColor();
         this.panelColor = CarTheme.panelColor(panelGray);
         this.autoHide = cfg.panelAutoHide();
+        // Sesión nueva: sin partir, hasta aceptar otra vez el aviso.
+        split = false;
     }
 
     /** Color del panel en vivo (ajuste del móvil); no hace nada si el modo ampliado no está en marcha. */
@@ -328,7 +334,7 @@ final class CarUi {
 
     /** El botón de la barra: AA junto a nuestra pantalla, o nuestra pantalla sola otra vez. */
     private void toggleSplit() {
-        if (!split && !new Config(ctx).splitAccepted()) {
+        if (!split && !splitAccepted) {
             showSplitWarning();
             return;
         }
@@ -339,7 +345,7 @@ final class CarUi {
     }
 
     /**
-     * Aviso de la pantalla partida, antes de usarla por primera vez: mejor con el coche parado, y bajo la
+     * Aviso de la pantalla partida, la primera vez de cada sesión: mejor con el coche parado, y bajo la
      * responsabilidad de quien la usa. Hay que aceptarlo; «Cancelar» deja la pantalla como estaba.
      */
     private void showSplitWarning() {
@@ -375,7 +381,7 @@ final class CarUi {
         TextView accept = CarKit.pill(c, Str.get(R.string.hql_split_accept), true);
         accept.setOnClickListener(v -> {
             L.i("CarUi: aviso de la pantalla partida: aceptado");
-            new Config(ctx).setSplitAccepted();
+            splitAccepted = true;
             dismissSplitWarning();
             toggleSplit();
         });

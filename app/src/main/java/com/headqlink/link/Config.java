@@ -265,17 +265,6 @@ final class Config {
         sp.edit().putInt(CAR_DARK, dark ? 1 : 0).apply();
     }
 
-    /** Aviso de la pantalla partida aceptado (con el coche parado y bajo la responsabilidad de quien la usa). */
-    static final String SPLIT_ACCEPTED = "split_accepted";
-
-    boolean splitAccepted() {
-        return sp.getBoolean(SPLIT_ACCEPTED, false);
-    }
-
-    void setSplitAccepted() {
-        sp.edit().putBoolean(SPLIT_ACCEPTED, true).apply();
-    }
-
     /** versionCode de AA con el que el Self-Mode va directo al servidor de head unit (SelfModeShortcut); -1 = no. */
     static final String SELF_MODE_DIRECT_AA = "self_mode_direct_aa";
 
