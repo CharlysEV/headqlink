@@ -962,8 +962,22 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         }
     }
 
+    /** headqlink: esta instancia se cerró nada más crearse (la proyección no sale en el móvil); onDestroy no toca nada. */
+    private var headqlinkClosed = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // headqlink: Android Auto va a la pantalla del coche, sin vista en el móvil (VideoTap.headless), y esta pantalla de
+        // head unit no debe salir nunca. Se abría al tocar la notificación de música o de navegación de AA (y Open Headunit
+        // la levanta en algunos casos): apaisada y a pantalla completa, con «Android Auto está iniciando…», tapaba todo el
+        // móvil hasta cerrarla y le quitaba al coche el decodificador de AA (viaje del 2026-10-09, 08:55). Se cierra al
+        // instante, antes de tocar el decodificador, la orientación o los márgenes anunciados.
+        if (!allowOnPhone) {
+            headqlinkClosed = true
+            AppLog.i("AapProjectionActivity: headqlink - la proyección no se abre en el móvil (va al coche); se cierra")
+            finish()
+            return
+        }
         // [FIX] applyOrientationSettings() must be called AFTER super.onCreate() so that the
         // Activity window is fully initialized before we lock the orientation. Calling it before
         // super.onCreate() caused SCREEN_ORIENTATION_LOCKED to inherit the orientation context
@@ -2244,6 +2258,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     override fun onDestroy() {
         super.onDestroy()
+        if (headqlinkClosed) return
         autoStartOfferTimer?.cancel()
         autoStartOfferTimer = null
         HeadUnitScreenConfig.onMarginsDiverged = null
@@ -2282,6 +2297,9 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     companion object {
         const val EXTRA_FOCUS = "focus"
+
+        /** headqlink: la proyección de Open Headunit en el propio móvil. Nunca en HeadQLink (va al coche, ver onCreate). */
+        @Volatile var allowOnPhone = false
         @Volatile var isForeground = false
 
         /**

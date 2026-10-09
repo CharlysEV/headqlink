@@ -260,10 +260,7 @@ final class LinkWidgetViews {
 
     /** La app, sin conectar sola (para eso está el botón grande). */
     static PendingIntent openPending(Context c) {
-        Intent i = new Intent(c, HomeActivity.class)
-                .putExtra(HomeActivity.EXTRA_NO_AUTOCONNECT, true)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        return PendingIntent.getActivity(c, RC_OPEN, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        return PendingIntent.getActivity(c, RC_OPEN, HomeActivity.openIntent(c), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     /** El coche virtual (si el coche de verdad está conectado, él mismo avisa y no arranca). */

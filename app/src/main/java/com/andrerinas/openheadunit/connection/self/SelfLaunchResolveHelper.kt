@@ -12,6 +12,12 @@ import com.andrerinas.openheadunit.utils.ToastUtils
 class SelfLaunchResolveHelper(private val service: AapService) {
 
     fun run() {
+        // headqlink: con el coche conectado (vídeo de AA sin vista), nada de abrir la pantalla de permisos de Android Auto
+        // en el móvil: tapaba el móvil ~11 s (viaje del 2026-10-09, 08:54) y en marcha no se puede atender.
+        if (com.andrerinas.openheadunit.decoder.video.VideoTap.headless) {
+            AppLog.w("SelfMode: AA no conectó; con el coche conectado no abro su pantalla de permisos en el móvil")
+            return
+        }
         openPermissionsCheck()
     }
 

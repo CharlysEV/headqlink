@@ -2240,3 +2240,27 @@ Líneas nuevas:
 | `AA: Android Auto se ha desconectado solo con el coche conectado; lo relanzo` | Relanzamiento tras una caída |
 
 Pruebas: `SelfModeShortcutTest` (la misma versión de AA, otra versión, nada aprendido).
+
+### 24.1 La pantalla de proyección de Open Headunit tapaba el móvil (2026-10-09)
+
+**Síntoma.** Captura del usuario: el móvil apaisado, en negro, con «Android Auto está iniciando…» (`android_auto_starting`).
+Tapa la pantalla entera y los botones, y deja el móvil sin poder usarse hasta que se cierra.
+
+**Qué era.** Era `AapProjectionActivity`, la pantalla de head unit de Open Headunit, en la pantalla 0 del móvil. Se abrió a las 08:55:03, en plena S13 por cable, sin que HeadQLink la pidiera. Hay tres caminos que la abren:
+- tocar la notificación de música de AA (`BackgroundNotification`);
+- tocar la de navegación (`AapNavigationHelper`);
+- algunos casos de Open Headunit (ajustes, `AapBroadcastReceiver`).
+
+**Daños.** Además de tapar el móvil, al abrirse se queda con el decodificador de AA («New surface set»): la zona de AA del coche se para. Antes, a las 08:54:28, el Self-Mode había caducado (Path 2 seguía esperando sus 12 s). `SelfLaunchResolveHelper` abrió entonces la pantalla de permisos de AA, que también tapó el móvil unos 11 s.
+
+**Arreglo.**
+- `AapProjectionActivity.onCreate` se cierra nada más crearse (`allowOnPhone = false`). No toca el decodificador, la orientación ni los márgenes anunciados, y `onDestroy` tampoco limpia nada.
+- Las dos notificaciones abren HeadQLink sin conectar sola (`HomeActivity.openIntent`, la misma vía que la marca del widget).
+- Con el coche conectado (`VideoTap.headless`), `SelfLaunchResolveHelper` no abre la pantalla de permisos de AA; solo lo apunta en el log.
+
+Líneas nuevas:
+
+| Línea | Significado |
+|---|---|
+| `AapProjectionActivity: headqlink - la proyección no se abre en el móvil (va al coche); se cierra` | Alguien intentó abrirla |
+| `SelfMode: AA no conectó; con el coche conectado no abro su pantalla de permisos en el móvil` | Self-Mode caducado en plena sesión |

@@ -240,10 +240,11 @@ val actionText = state?.stepsList?.firstOrNull()?.maneuver?.type?.let { maneuver
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setAutoCancel(true)
             .setContentIntent(
+                // headqlink: tocarla abre HeadQLink (sin conectar sola), no la proyección de Open Headunit (va al coche).
                 PendingIntent.getActivity(
                     appContext,
                     0,
-                    AapProjectionActivity.intent(appContext),
+                    com.headqlink.link.HomeActivity.openIntent(appContext),
                     pendingIntentFlags
                 )
             )

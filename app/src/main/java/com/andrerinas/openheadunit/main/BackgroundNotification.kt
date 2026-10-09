@@ -8,7 +8,6 @@ import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.R
-import com.andrerinas.openheadunit.aap.AapProjectionActivity
 import com.andrerinas.openheadunit.aap.protocol.proto.MediaPlayback
 import com.andrerinas.openheadunit.contract.MediaKeyIntent
 import com.andrerinas.openheadunit.utils.protoUint32ToLong
@@ -56,7 +55,9 @@ class BackgroundNotification(private val context: Context) {
                 .setSubText(progressText)
                 .setSmallIcon(R.drawable.ic_stat_aa)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setContentIntent(PendingIntent.getActivity(context, 0, AapProjectionActivity.intent(context),
+                // headqlink: tocarla abre HeadQLink (sin conectar sola), no la proyección de Open Headunit, que no sale en el
+                // móvil (va al coche: AapProjectionActivity se cierra sola).
+                .setContentIntent(PendingIntent.getActivity(context, 0, com.headqlink.link.HomeActivity.openIntent(context),
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE else PendingIntent.FLAG_UPDATE_CURRENT))
                 .addAction(R.drawable.ic_skip_previous_black_24dp, context.getString(R.string.media_action_previous), prev)
                 .addAction(

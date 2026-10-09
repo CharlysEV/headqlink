@@ -1,6 +1,7 @@
 package com.headqlink.link;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -52,6 +53,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
      * conectar ya están sus botones).
      */
     static final String EXTRA_NO_AUTOCONNECT = "no_autoconnect";
+
+    /** La app sin conectar sola (marca del widget, notificaciones de Android Auto): para quien solo quiere verla. */
+    public static Intent openIntent(Context c) {
+        return new Intent(c, HomeActivity.class).putExtra(EXTRA_NO_AUTOCONNECT, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    }
     /** TileService.ACTION_QS_TILE_PREFERENCES: el botón de los ajustes rápidos, mantenido pulsado. */
     private static final String ACTION_TILE_PREFERENCES = "android.service.quicksettings.action.QS_TILE_PREFERENCES";
     private static final int REQ_IPTV_FILE = 10;
