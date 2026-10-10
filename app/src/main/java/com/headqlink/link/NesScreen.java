@@ -321,14 +321,24 @@ final class NesScreen {
     }
 
     /** El fotograma del emulador, escalado a lo que cabe (8:7 como la NES) y centrado. */
-    private static final class NesView extends View {
+    static final class NesView extends View {
         private volatile Bitmap frame;
-        private final Paint p = new Paint(Paint.FILTER_BITMAP_FLAG);
+        // Sin suavizado: píxeles nítidos, que el codificador de vídeo comprime mucho mejor.
+        private final Paint p = new Paint();
         private final Rect src = new Rect(0, 0, NesEngine.W, NesEngine.H);
         private final RectF dst = new RectF();
 
         NesView(Context c) {
             super(c);
+        }
+
+        /**
+         * Puro: aumento entero que cabe (×3 en el C10). Con un aumento no entero, cada paso del desplazamiento remuestrea
+         * los píxeles y el codificador no encuentra el fotograma anterior: se pixela. Con uno entero, un paso de la NES son
+         * k píxeles exactos y se comprime casi gratis.
+         */
+        static int scale(int w, int h) {
+            return Math.max(1, Math.min(w / NesEngine.W, h / NesEngine.H));
         }
 
         private volatile boolean pending;
@@ -349,13 +359,14 @@ final class NesScreen {
         protected void onDraw(Canvas cv) {
             Bitmap b = frame;
             if (b == null) return;
-            float w = getWidth();
-            float h = getHeight();
-            // Píxeles de la NES ligeramente anchos (8:7), como en una tele.
-            float aspect = (NesEngine.W * 8f / 7f) / NesEngine.H;
-            float dw = Math.min(w, h * aspect);
-            float dh = dw / aspect;
-            dst.set((w - dw) / 2, (h - dh) / 2, (w + dw) / 2, (h + dh) / 2);
+            int w = getWidth();
+            int h = getHeight();
+            int k = scale(w, h);
+            int dw = NesEngine.W * k;
+            int dh = NesEngine.H * k;
+            int left = (w - dw) / 2;
+            int top = (h - dh) / 2;
+            dst.set(left, top, left + dw, top + dh);
             cv.drawBitmap(b, src, dst, p);
         }
     }

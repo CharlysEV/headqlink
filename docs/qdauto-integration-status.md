@@ -2418,3 +2418,12 @@ Primera prueba del usuario con un mando de Xbox por Bluetooth: no funcionaba, lo
 - **Mando:** faltaba `android:canRequestFilterKeyEvents="true"` en el servicio de accesibilidad (sin esa capacidad Android no le pasa teclas), y `NesPadActivity` no llegaba a abrirse porque Android bloquea abrir pantallas desde segundo plano. Ahora: la accesibilidad recibe los botones (A, B, Start, Select y la cruceta cuando llega como teclas); `HomeActivity` reenvía teclas y ejes (`dispatchKeyEvent`, `dispatchGenericMotionEvent`) mientras hay juego, así que con HeadQLink delante llega el mando entero; y una notificación «Mando conectado al coche» abre `NesPadActivity` de un toque (`NesPadActivity.notify`, canal `hql_nes`; se quita al parar).
 - **Varios dedos en nuestra interfaz:** `AaPassthroughSource` pasa todos los dedos (`CarUi.touchMulti`) y CarUi construye un `MotionEvent` con todos los punteros (DOWN/POINTER_DOWN/MOVE/POINTER_UP/UP según el dedo que cambia); un solo dedo sigue por el camino de siempre (con el gesto del panel).
 - **Saltos:** `NesView` pedía un redibujado por fotograma emulado (60/s) sobre la pantalla virtual de 30 Hz; ahora guarda el último fotograma y pide uno por tic (`postOnAnimation`). El hilo del emulador va con `THREAD_PRIORITY_URGENT_AUDIO`.
+
+### 32.2 Imagen pixelada y a saltos (0.2.41)
+
+Segunda prueba del usuario (coche virtual en el móvil): imagen pixelada y a saltos, injugable. Sin log (el móvil fuera de la red). Hipótesis y cambios:
+- **Pixelado:** el juego se escalaba ×3,57 con suavizado: cada paso del desplazamiento remuestreaba los píxeles y el codificador H.264 (bitrate limitado del enlace) no encontraba el fotograma anterior, así que perdía calidad en bloques. Ahora `NesView.scale` da un aumento entero (×3 en el C10, 768x672) sin suavizado: un paso de la NES son 3 píxeles exactos y el codificador lo comprime casi gratis. Se deja de lado el 8:7.
+- **Saltos:** la NES da 60 fotogramas por segundo y la pantalla 30; entregar «el último» mezclaba pasos de 1 y de 3 fotogramas. `NesEngine.setFrame` solo entrega los pares (siempre de dos en dos) y con tres búferes.
+- **Medida:** cada 5 s, `NES: X fps emulados · Y entregados a la pantalla · audio sin datos N veces` (con `AudioTrack.getUnderrunCount`). Con eso y la línea del relay (`descartados … por ir atrasados`) se ve si falta CPU, si el audio se queda sin datos o si el enlace tira fotogramas.
+
+Prueba: `NesInputTest.gameIsScaledByAWholeFactor`.

@@ -33,9 +33,18 @@ final class NesEngine implements GUIInterface {
     private final NES nes;
     private final PuppetController pad1 = new PuppetController();
     private final PuppetController pad2 = new PuppetController();
-    private final Bitmap[] frames = {Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888), Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)};
+    /** Tres búferes: el que se escribe nunca es el que la pantalla puede estar dibujando. */
+    private final Bitmap[] frames = {Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888), Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888),
+            Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)};
     private final int[] argb = new int[W * H];
     private int frameIdx;
+    /** Fotogramas emulados: la pantalla del coche va a 30 Hz, así que solo se entrega uno de cada dos (los pares). */
+    private long emulated;
+    private long shown;
+    private long statsAtNs;
+    private long statsEmulated;
+    private long statsShown;
+    private static volatile AudioTrack lastTrack;
     private Thread thread;
     private volatile Listener listener;
     private volatile String lastError;
@@ -117,15 +126,44 @@ final class NesEngine implements GUIInterface {
     public void setFrame(int[] frame, int[] bgcolor, boolean dotcrawl) {
         Listener l = listener;
         if (l == null) return;
+        emulated++;
+        logStats();
+        // La NES da 60 fotogramas por segundo y la pantalla del coche toma 30: entregar «el último» mezclaba saltos de
+        // uno y de tres fotogramas (tirones al desplazarse). Solo los pares: siempre de dos en dos.
+        if ((emulated & 1) != 0) return;
+        shown++;
         int[][] col = NesColors.col;
         for (int i = 0; i < W * H; i++) {
             int p = frame[i + W * CLIP];
             argb[i] = col[(p & 0x1c0) >> 6][p & 0x3f];
         }
         Bitmap b = frames[frameIdx];
-        frameIdx ^= 1;
+        frameIdx = (frameIdx + 1) % frames.length;
         b.setPixels(argb, 0, W, 0, 0, W, H);
         l.onFrame(b);
+    }
+
+    /** Cada 5 s, al log: fotogramas emulados y entregados por segundo y veces que el audio se quedó sin datos. */
+    private void logStats() {
+        long now = System.nanoTime();
+        if (statsAtNs == 0) {
+            statsAtNs = now;
+            return;
+        }
+        long dt = now - statsAtNs;
+        if (dt < 5_000_000_000L) return;
+        double s = dt / 1e9;
+        AudioTrack t = lastTrack;
+        int under = -1;
+        try {
+            if (t != null) under = t.getUnderrunCount();
+        } catch (IllegalStateException ignored) {
+        }
+        L.i(String.format(java.util.Locale.US, "NES: %.1f fps emulados · %.1f entregados a la pantalla · audio sin datos %d veces en total",
+                (emulated - statsEmulated) / s, (shown - statsShown) / s, under));
+        statsAtNs = now;
+        statsEmulated = emulated;
+        statsShown = shown;
     }
 
     @Override
@@ -169,6 +207,7 @@ final class NesEngine implements GUIInterface {
                             .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO).build(),
                     size, AudioTrack.MODE_STREAM, android.media.AudioManager.AUDIO_SESSION_ID_GENERATE);
             track.play();
+            lastTrack = track;
         }
 
         @Override

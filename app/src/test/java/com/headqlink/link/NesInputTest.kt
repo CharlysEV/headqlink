@@ -49,6 +49,14 @@ class NesInputTest {
     }
 
     @Test
+    fun gameIsScaledByAWholeFactor() {
+        // C10: la zona del juego (~1824 x ~790) cabe a ×3 (768 x 672); nunca un aumento no entero.
+        assertEquals(3, NesScreen.NesView.scale(1824, 790))
+        assertEquals(2, NesScreen.NesView.scale(800, 500))
+        assertEquals(1, NesScreen.NesView.scale(100, 100))
+    }
+
+    @Test
     fun romFilesAndFoldersSortFoldersFirst() {
         assertTrue(NesScreen.isRom("Juego.NES"))
         assertTrue(NesScreen.isRom("musica.nsf"))
