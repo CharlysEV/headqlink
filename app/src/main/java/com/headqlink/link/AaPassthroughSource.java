@@ -589,8 +589,10 @@ final class AaPassthroughSource implements VideoSource {
         GlFrameRelay r = relay;
         if (r != null) r.setAaRegion(aaVideoX(), aaVideoW());
         announceTopAlignedMargins();
+        // Pantalla partida: AA acaba antes de donde empezaría el panel (con el panel a la derecha, aw > 0 sin partir).
+        boolean split = aw > 0 && x + aw + PANEL_W < carW;
         L.i("AA: panel " + x + " px -> AA en x=" + aaVideoX() + " ancho " + aaVideoW() + " (vídeo)"
-                + (aw > 0 ? " · pantalla partida" : ""));
+                + (split ? " · pantalla partida" : ""));
     }
 
     @Override

@@ -282,20 +282,39 @@ final class SettingsScreen implements CarScreen {
                 cv.drawCircle(x, h / 2, 15, pt);
             }
 
+            float downX;
+            float downY;
+            boolean dragging;
+
             @Override
             public boolean onTouchEvent(android.view.MotionEvent e) {
-                if (e.getAction() == android.view.MotionEvent.ACTION_DOWN || e.getAction() == android.view.MotionEvent.ACTION_MOVE) {
-                    p = Math.max(0f, Math.min(1f, e.getX() / getWidth()));
-                    invalidate();
-                    // Padres (el ScrollView) fuera mientras se arrastra.
-                    getParent().requestDisallowInterceptTouchEvent(true);
-                    return true;
+                switch (e.getAction()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        downX = e.getX();
+                        downY = e.getY();
+                        dragging = false;
+                        return true;
+                    case android.view.MotionEvent.ACTION_MOVE:
+                        // Arrastre horizontal: la barra; vertical: lo deja pasar al ScrollView (que cancela este toque).
+                        if (!dragging && Math.abs(e.getX() - downX) > 24 && Math.abs(e.getX() - downX) > Math.abs(e.getY() - downY)) {
+                            dragging = true;
+                            getParent().requestDisallowInterceptTouchEvent(true);
+                        }
+                        if (dragging) {
+                            p = Math.max(0f, Math.min(1f, e.getX() / getWidth()));
+                            invalidate();
+                        }
+                        return true;
+                    case android.view.MotionEvent.ACTION_UP:
+                        // Toque suelto o fin del arrastre: se aplica.
+                        if (!dragging && Math.abs(e.getY() - downY) > 40) return true;
+                        p = Math.max(0f, Math.min(1f, e.getX() / getWidth()));
+                        invalidate();
+                        onPick.accept(p);
+                        return true;
+                    default:
+                        return super.onTouchEvent(e);
                 }
-                if (e.getAction() == android.view.MotionEvent.ACTION_UP) {
-                    onPick.accept(p);
-                    return true;
-                }
-                return super.onTouchEvent(e);
             }
         };
         row.addView(bar, new LinearLayout.LayoutParams(0, 60, 1f));

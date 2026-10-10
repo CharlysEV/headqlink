@@ -857,6 +857,8 @@ final class CarUi {
         // Desplegar el panel minimizado.
         ImageView ex = new ImageView(c);
         ex.setImageResource(R.drawable.hql_ic_expand);
+        // La flecha apunta hacia el contenido: con el panel a la derecha, hacia la izquierda.
+        ex.setScaleX(panelRight ? -1f : 1f);
         ex.setImageTintList(ColorStateList.valueOf(CarStyle.TEXT));
         ex.setBackground(CarStyle.round(CarStyle.PILL_BG, 36));
         ex.setPadding(16, 16, 16, 16);
