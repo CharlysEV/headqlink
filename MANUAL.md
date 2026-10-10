@@ -376,7 +376,7 @@ admite.
 - **«Auto»:** Android Auto a pantalla completa.
 - **«Auto extendido»:** un panel a la izquierda, del lado del conductor, con «Auto», «Coche» (pestañas Ruta,
   Conducción, Viajes, Instrumentos, Eficiencia y Estado), «Fotos», «Vídeos», «Web», «TV», «Radio», «Juegos» y «Ajustes». Con
-  Android Auto en pantalla, el panel se oculta solo a los pocos segundos; toca el borde izquierdo para que vuelva.
+  Android Auto en pantalla, el panel se oculta solo a los pocos segundos; toca el borde del lado del panel para que vuelva.
   Fotos, vídeos, web, TV y juegos son **solo para cuando el coche está parado**.
 - **Pantalla partida («Auto extendido»):** en «Web», «Vídeos» y «TV», el botón «Partir pantalla» del panel pone Android
   Auto a la izquierda, junto al panel, y esa pantalla a la derecha. Android Auto se queda con algo más de la mitad, lo
@@ -644,6 +644,13 @@ de los viajes; 0,20 de serie), y ver la conexión y el motor que se están usand
 «Color del panel lateral»: «Automático» (oscuro de noche y claro de día, como la pantalla del coche) o uno de 16 colores
 fijos, que se queda igual de día y de noche. Se aplica al momento, y el texto del panel pasa a claro u oscuro para que
 se lea.
+
+Debajo, «Tono» y «Claro / oscuro» dan cualquier otro color, y «Transparencia» lo funde con el negro de la pantalla.
+«Panel lateral a la derecha» pone el panel al otro lado, con Android Auto pegado al borde izquierdo. «Botones del panel
+lateral» elige cuáles se ven (Sí / No) y en qué orden (flechas); «Auto» y «Ajustes» van fijos. Con el panel reducido a
+iconos, abajo salen la hora, la temperatura exterior y la batería del coche (cuando hay dato). Y en la pantalla
+principal del móvil, al salir una versión nueva aparece un aviso con sus novedades y el enlace de descarga; la primera
+vez que arranca una versión recién instalada, se enseñan sus novedades.
 
 ### «Idioma»
 

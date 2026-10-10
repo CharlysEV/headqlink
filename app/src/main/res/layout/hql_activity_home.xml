@@ -59,6 +59,24 @@
                 android:tint="@color/hql_text" />
         </LinearLayout>
 
+        <!-- headqlink: aviso de versión nueva (oculto si no la hay); abre las novedades y el enlace de descarga -->
+        <TextView
+            android:id="@+id/hql_home_update"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/hql_panel_glow"
+            android:drawablePadding="12dp"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center_vertical"
+            android:paddingStart="18dp"
+            android:paddingTop="14dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="14dp"
+            android:textColor="@color/hql_text"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
         <!-- Modo y conexión -->
         <LinearLayout
             android:layout_width="match_parent"

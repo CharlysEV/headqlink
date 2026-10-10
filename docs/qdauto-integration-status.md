@@ -2367,3 +2367,15 @@ Línea nueva: `CarUi: color de la barra fijo #RRGGBB` / `… automático (día y
 Probado en el coche virtual: azul (texto blanco), blanco (texto oscuro) y vuelta a «Automático».
 
 Pruebas: `CarThemeTest` (color fijo de día y de noche, texto según el color, 16 colores distintos y opacos).
+
+## 28. Aviso de versión nueva, panel a medida y datos en la barra (0.2.34, 2026-10-10)
+
+- **Aviso de versión nueva (`UpdateCheck`).** El comprobador de Open Headunit miraba las releases de open-headunit. Ahora, en la pantalla principal, como mucho cada 6 h se consulta la última release de CharlysEV/headqlink (`/releases/latest`) y se compara número a número con la instalada (0.2.30 > 0.2.9). Si es más nueva, una fila «Hay una versión nueva: X» abre sus notas (Markdown pasado a texto llano, sin la sección «Aviso» ni el SHA) con «Descargar». **Novedades:** la primera vez que arranca una versión recién instalada (versionCode distinto del último visto; en la primera instalación no), se buscan las notas de su etiqueta `v<versión>` y se enseñan; si no hay red, se reintenta en el siguiente arranque. Pruebas: `UpdateCheckTest`.
+- **Botones del panel a medida** (`Config.panelButtons`, CSV en su orden; «Auto» arriba y «Ajustes» abajo fijos). En Ajustes, una fila por botón con Sí/No y flechas. Se aplica al momento (`CarUi.applyPanelButtons` → `rebuild`).
+- **Color libre y transparencia.** Bajo los 16 colores, dos barras de degradado («Tono», «Claro / oscuro»: `CarTheme.fromHue`, saturación fija 0,72) dan cualquier color (se guarda en el mismo `panelFixedColor`), y «Transparencia» (`Config.panelAlpha`, 0-100) funde el color con negro (`CarTheme.dim`): detrás del panel no hay otra cosa que el fondo negro, así que es lo que una transparencia real enseñaría. El texto del panel se decide con el color ya fundido.
+- **Panel a la derecha** (`Config.panelRight`). `CarUi` coloca el panel con gravedad derecha, el contenido entre AA y el panel, y anuncia a AA la zona `(0, ancho − panel)`; con la pantalla partida, AA en `[0, aaW)` y nuestra pantalla hasta el panel. `AaPassthroughSource` arranca con `panelCarW = 0` y `aaCarW = carW − PANEL_W` para que el relay y los toques estén bien desde el primer fotograma. El deslizamiento para desplegar el panel minimizado parte del borde derecho.
+- **Datos en la barra de iconos** (panel reducido): hora, temperatura exterior (`CarSensors.outsideTempC`, del tiempo; sin dato no se enseña) y batería del coche (`CarCloud.snapshot().status.socBest()`; sin cuenta no se enseña). Se refresca cada 30 s.
+
+Líneas: `versiones: la última publicada es X · instalada Y · hay versión nueva`, `versiones: novedades de la X`, `CarUi: botones del panel [...]`, `CarUi: panel a la derecha`, `CarUi: transparencia del panel N %`.
+
+Pruebas: `UpdateCheckTest`, `PanelSettingsTest`.

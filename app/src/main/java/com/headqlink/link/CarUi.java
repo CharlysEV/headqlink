@@ -132,6 +132,14 @@ final class CarUi {
     private View splitWarning;
     /** Aviso aceptado en esta sesión: se pide una vez por sesión con el coche. */
     private boolean splitAccepted;
+    /** Panel a la derecha (Ajustes): AA y nuestras pantallas a su izquierda. */
+    private boolean panelRight;
+    /** Datos en la barra de iconos (hora, temperatura exterior y batería del coche), solo con el panel reducido. */
+    private LinearLayout railInfo;
+    private TextView railTime;
+    private TextView railTemp;
+    private TextView railSoc;
+    private final Runnable railTick = this::renderRailInfo;
     private CarScreen screen;
     private String screenName = "aa";
     /**
@@ -190,6 +198,8 @@ final class CarUi {
         this.listener = listener;
         Config cfg = new Config(ctx);
         CarTheme.setFixedPanel(cfg.panelFixedColor());
+        CarTheme.setPanelAlpha(cfg.panelAlpha());
+        this.panelRight = cfg.panelRight();
         this.panelGray = cfg.panelColor();
         this.panelColor = CarTheme.panelColor(panelGray);
         this.autoHide = cfg.panelAutoHide();
@@ -238,6 +248,35 @@ final class CarUi {
         CarUi ui = current;
         if (ui != null) ui.main.post(() -> {
             L.i("CarUi: color de la barra " + (color == 0 ? "automático (día y noche)" : String.format("fijo #%06X", color & 0xFFFFFF)));
+            if (ui.pres != null) ui.rebuild();
+        });
+    }
+
+    /** Transparencia del panel (0-100) elegida en Ajustes: al momento. */
+    static void applyPanelAlpha(int pct) {
+        CarTheme.setPanelAlpha(pct);
+        CarUi ui = current;
+        if (ui != null) ui.main.post(() -> {
+            L.i("CarUi: transparencia del panel " + pct + " %");
+            if (ui.pres != null) ui.rebuild();
+        });
+    }
+
+    /** Panel a la derecha o a la izquierda (Ajustes): se rehace la interfaz y AA se recoloca. */
+    static void applyPanelRight(boolean right) {
+        CarUi ui = current;
+        if (ui != null) ui.main.post(() -> {
+            ui.panelRight = right;
+            L.i("CarUi: panel a la " + (right ? "derecha" : "izquierda"));
+            if (ui.pres != null) ui.rebuild();
+        });
+    }
+
+    /** Botones del panel (cuáles y en qué orden) cambiados en Ajustes: se rehace el panel. */
+    static void applyPanelButtons() {
+        CarUi ui = current;
+        if (ui != null) ui.main.post(() -> {
+            L.i("CarUi: botones del panel " + new Config(ui.ctx).panelButtons());
             if (ui.pres != null) ui.rebuild();
         });
     }
@@ -315,21 +354,25 @@ final class CarUi {
             b.setPadding(rail ? 0 : 18, 0, rail ? 0 : 18, 0);
         }
         battery.setVisibility(rail ? View.GONE : View.VISIBLE);
+        railInfo.setVisibility(rail ? View.VISIBLE : View.GONE);
+        if (rail) renderRailInfo();
         expand.setVisibility(hidden ? View.VISIBLE : View.GONE);
         renderAlert();
         panel.setPadding(rail ? 12 : 20, 20, rail ? 12 : 20, 20);
         renderRadioMini();
         int aaW = sp ? splitAaWidth(width, height, pw, dpi) : 0;
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) content.getLayoutParams();
-        lp.leftMargin = pw + aaW;
+        // Con el panel a la derecha, AA va pegado al borde izquierdo y nuestra pantalla entre AA y el panel.
+        int aaX = panelRight ? 0 : pw;
+        lp.leftMargin = aaX + aaW;
         lp.width = width - pw - aaW;
         content.setLayoutParams(lp);
         renderSplitButton(rail);
         // Solo importa a AA cuando se ve (el modo compacto es de nuestras pantallas).
         if (sp) {
-            listener.onAaRegion(pw, aaW);
+            listener.onAaRegion(aaX, aaW);
         } else if (!compact) {
-            listener.onAaRegion(pw, width - pw);
+            listener.onAaRegion(aaX, width - pw);
         }
     }
 
@@ -551,6 +594,7 @@ final class CarUi {
             if (current == this) current = null;
             main.removeCallbacks(hideTask);
             main.removeCallbacks(alertExpire);
+            main.removeCallbacks(railTick);
             if (RoutePlanner.chargeAlerts == chargeAlert) RoutePlanner.chargeAlerts = null;
             SspSession.setDrivingUi(true);
             try {
@@ -588,8 +632,9 @@ final class CarUi {
             long now = SystemClock.uptimeMillis();
             int a;
             // Panel minimizado: deslizar hacia la derecha desde la barra lo despliega.
-            if (action == 1) swipeX = hidden && x < COMPACT_W ? x : -1;
-            if (action == 3 && swipeX >= 0 && x - swipeX > 70) {
+            boolean atEdge = panelRight ? x > width - COMPACT_W : x < COMPACT_W;
+            if (action == 1) swipeX = hidden && atEdge ? x : -1;
+            if (action == 3 && swipeX >= 0 && (panelRight ? swipeX - x : x - swipeX) > 70) {
                 swipeX = -1;
                 setHidden(false);
                 scheduleHide();
@@ -666,15 +711,17 @@ final class CarUi {
         root = new FrameLayout(c);
         root.setBackgroundColor(CarStyle.BG);
         panel = buildPanel(c);
-        root.addView(panel, new FrameLayout.LayoutParams(panelW, height));
+        int side = panelRight ? Gravity.RIGHT : Gravity.LEFT;
+        root.addView(panel, new FrameLayout.LayoutParams(panelW, height, side));
         content = new FrameLayout(c);
         content.setBackgroundColor(panelColor);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(contentWidth(), height);
-        lp.leftMargin = panelW;
+        lp.leftMargin = panelRight ? 0 : panelW;
         root.addView(content, lp);
         FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(panelW - 24, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM | Gravity.LEFT);
+                Gravity.BOTTOM | side);
         alp.leftMargin = 12;
+        alp.rightMargin = 12;
         alp.bottomMargin = 12;
         root.addView(buildAlert(c), alp);
         return root;
@@ -797,14 +844,11 @@ final class CarUi {
         p.setPadding(20, 20, 20, 20);
         navButtons.clear();
         p.addView(navButton(c, Str.get(R.string.hql_mode_aa), "aa", R.drawable.hql_ic_aa));
-        p.addView(navButton(c, Str.get(R.string.hql_car), "car", R.drawable.hql_ic_gauges));
-        p.addView(navButton(c, Str.get(R.string.hql_photos), "photos", R.drawable.hql_ic_photos));
-        p.addView(navButton(c, Str.get(R.string.hql_videos), "videos", R.drawable.hql_ic_videos));
-        p.addView(navButton(c, "Web", "web", R.drawable.hql_ic_web));
-        p.addView(navButton(c, "TV", "tv", R.drawable.hql_ic_tv));
-        p.addView(navButton(c, Str.get(R.string.hql_radio), "radio", R.drawable.hql_ic_radio));
-        p.addView(buildRadioMini(c));
-        p.addView(navButton(c, Str.get(R.string.hql_games), "games", R.drawable.hql_ic_games));
+        // Los botones que se eligieron en Ajustes, en su orden («Auto» arriba y «Ajustes» abajo van fijos).
+        for (String id : new Config(ctx).panelButtons()) {
+            p.addView(navButton(c, navLabel(id), id, navIcon(id)));
+            if ("radio".equals(id)) p.addView(buildRadioMini(c));
+        }
         p.addView(buildSplitButton(c));
 
         View spacer = new View(c);
@@ -828,7 +872,73 @@ final class CarUi {
         battery = CarStyle.text(c, "", 22, CarTheme.navTextDim());
         battery.setPadding(8, 0, 0, 6);
         p.addView(battery);
+        p.addView(buildRailInfo(c));
         return p;
+    }
+
+    /** Texto de un botón del panel por su id (Config.PANEL_BUTTONS_ALL). */
+    static String navLabel(String id) {
+        switch (id) {
+            case "car": return Str.get(R.string.hql_car);
+            case "photos": return Str.get(R.string.hql_photos);
+            case "videos": return Str.get(R.string.hql_videos);
+            case "web": return "Web";
+            case "tv": return "TV";
+            case "radio": return Str.get(R.string.hql_radio);
+            case "games": return Str.get(R.string.hql_games);
+            default: return id;
+        }
+    }
+
+    static int navIcon(String id) {
+        switch (id) {
+            case "car": return R.drawable.hql_ic_gauges;
+            case "photos": return R.drawable.hql_ic_photos;
+            case "videos": return R.drawable.hql_ic_videos;
+            case "web": return R.drawable.hql_ic_web;
+            case "tv": return R.drawable.hql_ic_tv;
+            case "radio": return R.drawable.hql_ic_radio;
+            case "games": return R.drawable.hql_ic_games;
+            default: return R.drawable.hql_ic_settings;
+        }
+    }
+
+    /**
+     * Datos en la barra de iconos (cuando el panel está reducido): hora, temperatura exterior (del tiempo, si los sensores
+     * la tienen) y batería del coche (de la cuenta de Leapmotor, si hay dato). Se refresca cada 30 s.
+     */
+    private View buildRailInfo(Context c) {
+        LinearLayout l = new LinearLayout(c);
+        l.setOrientation(LinearLayout.VERTICAL);
+        l.setGravity(Gravity.CENTER_HORIZONTAL);
+        l.setPadding(0, 4, 0, 4);
+        railTime = CarStyle.text(c, "", 20, CarTheme.navText());
+        railTime.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        railTime.setGravity(Gravity.CENTER);
+        railTemp = CarStyle.text(c, "", 18, CarTheme.navTextDim());
+        railTemp.setGravity(Gravity.CENTER);
+        railSoc = CarStyle.text(c, "", 18, CarTheme.navTextDim());
+        railSoc.setGravity(Gravity.CENTER);
+        l.addView(railTime);
+        l.addView(railTemp);
+        l.addView(railSoc);
+        l.setVisibility(View.GONE);
+        railInfo = l;
+        return l;
+    }
+
+    private void renderRailInfo() {
+        main.removeCallbacks(railTick);
+        if (railInfo == null || railInfo.getVisibility() != View.VISIBLE) return;
+        railTime.setText(new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(new java.util.Date()));
+        double t = CarSensors.outsideTempC();
+        railTemp.setText(Double.isNaN(t) ? "" : Math.round(t) + "\u00b0");
+        railTemp.setVisibility(Double.isNaN(t) ? View.GONE : View.VISIBLE);
+        CarCloud.Snapshot cs = CarCloud.snapshot();
+        double soc = cs.hasData() ? cs.status.socBest() : Double.NaN;
+        railSoc.setText(Double.isNaN(soc) ? "" : Math.round(soc) + " %");
+        railSoc.setVisibility(Double.isNaN(soc) ? View.GONE : View.VISIBLE);
+        main.postDelayed(railTick, 30_000);
     }
 
     /** Elemento del panel al estilo de AA: icono + texto; el activo, en una píldora de color. */

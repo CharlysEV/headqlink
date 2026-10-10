@@ -531,6 +531,79 @@ final class Config {
         return 0xFF000000 | (g << 16) | (g << 8) | Math.min(255, g + 2);
     }
 
+    /** Panel del modo extendido a la derecha (AA pegado al conductor en coches con volante a la derecha, o a gusto). */
+    static final String PANEL_RIGHT = "panel_right";
+
+    boolean panelRight() {
+        return sp.getBoolean(PANEL_RIGHT, false);
+    }
+
+    /** Transparencia del panel (0-100): cuanta más, más se funde con el negro de la pantalla. */
+    static final String PANEL_ALPHA = "panel_alpha";
+
+    int panelAlpha() {
+        return sp.getInt(PANEL_ALPHA, 0);
+    }
+
+    void setPanelAlpha(int pct) {
+        sp.edit().putInt(PANEL_ALPHA, Math.max(0, Math.min(100, pct))).apply();
+    }
+
+    /** Botones del panel que se ven, en su orden (entre «Auto», fijo arriba, y «Ajustes», fijo abajo). */
+    static final String PANEL_BUTTONS = "panel_buttons";
+    static final String[] PANEL_BUTTONS_ALL = {"car", "photos", "videos", "web", "tv", "radio", "games"};
+
+    java.util.List<String> panelButtons() {
+        String v = sp.getString(PANEL_BUTTONS, null);
+        return panelButtonsFrom(v);
+    }
+
+    /** Puro: la lista guardada («car,web,radio»), o todos si no hay nada guardado; ignora lo que no exista. */
+    static java.util.List<String> panelButtonsFrom(String csv) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (csv == null) {
+            java.util.Collections.addAll(out, PANEL_BUTTONS_ALL);
+            return out;
+        }
+        for (String id : csv.split(",")) {
+            String t = id.trim();
+            if (!t.isEmpty() && java.util.Arrays.asList(PANEL_BUTTONS_ALL).contains(t) && !out.contains(t)) out.add(t);
+        }
+        return out;
+    }
+
+    void setPanelButtons(java.util.List<String> ids) {
+        sp.edit().putString(PANEL_BUTTONS, String.join(",", ids)).apply();
+    }
+
+    /** Aviso de versión nueva (UpdateCheck): cuándo se consultó GitHub y la última release recordada. */
+    long updateCheckedAt() {
+        return sp.getLong("update_checked_at", 0);
+    }
+
+    void setUpdateCheckedAt(long ms) {
+        sp.edit().putLong("update_checked_at", ms).apply();
+    }
+
+    UpdateCheck.Release updateRelease() {
+        String v = sp.getString("update_version", "");
+        if (v == null || v.isEmpty()) return null;
+        return new UpdateCheck.Release(v, sp.getString("update_url", UpdateCheck.RELEASES_WEB), sp.getString("update_notes", ""));
+    }
+
+    void setUpdateRelease(UpdateCheck.Release r) {
+        sp.edit().putString("update_version", r.version).putString("update_url", r.url).putString("update_notes", r.notes).apply();
+    }
+
+    /** Último versionCode que arrancó (para «Novedades» al actualizar); 0 = nunca. */
+    long seenVersionCode() {
+        return sp.getLong("seen_version_code", 0);
+    }
+
+    void setSeenVersionCode(long code) {
+        sp.edit().putLong("seen_version_code", code).apply();
+    }
+
     /** Color fijo de la barra del modo extendido (CarTheme.PANEL_COLORS); 0 = automático (día y noche). */
     static final String PANEL_FIXED = "panel_fixed_color";
 

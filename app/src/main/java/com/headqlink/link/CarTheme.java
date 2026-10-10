@@ -114,6 +114,32 @@ final class CarTheme {
         return fixedPanel;
     }
 
+    /** Transparencia del panel (0-100): se funde con el negro de la pantalla del coche (detrás no hay otra cosa). */
+    private static volatile int panelAlpha;
+
+    static void setPanelAlpha(int pct) {
+        panelAlpha = Math.max(0, Math.min(100, pct));
+    }
+
+    static int panelAlpha() {
+        return panelAlpha;
+    }
+
+    /** Puro: color fundido con negro según la transparencia (0 = tal cual, 100 = negro). */
+    static int dim(int color, int pct) {
+        float k = 1f - Math.max(0, Math.min(100, pct)) / 100f;
+        int r = Math.round(((color >> 16) & 0xFF) * k);
+        int g = Math.round(((color >> 8) & 0xFF) * k);
+        int b = Math.round((color & 0xFF) * k);
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+
+    /** Puro: un color desde el tono (0-360) y la claridad (0-1) de la barra de ajustes, con saturación fija. */
+    static int fromHue(float hue, float light) {
+        return android.graphics.Color.HSVToColor(new float[]{Math.max(0, Math.min(359.9f, hue)), 0.72f,
+                Math.max(0.12f, Math.min(1f, light))});
+    }
+
     /** ¿Color oscuro? (luminancia relativa, como WCAG): decide si el texto encima va claro u oscuro. */
     static boolean isDark(int color) {
         double r = channel((color >> 16) & 0xFF);
@@ -131,23 +157,27 @@ final class CarTheme {
 
     /** Texto e iconos de los botones del panel lateral: claros de noche, casi negros de día; con color fijo, según él. */
     static int navText() {
-        boolean dark = fixedPanel != 0 ? isDark(fixedPanel) : night;
-        return dark ? 0xFFDADCE0 : 0xFF22282E;
+        return panelDark() ? 0xFFDADCE0 : 0xFF22282E;
     }
 
     /** Texto secundario sobre el panel (la batería). */
     static int navTextDim() {
-        boolean dark = fixedPanel != 0 ? isDark(fixedPanel) : night;
-        return dark ? 0xFF9AA0A6 : 0xFF5F6368;
+        return panelDark() ? 0xFF9AA0A6 : 0xFF5F6368;
+    }
+
+    /** ¿El panel, tal como se ve (color fijo o del día, y con su transparencia), es oscuro? */
+    private static boolean panelDark() {
+        if (fixedPanel != 0 || panelAlpha > 0) return isDark(panelColor(0xFF1E1E20));
+        return night;
     }
 
     /**
      * Color del panel: el fijo si se eligió; si no, de noche el gris elegido (que se funda con las barras del coche) y de
-     * día, claro.
+     * día, claro. Y fundido con negro según la transparencia.
      */
     static int panelColor(int nightGray) {
-        if (fixedPanel != 0) return fixedPanel;
-        return night ? nightGray : 0xFFE9EDF1;
+        int base = fixedPanel != 0 ? fixedPanel : night ? nightGray : 0xFFE9EDF1;
+        return panelAlpha > 0 ? dim(base, panelAlpha) : base;
     }
 
     /** Fondo de la tarjeta de aviso del panel: ámbar o verde, oscuro de noche y claro de día. */

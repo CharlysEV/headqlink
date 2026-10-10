@@ -660,6 +660,13 @@ das viagens; 0,20 por omissão), e ver a ligação e o motor em uso. Use-o só c
 «Cor do painel lateral»: «Automático» (escuro à noite e claro de dia, como o ecrã do carro) ou uma de 16 cores fixas,
 que fica igual de dia e de noite. Aplica-se logo, e o texto do painel passa a claro ou escuro para se ler.
 
+Por baixo, «Tom» e «Claro / escuro» dão qualquer outra cor, e «Transparência» funde-a com o preto do ecrã. «Painel
+lateral à direita» põe o painel do outro lado, com o Android Auto encostado à borda esquerda. «Botões do painel lateral»
+escolhe quais se veem (Sim / Não) e por que ordem (setas); «Auto» e «Definições» ficam fixos. Com o painel reduzido a
+ícones, em baixo aparecem a hora, a temperatura exterior e a bateria do carro (quando há dado). E no ecrã principal do
+telemóvel, quando sai uma versão nova aparece um aviso com as novidades e a ligação para transferir; da primeira vez que
+arranca uma versão acabada de instalar, mostram-se as suas novidades.
+
 ### «Idioma»
 
 «Idioma» (Android 13 ou superior): «Idioma do sistema», «Español», «English», «Português (Portugal)», «Português

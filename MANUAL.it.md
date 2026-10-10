@@ -376,7 +376,7 @@ supporta.
 - **«Auto»:** Android Auto a schermo intero.
 - **«Auto esteso»:** un pannello a sinistra, dal lato del guidatore, con «Auto», «Veicolo» (schede Percorso, Guida,
   Viaggi, Strumenti, Efficienza e Stato), «Foto», «Video», «Web», «TV», «Radio», «Giochi» e «Impostazioni». Con Android
-  Auto sullo schermo, il pannello si nasconde da solo dopo qualche secondo; tocca il bordo sinistro per farlo
+  Auto sullo schermo, il pannello si nasconde da solo dopo qualche secondo; tocca il bordo dal lato del pannello per farlo
   ricomparire. Foto, video, web, TV e giochi sono **solo per quando l'auto è ferma**.
 - **Schermo diviso («Auto esteso»):** in «Web», «Video» e «TV», il pulsante «Dividi schermo» del pannello mette Android
   Auto a sinistra, accanto al pannello, e quella schermata a destra. Android Auto tiene un po' più della metà, quanto
@@ -658,6 +658,13 @@ solo con l'auto ferma.
 «Colore del pannello laterale»: «Automatico» (scuro di notte e chiaro di giorno, come lo schermo dell'auto) o uno di 16
 colori fissi, che resta uguale di giorno e di notte. Si applica subito, e il testo del pannello diventa chiaro o scuro
 perché si legga.
+
+Sotto, «Tonalità» e «Chiaro / scuro» danno qualsiasi altro colore, e «Trasparenza» lo fonde con il nero dello schermo.
+«Pannello laterale a destra» sposta il pannello dall'altro lato, con Android Auto contro il bordo sinistro. «Pulsanti
+del pannello laterale» sceglie quali si vedono (Sì / No) e in che ordine (frecce); «Auto» e «Impostazioni» restano
+fissi. Con il pannello ridotto a icone, in basso compaiono l'ora, la temperatura esterna e la batteria dell'auto (quando
+c'è il dato). E nella schermata principale del telefono, quando esce una versione nuova compare un avviso con le novità
+e il link per scaricarla; la prima volta che si avvia una versione appena installata, si mostrano le sue novità.
 
 ### «Lingua»
 

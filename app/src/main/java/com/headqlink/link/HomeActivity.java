@@ -80,6 +80,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         hint = findViewById(R.id.hql_home_hint);
         toggle = findViewById(R.id.hql_home_toggle);
         ((TextView) findViewById(R.id.hql_home_version)).setText(Ui.appVersionLabel(this));
+        updateRow = findViewById(R.id.hql_home_update);
+        // Novedades de la versión recién instalada (solo la primera vez que arranca).
+        UpdateCheck.whatsNew(this, r -> {
+            if (r != null && !isFinishing()) showReleaseNotes(Str.get(R.string.hql_whats_new_title, r.version), r, false);
+        });
         View menu = findViewById(R.id.hql_home_menu);
         menu.setOnClickListener(v -> showMenu(menu));
         btAuto = findViewById(R.id.hql_home_bt_auto);
@@ -142,6 +147,14 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         AaServerManual.checkSoon(this);
         // Con HeadQLink delante, el servicio recupera la ubicación «mientras se usa» si pasó a primer plano sin ella.
         LinkService.appShown("pantalla principal");
+        // Versión nueva en GitHub (como mucho una consulta cada 6 h).
+        UpdateCheck.check(this, r -> {
+            if (updateRow == null) return;
+            updateRow.setVisibility(r == null ? View.GONE : View.VISIBLE);
+            if (r == null) return;
+            updateRow.setText(Str.get(R.string.hql_update_available, r.version));
+            updateRow.setOnClickListener(v -> showReleaseNotes(Str.get(R.string.hql_update_title, r.version), r, true));
+        });
         if (hotspotNow()) {
             // Estado de la zona Wi-Fi también sin conectar (fuera del hilo principal: escanea interfaces).
             new Thread(() -> {
@@ -203,6 +216,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         HotspotWatcher.Probe p = hotspotProbe;
         return p != null ? HotspotWatcher.level(p.getState()) : LinkState.Level.IDLE;
     }
+
+    private TextView updateRow;
 
     private void render() {
         String mode = cfg.mode();
@@ -398,6 +413,18 @@ public class HomeActivity extends Activity implements LinkState.Listener {
      * ajustes rápidos) y diagnóstico.
      * (Sin «Tema»: la app va siempre en oscuro, estilo «Eléctrico».)
      */
+    /** Notas de una versión (de GitHub, en texto llano) con el enlace a la release; download: botón «Descargar». */
+    private void showReleaseNotes(String title, UpdateCheck.Release r, boolean download) {
+        String notes = UpdateCheck.plainNotes(r.notes);
+        MaterialAlertDialogBuilder b = new MaterialAlertDialogBuilder(this)
+                .setTitle(title)
+                .setMessage(notes.isEmpty() ? Str.get(R.string.hql_update_no_notes) : notes)
+                .setNegativeButton(Str.get(R.string.hql_close), null);
+        b.setPositiveButton(Str.get(download ? R.string.hql_update_download : R.string.hql_update_on_github), (d, w) ->
+                startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(r.url))));
+        b.show();
+    }
+
     private void showMenu(View anchor) {
         android.widget.PopupMenu pm = new android.widget.PopupMenu(this, anchor);
         android.view.Menu m = pm.getMenu();

@@ -202,6 +202,11 @@ final class CarSensors implements SensorEventListener, LocationListener {
         return instance != null;
     }
 
+    /** Temperatura exterior (del tiempo), o NaN si los sensores no están en marcha o aún no la tienen. */
+    static synchronized double outsideTempC() {
+        return instance == null ? Double.NaN : instance.snapshot().tempC;
+    }
+
     /** Reloj de los sensores (ms): el del sistema, o el simulado en el modo demostración. */
     private long nowMs() {
         return demo != null ? demoNs / 1_000_000 : SystemClock.elapsedRealtime();

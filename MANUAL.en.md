@@ -369,7 +369,7 @@ version). That tells us whether the C10 supports it.
 - **"Auto":** Android Auto in full screen.
 - **"Auto extended":** a panel on the left, on the driver's side, with "Auto", "Car" (Route, Driving, Trips, Gauges,
   Efficiency and Status tabs), "Photos", "Videos", "Web", "TV", "Radio", "Games" and "Settings". With Android Auto on screen, the
-  panel hides by itself after a few seconds; tap the left edge to bring it back. Photos, videos, web, TV and games are
+  panel hides by itself after a few seconds; tap the edge on the panel's side to bring it back. Photos, videos, web, TV and games are
   **only for when the car is stopped**.
 - **Split screen ("Auto extended"):** in "Web", "Videos" and "TV", the panel's "Split screen" button puts Android Auto
   on the left, next to the panel, and that screen on the right. Android Auto keeps a bit more than half, just enough for
@@ -635,6 +635,13 @@ a few seconds"), auto-hide the panel and latency optimizations, the "Electricity
 
 "Side panel color": "Automatic" (dark at night and light by day, like the car's screen) or one of 16 fixed colors, which
 stays the same day and night. It applies at once, and the panel's text turns light or dark so it stays readable.
+
+Below, "Hue" and "Light / dark" give any other color, and "Transparency" blends it into the black of the screen. "Side
+panel on the right" moves the panel to the other side, with Android Auto against the left edge. "Side panel buttons"
+picks which ones show (Yes / No) and in what order (arrows); "Auto" and "Settings" stay fixed. With the panel shrunk to
+icons, the time, the outside temperature and the car's battery (when known) show at the bottom. And on the phone's main
+screen, when a new version is out a notice shows its news and the download link; the first time a freshly installed
+version starts, its news is shown.
 
 ### "Language"
 

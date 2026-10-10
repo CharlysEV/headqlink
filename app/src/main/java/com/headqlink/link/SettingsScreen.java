@@ -113,6 +113,11 @@ final class SettingsScreen implements CarScreen {
         ui.addView(toggle(c, Str.get(R.string.hql_low_latency_reconnect), cfg.lowLatency(),
                 on -> cfg.putBool(Config.LOW_LATENCY, on)));
         ui.addView(panelColorRow(c));
+        ui.addView(toggle(c, Str.get(R.string.hql_panel_right), cfg.panelRight(), on -> {
+            cfg.putBool(Config.PANEL_RIGHT, on);
+            CarUi.applyPanelRight(on);
+        }));
+        ui.addView(panelButtonsRows(c));
         col.addView(ui, cardLp());
 
         // Energía: €/kWh para el coste de los viajes y la pestaña Eficiencia.
@@ -222,7 +227,141 @@ final class SettingsScreen implements CarScreen {
         TextView help = CarStyle.text(c, Str.get(R.string.hql_panel_color_help), 20, CarStyle.TEXT_DIM);
         help.setPadding(6, 10, 0, 0);
         box.addView(help);
+        // Cualquier otro color: tono y claridad en dos barras; y la transparencia (fundido con el negro de la pantalla).
+        float[] hsv = new float[]{200f, 0.72f, 0.55f};
+        if (fixed != 0) android.graphics.Color.colorToHSV(fixed, hsv);
+        float[] pick = {hsv[0], hsv[2]};
+        int[] hues = new int[13];
+        for (int i = 0; i < hues.length; i++) hues[i] = CarTheme.fromHue(i * 30f, 0.55f);
+        box.addView(strip(c, Str.get(R.string.hql_panel_hue), hues, pick[0] / 360f, f -> {
+            pick[0] = f * 360f;
+            setPanelColor(CarTheme.fromHue(pick[0], pick[1]));
+        }));
+        int[] lights = {CarTheme.fromHue(pick[0], 0.12f), CarTheme.fromHue(pick[0], 0.55f), CarTheme.fromHue(pick[0], 1f)};
+        box.addView(strip(c, Str.get(R.string.hql_panel_light), lights, pick[1], f -> {
+            pick[1] = f;
+            setPanelColor(CarTheme.fromHue(pick[0], pick[1]));
+        }));
+        int[] alphas = {0xFF9AA0A6, 0xFF000000};
+        box.addView(strip(c, Str.get(R.string.hql_panel_alpha), alphas, cfg.panelAlpha() / 100f, f -> {
+            int pct = Math.round(f * 100);
+            cfg.setPanelAlpha(pct);
+            CarUi.applyPanelAlpha(pct);
+        }));
+        TextView ahelp = CarStyle.text(c, Str.get(R.string.hql_panel_alpha_help), 20, CarStyle.TEXT_DIM);
+        ahelp.setPadding(6, 6, 0, 0);
+        box.addView(ahelp);
         return box;
+    }
+
+    /** Barra de degradado con un marcador; al tocar o arrastrar, da la posición (0-1). */
+    private static View strip(Context c, String label, int[] colors, float pos, java.util.function.Consumer<Float> onPick) {
+        LinearLayout row = new LinearLayout(c);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, 16, 0, 0);
+        TextView t = CarStyle.text(c, label, 22, CarStyle.TEXT);
+        t.setMinWidth(230);
+        row.addView(t);
+        View bar = new View(c) {
+            float p = pos;
+
+            @Override
+            protected void onDraw(android.graphics.Canvas cv) {
+                android.graphics.Paint pt = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                float h = getHeight();
+                android.graphics.RectF r = new android.graphics.RectF(0, h / 2 - 14, getWidth(), h / 2 + 14);
+                pt.setShader(new android.graphics.LinearGradient(0, 0, getWidth(), 0, colors, null,
+                        android.graphics.Shader.TileMode.CLAMP));
+                cv.drawRoundRect(r, 14, 14, pt);
+                pt.setShader(null);
+                float x = p * getWidth();
+                pt.setColor(0xFFFFFFFF);
+                cv.drawCircle(x, h / 2, 20, pt);
+                pt.setColor(CarStyle.ACCENT);
+                cv.drawCircle(x, h / 2, 15, pt);
+            }
+
+            @Override
+            public boolean onTouchEvent(android.view.MotionEvent e) {
+                if (e.getAction() == android.view.MotionEvent.ACTION_DOWN || e.getAction() == android.view.MotionEvent.ACTION_MOVE) {
+                    p = Math.max(0f, Math.min(1f, e.getX() / getWidth()));
+                    invalidate();
+                    // Padres (el ScrollView) fuera mientras se arrastra.
+                    getParent().requestDisallowInterceptTouchEvent(true);
+                    return true;
+                }
+                if (e.getAction() == android.view.MotionEvent.ACTION_UP) {
+                    onPick.accept(p);
+                    return true;
+                }
+                return super.onTouchEvent(e);
+            }
+        };
+        row.addView(bar, new LinearLayout.LayoutParams(0, 60, 1f));
+        return row;
+    }
+
+    /**
+     * Botones del panel: una fila por botón con «Sí/No» (se ve o no) y flechas para ordenarlos. «Auto» y «Ajustes»
+     * no se tocan. Se aplica al momento.
+     */
+    private View panelButtonsRows(Context c) {
+        LinearLayout box = new LinearLayout(c);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(0, 22, 0, 4);
+        TextView label = CarStyle.text(c, Str.get(R.string.hql_panel_buttons), 24, CarStyle.TEXT);
+        box.addView(label);
+        java.util.List<String> shown = cfg.panelButtons();
+        // Los que se ven, en su orden, y después los ocultos en el orden de siempre.
+        java.util.List<String> all = new java.util.ArrayList<>(shown);
+        for (String id : Config.PANEL_BUTTONS_ALL) if (!all.contains(id)) all.add(id);
+        for (int i = 0; i < all.size(); i++) {
+            String id = all.get(i);
+            boolean on = shown.contains(id);
+            LinearLayout r = new LinearLayout(c);
+            r.setOrientation(LinearLayout.HORIZONTAL);
+            r.setGravity(Gravity.CENTER_VERTICAL);
+            r.setPadding(0, 10, 0, 0);
+            TextView t = CarStyle.text(c, CarUi.navLabel(id), 23, on ? CarStyle.TEXT : CarStyle.TEXT_DIM);
+            r.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            int pos = shown.indexOf(id);
+            TextView up = CarStyle.pill(c, "\u25b2");
+            up.setMinWidth(80);
+            up.setAlpha(on && pos > 0 ? 1f : 0.3f);
+            up.setOnClickListener(v -> moveButton(id, -1));
+            r.addView(up);
+            TextView down = CarStyle.pill(c, "\u25bc");
+            down.setMinWidth(80);
+            down.setAlpha(on && pos < shown.size() - 1 ? 1f : 0.3f);
+            down.setOnClickListener(v -> moveButton(id, 1));
+            r.addView(down);
+            TextView sw = CarStyle.pill(c, Str.get(on ? R.string.hql_on_yes : R.string.hql_on_no));
+            sw.setMinWidth(110);
+            sw.setBackground(on ? CarStyle.accent(28) : CarStyle.round(CarStyle.PILL_BG, 28));
+            sw.setTextColor(on ? CarStyle.ON_ACCENT : CarStyle.TEXT);
+            sw.setOnClickListener(v -> {
+                java.util.List<String> ids = cfg.panelButtons();
+                if (ids.contains(id)) ids.remove(id);
+                else ids.add(id);
+                cfg.setPanelButtons(ids);
+                CarUi.applyPanelButtons();
+            });
+            r.addView(sw);
+            box.addView(r);
+        }
+        return box;
+    }
+
+    private void moveButton(String id, int dir) {
+        java.util.List<String> ids = cfg.panelButtons();
+        int i = ids.indexOf(id);
+        int j = i + dir;
+        if (i < 0 || j < 0 || j >= ids.size()) return;
+        ids.remove(i);
+        ids.add(j, id);
+        cfg.setPanelButtons(ids);
+        CarUi.applyPanelButtons();
     }
 
     private void setPanelColor(int color) {

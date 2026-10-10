@@ -517,6 +517,11 @@ final class AaPassthroughSource implements VideoSource {
                 announceTopAlignedMargins();
             }
         });
+        // Panel a la derecha: AA empieza en el borde izquierdo y acaba donde empieza el panel.
+        if (extended && new Config(ctx).panelRight()) {
+            panelCarW = 0;
+            aaCarW = carW - PANEL_W;
+        }
         // Siempre con capa: en el modo ampliado es nuestra interfaz; sin panel, solo la animación de carga.
         relay = new GlFrameRelay(surface, width, height, nw, nh, fps, aaVideoX(), aaVideoW(), true);
         relay.setGate(gate);
@@ -524,9 +529,11 @@ final class AaPassthroughSource implements VideoSource {
         relay.setSplashOnly(!extended);
         // La capa se diseña a la resolución de la pantalla del coche; el relay la escala al vídeo.
         relay.setOverlaySize(carW, carH);
-        // El color fijo de la barra (si se eligió) también va alrededor de AA desde el primer fotograma.
-        CarTheme.setFixedPanel(new Config(ctx).panelFixedColor());
-        relay.setBackgroundColor(CarTheme.panelColor(new Config(ctx).panelColor()));
+        // El color fijo de la barra (si se eligió) y su transparencia también van alrededor de AA desde el primer fotograma.
+        Config pcfg = new Config(ctx);
+        CarTheme.setFixedPanel(pcfg.panelFixedColor());
+        CarTheme.setPanelAlpha(pcfg.panelAlpha());
+        relay.setBackgroundColor(CarTheme.panelColor(pcfg.panelColor()));
         relay.setOnFirstAaFrame(() -> {
             CarUi ui = carUi;
             if (ui != null) ui.onAaReady();
