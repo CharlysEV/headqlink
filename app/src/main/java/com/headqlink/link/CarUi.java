@@ -508,16 +508,19 @@ final class CarUi {
      * nuevos) para ocupar el hueco.
      */
     private void setHidden(boolean on) {
-        if (panel == null || on == hidden || (on && !aaShown)) return;
+        if (panel == null || on == hidden) return;
         hidden = on;
         applyLayout();
         L.i("CarUi: panel " + (hidden ? "minimizado" : "desplegado"));
     }
 
-    /** Programa el ocultado tras un rato sin tocar el panel (solo con AA en pantalla). */
+    /**
+     * Programa el ocultado tras un rato sin tocar nuestra interfaz: con AA y también con nuestras pantallas (fotos, TV,
+     * juegos…), que ganan el ancho del panel.
+     */
     private void scheduleHide() {
         main.removeCallbacks(hideTask);
-        if (autoHide && aaShown && !hidden) main.postDelayed(hideTask, AUTO_HIDE_MS);
+        if (autoHide && !hidden) main.postDelayed(hideTask, AUTO_HIDE_MS);
     }
 
     /** Inicio de un gesto en el coche; toUi: va a nuestra interfaz (si no, a AA). */
@@ -1195,6 +1198,8 @@ final class CarUi {
         SspSession.setDrivingUi("aa".equals(name) || "car".equals(name) || "radio".equals(name));
         setCompact(false);
         if (!"aa".equals(name)) setHidden(false);
+        // Al abrir una pantalla se ve el panel con la elegida; a los pocos segundos sin tocar, se recoge.
+        scheduleHide();
         if (screen != null) screen.destroy();
         screen = null;
         screenName = name;

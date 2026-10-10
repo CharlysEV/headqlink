@@ -388,7 +388,7 @@ admite.
 - **«Auto»:** Android Auto em ecrã inteiro.
 - **«Auto estendido»:** um painel à esquerda, do lado do condutor, com «Auto», «Carro» (separadores Rota, Condução,
   Viagens, Instrumentos, Eficiência e Estado), «Fotos», «Vídeos», «Web», «TV», «Rádio», «Jogos» e «Definições». Com o Android
-  Auto no ecrã, o painel esconde-se sozinho ao fim de alguns segundos; toque na margem esquerda para que volte. Fotos,
+  Auto no ecrã, o painel recolhe-se sozinho ao fim de alguns segundos (também em Fotos, TV, Jogos…); toque na margem esquerda para que volte. Fotos,
   vídeos, web, TV e jogos são **só para quando o carro está parado**.
 - **Ecrã dividido («Auto estendido»):** em «Carro», «Web», «Vídeos» e «TV», o botão «Dividir ecrã» do painel põe o
   Android Auto à esquerda, junto ao painel, e esse ecrã à direita. Com «Carro» tem os instrumentos (consumo, bateria,

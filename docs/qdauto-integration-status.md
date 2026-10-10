@@ -2441,3 +2441,8 @@ Al tocar a Mario grande, en vez de parpadear desaparecía del todo hasta acabar 
 - A 30 fps, cada par se mezcla al 50 % (`NesEngine.blend`), como la persistencia de una tele: lo que parpadea a 60 Hz se ve a medias, nunca desaparece. Log: `NES: sesión a N fps: …`.
 
 Prueba: `NesInputTest.flickeringSpritesBlendInsteadOfVanishingAt30Fps`.
+
+### 32.5 NES más grande y panel que se recoge en todas las pantallas (0.2.44)
+
+- **Juego ×4:** sin cabecera, el juego usa todo el alto. `NesView.scale` busca el mayor aumento entero que quepa recortando como mucho 2 líneas arriba y abajo (`MAX_CROP`, el borde que las teles no enseñaban): en el C10, ×4 con 220 líneas (1024x880) en vez de ×3 (768x672). «‹ NES» y el título arriba a la izquierda, «Reiniciar» y «Botones táctiles» arriba a la derecha, cruceta y B/A abajo a los lados, Select y Start a media altura. Medido: 30 fps estables (150 fotogramas nuevos cada 5 s).
+- **Panel:** se recoge solo a los 8 s sin tocar también con nuestras pantallas (fotos, TV, juegos…), no solo con AA: `CarUi.setHidden` ya no exige AA y `open()` programa el ocultado.

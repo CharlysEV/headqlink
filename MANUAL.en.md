@@ -369,7 +369,7 @@ version). That tells us whether the C10 supports it.
 - **"Auto":** Android Auto in full screen.
 - **"Auto extended":** a panel on the left, on the driver's side, with "Auto", "Car" (Route, Driving, Trips, Gauges,
   Efficiency and Status tabs), "Photos", "Videos", "Web", "TV", "Radio", "Games" and "Settings". With Android Auto on screen, the
-  panel hides by itself after a few seconds; tap the edge on the panel's side to bring it back. Photos, videos, web, TV and games are
+  panel shrinks by itself after a few seconds (also in Photos, TV, Games…); tap the edge on the panel's side to bring it back. Photos, videos, web, TV and games are
   **only for when the car is stopped**.
 - **Split screen ("Auto extended"):** in "Car", "Web", "Videos" and "TV", the panel's "Split screen" button puts
   Android Auto on the left, next to the panel, and that screen on the right. With "Car" you get the gauges (consumption,

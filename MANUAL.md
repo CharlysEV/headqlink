@@ -376,7 +376,7 @@ admite.
 - **«Auto»:** Android Auto a pantalla completa.
 - **«Auto extendido»:** un panel a la izquierda, del lado del conductor, con «Auto», «Coche» (pestañas Ruta,
   Conducción, Viajes, Instrumentos, Eficiencia y Estado), «Fotos», «Vídeos», «Web», «TV», «Radio», «Juegos» y «Ajustes». Con
-  Android Auto en pantalla, el panel se oculta solo a los pocos segundos; toca el borde del lado del panel para que vuelva.
+  Android Auto en pantalla, el panel se recoge solo a los pocos segundos (también en Fotos, TV, Juegos…); toca el borde del lado del panel para que vuelva.
   Fotos, vídeos, web, TV y juegos son **solo para cuando el coche está parado**.
 - **Pantalla partida («Auto extendido»):** en «Coche», «Web», «Vídeos» y «TV», el botón «Partir pantalla» del panel
   pone Android Auto a la izquierda, junto al panel, y esa pantalla a la derecha. Con «Coche» tienes los instrumentos

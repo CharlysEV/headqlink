@@ -205,45 +205,52 @@ final class NesScreen {
 
     private View game(String name) {
         Context c = host.context();
-        LinearLayout col = new LinearLayout(c);
-        col.setOrientation(LinearLayout.VERTICAL);
-        col.setBackgroundColor(0xFF000000);
-        LinearLayout header = new LinearLayout(c);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(24, 12, 24, 6);
+        // Sin cabecera: el juego usa todo el alto (×4 en el C10) y los botones van a los lados, sobre el negro.
+        FrameLayout stage = new FrameLayout(c);
+        stage.setBackgroundColor(0xFF000000);
+        view = new NesView(c);
+        stage.addView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        View overlay = touchOverlay(c);
+        stage.addView(overlay, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        LinearLayout left = new LinearLayout(c);
+        left.setOrientation(LinearLayout.VERTICAL);
         TextView back = CarStyle.pill(c, "‹  NES");
         back.setOnClickListener(v -> {
             stopEngine();
             host.setContent(browser());
         });
-        header.addView(back);
-        TextView title = CarStyle.text(c, name.replaceAll("(?i)\\.(nes|nsf)$", ""), 26, CarStyle.TEXT);
-        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        title.setPadding(16, 0, 24, 0);
-        title.setSingleLine(true);
-        header.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        left.addView(back);
+        TextView title = CarStyle.text(c, name.replaceAll("(?i)\\.(nes|nsf)$", ""), 22, CarStyle.TEXT_DIM);
+        title.setPadding(6, 12, 0, 0);
+        title.setMaxLines(3);
+        // Ancho fijo: con «wrap_content» la columna tomaba el de la píldora y el título se cortaba en la primera palabra.
+        left.addView(title, new LinearLayout.LayoutParams(260, ViewGroup.LayoutParams.WRAP_CONTENT));
+        stage.addView(left, place(Gravity.TOP | Gravity.LEFT, 24, 18, 0, 0, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        LinearLayout right = new LinearLayout(c);
+        right.setOrientation(LinearLayout.VERTICAL);
+        right.setGravity(Gravity.END);
         TextView reset = CarStyle.pill(c, Str.get(R.string.hql_nes_reset));
         reset.setOnClickListener(v -> {
             if (engine != null) engine.reset();
         });
-        header.addView(reset);
+        right.addView(reset);
         TextView pad = CarStyle.pill(c, Str.get(R.string.hql_nes_touch));
-        header.addView(pad);
-        col.addView(header);
-        FrameLayout stage = new FrameLayout(c);
-        view = new NesView(c);
-        stage.addView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        View overlay = touchOverlay(c);
-        stage.addView(overlay, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        plp.topMargin = 12;
+        right.addView(pad, plp);
+        stage.addView(right, place(Gravity.TOP | Gravity.RIGHT, 0, 18, 14, 0, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
         pad.setOnClickListener(v -> {
             touchPad = !touchPad;
             overlay.setVisibility(touchPad ? View.VISIBLE : View.GONE);
             pad.setBackground(touchPad ? CarStyle.accent(28) : CarStyle.round(CarStyle.PILL_BG, 28));
             pad.setTextColor(touchPad ? CarStyle.ON_ACCENT : CarStyle.TEXT);
         });
-        pad.setBackground(CarStyle.accent(28));
-        pad.setTextColor(CarStyle.ON_ACCENT);
-        col.addView(stage, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        pad.setBackground(touchPad ? CarStyle.accent(28) : CarStyle.round(CarStyle.PILL_BG, 28));
+        pad.setTextColor(touchPad ? CarStyle.ON_ACCENT : CarStyle.TEXT);
+        overlay.setVisibility(touchPad ? View.VISIBLE : View.GONE);
         engine.setListener(new NesEngine.Listener() {
             @Override
             public void onFrame(Bitmap frame) {
@@ -256,33 +263,35 @@ final class NesScreen {
                 host.post(() -> host.setContent(CarStyle.message(c, Str.get(R.string.hql_nes_error, text))));
             }
         });
-        return col;
+        return stage;
     }
 
-    /** Botones táctiles: cruceta a la izquierda, B y A a la derecha, Select y Start abajo. Varios dedos a la vez. */
+    /**
+     * Botones táctiles a los lados del juego (que ocupa el centro a todo el alto): cruceta abajo a la izquierda, B y A
+     * abajo a la derecha, Select a la izquierda y Start a la derecha, a media altura. Varios dedos a la vez.
+     */
     private View touchOverlay(Context c) {
         FrameLayout f = new FrameLayout(c);
-        int s = 120;
-        int m = 30;
-        f.addView(padButton(c, "▲", PuppetController.Button.UP), at(m + s, m, s, s, Gravity.BOTTOM | Gravity.LEFT, 2 * s + 2 * m));
-        f.addView(padButton(c, "▼", PuppetController.Button.DOWN), at(m + s, m, s, s, Gravity.BOTTOM | Gravity.LEFT, m));
-        f.addView(padButton(c, "◀", PuppetController.Button.LEFT), at(m, m, s, s, Gravity.BOTTOM | Gravity.LEFT, s + m + m / 2));
-        f.addView(padButton(c, "▶", PuppetController.Button.RIGHT), at(m + 2 * s, m, s, s, Gravity.BOTTOM | Gravity.LEFT, s + m + m / 2));
-        f.addView(padButton(c, "B", PuppetController.Button.B), at(0, 2 * s + m + 20, s, s, Gravity.BOTTOM | Gravity.RIGHT, s + m));
-        f.addView(padButton(c, "A", PuppetController.Button.A), at(0, s + 20 - 60, s, s, Gravity.BOTTOM | Gravity.RIGHT, 2 * s + m - 40));
-        f.addView(padButton(c, "SELECT", PuppetController.Button.SELECT), at(0, 0, 150, 56, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, m, -90));
-        f.addView(padButton(c, "START", PuppetController.Button.START), at(0, 0, 150, 56, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, m, 90));
+        int s = 116;
+        int m = 26;
+        int bl = Gravity.BOTTOM | Gravity.LEFT;
+        int br = Gravity.BOTTOM | Gravity.RIGHT;
+        f.addView(padButton(c, "▲", PuppetController.Button.UP), place(bl, m + s, 0, 0, m + 2 * s, s, s));
+        f.addView(padButton(c, "▼", PuppetController.Button.DOWN), place(bl, m + s, 0, 0, m, s, s));
+        f.addView(padButton(c, "◀", PuppetController.Button.LEFT), place(bl, m, 0, 0, m + s, s, s));
+        f.addView(padButton(c, "▶", PuppetController.Button.RIGHT), place(bl, m + 2 * s, 0, 0, m + s, s, s));
+        f.addView(padButton(c, "B", PuppetController.Button.B), place(br, 0, 0, m + s + 20, m + 30, s, s));
+        f.addView(padButton(c, "A", PuppetController.Button.A), place(br, 0, 0, m, m + 30 + s / 2 + 20, s, s));
+        f.addView(padButton(c, "SELECT", PuppetController.Button.SELECT), place(Gravity.LEFT | Gravity.CENTER_VERTICAL, m, 0, 0, 0, 150, 56));
+        f.addView(padButton(c, "START", PuppetController.Button.START), place(Gravity.RIGHT | Gravity.CENTER_VERTICAL, 0, 0, m, 0, 150, 56));
         return f;
     }
 
-    private static FrameLayout.LayoutParams at(int left, int right, int w, int h, int gravity, int bottom) {
-        return at(left, right, w, h, gravity, bottom, 0);
-    }
-
-    private static FrameLayout.LayoutParams at(int left, int right, int w, int h, int gravity, int bottom, int shiftX) {
+    private static FrameLayout.LayoutParams place(int gravity, int left, int top, int right, int bottom, int w, int h) {
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, h, gravity);
-        lp.leftMargin = left + Math.max(0, shiftX);
-        lp.rightMargin = right + Math.max(0, -shiftX);
+        lp.leftMargin = left;
+        lp.topMargin = top;
+        lp.rightMargin = right;
         lp.bottomMargin = bottom;
         return lp;
     }
@@ -335,13 +344,22 @@ final class NesScreen {
             super(c);
         }
 
+        /** Líneas que se pueden recortar arriba y abajo para ganar un aumento (el borde: las teles no lo enseñaban). */
+        static final int MAX_CROP = 2;
+
         /**
-         * Puro: aumento entero que cabe (×3 en el C10). Con un aumento no entero, cada paso del desplazamiento remuestrea
-         * los píxeles y el codificador no encuentra el fotograma anterior: se pixela. Con uno entero, un paso de la NES son
-         * k píxeles exactos y se comprime casi gratis.
+         * Puro: aumento entero que cabe (×4 en el C10, recortando 2 líneas arriba y abajo). Con un aumento no entero, cada
+         * paso del desplazamiento remuestrea los píxeles y el codificador no encuentra el fotograma anterior: se pixela.
+         * Con uno entero, un paso de la NES son k píxeles exactos y se comprime casi gratis.
          */
         static int scale(int w, int h) {
-            return Math.max(1, Math.min(w / NesEngine.W, h / NesEngine.H));
+            return Math.max(1, Math.min(w / NesEngine.W, h / (NesEngine.H - 2 * MAX_CROP)));
+        }
+
+        /** Puro: líneas que se recortan arriba (y abajo) con ese aumento: las justas para caber, como mucho MAX_CROP. */
+        static int crop(int k, int h) {
+            int lines = Math.min(NesEngine.H, h / k);
+            return Math.min(MAX_CROP, (NesEngine.H - lines + 1) / 2);
         }
 
         private volatile boolean pending;
@@ -369,8 +387,10 @@ final class NesScreen {
             int w = getWidth();
             int h = getHeight();
             int k = scale(w, h);
+            int c = crop(k, h);
+            src.set(0, c, NesEngine.W, NesEngine.H - c);
             int dw = NesEngine.W * k;
-            int dh = NesEngine.H * k;
+            int dh = (NesEngine.H - 2 * c) * k;
             int left = (w - dw) / 2;
             int top = (h - dh) / 2;
             dst.set(left, top, left + dw, top + dh);

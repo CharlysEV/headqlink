@@ -50,8 +50,14 @@ class NesInputTest {
 
     @Test
     fun gameIsScaledByAWholeFactor() {
-        // C10: la zona del juego (~1824 x ~790) cabe a ×3 (768 x 672); nunca un aumento no entero.
-        assertEquals(3, NesScreen.NesView.scale(1824, 790))
+        // C10 sin cabecera (1824 x 882): ×4 recortando 2 líneas arriba y abajo (1024 x 880); nunca un aumento no entero.
+        assertEquals(4, NesScreen.NesView.scale(1824, 882))
+        assertEquals(2, NesScreen.NesView.crop(4, 882))
+        // Con el panel desplegado (1600) también cabe a ×4.
+        assertEquals(4, NesScreen.NesView.scale(1600, 882))
+        // Pantalla de 1080 de alto: ×4 sin recortar nada.
+        assertEquals(4, NesScreen.NesView.scale(1920, 1080))
+        assertEquals(0, NesScreen.NesView.crop(4, 1080))
         assertEquals(2, NesScreen.NesView.scale(800, 500))
         assertEquals(1, NesScreen.NesView.scale(100, 100))
     }

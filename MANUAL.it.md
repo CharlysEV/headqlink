@@ -376,7 +376,7 @@ supporta.
 - **«Auto»:** Android Auto a schermo intero.
 - **«Auto esteso»:** un pannello a sinistra, dal lato del guidatore, con «Auto», «Veicolo» (schede Percorso, Guida,
   Viaggi, Strumenti, Efficienza e Stato), «Foto», «Video», «Web», «TV», «Radio», «Giochi» e «Impostazioni». Con Android
-  Auto sullo schermo, il pannello si nasconde da solo dopo qualche secondo; tocca il bordo dal lato del pannello per farlo
+  Auto sullo schermo, il pannello si riduce da solo dopo qualche secondo (anche in Foto, TV, Giochi…); tocca il bordo dal lato del pannello per farlo
   ricomparire. Foto, video, web, TV e giochi sono **solo per quando l'auto è ferma**.
 - **Schermo diviso («Auto esteso»):** in «Veicolo», «Web», «Video» e «TV», il pulsante «Dividi schermo» del pannello
   mette Android Auto a sinistra, accanto al pannello, e quella schermata a destra. Con «Veicolo» hai gli strumenti
