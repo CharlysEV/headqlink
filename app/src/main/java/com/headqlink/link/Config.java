@@ -570,6 +570,17 @@ final class Config {
         return 0xFF000000 | (g << 16) | (g << 8) | Math.min(255, g + 2);
     }
 
+    /** Carpeta de ROMs de NES (URI de árbol de documentos con permiso persistente); vacío = sin elegir. */
+    static final String NES_TREE = "nes_tree";
+
+    String nesTree() {
+        return sp.getString(NES_TREE, "");
+    }
+
+    void setNesTree(String uri) {
+        sp.edit().putString(NES_TREE, uri == null ? "" : uri).apply();
+    }
+
     /** Avisos de radar por voz (RadarVoice): radar delante y exceso de velocidad junto a él. */
     static final String RADAR_VOICE = "radar_voice";
 

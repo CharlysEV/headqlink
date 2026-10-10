@@ -35,10 +35,13 @@ final class GamesScreen implements CarScreen {
             {R.string.hql_game_memory, R.string.hql_game_memory_sub},
             {R.string.hql_game_ttt, R.string.hql_game_ttt_sub},
             {R.string.hql_game_range, R.string.hql_game_range_sub},
-            {R.string.hql_game_fly, R.string.hql_game_fly_sub}};
+            {R.string.hql_game_fly, R.string.hql_game_fly_sub},
+            {R.string.hql_nes, R.string.hql_nes_sub}};
     private static final int[] ICONS = {R.drawable.hql_ic_game_2048, R.drawable.hql_ic_game_memory, R.drawable.hql_ic_game_ttt,
-            R.drawable.hql_ic_game_range, R.drawable.hql_ic_game_fly};
-    private static final int[] TINTS = {0xFFFDD663, 0xFF81C995, 0xFF8AB4F8, 0xFFF6AEA9, 0xFFC58AF9};
+            R.drawable.hql_ic_game_range, R.drawable.hql_ic_game_fly, R.drawable.hql_ic_games};
+    private static final int[] TINTS = {0xFFFDD663, 0xFF81C995, 0xFF8AB4F8, 0xFFF6AEA9, 0xFFC58AF9, 0xFFE8EAED};
+    /** Emulador NES (ROMs del usuario): navegador y juego dentro de esta pantalla. */
+    private NesScreen nes;
 
     private boolean running;
     /** Solo la vista previa: abrir este juego en modo demostración al crear la pantalla (-1: menú). */
@@ -69,8 +72,8 @@ final class GamesScreen implements CarScreen {
             TextView sub = CarStyle.text(c, Str.get(GAMES[i][1]), 22, CarStyle.TEXT_DIM);
             sub.setGravity(Gravity.CENTER);
             card.addView(sub);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(272, 330);
-            lp.setMargins(10, 0, 10, 0);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(255, 330);
+            lp.setMargins(8, 0, 8, 0);
             row.addView(card, lp);
             card.setOnClickListener(v -> open(idx));
         }
@@ -88,6 +91,11 @@ final class GamesScreen implements CarScreen {
 
     private void open(int game) {
         Context c = host.context();
+        if (game == 5) {
+            if (nes == null) nes = new NesScreen(host, () -> host.setContent(menu));
+            host.setContent(nes.browser());
+            return;
+        }
         Board board = game == 0 ? new Game2048(c) : game == 1 ? new Memory(c) : game == 2 ? new TicTacToe(c)
                 : game == 3 ? new Range(c) : new Flappy(c);
         LinearLayout col = new LinearLayout(c);
@@ -902,6 +910,7 @@ final class GamesScreen implements CarScreen {
 
     @Override
     public void destroy() {
+        if (nes != null) nes.stopEngine();
         running = false;
     }
 }

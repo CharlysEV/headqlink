@@ -62,6 +62,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     private static final String ACTION_TILE_PREFERENCES = "android.service.quicksettings.action.QS_TILE_PREFERENCES";
     private static final int REQ_IPTV_FILE = 10;
     private static final int REQ_RADIO_FILE = 11;
+    private static final int REQ_NES_TREE = 21;
     private static final int REQ_CHECKLIST = 12;
 
     @Override
@@ -511,6 +512,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             m.add(0, 2, 2, Str.get(R.string.hql_tv_list));
             m.add(0, 3, 3, Str.get(R.string.hql_radio_list));
             m.add(0, 12, 3, Str.get(R.string.hql_web_bookmarks));
+            m.add(0, 14, 3, Str.get(R.string.hql_nes_folder));
         }
         // Datos reales del coche (cuenta Leapmotor, opcional y de solo lectura): CarCloudActivity.
         m.add(0, 10, 3, Str.get(R.string.hql_cloud_menu));
@@ -552,6 +554,10 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     break;
                 case 13:
                     checkUpdateNow();
+                    break;
+                case 14:
+                    // Carpeta de ROMs: permiso persistente sobre el árbol elegido (ver onActivityResult).
+                    startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_NES_TREE);
                     break;
                 case 11:
                     if (LinkState.running && (LinkState.car == LinkState.Car.CONNECTED || LinkState.car == LinkState.Car.RECONNECTING)) {
@@ -739,6 +745,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             } catch (SecurityException e) {
                 L.w("sin permiso persistente para " + u + ": " + e.getMessage());
             }
+        }
+        if (req == REQ_NES_TREE && !uris.isEmpty()) {
+            cfg.setNesTree(uris.get(0).toString());
+            L.i("NES: carpeta de ROMs elegida");
+            android.widget.Toast.makeText(this, Str.get(R.string.hql_nes_folder_set), android.widget.Toast.LENGTH_LONG).show();
         }
         if (req == REQ_IPTV_FILE && !uris.isEmpty()) {
             cfg.setIptvSource(uris.get(0).toString());

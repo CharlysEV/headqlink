@@ -33,3 +33,10 @@ Charging point data (Route tab and charge plan):
 three.js (3D car in the Status tab):
   app/src/main/assets/three/three.min.js is three.js r149 (https://threejs.org), Copyright 2010-2023
   three.js authors, MIT License (app/src/main/assets/three/LICENSE).
+
+NES emulator (Games > NES, the user's own ROM files):
+  The nescore module is halfNES (https://github.com/andrew-hoffman/halfnes) by Andrew Hoffman, licensed under the
+  GNU General Public License v3.0 and combined with HeadQLink under section 13 of both licenses. Its desktop parts
+  (Swing, AWT, JavaFX, JInput) were removed; see nescore/UPSTREAM.md for the changes. HeadQLink ships no game ROMs:
+  the user picks a folder with their own files. Nintendo and NES are trademarks of Nintendo; HeadQLink is not
+  affiliated with Nintendo.

@@ -22,6 +22,17 @@
     <string name="hql_apply_reconnect">Übernehmen · verbindet kurz neu</string>
     <string name="hql_auto_not_responding">Android Auto antwortet nicht: %1$s</string>
     <string name="hql_autohide_panel">Seitenleiste nach ein paar Sekunden ausblenden</string>
+    <string name="hql_nes">NES</string>
+    <string name="hql_nes_sub">Deine ROMs, mit Gamepad</string>
+    <string name="hql_nes_folder">NES-Spiele: ROM-Ordner</string>
+    <string name="hql_nes_folder_set">ROM-Ordner gespeichert. Im Auto: Spiele › NES.</string>
+    <string name="hql_nes_no_folder">Wähle den ROM-Ordner am Telefon: Menü ⚙ › „NES-Spiele: ROM-Ordner“.</string>
+    <string name="hql_nes_empty">Keine .nes-Dateien in diesem Ordner.</string>
+    <string name="hql_nes_pad_title">Gamepad mit dem Auto verbunden</string>
+    <string name="hql_nes_pad_text">Spiele mit dem Gamepad auf dem Autobildschirm. Zurück verlässt diesen Bildschirm.</string>
+    <string name="hql_nes_reset">Zurücksetzen</string>
+    <string name="hql_nes_touch">Touch-Tasten</string>
+    <string name="hql_nes_error">ROM konnte nicht geöffnet werden: %1$s</string>
     <string name="hql_update_install">Herunterladen und installieren</string>
     <string name="hql_update_allow_unknown">Um die neue Version aus der App zu installieren, erlaube HeadQLink das Installieren unbekannter Apps. Tippe dann erneut auf „Herunterladen und installieren“.</string>
     <string name="hql_update_open_setting">Einstellung öffnen</string>

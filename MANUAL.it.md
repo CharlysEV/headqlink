@@ -688,6 +688,14 @@ Incolla l'URL di una lista M3U o tocca «Scegli file». Senza una lista radio, l
 Le scorciatoie della schermata «Web» dell'auto (di default YouTube, Google, Wikipedia e Twitch). Aggiungi i tuoi con
 nome e indirizzo, toglili o riordinali con le frecce; «Predefiniti» rimette i quattro originali.
 
+### «Giochi NES: cartella delle ROM» («Auto esteso»)
+
+Scegli la cartella del telefono con le tue ROM NES (file .nes; l'app non ne include). In auto, Giochi › NES apre
+quella cartella con le sottocartelle; tocca un gioco per giocare, con i pulsanti touch o con un gamepad Bluetooth
+collegato al telefono (croce, A, B, Start e Select). All'avvio, sul telefono compare «Gamepad collegato all'auto»:
+lasciala davanti perché tutto il gamepad arrivi al gioco. Solo a veicolo fermo. I giochi con salvataggio lo fanno da
+soli.
+
 ### «Diagnostica»
 
 - «Esporta log»: sezione 8.

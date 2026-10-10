@@ -675,6 +675,14 @@ populares.
 Los accesos de la pantalla «Web» del coche (de serie, YouTube, Google, Wikipedia y Twitch). Añade los tuyos con
 nombre y dirección, quítalos o cámbialos de orden con las flechas; «Los de serie» los deja como venían.
 
+### «Juegos NES: carpeta de ROMs» («Auto extendido»)
+
+Elige la carpeta del móvil donde tienes tus ROMs de NES (archivos .nes; la app no lleva ninguna). En el coche, Juegos ›
+NES abre esa carpeta con sus subcarpetas; toca un juego para jugar, con botones táctiles o con un mando Bluetooth
+conectado al móvil (cruceta, A, B, Start y Select). Al empezar, en el móvil se abre «Mando conectado al coche»: déjala
+delante para que el mando entero llegue al juego. Solo con el coche parado. Los juegos con partida guardada la guardan
+solos.
+
 ### «Diagnóstico»
 
 - «Exportar log»: sección 8.

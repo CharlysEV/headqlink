@@ -2402,3 +2402,12 @@ La 0.2.37 es solo la versión de comprobación de este flujo (0.2.36 → 0.2.37 
 - Diagnóstico en vertical: «Sesiones» aplastaba el interruptor «Prueba sin Android Auto» (su texto se partía letra a letra y la tarjeta crecía); ahora va en la fila de «Opciones de prueba». El título se encoge antes que partirse en dos líneas.
 
 Prueba: `SplitScreenTest.theCarSectionIsScaledDownWhenTheHalfIsNarrow`.
+
+## 32. Emulador NES en el coche (0.2.39, 2026-10-10)
+
+- **Núcleo:** halfNES (Andrew Hoffman, GPL-3.0) copiado al módulo `:nescore` sin sus partes de escritorio (ver `nescore/UPSTREAM.md`, NOTICE). Cambios: `PrefsSingleton` en memoria, `NES.audioFactory`, sin JavaFX ni el visor de nametables, guardado de SRAM en un hilo.
+- **`NesEngine`** (app): envuelve `NES` + `GUIInterface`; hilo propio a 60 fps; cada fotograma (256x240 números de color NES) pasa por `NesColors` a un Bitmap de 256x224 (dos alternos); audio por `AudioTrack` (16 bits estéreo, búfer de 4 fotogramas, `USAGE_GAME`). SRAM junto a la copia de la ROM en `files/nes/`.
+- **`NesScreen`** (Juegos › NES): navegador de la carpeta de ROMs elegida en el móvil (árbol de documentos: subcarpetas y `.nes`/`.nsf`), el juego escalado a 8:7 y botones táctiles (cruceta, B, A, Select, Start; varios dedos). «Reiniciar» y «Botones táctiles» (ocultarlos con mando).
+- **Mando Bluetooth:** `NesInput` traduce teclas de Android a botones NES (cruceta, A/Y → A, B/X → B, Start, Select) y los ejes de la cruceta o el stick a la cruceta. Llega por dos vías: `NesPadActivity` (se abre en el móvil al empezar a jugar; recibe teclas y ejes) y `TouchService.onKeyEvent` (`flagRequestFilterKeyEvents`: solo consume teclas del mando mientras hay juego, el resto pasa).
+- **Móvil:** menú ⚙ › «Juegos NES: carpeta de ROMs» (`ACTION_OPEN_DOCUMENT_TREE`, permiso persistente, `Config.nesTree`).
+- Solo con el coche parado (como Juegos). Pruebas: `NesInputTest`. **Sin probar en el móvil** (publicada a petición del usuario; la prueba fuera de casa).

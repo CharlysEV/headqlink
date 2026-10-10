@@ -22,6 +22,17 @@
     <string name="hql_apply_reconnect">Appliquer · reconnexion en quelques secondes</string>
     <string name="hql_auto_not_responding">Auto ne répond pas : %1$s</string>
     <string name="hql_autohide_panel">Masquer le panneau latéral après quelques secondes</string>
+    <string name="hql_nes">NES</string>
+    <string name="hql_nes_sub">Vos ROM, avec une manette</string>
+    <string name="hql_nes_folder">Jeux NES : dossier des ROM</string>
+    <string name="hql_nes_folder_set">Dossier des ROM enregistré. Dans la voiture : Jeux › NES.</string>
+    <string name="hql_nes_no_folder">Choisissez le dossier des ROM sur le téléphone : menu ⚙ › « Jeux NES : dossier des ROM ».</string>
+    <string name="hql_nes_empty">Aucun fichier .nes dans ce dossier.</string>
+    <string name="hql_nes_pad_title">Manette connectée à la voiture</string>
+    <string name="hql_nes_pad_text">Jouez avec la manette sur l\'écran de la voiture. Appuyez sur retour pour quitter cet écran.</string>
+    <string name="hql_nes_reset">Réinitialiser</string>
+    <string name="hql_nes_touch">Boutons tactiles</string>
+    <string name="hql_nes_error">Impossible d\'ouvrir la ROM : %1$s</string>
     <string name="hql_update_install">Télécharger et installer</string>
     <string name="hql_update_allow_unknown">Pour installer la nouvelle version depuis l\'app, autorisez HeadQLink à installer des apps inconnues. Puis touchez à nouveau « Télécharger et installer ».</string>
     <string name="hql_update_open_setting">Ouvrir le réglage</string>

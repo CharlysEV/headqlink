@@ -22,6 +22,17 @@
     <string name="hql_apply_reconnect">Apply · reconnects in a few seconds</string>
     <string name="hql_auto_not_responding">Auto is not responding: %1$s</string>
     <string name="hql_autohide_panel">Hide the side panel after a few seconds</string>
+    <string name="hql_nes">NES</string>
+    <string name="hql_nes_sub">Your ROMs, with a gamepad</string>
+    <string name="hql_nes_folder">NES games: ROM folder</string>
+    <string name="hql_nes_folder_set">ROM folder saved. In the car: Games › NES.</string>
+    <string name="hql_nes_no_folder">Choose the ROM folder on the phone: ⚙ menu › "NES games: ROM folder".</string>
+    <string name="hql_nes_empty">No .nes files in this folder.</string>
+    <string name="hql_nes_pad_title">Gamepad connected to the car</string>
+    <string name="hql_nes_pad_text">Play with the gamepad on the car screen. Press back to leave this screen.</string>
+    <string name="hql_nes_reset">Reset</string>
+    <string name="hql_nes_touch">Touch buttons</string>
+    <string name="hql_nes_error">Could not open the ROM: %1$s</string>
     <string name="hql_update_install">Download and install</string>
     <string name="hql_update_allow_unknown">To install the update from the app, allow HeadQLink to install unknown apps. Then tap "Download and install" again.</string>
     <string name="hql_update_open_setting">Open setting</string>

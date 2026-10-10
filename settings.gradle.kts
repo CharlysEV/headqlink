@@ -1,7 +1,7 @@
 import org.gradle.kotlin.dsl.maven
 import org.gradle.kotlin.dsl.repositories
 
-include(":app", ":contract", ":qdcore", ":qdsim")
+include(":app", ":contract", ":qdcore", ":qdsim", ":nescore")
 
 
 rootProject.name = "open-headunit"

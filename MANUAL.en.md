@@ -664,6 +664,13 @@ Paste the URL of an M3U list or tap "Choose file". Without a radio list, the car
 The shortcuts on the car's "Web" screen (YouTube, Google, Wikipedia and Twitch by default). Add your own with a
 name and an address, remove them or reorder them with the arrows; "Defaults" puts back the original four.
 
+### "NES games: ROM folder" ("Auto extended")
+
+Pick the phone folder with your NES ROMs (.nes files; the app ships none). In the car, Games › NES opens that folder
+and its subfolders; tap a game to play, with touch buttons or a Bluetooth gamepad connected to the phone (d-pad, A,
+B, Start and Select). When a game starts, the phone shows "Gamepad connected to the car": keep it in front so the
+whole gamepad reaches the game. Only with the car stopped. Games with saved progress save it by themselves.
+
 ### "Diagnostics"
 
 - "Export log": section 8.

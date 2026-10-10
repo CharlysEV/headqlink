@@ -22,6 +22,17 @@
     <string name="hql_apply_reconnect">Aplicar · volta a ligar em poucos segundos</string>
     <string name="hql_auto_not_responding">O Auto não responde: %1$s</string>
     <string name="hql_autohide_panel">Ocultar o painel lateral após alguns segundos</string>
+    <string name="hql_nes">NES</string>
+    <string name="hql_nes_sub">As suas ROMs, com comando</string>
+    <string name="hql_nes_folder">Jogos NES: pasta de ROMs</string>
+    <string name="hql_nes_folder_set">Pasta de ROMs guardada. No carro: Jogos › NES.</string>
+    <string name="hql_nes_no_folder">Escolha a pasta de ROMs no telemóvel: menu ⚙ › «Jogos NES: pasta de ROMs».</string>
+    <string name="hql_nes_empty">Não há ficheiros .nes nesta pasta.</string>
+    <string name="hql_nes_pad_title">Comando ligado ao carro</string>
+    <string name="hql_nes_pad_text">Jogue com o comando no ecrã do carro. Prima retroceder para sair deste ecrã.</string>
+    <string name="hql_nes_reset">Reiniciar</string>
+    <string name="hql_nes_touch">Botões táteis</string>
+    <string name="hql_nes_error">Não foi possível abrir a ROM: %1$s</string>
     <string name="hql_update_install">Transferir e instalar</string>
     <string name="hql_update_allow_unknown">Para instalar a nova versão a partir da aplicação, permita ao HeadQLink instalar aplicações desconhecidas. Depois toque outra vez em «Transferir e instalar».</string>
     <string name="hql_update_open_setting">Abrir a definição</string>

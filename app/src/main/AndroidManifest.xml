@@ -618,6 +618,14 @@
             headqlink: coche virtual (menú de inicio): la pantalla del coche en el móvil, con Android Auto por Self-Mode,
             nuestras pantallas y rutas reales, sin coche. Solo desde la app.
         -->
+        <!-- headqlink: mando Bluetooth para el emulador NES del coche (recibe teclas y ejes mientras está delante) -->
+        <activity
+            android:name="com.headqlink.link.NesPadActivity"
+            android:exported="false"
+            android:label="@string/hql_nes_pad_title"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.HeadQLink" />
+
         <activity
             android:name="com.headqlink.link.CarSimActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|navigation|uiMode|density"

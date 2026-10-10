@@ -143,6 +143,13 @@ public class TouchService extends AccessibilityService {
         }
     }
 
+    /** Teclas de un mando Bluetooth mientras hay un juego NES en el coche: van al emulador y no a la app de delante. */
+    @Override
+    protected boolean onKeyEvent(android.view.KeyEvent e) {
+        if (NesInput.pad == null) return false;
+        return NesInput.key(e.getKeyCode(), e.getAction());
+    }
+
     @Override
     public void onInterrupt() {
     }

@@ -689,6 +689,13 @@ Cole o URL de uma lista M3U ou toque em «Escolher ficheiro». Sem lista de rád
 Os atalhos do ecrã «Web» do carro (de origem, YouTube, Google, Wikipedia e Twitch). Adicione os seus com nome e
 endereço, retire-os ou mude a ordem com as setas; «Os de origem» repõe os quatro iniciais.
 
+### «Jogos NES: pasta de ROMs» («Auto estendido»)
+
+Escolha a pasta do telemóvel com as suas ROMs de NES (ficheiros .nes; a aplicação não traz nenhuma). No carro, Jogos ›
+NES abre essa pasta com as subpastas; toque num jogo para jogar, com botões táteis ou com um comando Bluetooth ligado
+ao telemóvel (direcional, A, B, Start e Select). Ao começar, no telemóvel aparece «Comando ligado ao carro»: deixe-a à
+frente para que todo o comando chegue ao jogo. Só com o carro parado. Os jogos com gravação gravam sozinhos.
+
 ### «Diagnóstico»
 
 - «Exportar registo»: secção 8.
