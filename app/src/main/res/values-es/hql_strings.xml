@@ -22,6 +22,14 @@
     <string name="hql_apply_reconnect">Aplicar · reconecta unos segundos</string>
     <string name="hql_auto_not_responding">Auto no responde: %1$s</string>
     <string name="hql_autohide_panel">Ocultar el panel lateral tras unos segundos</string>
+    <string name="hql_update_install">Descargar e instalar</string>
+    <string name="hql_update_allow_unknown">Para instalar la versión nueva desde la app, permite a HeadQLink instalar apps desconocidas. Después vuelve a pulsar «Descargar e instalar».</string>
+    <string name="hql_update_open_setting">Abrir el ajuste</string>
+    <string name="hql_update_downloading">Descargando HeadQLink %1$s…</string>
+    <string name="hql_update_download_failed">No se pudo descargar (%1$s). Puedes bajarla de GitHub.</string>
+    <string name="hql_update_check">Buscar versión nueva</string>
+    <string name="hql_update_checking">Comprobando…</string>
+    <string name="hql_update_latest">Ya tienes la última versión (%1$s).</string>
     <string name="hql_web_bookmarks">Marcadores web</string>
     <string name="hql_bookmark_name">Nombre</string>
     <string name="hql_bookmark_url">Dirección (URL)</string>

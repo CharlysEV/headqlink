@@ -665,8 +665,10 @@ Por baixo, «Tom» e «Claro / escuro» dão qualquer outra cor, e «Transparên
 lateral à direita» põe o painel do outro lado, com o Android Auto encostado à borda esquerda. «Botões do painel lateral»
 escolhe quais se veem (Sim / Não) e por que ordem (setas); «Auto» e «Definições» ficam fixos. Com o painel reduzido a
 ícones, em baixo aparecem a hora, a temperatura exterior e a bateria do carro (quando há dado). E no ecrã principal do
-telemóvel, quando sai uma versão nova aparece um aviso com as novidades e a ligação para transferir; da primeira vez que
-arranca uma versão acabada de instalar, mostram-se as suas novidades.
+telemóvel, quando sai uma versão nova aparece um aviso com as novidades e «Transferir e instalar» (a aplicação transfere o APK e abre o instalador do
+Android; da primeira vez pede para permitir ao HeadQLink instalar aplicações desconhecidas); da primeira vez que
+arranca uma versão acabada de instalar, mostram-se as suas novidades. No menu ⚙, «Procurar versão nova» verifica
+logo.
 
 «Avisos de radar por voz» (ativado de origem): ao aproximar-se de um radar, «Radar a 700 metros, limite 80», uma vez
 por radar; e se a 400 metros ou menos for acima do limite, «Vai a 95, limite 80». Os radares vêm do OpenStreetMap,

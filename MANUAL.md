@@ -650,8 +650,10 @@ Debajo, «Tono» y «Claro / oscuro» dan cualquier otro color, y «Transparenci
 «Panel lateral a la derecha» pone el panel al otro lado, con Android Auto pegado al borde izquierdo. «Botones del panel
 lateral» elige cuáles se ven (Sí / No) y en qué orden (flechas); «Auto» y «Ajustes» van fijos. Con el panel reducido a
 iconos, abajo salen la hora, la temperatura exterior y la batería del coche (cuando hay dato). Y en la pantalla
-principal del móvil, al salir una versión nueva aparece un aviso con sus novedades y el enlace de descarga; la primera
-vez que arranca una versión recién instalada, se enseñan sus novedades.
+principal del móvil, al salir una versión nueva aparece un aviso con sus novedades y «Descargar e instalar» (la app baja el APK y abre el instalador de Android; la
+primera vez pide permitir a HeadQLink instalar apps desconocidas); la primera
+vez que arranca una versión recién instalada, se enseñan sus novedades. En el menú ⚙, «Buscar versión nueva» lo
+comprueba al momento.
 
 «Avisos de radar por voz» (activado de serie): al acercarte a un radar, «Radar a 700 metros, límite 80», una vez por
 radar; y si a 400 metros o menos vas por encima del límite, «Vas a 95, límite 80». Los radares salen de

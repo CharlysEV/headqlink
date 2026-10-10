@@ -147,8 +147,10 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         AaServerManual.checkSoon(this);
         // Con HeadQLink delante, el servicio recupera la ubicación «mientras se usa» si pasó a primer plano sin ella.
         LinkService.appShown("pantalla principal");
-        // Versión nueva en GitHub (como mucho una consulta cada 6 h).
-        UpdateCheck.check(this, r -> {
+        // Versión nueva en GitHub (como mucho una consulta cada 6 h; con el extra force_update_check, ahora: pruebas).
+        boolean forceCheck = getIntent().getBooleanExtra("force_update_check", false);
+        getIntent().removeExtra("force_update_check");
+        UpdateCheck.check(this, forceCheck, r -> {
             if (updateRow == null) return;
             updateRow.setVisibility(r == null ? View.GONE : View.VISIBLE);
             if (r == null) return;
@@ -420,9 +422,83 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 .setTitle(title)
                 .setMessage(notes.isEmpty() ? Str.get(R.string.hql_update_no_notes) : notes)
                 .setNegativeButton(Str.get(R.string.hql_close), null);
-        b.setPositiveButton(Str.get(download ? R.string.hql_update_download : R.string.hql_update_on_github), (d, w) ->
-                startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(r.url))));
+        if (download && r.hasApk()) {
+            // Dentro de la app: baja el APK y abre el instalador. GitHub en el botón del medio, por si se prefiere.
+            b.setPositiveButton(Str.get(R.string.hql_update_install), (d, w) -> downloadAndInstall(r));
+            b.setNeutralButton(Str.get(R.string.hql_update_on_github), (d, w) ->
+                    startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(r.url))));
+        } else {
+            b.setPositiveButton(Str.get(download ? R.string.hql_update_download : R.string.hql_update_on_github), (d, w) ->
+                    startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(r.url))));
+        }
         b.show();
+    }
+
+    /** «Buscar versión nueva»: consulta GitHub ahora; si hay una más nueva, la fila y su diálogo; si no, un aviso. */
+    private void checkUpdateNow() {
+        android.widget.Toast.makeText(this, Str.get(R.string.hql_update_checking), android.widget.Toast.LENGTH_SHORT).show();
+        UpdateCheck.check(this, true, r -> {
+            if (isFinishing()) return;
+            if (r == null) {
+                android.widget.Toast.makeText(this, Str.get(R.string.hql_update_latest, Ui.appVersionLabel(this)),
+                        android.widget.Toast.LENGTH_LONG).show();
+                if (updateRow != null) updateRow.setVisibility(View.GONE);
+                return;
+            }
+            updateRow.setVisibility(View.VISIBLE);
+            updateRow.setText(Str.get(R.string.hql_update_available, r.version));
+            updateRow.setOnClickListener(v -> showReleaseNotes(Str.get(R.string.hql_update_title, r.version), r, true));
+            showReleaseNotes(Str.get(R.string.hql_update_title, r.version), r, true);
+        });
+    }
+
+    /** Baja el APK con una barra de progreso y abre el instalador; antes, si hace falta, el permiso de apps desconocidas. */
+    private void downloadAndInstall(UpdateCheck.Release r) {
+        if (!UpdateInstaller.canInstall(this)) {
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(Str.get(R.string.hql_update_install))
+                    .setMessage(Str.get(R.string.hql_update_allow_unknown))
+                    .setPositiveButton(Str.get(R.string.hql_update_open_setting), (d, w) -> UpdateInstaller.openUnknownSourcesSetting(this))
+                    .setNegativeButton(Str.get(R.string.hql_cancel), null)
+                    .show();
+            return;
+        }
+        android.widget.ProgressBar bar = new android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        bar.setMax(100);
+        bar.setIndeterminate(true);
+        int pad = Math.round(24 * getResources().getDisplayMetrics().density);
+        bar.setPadding(pad, pad / 2, pad, 0);
+        androidx.appcompat.app.AlertDialog dlg = new MaterialAlertDialogBuilder(this)
+                .setTitle(Str.get(R.string.hql_update_downloading, r.version))
+                .setView(bar)
+                .setCancelable(false)
+                .show();
+        UpdateInstaller.download(this, r, new UpdateInstaller.Listener() {
+            @Override
+            public void onProgress(int pct) {
+                if (pct >= 0) {
+                    bar.setIndeterminate(false);
+                    bar.setProgress(pct);
+                }
+            }
+
+            @Override
+            public void onDone(java.io.File apk, String error) {
+                dlg.dismiss();
+                if (isFinishing()) return;
+                if (apk == null) {
+                    new MaterialAlertDialogBuilder(HomeActivity.this)
+                            .setTitle(Str.get(R.string.hql_update_install))
+                            .setMessage(Str.get(R.string.hql_update_download_failed, error))
+                            .setPositiveButton(Str.get(R.string.hql_update_on_github), (d, w) ->
+                                    startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(r.url))))
+                            .setNegativeButton(Str.get(R.string.hql_close), null)
+                            .show();
+                    return;
+                }
+                UpdateInstaller.install(HomeActivity.this, apk);
+            }
+        });
     }
 
     private void showMenu(View anchor) {
@@ -438,6 +514,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         }
         // Datos reales del coche (cuenta Leapmotor, opcional y de solo lectura): CarCloudActivity.
         m.add(0, 10, 3, Str.get(R.string.hql_cloud_menu));
+        m.add(0, 13, 3, Str.get(R.string.hql_update_check));
         if (android.os.Build.VERSION.SDK_INT >= 33) m.add(0, 4, 4, Str.get(R.string.hql_language));
         if (android.os.Build.VERSION.SDK_INT >= 26) m.add(0, 8, 5, Str.get(R.string.hql_w_add_widget));
         if (android.os.Build.VERSION.SDK_INT >= 33) m.add(0, 9, 5, Str.get(R.string.hql_w_add_tile));
@@ -472,6 +549,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     break;
                 case 12:
                     showBookmarks();
+                    break;
+                case 13:
+                    checkUpdateNow();
                     break;
                 case 11:
                     if (LinkState.running && (LinkState.car == LinkState.Car.CONNECTED || LinkState.car == LinkState.Car.RECONNECTING)) {

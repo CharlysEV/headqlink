@@ -22,6 +22,14 @@
     <string name="hql_apply_reconnect">Aplicar · volta a ligar em poucos segundos</string>
     <string name="hql_auto_not_responding">O Auto não responde: %1$s</string>
     <string name="hql_autohide_panel">Ocultar o painel lateral após alguns segundos</string>
+    <string name="hql_update_install">Transferir e instalar</string>
+    <string name="hql_update_allow_unknown">Para instalar a nova versão a partir da aplicação, permita ao HeadQLink instalar aplicações desconhecidas. Depois toque outra vez em «Transferir e instalar».</string>
+    <string name="hql_update_open_setting">Abrir a definição</string>
+    <string name="hql_update_downloading">A transferir o HeadQLink %1$s…</string>
+    <string name="hql_update_download_failed">Não foi possível transferir (%1$s). Pode obtê-la no GitHub.</string>
+    <string name="hql_update_check">Procurar versão nova</string>
+    <string name="hql_update_checking">A verificar…</string>
+    <string name="hql_update_latest">Já tem a versão mais recente (%1$s).</string>
     <string name="hql_web_bookmarks">Marcadores web</string>
     <string name="hql_bookmark_name">Nome</string>
     <string name="hql_bookmark_url">Endereço (URL)</string>

@@ -5,9 +5,31 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config as RoboConfig
+import org.robolectric.annotation.ConscryptMode
 
-/** Aviso de versión nueva: etiquetas de GitHub comparadas número a número, y las notas en texto llano. */
+/** Aviso de versión nueva: etiquetas de GitHub comparadas número a número, las notas en texto llano y el APK adjunto. */
+@RunWith(RobolectricTestRunner::class)
+@ConscryptMode(ConscryptMode.Mode.OFF)
+@RoboConfig(sdk = [35], application = android.app.Application::class)
 class UpdateCheckTest {
+    @Test
+    fun releaseJsonGivesTheApkAsset() {
+        val json = org.json.JSONObject(
+            """{"tag_name":"v0.2.36-qdauto","html_url":"https://example.org/r","body":"## x",
+               "assets":[{"name":"notas.txt","browser_download_url":"https://example.org/n"},
+                         {"name":"HeadQLink-QDAuto-v0.2.36.apk","browser_download_url":"https://example.org/a.apk"}]}"""
+        )
+        val r = UpdateCheck.fromJson(json)
+        assertEquals("0.2.36", r.version)
+        assertEquals("https://example.org/a.apk", r.apkUrl)
+        assertTrue(r.hasApk())
+        // Sin adjuntos: sin APK (queda el enlace a GitHub).
+        assertFalse(UpdateCheck.fromJson(org.json.JSONObject("""{"tag_name":"v0.2.1"}""")).hasApk())
+    }
+
     @Test
     fun tagsParseNumberByNumber() {
         assertEquals(listOf(0, 2, 33), UpdateCheck.parse("v0.2.33-qdauto")!!.toList())

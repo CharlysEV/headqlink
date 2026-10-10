@@ -22,6 +22,14 @@
     <string name="hql_apply_reconnect">Toepassen · verbindt even opnieuw</string>
     <string name="hql_auto_not_responding">Android Auto reageert niet: %1$s</string>
     <string name="hql_autohide_panel">Zijpaneel na een paar seconden verbergen</string>
+    <string name="hql_update_install">Downloaden en installeren</string>
+    <string name="hql_update_allow_unknown">Om de nieuwe versie vanuit de app te installeren, sta HeadQLink toe onbekende apps te installeren. Tik daarna opnieuw op \'Downloaden en installeren\'.</string>
+    <string name="hql_update_open_setting">Instelling openen</string>
+    <string name="hql_update_downloading">HeadQLink %1$s wordt gedownload…</string>
+    <string name="hql_update_download_failed">Het downloaden is mislukt (%1$s). Je kunt hem van GitHub halen.</string>
+    <string name="hql_update_check">Zoeken naar nieuwe versie</string>
+    <string name="hql_update_checking">Controleren…</string>
+    <string name="hql_update_latest">Je hebt al de nieuwste versie (%1$s).</string>
     <string name="hql_web_bookmarks">Webbladwijzers</string>
     <string name="hql_bookmark_name">Naam</string>
     <string name="hql_bookmark_url">Adres (URL)</string>

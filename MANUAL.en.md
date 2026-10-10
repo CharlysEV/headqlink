@@ -641,8 +641,9 @@ Below, "Hue" and "Light / dark" give any other color, and "Transparency" blends 
 panel on the right" moves the panel to the other side, with Android Auto against the left edge. "Side panel buttons"
 picks which ones show (Yes / No) and in what order (arrows); "Auto" and "Settings" stay fixed. With the panel shrunk to
 icons, the time, the outside temperature and the car's battery (when known) show at the bottom. And on the phone's main
-screen, when a new version is out a notice shows its news and the download link; the first time a freshly installed
-version starts, its news is shown.
+screen, when a new version is out a notice shows its news and "Download and install" (the app downloads the APK and opens Android's installer; the
+first time it asks to allow HeadQLink to install unknown apps); the first time a freshly installed
+version starts, its news is shown. In the ⚙ menu, "Check for new version" checks right away.
 
 "Speed camera voice alerts" (on by default): when you approach a camera, "Speed camera in 700 meters, limit 80",
 once per camera; and if at 400 meters or less you are over the limit, "You are doing 95, limit 80". Cameras come

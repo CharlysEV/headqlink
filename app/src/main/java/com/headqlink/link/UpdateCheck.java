@@ -19,17 +19,39 @@ final class UpdateCheck {
     private static final String API = "https://api.github.com/repos/" + REPO + "/releases";
     private static final long EVERY_MS = 6 * 3600_000L;
 
-    /** Una release: versión limpia («0.2.34»), enlace y notas. */
+    /** Una release: versión limpia («0.2.34»), enlace, notas y el APK adjunto (o vacío). */
     static final class Release {
         final String version;
         final String url;
         final String notes;
+        final String apkUrl;
 
-        Release(String version, String url, String notes) {
+        Release(String version, String url, String notes, String apkUrl) {
             this.version = version;
             this.url = url;
             this.notes = notes;
+            this.apkUrl = apkUrl == null ? "" : apkUrl;
         }
+
+        boolean hasApk() {
+            return !apkUrl.isEmpty();
+        }
+    }
+
+    /** Puro: la release de GitHub (JSON) → Release, con el primer adjunto .apk. */
+    static Release fromJson(JSONObject o) {
+        String apk = "";
+        org.json.JSONArray assets = o.optJSONArray("assets");
+        if (assets != null) {
+            for (int i = 0; i < assets.length(); i++) {
+                JSONObject a = assets.optJSONObject(i);
+                if (a != null && a.optString("name").endsWith(".apk")) {
+                    apk = a.optString("browser_download_url");
+                    break;
+                }
+            }
+        }
+        return new Release(clean(o.optString("tag_name")), o.optString("html_url", RELEASES_WEB), o.optString("body", ""), apk);
     }
 
     private UpdateCheck() {
@@ -108,12 +130,17 @@ final class UpdateCheck {
      * release si es más nueva que la instalada, o null.
      */
     static void check(Context ctx, Consumer<Release> cb) {
+        check(ctx, false, cb);
+    }
+
+    /** force: consulta ahora aunque no hayan pasado las 6 h (pruebas: HomeActivity con el extra force_update_check). */
+    static void check(Context ctx, boolean force, Consumer<Release> cb) {
         Context app = ctx.getApplicationContext();
         Config cfg = new Config(app);
         String installed = installedVersion(app);
         long last = cfg.updateCheckedAt();
         Handler main = new Handler(Looper.getMainLooper());
-        if (System.currentTimeMillis() - last < EVERY_MS) {
+        if (!force && System.currentTimeMillis() - last < EVERY_MS) {
             Release r = cfg.updateRelease();
             cb.accept(r != null && newer(r.version, installed) ? r : null);
             return;
@@ -121,8 +148,7 @@ final class UpdateCheck {
         new Thread(() -> {
             Release r = null;
             try {
-                JSONObject o = new JSONObject(Http.get(API + "/latest"));
-                r = new Release(clean(o.optString("tag_name")), o.optString("html_url", RELEASES_WEB), o.optString("body", ""));
+                r = fromJson(new JSONObject(Http.get(API + "/latest")));
                 cfg.setUpdateRelease(r);
                 L.i("versiones: la última publicada es " + r.version + " · instalada " + installed
                         + (newer(r.version, installed) ? " · hay versión nueva" : ""));
@@ -158,8 +184,7 @@ final class UpdateCheck {
             try {
                 int dash = installed.indexOf('-');
                 String tag = "v" + installed + (dash < 0 ? "-qdauto" : "");
-                JSONObject o = new JSONObject(Http.get(API + "/tags/" + tag));
-                r = new Release(clean(o.optString("tag_name")), o.optString("html_url", RELEASES_WEB), o.optString("body", ""));
+                r = fromJson(new JSONObject(Http.get(API + "/tags/" + tag)));
                 cfg.setSeenVersionCode(code);
                 L.i("versiones: novedades de la " + r.version);
             } catch (Exception e) {

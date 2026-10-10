@@ -665,7 +665,9 @@ Sotto, «Tonalità» e «Chiaro / scuro» danno qualsiasi altro colore, e «Tras
 del pannello laterale» sceglie quali si vedono (Sì / No) e in che ordine (frecce); «Auto» e «Impostazioni» restano
 fissi. Con il pannello ridotto a icone, in basso compaiono l'ora, la temperatura esterna e la batteria dell'auto (quando
 c'è il dato). E nella schermata principale del telefono, quando esce una versione nuova compare un avviso con le novità
-e il link per scaricarla; la prima volta che si avvia una versione appena installata, si mostrano le sue novità.
+e «Scarica e installa» (l'app scarica l'APK e apre l'installer di Android; la prima volta chiede di permettere a
+HeadQLink di installare app sconosciute); la prima volta che si avvia una versione appena installata, si mostrano le
+sue novità. Nel menu ⚙, «Cerca nuova versione» controlla subito.
 
 «Avvisi autovelox a voce» (attivo di default): avvicinandoti a un autovelox, «Autovelox a 700 metri, limite 80», una
 volta per autovelox; e se a 400 metri o meno vai oltre il limite, «Vai a 95, limite 80». Gli autovelox vengono da

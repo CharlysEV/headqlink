@@ -22,6 +22,14 @@
     <string name="hql_apply_reconnect">Übernehmen · verbindet kurz neu</string>
     <string name="hql_auto_not_responding">Android Auto antwortet nicht: %1$s</string>
     <string name="hql_autohide_panel">Seitenleiste nach ein paar Sekunden ausblenden</string>
+    <string name="hql_update_install">Herunterladen und installieren</string>
+    <string name="hql_update_allow_unknown">Um die neue Version aus der App zu installieren, erlaube HeadQLink das Installieren unbekannter Apps. Tippe dann erneut auf „Herunterladen und installieren“.</string>
+    <string name="hql_update_open_setting">Einstellung öffnen</string>
+    <string name="hql_update_downloading">HeadQLink %1$s wird heruntergeladen…</string>
+    <string name="hql_update_download_failed">Der Download ist fehlgeschlagen (%1$s). Du kannst sie von GitHub holen.</string>
+    <string name="hql_update_check">Nach neuer Version suchen</string>
+    <string name="hql_update_checking">Prüfe…</string>
+    <string name="hql_update_latest">Du hast schon die neueste Version (%1$s).</string>
     <string name="hql_web_bookmarks">Web-Lesezeichen</string>
     <string name="hql_bookmark_name">Name</string>
     <string name="hql_bookmark_url">Adresse (URL)</string>

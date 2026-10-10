@@ -634,11 +634,13 @@ final class Config {
     UpdateCheck.Release updateRelease() {
         String v = sp.getString("update_version", "");
         if (v == null || v.isEmpty()) return null;
-        return new UpdateCheck.Release(v, sp.getString("update_url", UpdateCheck.RELEASES_WEB), sp.getString("update_notes", ""));
+        return new UpdateCheck.Release(v, sp.getString("update_url", UpdateCheck.RELEASES_WEB), sp.getString("update_notes", ""),
+                sp.getString("update_apk", ""));
     }
 
     void setUpdateRelease(UpdateCheck.Release r) {
-        sp.edit().putString("update_version", r.version).putString("update_url", r.url).putString("update_notes", r.notes).apply();
+        sp.edit().putString("update_version", r.version).putString("update_url", r.url).putString("update_notes", r.notes)
+                .putString("update_apk", r.apkUrl).apply();
     }
 
     /** Último versionCode que arrancó (para «Novedades» al actualizar); 0 = nunca. */
