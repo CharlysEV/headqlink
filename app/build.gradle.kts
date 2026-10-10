@@ -98,8 +98,8 @@ android {
         applicationId = "com.headqlink.app" // headqlink: identificador propio del fork
         minSdk = 16
         targetSdk = 36
-        versionCode = 18
-        versionName = "0.2.36-qdauto"
+        versionCode = 19
+        versionName = "0.2.37-qdauto"
         setProperty("archivesBaseName", "${applicationId}_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true

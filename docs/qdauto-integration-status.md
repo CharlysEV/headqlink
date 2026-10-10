@@ -2392,3 +2392,5 @@ Pruebas: `UpdateCheckTest`, `PanelSettingsTest`.
 `UpdateCheck.Release` lleva el primer adjunto `.apk` de la release (`fromJson`, puro). En el diálogo de la versión nueva, «Descargar e instalar» (`UpdateInstaller`): baja el APK a `files/apk/` (se borra el anterior) con barra de progreso y abre el instalador de Android por `FileProvider` (`REQUEST_INSTALL_PACKAGES`). Si HeadQLink aún no puede instalar apps desconocidas (`canRequestPackageInstalls`), se abre ese ajuste y hay que volver a pulsar. «Ver en GitHub» queda en el botón del medio. Si la release no tiene APK, se abre GitHub como antes.
 
 Menú ⚙ › «Buscar versión nueva»: consulta GitHub ahora (sin esperar las 6 h) y enseña el diálogo o «Ya tienes la última versión». Para pruebas por adb: `am start -n com.headqlink.app/com.headqlink.link.HomeActivity --ez no_autoconnect true --ez force_update_check true`. Líneas: `versiones: APK de la X bajado (N KB)`, `versiones: abro el instalador con …`.
+
+La 0.2.37 es solo la versión de comprobación de este flujo (0.2.36 → 0.2.37 desde la app, en el móvil de pruebas).
