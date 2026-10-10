@@ -277,6 +277,23 @@ public class CarSimActivity extends Activity {
         close();
     }
 
+    /**
+     * Mando Bluetooth con un juego NES en el coche virtual: esta pantalla es la de delante, así que le llegan la cruceta y
+     * el stick (ejes, que la accesibilidad no ve) y las teclas. Atrás sigue cerrando el coche virtual.
+     */
+    @Override
+    public boolean dispatchKeyEvent(android.view.KeyEvent e) {
+        if (NesInput.pad != null && e.getKeyCode() != android.view.KeyEvent.KEYCODE_BACK
+                && NesInput.key(e.getKeyCode(), e.getAction())) return true;
+        return super.dispatchKeyEvent(e);
+    }
+
+    @Override
+    public boolean dispatchGenericMotionEvent(MotionEvent e) {
+        if (NesInput.pad != null && NesInput.motion(e)) return true;
+        return super.dispatchGenericMotionEvent(e);
+    }
+
     @Override
     protected void onDestroy() {
         main.removeCallbacks(watchLink);

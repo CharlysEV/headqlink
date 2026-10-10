@@ -193,12 +193,14 @@ final class NesScreen {
             return;
         }
         L.i("NES: " + e.name + " · " + engine.romInfo());
-        NesInput.pad = engine.pad1();
+        NesInput.newGame(engine.pad1());
+        CarUi.gameDrawing(true);
         host.setContent(game(e.name));
         engine.start();
-        // El mando Bluetooth: las teclas llegan por la accesibilidad; la cruceta (ejes) solo con HeadQLink o la pantalla
-        // del mando delante en el móvil. Android no deja abrirla desde segundo plano: una notificación la abre de un toque.
-        NesPadActivity.notify(c, e.name);
+        // El mando Bluetooth: las teclas llegan por la accesibilidad; la cruceta y el stick (ejes) solo con una pantalla de
+        // HeadQLink delante en el móvil. En el coche virtual ya lo está (CarSimActivity los pasa); con el coche de verdad,
+        // la pantalla del mando (y una notificación para volver a ella).
+        if (!RoutePlanner.testMode()) NesPadActivity.notify(c.getApplicationContext(), e.name);
     }
 
     private View game(String name) {
@@ -311,6 +313,7 @@ final class NesScreen {
     }
 
     void stopEngine() {
+        CarUi.gameDrawing(false);
         NesInput.pad = null;
         NesPadActivity.close();
         NesPadActivity.cancelNotification(host.context());
@@ -343,14 +346,18 @@ final class NesScreen {
 
         private volatile boolean pending;
 
-        /** Guarda el último fotograma y pide un redibujado por tic de la pantalla (no uno por fotograma emulado). */
+        /**
+         * Guarda el último fotograma y lo dibuja ya en el hilo principal: sin esperar al ritmo de la pantalla del móvil
+         * (CarUi.gameFrame dibuja la interfaz directamente en el vídeo del coche).
+         */
         void show(Bitmap b) {
             frame = b;
             if (!pending) {
                 pending = true;
-                postOnAnimation(() -> {
+                post(() -> {
                     pending = false;
                     invalidate();
+                    CarUi.gameFrame();
                 });
             }
         }

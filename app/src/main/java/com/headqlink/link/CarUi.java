@@ -294,6 +294,20 @@ final class CarUi {
         });
     }
 
+    /** Juego NES en marcha (o no): la interfaz la dibuja HeadQLink con cada fotograma (PhoneOffRenderer forzado). */
+    static void gameDrawing(boolean on) {
+        CarUi ui = current;
+        if (ui != null) ui.main.post(() -> {
+            if (ui.phoneOff != null) ui.phoneOff.setForced(on);
+        });
+    }
+
+    /** Hilo principal: el juego tiene fotograma nuevo; se dibuja ya, sin esperar al ritmo de la pantalla del móvil. */
+    static void gameFrame() {
+        CarUi ui = current;
+        if (ui != null && ui.phoneOff != null) ui.phoneOff.requestDraw();
+    }
+
     static void applyAutoHide(boolean on) {
         CarUi ui = current;
         if (ui != null) ui.main.post(() -> {

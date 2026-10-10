@@ -2427,3 +2427,9 @@ Segunda prueba del usuario (coche virtual en el móvil): imagen pixelada y a sal
 - **Medida:** cada 5 s, `NES: X fps emulados · Y entregados a la pantalla · audio sin datos N veces` (con `AudioTrack.getUnderrunCount`). Con eso y la línea del relay (`descartados … por ir atrasados`) se ve si falta CPU, si el audio se queda sin datos o si el enlace tira fotogramas.
 
 Prueba: `NesInputTest.gameIsScaledByAWholeFactor`.
+
+### 32.3 Cruceta del mando Xbox y congelones a ratos (0.2.42)
+
+- **Cruceta y stick:** en un mando Xbox son ejes (`AXIS_HAT_X/Y`, `AXIS_X/Y`), no teclas, y Android solo los da a la ventana enfocada del móvil; la accesibilidad no los ve. En el coche virtual la enfocada es `CarSimActivity`, que ahora los pasa a `NesInput` (como `HomeActivity`). Con el coche de verdad, `NesPadActivity` se abre en la pantalla del móvil (`ActivityOptions.setLaunchDisplayId(DEFAULT_DISPLAY)` y contexto de la app: desde el de la Presentation daba «Permission Denial» porque apuntaba a la pantalla virtual). En el coche virtual no se abre (lo taparía). Log: `NES: mando: primer botón …` y `NES: mando: cruceta o stick por ejes (Xbox Wireless Controller)`.
+- **Congelones a ratos:** el emulador daba siempre 60 fps y entregaba 30, pero la pantalla virtual de la interfaz producía entre 4 y 30 fotogramas por segundo según el momento (`interfaz 18 … 150` en el relay). Android compone esa pantalla al ritmo de la del móvil, y el S25 lo baja cuando nadie la toca (jugando con mando). Ahora, mientras hay juego, `PhoneOffRenderer` va forzado (`CarUi.gameDrawing`): HeadQLink dibuja la interfaz él mismo en la entrada propia del relay, y cada fotograma del juego la dibuja ya (`CarUi.gameFrame`, sin esperar al vsync del móvil). Medido en el coche virtual, 45 s sin tocar: 150-152 fotogramas nuevos cada 5 s, sin repetidos; 1691 dibujados en 56 s.
+- **Audio:** el `AudioTrack` de una partida se cierra al pararla (antes quedaba abierto hasta que lo recogía el sistema).

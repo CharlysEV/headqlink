@@ -45,12 +45,18 @@ final class NesEngine implements GUIInterface {
     private long statsEmulated;
     private long statsShown;
     private static volatile AudioTrack lastTrack;
+    /** La salida de audio de este juego: se cierra al pararlo (si no, quedaba abierta hasta que la recogía el sistema). */
+    private volatile TrackAudio audio;
     private Thread thread;
     private volatile Listener listener;
     private volatile String lastError;
 
     NesEngine(Context ctx) {
-        NES.audioFactory = (n, rate, tv) -> new TrackAudio(rate);
+        NES.audioFactory = (n, rate, tv) -> {
+            TrackAudio t = new TrackAudio(rate);
+            audio = t;
+            return t;
+        };
         nes = new NES(this);
         nes.setControllers(pad1, pad2);
     }
@@ -105,6 +111,9 @@ final class NesEngine implements GUIInterface {
             } catch (InterruptedException ignored) {
             }
         }
+        TrackAudio a = audio;
+        audio = null;
+        if (a != null) a.destroy();
     }
 
     String romInfo() {
@@ -246,8 +255,12 @@ final class NesEngine implements GUIInterface {
             }
         }
 
+        private boolean released;
+
         @Override
-        public void destroy() {
+        public synchronized void destroy() {
+            if (released) return;
+            released = true;
             try {
                 track.stop();
             } catch (IllegalStateException ignored) {

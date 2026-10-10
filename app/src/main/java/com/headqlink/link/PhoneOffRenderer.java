@@ -52,6 +52,13 @@ final class PhoneOffRenderer {
     private boolean posted;
     private boolean stopped;
     private int frames;
+    /**
+     * Dibujo propio también con la pantalla del móvil encendida (un juego NES en marcha): Android compone la pantalla
+     * virtual al ritmo de la del móvil, y el S25 lo baja cuando su contenido apenas cambia y nadie la toca (juego con
+     * mando: de 30 fotogramas a 4-15 por segundo, prueba del 2026-10-10). Con esto, cada fotograma del juego llega al
+     * coche aunque Android no componga.
+     */
+    private boolean forced;
 
     PhoneOffRenderer(Context ctx, Handler main, Surface out, Consumer<Boolean> useManual, int width, int height,
             Supplier<View> root) {
@@ -110,6 +117,18 @@ final class PhoneOffRenderer {
         main.post(poll);
     }
 
+    /** Hilo principal: dibujo propio también con la pantalla encendida (juego NES), o vuelta a lo normal. */
+    void setForced(boolean on) {
+        if (forced == on) return;
+        forced = on;
+        update();
+    }
+
+    /** Hilo principal: dibuja ya (el juego tiene fotograma nuevo), sin esperar al dibujo de la Presentation. */
+    void requestDraw() {
+        scheduleDraw();
+    }
+
     /** Hilo principal; antes de soltar la pantalla virtual. */
     void stop() {
         stopped = true;
@@ -121,7 +140,7 @@ final class PhoneOffRenderer {
     private void update() {
         if (stopped || dm == null) return;
         Display d = dm.getDisplay(Display.DEFAULT_DISPLAY);
-        boolean off = d != null && phoneOff(d.getState());
+        boolean off = forced || d != null && phoneOff(d.getState());
         if (off && !active) {
             enter();
         } else if (!off && active) {
@@ -142,7 +161,8 @@ final class PhoneOffRenderer {
             r.getViewTreeObserver().addOnDrawListener(onDraw);
             active = true;
             frames = 0;
-            L.i("CarUi: pantalla del móvil apagada: dibujo yo la interfaz (Android no compone la pantalla virtual)");
+            L.i(forced ? "CarUi: juego en marcha: dibujo yo la interfaz (sin esperar a que Android componga la pantalla virtual)"
+                    : "CarUi: pantalla del móvil apagada: dibujo yo la interfaz (Android no compone la pantalla virtual)");
             drawPosted();
             useManual.accept(true);
         } catch (RuntimeException e) {
@@ -183,6 +203,6 @@ final class PhoneOffRenderer {
             node = null;
         }
         if (r != null) r.invalidate();
-        if (was) L.i("CarUi: pantalla del móvil encendida: vuelve la composición de Android (" + frames + " fotogramas dibujados por HeadQLink)");
+        if (was) L.i("CarUi: vuelve la composición de Android (" + frames + " fotogramas dibujados por HeadQLink)");
     }
 }

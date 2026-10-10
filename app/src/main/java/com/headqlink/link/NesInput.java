@@ -16,6 +16,15 @@ final class NesInput {
 
     /** Mando del jugador 1 mientras hay un juego en marcha; null si no. */
     static volatile PuppetController pad;
+    /** Para el log: el primer botón y el primer movimiento de cruceta de cada partida (por qué vía llegan). */
+    static volatile boolean loggedKey;
+    static volatile boolean loggedAxis;
+
+    static void newGame(PuppetController p) {
+        pad = p;
+        loggedKey = false;
+        loggedAxis = false;
+    }
 
     /** Puro: tecla de Android → botón NES, o null si no es del mando. */
     static PuppetController.Button map(int keyCode) {
@@ -52,6 +61,10 @@ final class NesInput {
         if (p == null) return false;
         PuppetController.Button b = map(keyCode);
         if (b == null) return false;
+        if (!loggedKey && action == KeyEvent.ACTION_DOWN) {
+            loggedKey = true;
+            L.i("NES: mando: primer botón " + KeyEvent.keyCodeToString(keyCode) + " → " + b);
+        }
         // Atrás solo cuenta como Select en el mando del coche; en el móvil lo gestiona la actividad.
         if (action == KeyEvent.ACTION_DOWN) p.pressButton(b);
         else if (action == KeyEvent.ACTION_UP) p.releaseButton(b);
@@ -79,6 +92,10 @@ final class NesInput {
         if (Math.abs(x) < 0.5f && Math.abs(y) < 0.5f) {
             x = e.getAxisValue(MotionEvent.AXIS_X);
             y = e.getAxisValue(MotionEvent.AXIS_Y);
+        }
+        if (!loggedAxis && (Math.abs(x) > 0.5f || Math.abs(y) > 0.5f)) {
+            loggedAxis = true;
+            L.i("NES: mando: cruceta o stick por ejes (" + (e.getDevice() != null ? e.getDevice().getName() : "?") + ")");
         }
         apply(p, x, y);
         return true;

@@ -84,8 +84,11 @@ public class NesPadActivity extends Activity {
                     .setContentIntent(pi)
                     .setOngoing(true)
                     .build());
-            // Si HeadQLink está delante, se abre directamente.
-            ctx.startActivity(new android.content.Intent(ctx, NesPadActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+            // En la pantalla del móvil (el contexto de la interfaz del coche apuntaría a su pantalla virtual: «Permission
+            // Denial»). Con el servicio de accesibilidad activo, Android deja abrirla aunque HeadQLink no esté delante.
+            android.app.ActivityOptions o = android.app.ActivityOptions.makeBasic().setLaunchDisplayId(android.view.Display.DEFAULT_DISPLAY);
+            ctx.startActivity(new android.content.Intent(ctx, NesPadActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                    o.toBundle());
         } catch (Exception e) {
             L.w("NES: no se pudo avisar del mando: " + e);
         }
