@@ -22,6 +22,9 @@
     <string name="hql_apply_reconnect">Toepassen · verbindt even opnieuw</string>
     <string name="hql_auto_not_responding">Android Auto reageert niet: %1$s</string>
     <string name="hql_autohide_panel">Zijpaneel na een paar seconden verbergen</string>
+    <string name="hql_panel_color">Kleur van het zijpaneel</string>
+    <string name="hql_panel_color_auto">Automatisch</string>
+    <string name="hql_panel_color_help">Automatisch: \'s nachts donker en overdag licht, zoals het scherm van de auto. Met een kleur blijft het paneel altijd zo.</string>
     <string name="hql_autohide_panel_ext">Zijpaneel na een paar seconden verbergen (Android Auto uitgebreid)</string>
     <string name="hql_back">Terug</string>
     <string name="hql_back_short">Terug</string>

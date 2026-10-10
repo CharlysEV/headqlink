@@ -22,6 +22,9 @@
     <string name="hql_apply_reconnect">Apply · reconnects in a few seconds</string>
     <string name="hql_auto_not_responding">Auto is not responding: %1$s</string>
     <string name="hql_autohide_panel">Hide the side panel after a few seconds</string>
+    <string name="hql_panel_color">Side panel color</string>
+    <string name="hql_panel_color_auto">Automatic</string>
+    <string name="hql_panel_color_help">Automatic: dark at night and light by day, like the car\'s screen. With a color, the panel always stays that way.</string>
     <string name="hql_autohide_panel_ext">Hide the side panel after a few seconds (Auto extended)</string>
     <string name="hql_back">Back</string>
     <string name="hql_back_short">Back</string>

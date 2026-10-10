@@ -112,6 +112,7 @@ final class SettingsScreen implements CarScreen {
         }));
         ui.addView(toggle(c, Str.get(R.string.hql_low_latency_reconnect), cfg.lowLatency(),
                 on -> cfg.putBool(Config.LOW_LATENCY, on)));
+        ui.addView(panelColorRow(c));
         col.addView(ui, cardLp());
 
         // Energía: €/kWh para el coste de los viajes y la pestaña Eficiencia.
@@ -175,6 +176,59 @@ final class SettingsScreen implements CarScreen {
         ScrollView sv = new ScrollView(c);
         sv.addView(col);
         return sv;
+    }
+
+    /**
+     * Color de la barra: «Automático» (oscura de noche y clara de día, como el coche) o uno de los 16 fijos
+     * (CarTheme.PANEL_COLORS). Se aplica al momento: la interfaz se rehace y esta pantalla vuelve con el elegido marcado.
+     */
+    private View panelColorRow(Context c) {
+        LinearLayout box = new LinearLayout(c);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(0, 22, 0, 4);
+        TextView label = CarStyle.text(c, Str.get(R.string.hql_panel_color), 24, CarStyle.TEXT);
+        label.setPadding(0, 0, 0, 12);
+        box.addView(label);
+        int fixed = cfg.panelFixedColor();
+        LinearLayout row = new LinearLayout(c);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        TextView auto = CarStyle.pill(c, Str.get(R.string.hql_panel_color_auto));
+        auto.setPadding(30, 16, 30, 16);
+        auto.setBackground(CarStyle.round(fixed == 0 ? CarStyle.ACCENT_BG : CarStyle.PILL_BG, 28));
+        auto.setOnClickListener(v -> setPanelColor(0));
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        alp.rightMargin = 18;
+        row.addView(auto, alp);
+        for (int pc : CarTheme.PANEL_COLORS) {
+            View sw = new View(c);
+            android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
+            d.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            d.setColor(pc);
+            boolean sel = pc == fixed;
+            // El elegido, con un aro del acento; el resto, con un borde fino (para ver el negro y el blanco).
+            d.setStroke(sel ? 7 : 2, sel ? CarStyle.ACCENT : CarKit.EDGE);
+            sw.setBackground(d);
+            sw.setOnClickListener(v -> setPanelColor(pc));
+            LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(60, 60);
+            slp.rightMargin = 12;
+            row.addView(sw, slp);
+        }
+        android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(c);
+        scroll.setHorizontalScrollBarEnabled(false);
+        scroll.addView(row);
+        box.addView(scroll);
+        TextView help = CarStyle.text(c, Str.get(R.string.hql_panel_color_help), 20, CarStyle.TEXT_DIM);
+        help.setPadding(6, 10, 0, 0);
+        box.addView(help);
+        return box;
+    }
+
+    private void setPanelColor(int color) {
+        if (color == cfg.panelFixedColor()) return;
+        cfg.setPanelFixedColor(color);
+        CarUi.applyPanelFixed(color);
     }
 
     private static LinearLayout.LayoutParams cardLp() {

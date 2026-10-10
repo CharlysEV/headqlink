@@ -641,6 +641,10 @@ El botón «Ajustes» del panel del coche permite cambiar el perfil de imagen y 
 segundos»), ocultar el panel solo y las optimizaciones de latencia, el «Precio de la electricidad» (€/kWh, para el coste
 de los viajes; 0,20 de serie), y ver la conexión y el motor que se están usando. Úsalo solo con el coche parado.
 
+«Color del panel lateral»: «Automático» (oscuro de noche y claro de día, como la pantalla del coche) o uno de 16 colores
+fijos, que se queda igual de día y de noche. Se aplica al momento, y el texto del panel pasa a claro u oscuro para que
+se lea.
+
 ### «Idioma»
 
 «Idioma» (Android 13 o superior): «Idioma del sistema», «Español», «English», «Português (Portugal)», «Português

@@ -633,6 +633,9 @@ The "Settings" button on the car's panel lets you change the picture profile and
 a few seconds"), auto-hide the panel and latency optimizations, the "Electricity price" (€/kWh, for the cost of trips;
 0.20 by default), and see the connection and engine in use. Only use it with the car stopped.
 
+"Side panel color": "Automatic" (dark at night and light by day, like the car's screen) or one of 16 fixed colors, which
+stays the same day and night. It applies at once, and the panel's text turns light or dark so it stays readable.
+
 ### "Language"
 
 "Language" (Android 13 or later): "System language", "Español", "English", "Português (Portugal)", "Português

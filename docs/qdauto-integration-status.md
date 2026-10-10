@@ -2350,3 +2350,20 @@ Ahora `CarUi.splitAaWidth(width, height, railW, dpi)` da la mitad, pero nunca me
 | Línea | Significado |
 |---|---|
 | `CarUi: aviso de la pantalla partida` / `…: aceptado` / `…: cancelado` | El aviso |
+
+## 27. Color fijo del panel lateral (0.2.33, 2026-10-10)
+
+En «Ajustes» del coche, tarjeta «Pantalla», «Color del panel lateral»:
+- **«Automático»:** como hasta ahora. Oscuro de noche (el gris de `Config.panelColor`) y claro de día, siguiendo el día y la noche de la sesión.
+- **16 colores fijos** (`CarTheme.PANEL_COLORS`): negros y grises para fundirse con las barras del C10, blanco y colores. El elegido se queda igual de día y de noche.
+
+Detalles:
+- Se guarda en `Config.panelFixedColor` (0 = automático). `CarTheme.setFixedPanel` lo aplica a `panelColor`, al fondo del relay alrededor de AA (desde el primer fotograma, en `AaPassthroughSource`) y a la animación de carga.
+- El texto y los iconos del panel (`CarTheme.navText`, `navTextDim`) pasan a claros u oscuros según la luminancia del color (`CarTheme.isDark`, umbral 0,18, donde el contraste con blanco y con negro es el mismo). Azul, verde azulado y verde van algo oscurecidos para que el texto blanco se lea y no se confundan con el acento del botón activo.
+- Al elegir, `CarUi.applyPanelFixed` rehace la interfaz (`CarUi.rebuild`, lo mismo que al cambiar de día a noche) y vuelve a Ajustes con el elegido marcado.
+
+Línea nueva: `CarUi: color de la barra fijo #RRGGBB` / `… automático (día y noche)`.
+
+Probado en el coche virtual: azul (texto blanco), blanco (texto oscuro) y vuelta a «Automático».
+
+Pruebas: `CarThemeTest` (color fijo de día y de noche, texto según el color, 16 colores distintos y opacos).

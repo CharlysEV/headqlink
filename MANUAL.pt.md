@@ -657,6 +657,9 @@ O botão «Definições» do painel do carro permite mudar o perfil de imagem e 
 poucos segundos»), ocultar o painel sozinho e as otimizações de latência, o «Preço da eletricidade» (€/kWh, para o custo
 das viagens; 0,20 por omissão), e ver a ligação e o motor em uso. Use-o só com o carro parado.
 
+«Cor do painel lateral»: «Automático» (escuro à noite e claro de dia, como o ecrã do carro) ou uma de 16 cores fixas,
+que fica igual de dia e de noite. Aplica-se logo, e o texto do painel passa a claro ou escuro para se ler.
+
 ### «Idioma»
 
 «Idioma» (Android 13 ou superior): «Idioma do sistema», «Español», «English», «Português (Portugal)», «Português

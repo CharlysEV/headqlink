@@ -655,6 +655,10 @@ si riconnette in pochi secondi»), l'occultamento automatico del pannello e le o
 dell'elettricità» (€/kWh, per il costo dei viaggi; 0,20 di default), e di vedere la connessione e il motore in uso. Usalo
 solo con l'auto ferma.
 
+«Colore del pannello laterale»: «Automatico» (scuro di notte e chiaro di giorno, come lo schermo dell'auto) o uno di 16
+colori fissi, che resta uguale di giorno e di notte. Si applica subito, e il testo del pannello diventa chiaro o scuro
+perché si legga.
+
 ### «Lingua»
 
 «Lingua» (Android 13 o successivo): «Lingua del sistema», «Español», «English», «Português (Portugal)», «Português

@@ -92,13 +92,61 @@ final class CarTheme {
         return changed;
     }
 
-    /** Texto e iconos de los botones del panel lateral: claros de noche, casi negros de día. */
-    static int navText() {
-        return night ? 0xFFDADCE0 : 0xFF22282E;
+    /**
+     * Colores que se pueden dejar fijos en la barra (Ajustes del coche): negros y grises para fundirse con las barras
+     * del C10, blanco, y colores. 0 en Config = automático.
+     */
+    static final int[] PANEL_COLORS = {
+            0xFF000000, 0xFF1E1E20, 0xFF2E3238, 0xFF5F6368,
+            0xFFBDC1C6, 0xFFF1F3F4, 0xFF0D2B4E, 0xFF1967D2,
+            0xFF00695C, 0xFF137333, 0xFF4E5B31, 0xFFF9AB00,
+            0xFFE8710A, 0xFFC5221F, 0xFF6D1B2B, 0xFF6A1B9A,
+    };
+
+    /** Color fijo de la barra (uno de PANEL_COLORS), o 0: sigue el día y la noche. */
+    private static volatile int fixedPanel;
+
+    static void setFixedPanel(int color) {
+        fixedPanel = color;
     }
 
-    /** Color del panel: de noche, el gris elegido (que se funda con las barras del coche); de día, claro. */
+    static int fixedPanel() {
+        return fixedPanel;
+    }
+
+    /** ¿Color oscuro? (luminancia relativa, como WCAG): decide si el texto encima va claro u oscuro. */
+    static boolean isDark(int color) {
+        double r = channel((color >> 16) & 0xFF);
+        double g = channel((color >> 8) & 0xFF);
+        double b = channel(color & 0xFF);
+        double l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        // Contraste igual con blanco (1,05) que con negro (0,05) en l ≈ 0,18.
+        return l < 0.18;
+    }
+
+    private static double channel(int v) {
+        double c = v / 255.0;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    }
+
+    /** Texto e iconos de los botones del panel lateral: claros de noche, casi negros de día; con color fijo, según él. */
+    static int navText() {
+        boolean dark = fixedPanel != 0 ? isDark(fixedPanel) : night;
+        return dark ? 0xFFDADCE0 : 0xFF22282E;
+    }
+
+    /** Texto secundario sobre el panel (la batería). */
+    static int navTextDim() {
+        boolean dark = fixedPanel != 0 ? isDark(fixedPanel) : night;
+        return dark ? 0xFF9AA0A6 : 0xFF5F6368;
+    }
+
+    /**
+     * Color del panel: el fijo si se eligió; si no, de noche el gris elegido (que se funda con las barras del coche) y de
+     * día, claro.
+     */
     static int panelColor(int nightGray) {
+        if (fixedPanel != 0) return fixedPanel;
         return night ? nightGray : 0xFFE9EDF1;
     }
 

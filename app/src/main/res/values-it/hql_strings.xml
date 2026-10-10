@@ -22,6 +22,9 @@
     <string name="hql_apply_reconnect">Applica · si riconnette in pochi secondi</string>
     <string name="hql_auto_not_responding">Android Auto non risponde: %1$s</string>
     <string name="hql_autohide_panel">Nascondi il pannello laterale dopo qualche secondo</string>
+    <string name="hql_panel_color">Colore del pannello laterale</string>
+    <string name="hql_panel_color_auto">Automatico</string>
+    <string name="hql_panel_color_help">Automatico: scuro di notte e chiaro di giorno, come lo schermo dell\'auto. Con un colore, il pannello resta sempre così.</string>
     <string name="hql_autohide_panel_ext">Nascondi il pannello laterale dopo qualche secondo (Auto esteso)</string>
     <string name="hql_back">Indietro</string>
     <string name="hql_back_short">Indietro</string>

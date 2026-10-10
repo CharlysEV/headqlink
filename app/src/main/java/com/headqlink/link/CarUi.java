@@ -150,6 +150,11 @@ final class CarUi {
     private void applyNight(boolean isNight) {
         if (!CarTheme.apply(isNight) || pres == null) return;
         L.i("CarUi: modo " + (isNight ? "noche" : "día") + " (como Android Auto)");
+        rebuild();
+    }
+
+    /** Rehace la interfaz entera con los colores de ahora (CarTheme) y vuelve a la misma pantalla. */
+    private void rebuild() {
         panelColor = CarTheme.panelColor(panelGray);
         listener.onPanelColor(panelColor);
         String name = screenName == null ? "aa" : screenName;
@@ -184,6 +189,7 @@ final class CarUi {
         this.dpi = dpi;
         this.listener = listener;
         Config cfg = new Config(ctx);
+        CarTheme.setFixedPanel(cfg.panelFixedColor());
         this.panelGray = cfg.panelColor();
         this.panelColor = CarTheme.panelColor(panelGray);
         this.autoHide = cfg.panelAutoHide();
@@ -226,6 +232,16 @@ final class CarUi {
     }
 
     /** Ocultar el panel solo: en vivo desde Ajustes (coche o móvil). */
+    /** Color fijo de la barra (0 = automático) elegido en Ajustes: se aplica al momento rehaciendo la interfaz. */
+    static void applyPanelFixed(int color) {
+        CarTheme.setFixedPanel(color);
+        CarUi ui = current;
+        if (ui != null) ui.main.post(() -> {
+            L.i("CarUi: color de la barra " + (color == 0 ? "automático (día y noche)" : String.format("fijo #%06X", color & 0xFFFFFF)));
+            if (ui.pres != null) ui.rebuild();
+        });
+    }
+
     static void applyAutoHide(boolean on) {
         CarUi ui = current;
         if (ui != null) ui.main.post(() -> {
@@ -809,7 +825,7 @@ final class CarUi {
         elp.topMargin = 6;
         p.addView(ex, elp);
         expand = ex;
-        battery = CarStyle.text(c, "", 22, CarStyle.TEXT_DIM);
+        battery = CarStyle.text(c, "", 22, CarTheme.navTextDim());
         battery.setPadding(8, 0, 0, 6);
         p.addView(battery);
         return p;

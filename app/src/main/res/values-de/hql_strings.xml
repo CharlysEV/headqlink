@@ -22,6 +22,9 @@
     <string name="hql_apply_reconnect">Übernehmen · verbindet kurz neu</string>
     <string name="hql_auto_not_responding">Android Auto antwortet nicht: %1$s</string>
     <string name="hql_autohide_panel">Seitenleiste nach ein paar Sekunden ausblenden</string>
+    <string name="hql_panel_color">Farbe der Seitenleiste</string>
+    <string name="hql_panel_color_auto">Automatisch</string>
+    <string name="hql_panel_color_help">Automatisch: nachts dunkel und tagsüber hell, wie der Bildschirm des Autos. Mit einer Farbe bleibt die Seitenleiste immer so.</string>
     <string name="hql_autohide_panel_ext">Seitenleiste nach ein paar Sekunden ausblenden (Auto erweitert)</string>
     <string name="hql_back">Zurück</string>
     <string name="hql_back_short">Zurück</string>

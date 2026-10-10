@@ -531,6 +531,17 @@ final class Config {
         return 0xFF000000 | (g << 16) | (g << 8) | Math.min(255, g + 2);
     }
 
+    /** Color fijo de la barra del modo extendido (CarTheme.PANEL_COLORS); 0 = automático (día y noche). */
+    static final String PANEL_FIXED = "panel_fixed_color";
+
+    int panelFixedColor() {
+        return sp.getInt(PANEL_FIXED, 0);
+    }
+
+    void setPanelFixedColor(int color) {
+        sp.edit().putInt(PANEL_FIXED, color).apply();
+    }
+
     /** "Último frame" (recodificar): lo decide el perfil, salvo ajuste manual por adb (aa_reencode). */
     boolean aaReencode() {
         if (sp.contains(AA_REENCODE)) return sp.getBoolean(AA_REENCODE, true);
