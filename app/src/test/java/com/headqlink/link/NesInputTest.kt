@@ -57,6 +57,21 @@ class NesInputTest {
     }
 
     @Test
+    fun flickeringSpritesBlendInsteadOfVanishingAt30Fps() {
+        // Un píxel de Mario (rojo) que la NES pinta en un fotograma y no en el siguiente (cielo azul): a 30 fps se ve a medias.
+        val prev = intArrayOf(0xFFE40058.toInt(), 0xFF5C94FC.toInt())
+        val cur = intArrayOf(0xFF5C94FC.toInt(), 0xFF5C94FC.toInt())
+        NesEngine.blend(prev, cur)
+        assertEquals(0xFFA04AAA.toInt(), cur[0])
+        // Lo que no cambia, igual.
+        assertEquals(0xFF5C94FC.toInt(), cur[1])
+        // Mitad y mitad de cada canal.
+        assertEquals((0xE4 shr 1) + (0x5C shr 1), (cur[0] shr 16) and 0xFF)
+        assertEquals((0x00 shr 1) + (0x94 shr 1), (cur[0] shr 8) and 0xFF)
+        assertEquals((0x58 shr 1) + (0xFC shr 1), cur[0] and 0xFF)
+    }
+
+    @Test
     fun romFilesAndFoldersSortFoldersFirst() {
         assertTrue(NesScreen.isRom("Juego.NES"))
         assertTrue(NesScreen.isRom("musica.nsf"))

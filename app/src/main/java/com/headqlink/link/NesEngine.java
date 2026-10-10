@@ -37,6 +37,9 @@ final class NesEngine implements GUIInterface {
     private final Bitmap[] frames = {Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888), Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888),
             Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)};
     private final int[] argb = new int[W * H];
+    /** El fotograma impar anterior, para mezclarlo con el par cuando la sesión va a 30 fps. */
+    private final int[] prev = new int[W * H];
+    private int loggedRate;
     private int frameIdx;
     /** Fotogramas emulados: la pantalla del coche va a 30 Hz, así que solo se entrega uno de cada dos (los pares). */
     private long emulated;
@@ -137,19 +140,40 @@ final class NesEngine implements GUIInterface {
         if (l == null) return;
         emulated++;
         logStats();
-        // La NES da 60 fotogramas por segundo y la pantalla del coche toma 30: entregar «el último» mezclaba saltos de
-        // uno y de tres fotogramas (tirones al desplazarse). Solo los pares: siempre de dos en dos.
-        if ((emulated & 1) != 0) return;
-        shown++;
         int[][] col = NesColors.col;
         for (int i = 0; i < W * H; i++) {
             int p = frame[i + W * CLIP];
             argb[i] = col[(p & 0x1c0) >> 6][p & 0x3f];
         }
+        // Sesión a 60 fps (fluidez 60): todos los fotogramas, con el parpadeo de verdad. A 30: de dos en dos (entregar «el
+        // último» mezclaba saltos de uno y de tres), y cada par mezclado como la persistencia de una tele: lo que la NES
+        // pinta en un fotograma sí y en otro no (Mario tocado, enemigos que parpadean) se ve a medias en vez de
+        // desaparecer si cae siempre en los descartados.
+        int rate = CarUi.frameRate();
+        boolean full = rate >= 50;
+        if (rate != loggedRate) {
+            loggedRate = rate;
+            L.i("NES: sesión a " + rate + " fps: " + (full ? "todos los fotogramas" : "fotogramas mezclados de dos en dos (los parpadeos se ven)"));
+        }
+        if (!full) {
+            if ((emulated & 1) != 0) {
+                System.arraycopy(argb, 0, prev, 0, W * H);
+                return;
+            }
+            blend(prev, argb);
+        }
+        shown++;
         Bitmap b = frames[frameIdx];
         frameIdx = (frameIdx + 1) % frames.length;
         b.setPixels(argb, 0, W, 0, 0, W, H);
         l.onFrame(b);
+    }
+
+    /** Puro: mezcla al 50 % (por canal) el fotograma anterior a con el actual b, en b. */
+    static void blend(int[] a, int[] b) {
+        for (int i = 0; i < b.length; i++) {
+            b[i] = 0xFF000000 | (((a[i] & 0xFEFEFE) >>> 1) + ((b[i] & 0xFEFEFE) >>> 1));
+        }
     }
 
     /** Cada 5 s, al log: fotogramas emulados y entregados por segundo y veces que el audio se quedó sin datos. */

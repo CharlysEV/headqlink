@@ -294,6 +294,12 @@ final class CarUi {
         });
     }
 
+    /** Fotogramas por segundo de la sesión (los del vídeo al coche: 30 o 60 según la fluidez); 30 si no hay sesión. */
+    static int frameRate() {
+        CarUi ui = current;
+        return ui != null && ui.refreshHz > 0 ? Math.round(ui.refreshHz) : 30;
+    }
+
     /** Juego NES en marcha (o no): la interfaz la dibuja HeadQLink con cada fotograma (PhoneOffRenderer forzado). */
     static void gameDrawing(boolean on) {
         CarUi ui = current;

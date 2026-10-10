@@ -2433,3 +2433,11 @@ Prueba: `NesInputTest.gameIsScaledByAWholeFactor`.
 - **Cruceta y stick:** en un mando Xbox son ejes (`AXIS_HAT_X/Y`, `AXIS_X/Y`), no teclas, y Android solo los da a la ventana enfocada del móvil; la accesibilidad no los ve. En el coche virtual la enfocada es `CarSimActivity`, que ahora los pasa a `NesInput` (como `HomeActivity`). Con el coche de verdad, `NesPadActivity` se abre en la pantalla del móvil (`ActivityOptions.setLaunchDisplayId(DEFAULT_DISPLAY)` y contexto de la app: desde el de la Presentation daba «Permission Denial» porque apuntaba a la pantalla virtual). En el coche virtual no se abre (lo taparía). Log: `NES: mando: primer botón …` y `NES: mando: cruceta o stick por ejes (Xbox Wireless Controller)`.
 - **Congelones a ratos:** el emulador daba siempre 60 fps y entregaba 30, pero la pantalla virtual de la interfaz producía entre 4 y 30 fotogramas por segundo según el momento (`interfaz 18 … 150` en el relay). Android compone esa pantalla al ritmo de la del móvil, y el S25 lo baja cuando nadie la toca (jugando con mando). Ahora, mientras hay juego, `PhoneOffRenderer` va forzado (`CarUi.gameDrawing`): HeadQLink dibuja la interfaz él mismo en la entrada propia del relay, y cada fotograma del juego la dibuja ya (`CarUi.gameFrame`, sin esperar al vsync del móvil). Medido en el coche virtual, 45 s sin tocar: 150-152 fotogramas nuevos cada 5 s, sin repetidos; 1691 dibujados en 56 s.
 - **Audio:** el `AudioTrack` de una partida se cierra al pararla (antes quedaba abierto hasta que lo recogía el sistema).
+
+### 32.4 Mario invisible al recibir un golpe (0.2.43)
+
+Al tocar a Mario grande, en vez de parpadear desaparecía del todo hasta acabar el parpadeo. Super Mario Bros., con Mario herido, solo lo dibuja en fotogramas alternos (un fotograma sí y otro no, con el contador de fotogramas del juego); a 30 fps, `NesEngine` entregaba solo los pares, y si su fase coincidía con la del juego, todos los entregados eran los de Mario sin dibujar. Ahora:
+- Con la sesión a 60 fps (fluidez 60: `CarUi.frameRate()`), se entregan todos los fotogramas: el parpadeo de verdad.
+- A 30 fps, cada par se mezcla al 50 % (`NesEngine.blend`), como la persistencia de una tele: lo que parpadea a 60 Hz se ve a medias, nunca desaparece. Log: `NES: sesión a N fps: …`.
+
+Prueba: `NesInputTest.flickeringSpritesBlendInsteadOfVanishingAt30Fps`.
