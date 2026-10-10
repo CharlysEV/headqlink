@@ -383,7 +383,7 @@ final class InstrumentsScreen implements CarScreen {
         float tx = cx + rad + 26;
         int tw = (int) (r.right - tx);
         if (score < 0) {
-            how.draw(cv, Str.get(R.string.hql_smooth_wait), tx, cy - 30, tw, false);
+            if (tw >= 170) how.draw(cv, Str.get(R.string.hql_smooth_wait), tx, cy - 30, tw, false);
             return;
         }
         int word = score >= 85 ? R.string.hql_smooth_excellent : score >= 70 ? R.string.hql_smooth_good
@@ -392,7 +392,8 @@ final class InstrumentsScreen implements CarScreen {
         if (s.smoothRecent >= 0) {
             CarKit.text(cv, Str.get(R.string.hql_smooth_recent, s.smoothRecent), tx, r.top + 78, 23, CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
         }
-        how.draw(cv, Str.get(R.string.hql_smooth_how), tx, r.top + 98, tw, false);
+        // Tarjeta estrecha (pantalla partida): el consejo no cabe sin partir palabras; se queda el aro y la nota.
+        if (tw >= 170) how.draw(cv, Str.get(R.string.hql_smooth_how), tx, r.top + 98, tw, false);
     }
 
 }

@@ -369,11 +369,19 @@ final class CarStatusTab implements CarScreen {
         return carTop;
     }
 
+    /** Tarjeta estrecha (pantalla partida): sin 3D (sus etiquetas se montan) y con las presiones más pequeñas. */
+    private static final int TYRES_NARROW_W = 460;
+
     private void paintTyres(Canvas cv, RectF r, Paint p) {
         LeapStatus s = snap.status;
+        boolean narrow = r.width() < TYRES_NARROW_W;
+        if (car3d != null) {
+            int vis = narrow ? android.view.View.GONE : android.view.View.VISIBLE;
+            if (car3d.getVisibility() != vis) car3d.post(() -> car3d.setVisibility(vis));
+        }
         // Con el 3D, el coche ocupa todo el alto que dejan los textos de abajo (los pinta la página, no este lienzo).
-        boolean threeD = car3d != null;
-        float ch = threeD ? r.height() - TYRES_TEXT_H : Math.min(r.height() - TYRES_TEXT_H, 420);
+        boolean threeD = car3d != null && !narrow;
+        float ch = threeD ? r.height() - TYRES_TEXT_H : Math.min(r.height() - TYRES_TEXT_H, narrow ? 300 : 420);
         float top = r.top + 8;
         if (!threeD) paintTyresTop(cv, r, s, ch, top, p);
         paintTyresText(cv, r, s, ch, top, p);
@@ -406,9 +414,11 @@ final class CarStatusTab implements CarScreen {
             tmp.set(tx0 - 6, ty - 6, tx0 + tw + 6, ty + th + 6);
             cv.drawRoundRect(tmp, 10, 10, p);
             p.setStyle(Paint.Style.FILL);
-            float lx = left ? car.left - 44 : car.right + 44;
+            boolean narrow = r.width() < TYRES_NARROW_W;
+            float lx = left ? car.left - (narrow ? 24 : 44) : car.right + (narrow ? 24 : 44);
             Paint.Align al = left ? Paint.Align.RIGHT : Paint.Align.LEFT;
-            CarKit.number(cv, num(bar, 2), "bar", lx, ty + th / 2 + 14, 46, warn ? CarKit.AMBER : CarKit.TEXT, CarKit.REGULAR, p, al);
+            // Estrecha: coche más pequeño y solo el número (la unidad no cabe junto al borde de la tarjeta).
+            CarKit.number(cv, num(bar, 2), narrow ? "" : "bar", lx, ty + th / 2 + 14, narrow ? 28 : 46, warn ? CarKit.AMBER : CarKit.TEXT, CarKit.REGULAR, p, al);
             if (s.tyreStateAlert(i)) {
                 CarKit.text(cv, Str.get(R.string.hql_cloud_tyre_tpms_short), lx, ty + th / 2 + 48, 20, CarKit.AMBER, CarKit.MEDIUM, p, al);
             }

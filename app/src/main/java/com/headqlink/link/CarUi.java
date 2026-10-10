@@ -132,6 +132,19 @@ final class CarUi {
     private View splitWarning;
     /** Aviso aceptado en esta sesión: se pide una vez por sesión con el coche. */
     private boolean splitAccepted;
+    /**
+     * Pantalla partida con la sección Coche: sus tarjetas están pensadas para todo el ancho y en la mitad se montan. La
+     * sección se dibuja a NARROW_MIN_W (o más) y se escala a lo que hay (contentScale < 1); el Host le da ese ancho
+     * virtual.
+     */
+    static final int NARROW_MIN_W = 1100;
+    private float contentScale = 1f;
+
+    /** Puro: escala de la sección Coche para un ancho de contenido dado (1 si cabe). */
+    static float narrowScale(String name, int contentW) {
+        if (!"car".equals(name) || contentW >= NARROW_MIN_W) return 1f;
+        return contentW / (float) NARROW_MIN_W;
+    }
     /** Panel a la derecha (Ajustes): AA y nuestras pantallas a su izquierda. */
     private boolean panelRight;
     /** Datos en la barra de iconos (hora, temperatura exterior y batería del coche), solo con el panel reducido. */
@@ -404,6 +417,11 @@ final class CarUi {
         }
         split = !split;
         L.i("CarUi: pantalla partida " + (split ? "sí" : "no") + " (" + screenName + ")");
+        if ("car".equals(screenName)) {
+            // La sección Coche cambia de escala con el ancho: se vuelve a abrir (las de ocio conservan su página).
+            open("car");
+            return;
+        }
         applyLayout();
         listener.onAaVisible(aaVisible());
     }
@@ -1080,6 +1098,8 @@ final class CarUi {
         Supplier<CarScreen> factory = factory(name);
         if (factory != null) {
             screen = factory.get();
+            // Con la pantalla partida, la sección Coche se dibuja ancha y se escala (ver narrowScale).
+            contentScale = split && splitCapable(name) ? narrowScale(name, width - COMPACT_W - splitAaWidth(width, height, COMPACT_W, dpi)) : 1f;
             View v;
             try {
                 v = screen.create(host);
@@ -1087,7 +1107,17 @@ final class CarUi {
                 L.e("CarUi: no se pudo abrir " + name, e);
                 v = CarStyle.message(content.getContext(), Str.get(R.string.hql_screen_open_failed));
             }
-            content.addView(v, CarStyle.match());
+            if (contentScale < 1f) {
+                float s = contentScale;
+                v.setPivotX(0);
+                v.setPivotY(0);
+                v.setScaleX(s);
+                v.setScaleY(s);
+                content.addView(v, new FrameLayout.LayoutParams(Math.round(contentWidth() / s), Math.round(height / s)));
+                L.i("CarUi: sección Coche a escala " + String.format(java.util.Locale.US, "%.2f", s) + " en la pantalla partida");
+            } else {
+                content.addView(v, CarStyle.match());
+            }
         } else if (!aaReady) {
             // Zona de AA antes de su primer frame: animación de carga (GlFrameRelay aún no dibuja AA).
             splash = new SplashView(content.getContext(), panelColor);
@@ -1143,12 +1173,12 @@ final class CarUi {
 
         @Override
         public int width() {
-            return contentWidth();
+            return Math.round(contentWidth() / contentScale);
         }
 
         @Override
         public int height() {
-            return height;
+            return Math.round(height / contentScale);
         }
 
         @Override

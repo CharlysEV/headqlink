@@ -2394,3 +2394,11 @@ Pruebas: `UpdateCheckTest`, `PanelSettingsTest`.
 Menú ⚙ › «Buscar versión nueva»: consulta GitHub ahora (sin esperar las 6 h) y enseña el diálogo o «Ya tienes la última versión». Para pruebas por adb: `am start -n com.headqlink.app/com.headqlink.link.HomeActivity --ez no_autoconnect true --ez force_update_check true`. Líneas: `versiones: APK de la X bajado (N KB)`, `versiones: abro el instalador con …`.
 
 La 0.2.37 es solo la versión de comprobación de este flujo (0.2.36 → 0.2.37 desde la app, en el móvil de pruebas).
+
+## 31. Sección Coche en la pantalla partida a escala, y Diagnóstico en vertical (0.2.38, 2026-10-10)
+
+- Las tarjetas de la sección Coche están pensadas para todo el ancho y en la mitad (810 px) se montaban. Ahora, con la pantalla partida, `CarUi.open` dibuja la sección a `NARROW_MIN_W` (1100 px) o más y la escala (`setScaleX/Y`, pivote arriba a la izquierda) a lo que hay: en el C10, 0,74. El `Host` le da el ancho y alto virtuales (`contentScale`); los toques los transforma Android. Al partir o unir con la sección abierta, se vuelve a abrir (las de ocio no, para no perder la página).
+- Aun así, dos tarjetas no cabían a 1100: «Suavidad» (Instrumentos) omite el consejo si la columna de texto es estrecha, y «Neumáticos y puertas» (Estado) con menos de 460 px pasa del 3D (sus etiquetas se montaban) a la vista cenital con el coche más pequeño y solo los números.
+- Diagnóstico en vertical: «Sesiones» aplastaba el interruptor «Prueba sin Android Auto» (su texto se partía letra a letra y la tarjeta crecía); ahora va en la fila de «Opciones de prueba». El título se encoge antes que partirse en dos líneas.
+
+Prueba: `SplitScreenTest.theCarSectionIsScaledDownWhenTheHalfIsNarrow`.

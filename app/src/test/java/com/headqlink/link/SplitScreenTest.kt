@@ -30,6 +30,14 @@ class SplitScreenTest {
     }
 
     @Test
+    fun theCarSectionIsScaledDownWhenTheHalfIsNarrow() {
+        // En el C10 la mitad deja 810 px: la sección se dibuja a 1100 y se escala a 0,74. Las de ocio, nunca.
+        assertEquals(810f / 1100f, CarUi.narrowScale("car", 810), 0.001f)
+        assertEquals(1f, CarUi.narrowScale("car", 1600), 0f)
+        assertEquals(1f, CarUi.narrowScale("web", 810), 0f)
+    }
+
+    @Test
     fun aWideScreenStaysHalfAndHalf() {
         // Con sitio de sobra, mitad y mitad.
         assertEquals(1452, CarUi.splitAaWidth(3000, 882, 96, 200))
