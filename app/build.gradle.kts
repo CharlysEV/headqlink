@@ -98,8 +98,8 @@ android {
         applicationId = "com.headqlink.app" // headqlink: identificador propio del fork
         minSdk = 16
         targetSdk = 36
-        versionCode = 20
-        versionName = "0.2.38-qdauto"
+        versionCode = 21
+        versionName = "0.2.39-qdauto"
         setProperty("archivesBaseName", "${applicationId}_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
@@ -295,6 +295,7 @@ dependencies {
     implementation(project(":contract"))
     // headqlink: nÃºcleo del protocolo QDLink/SSPLink de QDAuto (motor de enlace Â«QDAutoÂ»).
     implementation(project(":qdcore"))
+    implementation(project(":nescore"))
 
     // Multidex
     implementation("androidx.multidex:multidex:2.0.1")
