@@ -30,6 +30,7 @@
     <string name="hql_nes_empty">Não há arquivos .nes nesta pasta.</string>
     <string name="hql_nes_pad_title">Controle conectado ao carro</string>
     <string name="hql_nes_pad_text">Jogue com o controle na tela do carro. Toque em voltar para sair desta tela.</string>
+    <string name="hql_nes_pad_notification">Toque para abrir a tela do controle enquanto joga %1$s.</string>
     <string name="hql_nes_reset">Reiniciar</string>
     <string name="hql_nes_touch">Botões na tela</string>
     <string name="hql_nes_error">Não foi possível abrir a ROM: %1$s</string>

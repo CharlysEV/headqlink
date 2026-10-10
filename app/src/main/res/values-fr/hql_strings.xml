@@ -30,6 +30,7 @@
     <string name="hql_nes_empty">Aucun fichier .nes dans ce dossier.</string>
     <string name="hql_nes_pad_title">Manette connectée à la voiture</string>
     <string name="hql_nes_pad_text">Jouez avec la manette sur l\'écran de la voiture. Appuyez sur retour pour quitter cet écran.</string>
+    <string name="hql_nes_pad_notification">Touchez pour ouvrir l\'écran de la manette pendant que vous jouez à %1$s.</string>
     <string name="hql_nes_reset">Réinitialiser</string>
     <string name="hql_nes_touch">Boutons tactiles</string>
     <string name="hql_nes_error">Impossible d\'ouvrir la ROM : %1$s</string>

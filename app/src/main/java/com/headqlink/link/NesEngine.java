@@ -64,8 +64,11 @@ final class NesEngine implements GUIInterface {
 
     void start() {
         if (thread != null) return;
-        thread = new Thread(nes::run, "hql-nes");
-        thread.setPriority(Thread.NORM_PRIORITY + 1);
+        thread = new Thread(() -> {
+            // Como el audio: que no lo desplacen los hilos de dibujo (los saltos de imagen venían de ahí y del redibujo a 60).
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+            nes.run();
+        }, "hql-nes");
         thread.start();
     }
 

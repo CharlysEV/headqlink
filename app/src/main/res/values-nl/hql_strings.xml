@@ -30,6 +30,7 @@
     <string name="hql_nes_empty">Geen .nes-bestanden in deze map.</string>
     <string name="hql_nes_pad_title">Gamepad verbonden met de auto</string>
     <string name="hql_nes_pad_text">Speel met de gamepad op het autoscherm. Druk op terug om dit scherm te verlaten.</string>
+    <string name="hql_nes_pad_notification">Tik om het gamepadscherm te openen terwijl je %1$s speelt.</string>
     <string name="hql_nes_reset">Opnieuw</string>
     <string name="hql_nes_touch">Aanraakknoppen</string>
     <string name="hql_nes_error">Kon de ROM niet openen: %1$s</string>

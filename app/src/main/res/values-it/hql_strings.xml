@@ -30,6 +30,7 @@
     <string name="hql_nes_empty">Nessun file .nes in questa cartella.</string>
     <string name="hql_nes_pad_title">Gamepad collegato all\'auto</string>
     <string name="hql_nes_pad_text">Gioca con il gamepad sullo schermo dell\'auto. Premi indietro per uscire da questa schermata.</string>
+    <string name="hql_nes_pad_notification">Tocca per aprire la schermata del gamepad mentre giochi a %1$s.</string>
     <string name="hql_nes_reset">Riavvia</string>
     <string name="hql_nes_touch">Pulsanti touch</string>
     <string name="hql_nes_error">Impossibile aprire la ROM: %1$s</string>

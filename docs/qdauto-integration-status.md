@@ -2411,3 +2411,10 @@ Prueba: `SplitScreenTest.theCarSectionIsScaledDownWhenTheHalfIsNarrow`.
 - **Mando Bluetooth:** `NesInput` traduce teclas de Android a botones NES (cruceta, A/Y → A, B/X → B, Start, Select) y los ejes de la cruceta o el stick a la cruceta. Llega por dos vías: `NesPadActivity` (se abre en el móvil al empezar a jugar; recibe teclas y ejes) y `TouchService.onKeyEvent` (`flagRequestFilterKeyEvents`: solo consume teclas del mando mientras hay juego, el resto pasa).
 - **Móvil:** menú ⚙ › «Juegos NES: carpeta de ROMs» (`ACTION_OPEN_DOCUMENT_TREE`, permiso persistente, `Config.nesTree`).
 - Solo con el coche parado (como Juegos). Pruebas: `NesInputTest`. **Sin probar en el móvil** (publicada a petición del usuario; la prueba fuera de casa).
+
+### 32.1 Mando Xbox, varios dedos y saltos de imagen (0.2.40)
+
+Primera prueba del usuario con un mando de Xbox por Bluetooth: no funcionaba, los botones táctiles solo admitían un dedo y la imagen daba saltos.
+- **Mando:** faltaba `android:canRequestFilterKeyEvents="true"` en el servicio de accesibilidad (sin esa capacidad Android no le pasa teclas), y `NesPadActivity` no llegaba a abrirse porque Android bloquea abrir pantallas desde segundo plano. Ahora: la accesibilidad recibe los botones (A, B, Start, Select y la cruceta cuando llega como teclas); `HomeActivity` reenvía teclas y ejes (`dispatchKeyEvent`, `dispatchGenericMotionEvent`) mientras hay juego, así que con HeadQLink delante llega el mando entero; y una notificación «Mando conectado al coche» abre `NesPadActivity` de un toque (`NesPadActivity.notify`, canal `hql_nes`; se quita al parar).
+- **Varios dedos en nuestra interfaz:** `AaPassthroughSource` pasa todos los dedos (`CarUi.touchMulti`) y CarUi construye un `MotionEvent` con todos los punteros (DOWN/POINTER_DOWN/MOVE/POINTER_UP/UP según el dedo que cambia); un solo dedo sigue por el camino de siempre (con el gesto del panel).
+- **Saltos:** `NesView` pedía un redibujado por fotograma emulado (60/s) sobre la pantalla virtual de 30 Hz; ahora guarda el último fotograma y pide uno por tic (`postOnAnimation`). El hilo del emulador va con `THREAD_PRIORITY_URGENT_AUDIO`.

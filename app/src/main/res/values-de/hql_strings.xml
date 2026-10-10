@@ -30,6 +30,7 @@
     <string name="hql_nes_empty">Keine .nes-Dateien in diesem Ordner.</string>
     <string name="hql_nes_pad_title">Gamepad mit dem Auto verbunden</string>
     <string name="hql_nes_pad_text">Spiele mit dem Gamepad auf dem Autobildschirm. Zurück verlässt diesen Bildschirm.</string>
+    <string name="hql_nes_pad_notification">Antippen, um den Gamepad-Bildschirm zu öffnen, während du %1$s spielst.</string>
     <string name="hql_nes_reset">Zurücksetzen</string>
     <string name="hql_nes_touch">Touch-Tasten</string>
     <string name="hql_nes_error">ROM konnte nicht geöffnet werden: %1$s</string>

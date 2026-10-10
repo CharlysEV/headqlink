@@ -196,11 +196,9 @@ final class NesScreen {
         NesInput.pad = engine.pad1();
         host.setContent(game(e.name));
         engine.start();
-        // El mando Bluetooth entero (teclas y ejes) llega por la pantalla del móvil; la accesibilidad cubre las teclas.
-        try {
-            c.startActivity(new Intent(c, NesPadActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        } catch (Exception ignored) {
-        }
+        // El mando Bluetooth: las teclas llegan por la accesibilidad; la cruceta (ejes) solo con HeadQLink o la pantalla
+        // del mando delante en el móvil. Android no deja abrirla desde segundo plano: una notificación la abre de un toque.
+        NesPadActivity.notify(c, e.name);
     }
 
     private View game(String name) {
@@ -315,6 +313,7 @@ final class NesScreen {
     void stopEngine() {
         NesInput.pad = null;
         NesPadActivity.close();
+        NesPadActivity.cancelNotification(host.context());
         NesEngine e = engine;
         engine = null;
         view = null;
@@ -332,9 +331,18 @@ final class NesScreen {
             super(c);
         }
 
+        private volatile boolean pending;
+
+        /** Guarda el último fotograma y pide un redibujado por tic de la pantalla (no uno por fotograma emulado). */
         void show(Bitmap b) {
             frame = b;
-            postInvalidate();
+            if (!pending) {
+                pending = true;
+                postOnAnimation(() -> {
+                    pending = false;
+                    invalidate();
+                });
+            }
         }
 
         @Override

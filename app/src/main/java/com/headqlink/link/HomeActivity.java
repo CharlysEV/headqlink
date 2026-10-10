@@ -222,6 +222,20 @@ public class HomeActivity extends Activity implements LinkState.Listener {
 
     private TextView updateRow;
 
+    /** Mando Bluetooth con un juego NES en el coche: con HeadQLink delante llegan las teclas y la cruceta (ejes). */
+    @Override
+    public boolean dispatchKeyEvent(android.view.KeyEvent e) {
+        if (NesInput.pad != null && e.getKeyCode() != android.view.KeyEvent.KEYCODE_BACK
+                && NesInput.key(e.getKeyCode(), e.getAction())) return true;
+        return super.dispatchKeyEvent(e);
+    }
+
+    @Override
+    public boolean dispatchGenericMotionEvent(android.view.MotionEvent e) {
+        if (NesInput.pad != null && NesInput.motion(e)) return true;
+        return super.dispatchGenericMotionEvent(e);
+    }
+
     private void render() {
         String mode = cfg.mode();
         // La conexión con la que va el servicio; si se cambió en marcha, la nueva se aplica al volver a conectar.

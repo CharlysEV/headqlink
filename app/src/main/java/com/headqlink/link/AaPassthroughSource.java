@@ -636,7 +636,8 @@ final class AaPassthroughSource implements VideoSource {
                 ui.noteTouch(touchToUi);
             }
             if (touchToUi) {
-                if (first.id == 0 || count == 1) ui.touch(first.action, first.x, first.y);
+                // Todos los dedos: los botones táctiles del emulador NES (correr y saltar) necesitan dos a la vez.
+                ui.touchMulti(fingers);
                 return;
             }
         }

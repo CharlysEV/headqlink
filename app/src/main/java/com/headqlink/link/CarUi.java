@@ -650,7 +650,12 @@ final class CarUi {
 
     /** Toque del coche en píxeles de la pantalla (1 down, 2 up, 3 move). */
     void touch(int action, float x, float y) {
-        main.post(() -> {
+        main.post(() -> touchNow(action, x, y));
+    }
+
+    /** Un dedo, en el hilo principal: el MotionEvent y el gesto de desplegar el panel desde el borde. */
+    private void touchNow(int action, float x, float y) {
+        {
             if (pres == null) return;
             long now = SystemClock.uptimeMillis();
             int a;
@@ -677,6 +682,85 @@ final class CarUi {
             ev.setSource(InputDevice.SOURCE_TOUCHSCREEN);
             pres.dispatchTouchEvent(ev);
             ev.recycle();
+        }
+    }
+
+    /** Dedos en contacto con nuestra interfaz (id del coche → x, y), en orden de llegada. */
+    private final java.util.LinkedHashMap<Integer, float[]> uiDown = new java.util.LinkedHashMap<>();
+
+    /**
+     * Varios dedos a la vez (el coche manda hasta 3): un MotionEvent con todos los punteros, con DOWN/POINTER_DOWN,
+     * MOVE y POINTER_UP/UP según el dedo que cambia. El primer dedo lleva además el gesto de desplegar el panel.
+     */
+    void touchMulti(Proto.Finger[] fingers) {
+        Proto.Finger[] copy = new Proto.Finger[fingers.length];
+        for (int i = 0; i < fingers.length; i++) {
+            if (fingers[i] == null) continue;
+            Proto.Finger f = new Proto.Finger();
+            f.id = fingers[i].id;
+            f.action = fingers[i].action;
+            f.x = fingers[i].x;
+            f.y = fingers[i].y;
+            copy[i] = f;
+        }
+        main.post(() -> {
+            if (pres == null) return;
+            Proto.Finger first = null;
+            for (Proto.Finger f : copy) if (f != null) { first = f; break; }
+            if (first == null) return;
+            // Un solo dedo: el camino de siempre (gesto del panel incluido).
+            int count = 0;
+            for (Proto.Finger f : copy) if (f != null) count++;
+            if (count == 1 && uiDown.size() <= 1 && (first.action != 1 || uiDown.isEmpty())) {
+                if (first.action == 1) uiDown.clear();
+                uiDown.put(first.id, new float[]{first.x, first.y});
+                if (first.action == 2) uiDown.remove(first.id);
+                touchNow(first.action, first.x, first.y);
+                return;
+            }
+            long now = SystemClock.uptimeMillis();
+            int changed = -1;
+            int changedAction = 3;
+            for (Proto.Finger f : copy) {
+                if (f == null) continue;
+                if (f.action == 1 || uiDown.containsKey(f.id)) uiDown.put(f.id, new float[]{f.x, f.y});
+                if (f.action != 3 && changed < 0) {
+                    changed = f.id;
+                    changedAction = f.action;
+                }
+            }
+            if (uiDown.isEmpty()) return;
+            int n = uiDown.size();
+            MotionEvent.PointerProperties[] props = new MotionEvent.PointerProperties[n];
+            MotionEvent.PointerCoords[] coords = new MotionEvent.PointerCoords[n];
+            int index = 0;
+            int i = 0;
+            for (java.util.Map.Entry<Integer, float[]> e : uiDown.entrySet()) {
+                if (e.getKey() == changed) index = i;
+                props[i] = new MotionEvent.PointerProperties();
+                props[i].id = e.getKey();
+                props[i].toolType = MotionEvent.TOOL_TYPE_FINGER;
+                coords[i] = new MotionEvent.PointerCoords();
+                coords[i].x = e.getValue()[0];
+                coords[i].y = e.getValue()[1];
+                coords[i].pressure = 1f;
+                coords[i].size = 1f;
+                i++;
+            }
+            int a;
+            if (changedAction == 1) {
+                if (n == 1) downTime = now;
+                a = n == 1 ? MotionEvent.ACTION_DOWN : MotionEvent.ACTION_POINTER_DOWN | (index << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
+            } else if (changedAction == 2) {
+                a = n == 1 ? MotionEvent.ACTION_UP : MotionEvent.ACTION_POINTER_UP | (index << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
+            } else {
+                a = MotionEvent.ACTION_MOVE;
+            }
+            MotionEvent ev = MotionEvent.obtain(downTime, now, a, n, props, coords, 0, 0, 1f, 1f, 0, 0,
+                    InputDevice.SOURCE_TOUCHSCREEN, 0);
+            pres.dispatchTouchEvent(ev);
+            ev.recycle();
+            if (changedAction == 2) uiDown.remove(changed);
         });
     }
 

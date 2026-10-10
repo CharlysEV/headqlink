@@ -30,6 +30,7 @@
     <string name="hql_nes_empty">No .nes files in this folder.</string>
     <string name="hql_nes_pad_title">Gamepad connected to the car</string>
     <string name="hql_nes_pad_text">Play with the gamepad on the car screen. Press back to leave this screen.</string>
+    <string name="hql_nes_pad_notification">Tap to open the gamepad screen while you play %1$s.</string>
     <string name="hql_nes_reset">Reset</string>
     <string name="hql_nes_touch">Touch buttons</string>
     <string name="hql_nes_error">Could not open the ROM: %1$s</string>

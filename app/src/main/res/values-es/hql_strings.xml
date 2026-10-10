@@ -30,6 +30,7 @@
     <string name="hql_nes_empty">No hay archivos .nes en esta carpeta.</string>
     <string name="hql_nes_pad_title">Mando conectado al coche</string>
     <string name="hql_nes_pad_text">Juega con el mando en la pantalla del coche. Pulsa atrás para salir de esta pantalla.</string>
+    <string name="hql_nes_pad_notification">Toca para abrir la pantalla del mando mientras juegas a %1$s.</string>
     <string name="hql_nes_reset">Reiniciar</string>
     <string name="hql_nes_touch">Botones táctiles</string>
     <string name="hql_nes_error">No se pudo abrir la ROM: %1$s</string>

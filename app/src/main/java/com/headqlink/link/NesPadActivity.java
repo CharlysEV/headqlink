@@ -65,6 +65,39 @@ public class NesPadActivity extends Activity {
         return super.dispatchGenericMotionEvent(e);
     }
 
+    private static final String CHANNEL = "hql_nes";
+    private static final int NOTIFICATION_ID = 7301;
+
+    /** Notificación «Mando: toca para abrir» mientras hay juego (abrir la pantalla desde segundo plano está bloqueado). */
+    static void notify(android.content.Context ctx, String game) {
+        try {
+            android.app.NotificationManager nm = ctx.getSystemService(android.app.NotificationManager.class);
+            nm.createNotificationChannel(new android.app.NotificationChannel(CHANNEL, Str.get(R.string.hql_nes),
+                    android.app.NotificationManager.IMPORTANCE_DEFAULT));
+            android.app.PendingIntent pi = android.app.PendingIntent.getActivity(ctx, 0,
+                    new android.content.Intent(ctx, NesPadActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
+            nm.notify(NOTIFICATION_ID, new android.app.Notification.Builder(ctx, CHANNEL)
+                    .setSmallIcon(R.drawable.hql_ic_games)
+                    .setContentTitle(Str.get(R.string.hql_nes_pad_title))
+                    .setContentText(Str.get(R.string.hql_nes_pad_notification, game))
+                    .setContentIntent(pi)
+                    .setOngoing(true)
+                    .build());
+            // Si HeadQLink está delante, se abre directamente.
+            ctx.startActivity(new android.content.Intent(ctx, NesPadActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (Exception e) {
+            L.w("NES: no se pudo avisar del mando: " + e);
+        }
+    }
+
+    static void cancelNotification(android.content.Context ctx) {
+        try {
+            ctx.getSystemService(android.app.NotificationManager.class).cancel(NOTIFICATION_ID);
+        } catch (Exception ignored) {
+        }
+    }
+
     /** Cierra la pantalla del mando si está abierta (al acabar el juego). */
     static void close() {
         NesPadActivity a = instance;
