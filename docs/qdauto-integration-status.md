@@ -2379,3 +2379,10 @@ Pruebas: `CarThemeTest` (color fijo de día y de noche, texto según el color, 1
 Líneas: `versiones: la última publicada es X · instalada Y · hay versión nueva`, `versiones: novedades de la X`, `CarUi: botones del panel [...]`, `CarUi: panel a la derecha`, `CarUi: transparencia del panel N %`.
 
 Pruebas: `UpdateCheckTest`, `PanelSettingsTest`.
+
+## 29. Pantalla partida con «Coche», marcadores web, avisos de radar por voz y «Sesiones» (0.2.35, 2026-10-10)
+
+- **Pantalla partida con la sección Coche.** `CarUi.splitCapable` admite `car`; el aviso de responsabilidad solo es para el ocio (`splitNeedsWarning`): la sección Coche es información de conducción y vale en marcha. Las seis pestañas no caben en la mitad: la fila de pestañas de `CarHubScreen` va en un `HorizontalScrollView`.
+- **Marcadores web propios** (`Config.webShortcuts`, JSON `[[nombre, url], …]`; sin nada guardado, los cuatro de serie). En el móvil, menú ⚙ › «Marcadores web» (solo Auto extendido): lista con subir, bajar y quitar, formulario para añadir (si falta «https://» o el nombre, `webShortcutsFrom` los completa) y «Los de serie». La rejilla de la pantalla Web se desplaza si hay muchos. Prueba: `WebShortcutsTest`.
+- **Avisos de radar por voz** (`RadarVoice`, puro; `RoadInfo.step` lo llama con el radar más cercano delante): «Radar a 700 metros, límite 80» una vez por radar al entrar en los 700 m, y «Vas a 95, límite 80» una vez si a 400 m o menos se va más de 4 km/h por encima. Ajuste «Avisos de radar por voz» en Ajustes del coche (`Config.radarVoice`, sí por defecto). Línea: `vía: aviso por voz: …`. Prueba: `RadarVoiceTest`. Sin probar en marcha todavía.
+- **«Sesiones» en Diagnóstico** (`SessionsView`, puro): las últimas 30 filas de `sessions.csv` (con sus cabeceras repetidas: vale la última antes de cada fila), una línea por sesión: fecha, duración, conexión, fps, cortes (y el mayor) y cómo acabó; «sin vídeo» si no llegó a verse. Prueba: `SessionsViewTest`.

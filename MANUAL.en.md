@@ -371,8 +371,9 @@ version). That tells us whether the C10 supports it.
   Efficiency and Status tabs), "Photos", "Videos", "Web", "TV", "Radio", "Games" and "Settings". With Android Auto on screen, the
   panel hides by itself after a few seconds; tap the edge on the panel's side to bring it back. Photos, videos, web, TV and games are
   **only for when the car is stopped**.
-- **Split screen ("Auto extended"):** in "Web", "Videos" and "TV", the panel's "Split screen" button puts Android Auto
-  on the left, next to the panel, and that screen on the right. Android Auto keeps a bit more than half, just enough for
+- **Split screen ("Auto extended"):** in "Car", "Web", "Videos" and "TV", the panel's "Split screen" button puts
+  Android Auto on the left, next to the panel, and that screen on the right. With "Car" you get the gauges (consumption,
+  battery, range, next stop) next to Android Auto, and it is fine while driving, with no notice. Android Auto keeps a bit more than half, just enough for
   Google Maps to pan and search. Each side takes its own touches. "Full screen" shows it alone again. It lasts while you
   stay connected to the car. The first time in each connection, a notice must be accepted: we recommend using it with
   the car stopped, and you use it at your own risk.
@@ -643,6 +644,10 @@ icons, the time, the outside temperature and the car's battery (when known) show
 screen, when a new version is out a notice shows its news and the download link; the first time a freshly installed
 version starts, its news is shown.
 
+"Speed camera voice alerts" (on by default): when you approach a camera, "Speed camera in 700 meters, limit 80",
+once per camera; and if at 400 meters or less you are over the limit, "You are doing 95, limit 80". Cameras come
+from OpenStreetMap, so some may be missing.
+
 ### "Language"
 
 "Language" (Android 13 or later): "System language", "Español", "English", "Português (Portugal)", "Português
@@ -653,9 +658,16 @@ language.
 
 Paste the URL of an M3U list or tap "Choose file". Without a radio list, the car shows the popular stations.
 
+### "Web bookmarks" ("Auto extended")
+
+The shortcuts on the car's "Web" screen (YouTube, Google, Wikipedia and Twitch by default). Add your own with a
+name and an address, remove them or reorder them with the arrows; "Defaults" puts back the original four.
+
 ### "Diagnostics"
 
 - "Export log": section 8.
+- "Sessions": the latest sessions with the car, one per line: when, how long, over which connection, the fps, the
+  dropouts and how it ended. To see what went wrong without sending the log.
 - "Test without Android Auto (pattern)": shows a test image in the car instead of Android Auto. It tells you whether
   the problem is the connection or Android Auto. **Turn it off afterwards.**
 - "Test options (QDAuto)": for testing the engine. Normally leave them as they are. One of them is "Wait for the car to

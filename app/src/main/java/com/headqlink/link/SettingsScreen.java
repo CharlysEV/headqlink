@@ -112,6 +112,8 @@ final class SettingsScreen implements CarScreen {
         }));
         ui.addView(toggle(c, Str.get(R.string.hql_low_latency_reconnect), cfg.lowLatency(),
                 on -> cfg.putBool(Config.LOW_LATENCY, on)));
+        ui.addView(toggle(c, Str.get(R.string.hql_radar_voice), cfg.radarVoice(),
+                on -> cfg.putBool(Config.RADAR_VOICE, on)));
         ui.addView(panelColorRow(c));
         ui.addView(toggle(c, Str.get(R.string.hql_panel_right), cfg.panelRight(), on -> {
             cfg.putBool(Config.PANEL_RIGHT, on);

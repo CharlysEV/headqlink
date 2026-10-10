@@ -36,7 +36,11 @@ final class CarHubScreen implements CarScreen {
         col.setBackgroundColor(CarKit.BG);
         String[] names = new String[TABS.length];
         for (int i = 0; i < TABS.length; i++) names[i] = Str.get(TABS[i]);
-        col.addView(CarStyle.tabs(c, names, lastTab, this::open));
+        // Con la pantalla partida (la mitad de ancho) las seis pestañas no caben: la fila se desplaza.
+        android.widget.HorizontalScrollView tabScroll = new android.widget.HorizontalScrollView(c);
+        tabScroll.setHorizontalScrollBarEnabled(false);
+        tabScroll.addView(CarStyle.tabs(c, names, lastTab, this::open));
+        col.addView(tabScroll);
         body = new FrameLayout(c);
         col.addView(body, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         open(lastTab);

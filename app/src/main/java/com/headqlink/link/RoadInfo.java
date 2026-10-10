@@ -35,6 +35,8 @@ final class RoadInfo {
     }
 
     private static RoadInfo instance;
+    private final android.content.Context ctx;
+    private final RadarVoice radarVoice = new RadarVoice();
     private final CarSensors sensors;
     private volatile boolean running;
     private volatile State state = new State();
@@ -53,6 +55,7 @@ final class RoadInfo {
     private final boolean demo;
 
     private RoadInfo(Context ctx) {
+        this.ctx = ctx.getApplicationContext();
         sensors = CarSensors.start(ctx);
         demo = DemoMode.active();
     }
@@ -114,6 +117,7 @@ final class RoadInfo {
         st.limitEstimated = limitEst;
         st.roadName = road;
         // Radar más cercano delante (±25° del rumbo) a menos de 1,5 km.
+        double[] nearest = null;
         if (s.speedKmh > 5) {
             for (double[] c : cameras) {
                 double d = dist(s.lat, s.lon, c[0], c[1]);
@@ -123,8 +127,17 @@ final class RoadInfo {
                 if (diff < 25 && (st.cameraM < 0 || d < st.cameraM)) {
                     st.cameraM = d;
                     st.cameraLimit = (int) c[2];
+                    nearest = c;
                 }
             }
+        }
+        // Aviso por voz (una vez por radar, y una vez si se va por encima del límite cerca de él).
+        RadarVoice.Alert alert = radarVoice.onTick(st.cameraM, st.cameraLimit, nearest != null ? nearest[0] : 0,
+                nearest != null ? nearest[1] : 0, s.speedKmh);
+        if (alert != null && new Config(ctx).radarVoice()) {
+            String text = Str.get(alert.text, alert.args);
+            L.i("vía: aviso por voz: " + text);
+            VoiceAlert.say(ctx, text);
         }
         double[] sun = sunPosition(s.lat, s.lon, System.currentTimeMillis());
         st.sunElevation = sun[0];

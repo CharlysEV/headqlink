@@ -516,9 +516,48 @@ final class Config {
         sp.edit().putString("recent_places", json).apply();
     }
 
-    /** Accesos directos de la web en el coche: {nombre, url}. */
+    /** Marcadores de la pantalla Web del coche: {nombre, url}; los de serie si no se han cambiado. */
+    static final String WEB_SHORTCUTS = "web_shortcuts";
+
     String[][] webShortcuts() {
-        return WebScreen.DEFAULT_SHORTCUTS;
+        return webShortcutsFrom(sp.getString(WEB_SHORTCUTS, null));
+    }
+
+    void setWebShortcuts(String[][] list) {
+        sp.edit().putString(WEB_SHORTCUTS, webShortcutsJson(list)).apply();
+    }
+
+    /** Puro: el JSON guardado ([["YouTube","https://…"],…]) → lista; null o roto → los de serie. Entradas sin URL, fuera. */
+    static String[][] webShortcutsFrom(String json) {
+        if (json == null) return WebScreen.DEFAULT_SHORTCUTS;
+        try {
+            org.json.JSONArray a = new org.json.JSONArray(json);
+            java.util.List<String[]> out = new java.util.ArrayList<>();
+            for (int i = 0; i < a.length(); i++) {
+                org.json.JSONArray e = a.optJSONArray(i);
+                if (e == null || e.length() < 2) continue;
+                String name = e.optString(0).trim();
+                String url = e.optString(1).trim();
+                if (url.isEmpty()) continue;
+                if (!url.startsWith("http://") && !url.startsWith("https://")) url = "https://" + url;
+                if (name.isEmpty()) name = url.replaceFirst("^https?://(www\\.)?", "").replaceFirst("/.*$", "");
+                out.add(new String[]{name, url});
+            }
+            return out.toArray(new String[0][]);
+        } catch (org.json.JSONException e) {
+            return WebScreen.DEFAULT_SHORTCUTS;
+        }
+    }
+
+    static String webShortcutsJson(String[][] list) {
+        org.json.JSONArray a = new org.json.JSONArray();
+        for (String[] e : list) {
+            org.json.JSONArray x = new org.json.JSONArray();
+            x.put(e[0]);
+            x.put(e[1]);
+            a.put(x);
+        }
+        return a.toString();
     }
 
     /** Gris del panel propio (0-80), ajustable para que se funda con las barras del coche. */
@@ -529,6 +568,13 @@ final class Config {
     int panelColor() {
         int g = panelGray();
         return 0xFF000000 | (g << 16) | (g << 8) | Math.min(255, g + 2);
+    }
+
+    /** Avisos de radar por voz (RadarVoice): radar delante y exceso de velocidad junto a él. */
+    static final String RADAR_VOICE = "radar_voice";
+
+    boolean radarVoice() {
+        return sp.getBoolean(RADAR_VOICE, true);
     }
 
     /** Panel del modo extendido a la derecha (AA pegado al conductor en coches con volante a la derecha, o a gusto). */

@@ -294,9 +294,14 @@ final class CarUi {
         return width - pw - (splitActive() ? splitAaWidth(width, height, pw, dpi) : 0);
     }
 
-    /** Pantallas que se pueden poner junto a AA. */
+    /** Pantallas que se pueden poner junto a AA: la sección Coche (instrumentos: vale en marcha) y las de ocio. */
     static boolean splitCapable(String name) {
-        return "web".equals(name) || "videos".equals(name) || "tv".equals(name);
+        return "car".equals(name) || "web".equals(name) || "videos".equals(name) || "tv".equals(name);
+    }
+
+    /** El aviso (mejor parado, bajo tu responsabilidad) es para el ocio; la sección Coche es información de conducción. */
+    static boolean splitNeedsWarning(String name) {
+        return splitCapable(name) && !"car".equals(name);
     }
 
     /**
@@ -393,7 +398,7 @@ final class CarUi {
 
     /** El botón de la barra: AA junto a nuestra pantalla, o nuestra pantalla sola otra vez. */
     private void toggleSplit() {
-        if (!split && !splitAccepted) {
+        if (!split && !splitAccepted && splitNeedsWarning(screenName)) {
             showSplitWarning();
             return;
         }

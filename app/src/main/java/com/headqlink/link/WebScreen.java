@@ -168,7 +168,10 @@ final class WebScreen implements CarScreen {
             t.setOnClickListener(v -> go(l[1]));
             g.addView(t);
         }
-        return g;
+        // Con muchos marcadores, la rejilla se desplaza.
+        android.widget.ScrollView sv = new android.widget.ScrollView(c);
+        sv.addView(g);
+        return sv;
     }
 
     private void showHome() {

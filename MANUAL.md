@@ -378,8 +378,9 @@ admite.
   Conducción, Viajes, Instrumentos, Eficiencia y Estado), «Fotos», «Vídeos», «Web», «TV», «Radio», «Juegos» y «Ajustes». Con
   Android Auto en pantalla, el panel se oculta solo a los pocos segundos; toca el borde del lado del panel para que vuelva.
   Fotos, vídeos, web, TV y juegos son **solo para cuando el coche está parado**.
-- **Pantalla partida («Auto extendido»):** en «Web», «Vídeos» y «TV», el botón «Partir pantalla» del panel pone Android
-  Auto a la izquierda, junto al panel, y esa pantalla a la derecha. Android Auto se queda con algo más de la mitad, lo
+- **Pantalla partida («Auto extendido»):** en «Coche», «Web», «Vídeos» y «TV», el botón «Partir pantalla» del panel
+  pone Android Auto a la izquierda, junto al panel, y esa pantalla a la derecha. Con «Coche» tienes los instrumentos
+  (consumo, batería, autonomía, próxima parada) junto a Android Auto, y vale en marcha, sin aviso. Android Auto se queda con algo más de la mitad, lo
   justo para que Google Maps se pueda mover y buscar. Cada lado responde a sus toques. «Pantalla completa» la deja sola
   otra vez. Dura mientras sigas conectado al coche. La primera vez de cada conexión sale un aviso que hay que aceptar:
   se recomienda usarla con el coche parado, y se usa bajo tu responsabilidad.
@@ -652,6 +653,10 @@ iconos, abajo salen la hora, la temperatura exterior y la batería del coche (cu
 principal del móvil, al salir una versión nueva aparece un aviso con sus novedades y el enlace de descarga; la primera
 vez que arranca una versión recién instalada, se enseñan sus novedades.
 
+«Avisos de radar por voz» (activado de serie): al acercarte a un radar, «Radar a 700 metros, límite 80», una vez por
+radar; y si a 400 metros o menos vas por encima del límite, «Vas a 95, límite 80». Los radares salen de
+OpenStreetMap, así que puede faltar alguno.
+
 ### «Idioma»
 
 «Idioma» (Android 13 o superior): «Idioma del sistema», «Español», «English», «Português (Portugal)», «Português
@@ -663,9 +668,16 @@ Android 12 o anterior, la app usa el idioma del sistema.
 Pega la URL de una lista M3U o pulsa «Elegir archivo». Si no pones lista de radio, en el coche salen las emisoras
 populares.
 
+### «Marcadores web» («Auto extendido»)
+
+Los accesos de la pantalla «Web» del coche (de serie, YouTube, Google, Wikipedia y Twitch). Añade los tuyos con
+nombre y dirección, quítalos o cámbialos de orden con las flechas; «Los de serie» los deja como venían.
+
 ### «Diagnóstico»
 
 - «Exportar log»: sección 8.
+- «Sesiones»: las últimas sesiones con el coche, una por línea: cuándo, cuánto duró, por qué conexión, los fps, los
+  cortes y cómo acabó. Para ver qué falló sin mandar el log.
 - «Prueba sin Android Auto (patrón)»: muestra en el coche una imagen de prueba en lugar de Android Auto. Sirve para
   saber si falla la conexión o Android Auto. **Apágala al terminar.**
 - «Opciones de prueba (QDAuto)»: para probar el motor. Lo normal es dejarlas como vienen. Entre ellas está «Espera a

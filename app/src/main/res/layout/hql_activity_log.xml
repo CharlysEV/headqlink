@@ -77,6 +77,18 @@
                 android:paddingEnd="18dp"
                 android:text="@string/hql_export_log"
                 android:textSize="14sp" />
+
+            <!-- headqlink: las últimas sesiones con el coche, resumidas (sessions.csv) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/hql_log_sessions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:minHeight="50dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="@string/hql_sessions_button"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <!-- headqlink: opciones de prueba del motor y vista previa del modo extendido (sin coche) -->

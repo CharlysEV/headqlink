@@ -378,8 +378,9 @@ supporta.
   Viaggi, Strumenti, Efficienza e Stato), «Foto», «Video», «Web», «TV», «Radio», «Giochi» e «Impostazioni». Con Android
   Auto sullo schermo, il pannello si nasconde da solo dopo qualche secondo; tocca il bordo dal lato del pannello per farlo
   ricomparire. Foto, video, web, TV e giochi sono **solo per quando l'auto è ferma**.
-- **Schermo diviso («Auto esteso»):** in «Web», «Video» e «TV», il pulsante «Dividi schermo» del pannello mette Android
-  Auto a sinistra, accanto al pannello, e quella schermata a destra. Android Auto tiene un po' più della metà, quanto
+- **Schermo diviso («Auto esteso»):** in «Veicolo», «Web», «Video» e «TV», il pulsante «Dividi schermo» del pannello
+  mette Android Auto a sinistra, accanto al pannello, e quella schermata a destra. Con «Veicolo» hai gli strumenti
+  (consumo, batteria, autonomia, prossima sosta) accanto ad Android Auto, e va bene in marcia, senza avviso. Android Auto tiene un po' più della metà, quanto
   basta perché Google Maps si possa spostare e cercare. Ogni lato risponde ai suoi tocchi. «Schermo intero» la lascia di
   nuovo da sola. Dura finché resti collegato all'auto. La prima volta di ogni collegamento compare un avviso da
   accettare: si consiglia di usarlo a veicolo fermo, e lo usi sotto la tua responsabilità.
@@ -666,6 +667,10 @@ fissi. Con il pannello ridotto a icone, in basso compaiono l'ora, la temperatura
 c'è il dato). E nella schermata principale del telefono, quando esce una versione nuova compare un avviso con le novità
 e il link per scaricarla; la prima volta che si avvia una versione appena installata, si mostrano le sue novità.
 
+«Avvisi autovelox a voce» (attivo di default): avvicinandoti a un autovelox, «Autovelox a 700 metri, limite 80», una
+volta per autovelox; e se a 400 metri o meno vai oltre il limite, «Vai a 95, limite 80». Gli autovelox vengono da
+OpenStreetMap, quindi qualcuno può mancare.
+
 ### «Lingua»
 
 «Lingua» (Android 13 o successivo): «Lingua del sistema», «Español», «English», «Português (Portugal)», «Português
@@ -676,9 +681,16 @@ Su Android 12 o precedente, l'app usa la lingua del sistema.
 
 Incolla l'URL di una lista M3U o tocca «Scegli file». Senza una lista radio, l'auto mostra le stazioni popolari.
 
+### «Segnalibri web» («Auto esteso»)
+
+Le scorciatoie della schermata «Web» dell'auto (di default YouTube, Google, Wikipedia e Twitch). Aggiungi i tuoi con
+nome e indirizzo, toglili o riordinali con le frecce; «Predefiniti» rimette i quattro originali.
+
 ### «Diagnostica»
 
 - «Esporta log»: sezione 8.
+- «Sessioni»: le ultime sessioni con l'auto, una per riga: quando, quanto è durata, con quale connessione, i fps,
+  le interruzioni e come è finita. Per vedere cosa è andato storto senza inviare il log.
 - «Test senza Android Auto (immagine di prova)»: mostra in auto un'immagine di prova al posto di Android Auto. Ti dice
   se il problema è la connessione o Android Auto. **Disattivalo dopo.**
 - «Opzioni di test (QDAuto)»: per provare il motore. Di norma lasciale come sono. Una di esse è «Video attivo senza

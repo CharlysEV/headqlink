@@ -12,7 +12,10 @@ class SplitScreenTest {
         assertTrue(CarUi.splitCapable("web"))
         assertTrue(CarUi.splitCapable("videos"))
         assertTrue(CarUi.splitCapable("tv"))
-        assertFalse(CarUi.splitCapable("car"))
+        // La sección Coche también (instrumentos junto a AA), y sin aviso: es información de conducción.
+        assertTrue(CarUi.splitCapable("car"))
+        assertFalse(CarUi.splitNeedsWarning("car"))
+        assertTrue(CarUi.splitNeedsWarning("web"))
         assertFalse(CarUi.splitCapable("aa"))
         assertFalse(CarUi.splitCapable("photos"))
     }

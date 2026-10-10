@@ -390,8 +390,9 @@ admite.
   Viagens, Instrumentos, Eficiência e Estado), «Fotos», «Vídeos», «Web», «TV», «Rádio», «Jogos» e «Definições». Com o Android
   Auto no ecrã, o painel esconde-se sozinho ao fim de alguns segundos; toque na margem esquerda para que volte. Fotos,
   vídeos, web, TV e jogos são **só para quando o carro está parado**.
-- **Ecrã dividido («Auto estendido»):** em «Web», «Vídeos» e «TV», o botão «Dividir ecrã» do painel põe o Android Auto à
-  esquerda, junto ao painel, e esse ecrã à direita. O Android Auto fica com um pouco mais de metade, o suficiente para o
+- **Ecrã dividido («Auto estendido»):** em «Carro», «Web», «Vídeos» e «TV», o botão «Dividir ecrã» do painel põe o
+  Android Auto à esquerda, junto ao painel, e esse ecrã à direita. Com «Carro» tem os instrumentos (consumo, bateria,
+  autonomia, próxima paragem) junto ao Android Auto, e serve em andamento, sem aviso. O Android Auto fica com um pouco mais de metade, o suficiente para o
   Google Maps se poder mover e pesquisar. Cada lado responde aos seus toques. «Ecrã inteiro» deixa-o sozinho outra vez.
   Dura enquanto estiver ligado ao carro. Da primeira vez em cada ligação aparece um aviso que é preciso aceitar:
   recomenda-se usar com o carro parado, e a utilização é da sua responsabilidade.
@@ -667,6 +668,10 @@ escolhe quais se veem (Sim / Não) e por que ordem (setas); «Auto» e «Defini�
 telemóvel, quando sai uma versão nova aparece um aviso com as novidades e a ligação para transferir; da primeira vez que
 arranca uma versão acabada de instalar, mostram-se as suas novidades.
 
+«Avisos de radar por voz» (ativado de origem): ao aproximar-se de um radar, «Radar a 700 metros, limite 80», uma vez
+por radar; e se a 400 metros ou menos for acima do limite, «Vai a 95, limite 80». Os radares vêm do OpenStreetMap,
+por isso pode faltar algum.
+
 ### «Idioma»
 
 «Idioma» (Android 13 ou superior): «Idioma do sistema», «Español», «English», «Português (Portugal)», «Português
@@ -677,9 +682,16 @@ sistema.
 
 Cole o URL de uma lista M3U ou toque em «Escolher ficheiro». Sem lista de rádio, o carro mostra as estações populares.
 
+### «Marcadores web» («Auto estendido»)
+
+Os atalhos do ecrã «Web» do carro (de origem, YouTube, Google, Wikipedia e Twitch). Adicione os seus com nome e
+endereço, retire-os ou mude a ordem com as setas; «Os de origem» repõe os quatro iniciais.
+
 ### «Diagnóstico»
 
 - «Exportar registo»: secção 8.
+- «Sessões»: as últimas sessões com o carro, uma por linha: quando, quanto durou, por que ligação, os fps, os cortes
+  e como acabou. Para ver o que falhou sem enviar o registo.
 - «Teste sem Android Auto (padrão)»: mostra no carro uma imagem de teste em vez do Android Auto. Serve para saber se o
   que falha é a ligação ou o Android Auto. **Desative-o no fim.**
 - «Opções de teste (QDAuto)»: para testar o motor. Normalmente, deixe-as como estão. Entre elas está «Esperar que o carro

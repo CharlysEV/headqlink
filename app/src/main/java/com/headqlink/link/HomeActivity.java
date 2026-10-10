@@ -434,6 +434,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         if (ext) {
             m.add(0, 2, 2, Str.get(R.string.hql_tv_list));
             m.add(0, 3, 3, Str.get(R.string.hql_radio_list));
+            m.add(0, 12, 3, Str.get(R.string.hql_web_bookmarks));
         }
         // Datos reales del coche (cuenta Leapmotor, opcional y de solo lectura): CarCloudActivity.
         m.add(0, 10, 3, Str.get(R.string.hql_cloud_menu));
@@ -468,6 +469,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     break;
                 case 10:
                     startActivity(new Intent(this, CarCloudActivity.class));
+                    break;
+                case 12:
+                    showBookmarks();
                     break;
                 case 11:
                     if (LinkState.running && (LinkState.car == LinkState.Car.CONNECTED || LinkState.car == LinkState.Car.RECONNECTING)) {
@@ -516,6 +520,93 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     }
 
     /** Lista M3U para la TV o la radio del coche: una URL o un archivo del móvil. */
+    /**
+     * Marcadores de la pantalla Web del coche: lista con subir, bajar y quitar, y un formulario para añadir. Cada cambio
+     * se guarda al momento; «Los de serie» vuelve a los cuatro de siempre.
+     */
+    private void showBookmarks() {
+        int pad = Math.round(20 * getResources().getDisplayMetrics().density);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(pad, pad / 2, pad, 0);
+        TextView help = new TextView(this);
+        help.setText(Str.get(R.string.hql_bookmarks_help));
+        box.addView(help);
+        LinearLayout rows = new LinearLayout(this);
+        rows.setOrientation(LinearLayout.VERTICAL);
+        box.addView(rows);
+        EditText name = new EditText(this);
+        name.setHint(Str.get(R.string.hql_bookmark_name));
+        name.setSingleLine(true);
+        EditText url = new EditText(this);
+        url.setHint(Str.get(R.string.hql_bookmark_url));
+        url.setSingleLine(true);
+        url.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
+        box.addView(name);
+        box.addView(url);
+        android.widget.Button add = new android.widget.Button(this);
+        add.setText(Str.get(R.string.hql_bookmark_add));
+        box.addView(add);
+        Runnable[] render = new Runnable[1];
+        render[0] = () -> {
+            rows.removeAllViews();
+            String[][] list = cfg.webShortcuts();
+            for (int i = 0; i < list.length; i++) {
+                int idx = i;
+                LinearLayout r = new LinearLayout(this);
+                r.setOrientation(LinearLayout.HORIZONTAL);
+                r.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                TextView t = new TextView(this);
+                t.setText(list[i][0] + "\n" + list[i][1]);
+                t.setSingleLine(false);
+                t.setMaxLines(2);
+                t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                r.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                String[] glyphs = {"\u25b2", "\u25bc", "\u2715"};
+                for (int k = 0; k < 3; k++) {
+                    int op = k;
+                    android.widget.Button b = new android.widget.Button(this, null, android.R.attr.borderlessButtonStyle);
+                    b.setText(glyphs[k]);
+                    b.setMinWidth(0);
+                    b.setMinimumWidth(0);
+                    b.setEnabled(op == 2 || (op == 0 ? idx > 0 : idx < list.length - 1));
+                    b.setOnClickListener(v -> {
+                        java.util.List<String[]> l = new java.util.ArrayList<>(java.util.Arrays.asList(cfg.webShortcuts()));
+                        if (op == 2) l.remove(idx);
+                        else {
+                            String[] e = l.remove(idx);
+                            l.add(op == 0 ? idx - 1 : idx + 1, e);
+                        }
+                        cfg.setWebShortcuts(l.toArray(new String[0][]));
+                        render[0].run();
+                    });
+                    r.addView(b);
+                }
+                rows.addView(r);
+            }
+        };
+        add.setOnClickListener(v -> {
+            String u = url.getText().toString().trim();
+            if (u.isEmpty()) return;
+            java.util.List<String[]> l = new java.util.ArrayList<>(java.util.Arrays.asList(cfg.webShortcuts()));
+            l.add(new String[]{name.getText().toString().trim(), u});
+            // Por webShortcutsFrom: completa «https://» y el nombre si falta.
+            cfg.setWebShortcuts(Config.webShortcutsFrom(Config.webShortcutsJson(l.toArray(new String[0][]))));
+            name.setText("");
+            url.setText("");
+            render[0].run();
+        });
+        render[0].run();
+        android.widget.ScrollView sv = new android.widget.ScrollView(this);
+        sv.addView(box);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(Str.get(R.string.hql_web_bookmarks))
+                .setView(sv)
+                .setPositiveButton(Str.get(R.string.hql_close), null)
+                .setNeutralButton(Str.get(R.string.hql_bookmark_defaults), (d, w) -> cfg.setWebShortcuts(WebScreen.DEFAULT_SHORTCUTS))
+                .show();
+    }
+
     private void showList(boolean radio) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);

@@ -50,6 +50,7 @@ public class LogActivity extends Activity {
         pattern.setChecked(Config.MODE_PATTERN.equals(cfg.mode()));
         pattern.setOnCheckedChangeListener((b2, on) -> setPatternTest(cfg, on));
         findViewById(R.id.hql_log_export).setOnClickListener(v -> exportLog());
+        findViewById(R.id.hql_log_sessions).setOnClickListener(v -> showSessions());
         findViewById(R.id.hql_log_qd_options).setOnClickListener(v -> showQdOptions(cfg));
         if (f != null) {
             try {
@@ -151,6 +152,28 @@ public class LogActivity extends Activity {
     }
 
     /** Exportar log: en otro hilo, con avisos; al acabar, la hoja de compartir. */
+    /** Las últimas 30 sesiones con el coche, una por línea (SessionsView), para ver qué falló sin mandar logs. */
+    private void showSessions() {
+        File base = getExternalFilesDir(null);
+        List<SessionsView.Row> rows = new java.util.ArrayList<>();
+        try {
+            File csv = new File(new File(base, "logs"), "sessions.csv");
+            if (csv.exists()) rows = SessionsView.parse(Files.readAllLines(csv.toPath()), 30);
+        } catch (Exception e) {
+            L.w("sesiones: no se pudo leer sessions.csv: " + e);
+        }
+        StringBuilder b = new StringBuilder();
+        for (SessionsView.Row r : rows) {
+            if (b.length() > 0) b.append("\n\n");
+            b.append(SessionsView.line(r));
+        }
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(Str.get(R.string.hql_sessions_title))
+                .setMessage(b.length() == 0 ? Str.get(R.string.hql_sessions_none) : b.toString())
+                .setPositiveButton(Str.get(R.string.hql_close), null)
+                .show();
+    }
+
     private void exportLog() {
         ToastUtils.showToast(this, Str.get(R.string.hql_export_running), Toast.LENGTH_SHORT, true);
         new Thread(() -> {
