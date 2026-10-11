@@ -8,17 +8,33 @@ import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.GridLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 /**
- * Ajustes desde el coche: perfil de imagen (con el recomendado marcado), panel que se oculta solo,
- * optimizaciones de latencia y el precio de la electricidad (coste de los viajes en la sección Coche). Lo mismo que
- * en el móvil (Ajustes de imagen), sin tener que cogerlo.
- * Cambiar de perfil reconecta coche y Android Auto (unos segundos).
+ * Ajustes desde el coche, en dos columnas como los de Android Auto: a la izquierda las secciones (con lo que está puesto
+ * debajo de cada una) y a la derecha lo de la elegida, en tarjetas.
+ * - Imagen: perfil (con el recomendado marcado), fluidez y optimizaciones de latencia. Cambiar de perfil o de fluidez
+ *   reconecta coche y Android Auto (unos segundos).
+ * - Panel lateral: ocultarse solo, lado, color y transparencia, y qué botones salen y en qué orden.
+ * - Viaje: avisos de radar por voz y precio de la electricidad (coste de los viajes en la sección Coche).
+ * - Conexión: la de ahora (solo lectura).
+ * Lo mismo que en el móvil, sin tener que cogerlo. Al cambiar el panel, la interfaz se rehace: la sección y el punto de
+ * la lista se recuerdan para volver al mismo sitio.
  */
 final class SettingsScreen implements CarScreen {
+    private static final String SEC_IMAGE = "image";
+    private static final String SEC_PANEL = "panel";
+    private static final String SEC_TRIP = "trip";
+    private static final String SEC_CONN = "conn";
+    private static final String[] SECTIONS = {SEC_IMAGE, SEC_PANEL, SEC_TRIP, SEC_CONN};
+    /** Sección elegida y desplazamiento de su lista: sobreviven a que la interfaz se rehaga (color, botones del panel). */
+    private static String section = SEC_IMAGE;
+    private static int scrollY;
+
     private Host host;
     private Config cfg;
     private String pending;
@@ -28,103 +44,278 @@ final class SettingsScreen implements CarScreen {
     private TextView detail;
     private final java.util.List<TextView> profilePills = new java.util.ArrayList<>();
     private final java.util.List<TextView> fluidPills = new java.util.ArrayList<>();
+    private LinearLayout nav;
+    private ScrollView pane;
 
     @Override
     public View create(Host h) {
         host = h;
         Context c = h.context();
         cfg = new Config(c);
-        String rec = VideoProfile.recommended(c);
         pending = cfg.videoProfileChoice();
         pendingFluid = cfg.fluidity();
 
+        LinearLayout root = new LinearLayout(c);
+        root.setOrientation(LinearLayout.HORIZONTAL);
+        root.setBackgroundColor(CarStyle.BG);
+
+        // Secciones.
+        nav = new LinearLayout(c);
+        nav.setOrientation(LinearLayout.VERTICAL);
+        nav.setPadding(26, 30, 18, 30);
+        TextView head = CarStyle.text(c, Str.get(R.string.hql_settings), 38, CarStyle.TEXT);
+        head.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        head.setPadding(18, 0, 0, 22);
+        nav.addView(head);
+        for (String s : SECTIONS) nav.addView(navRow(c, s));
+        root.addView(nav, new LinearLayout.LayoutParams(Math.max(360, Math.min(440, h.width() / 4)), ViewGroup.LayoutParams.MATCH_PARENT));
+
+        // Lo de la sección.
+        pane = new ScrollView(c);
+        pane.setFillViewport(true);
+        pane.setVerticalScrollBarEnabled(false);
+        pane.setOnScrollChangeListener((v, x, y, ox, oy) -> scrollY = y);
+        root.addView(pane, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        showSection(section, true);
+        return root;
+    }
+
+    // ------------------------------------------------------------------ secciones
+
+    private View navRow(Context c, String s) {
+        LinearLayout r = new LinearLayout(c);
+        r.setOrientation(LinearLayout.HORIZONTAL);
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.setPadding(20, 16, 16, 16);
+        r.setTag(s);
+        ImageView icon = new ImageView(c);
+        icon.setImageResource(sectionIcon(s));
+        r.addView(icon, new LinearLayout.LayoutParams(44, 44));
+        LinearLayout texts = new LinearLayout(c);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        texts.setPadding(20, 0, 0, 0);
+        TextView t = CarStyle.text(c, sectionTitle(s), 26, CarStyle.TEXT);
+        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        texts.addView(t);
+        TextView sub = CarStyle.text(c, sectionSummary(s), 19, CarStyle.TEXT_DIM);
+        sub.setSingleLine(true);
+        sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        texts.addView(sub);
+        r.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        r.setOnClickListener(v -> showSection(s, false));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = 6;
+        r.setLayoutParams(lp);
+        return r;
+    }
+
+    private static int sectionIcon(String s) {
+        switch (s) {
+            case SEC_PANEL:
+                return R.drawable.hql_ic_split;
+            case SEC_TRIP:
+                return R.drawable.hql_ic_gauges;
+            case SEC_CONN:
+                return R.drawable.hql_ic_aa;
+            default:
+                return R.drawable.hql_ic_photos;
+        }
+    }
+
+    private static String sectionTitle(String s) {
+        switch (s) {
+            case SEC_PANEL:
+                return Str.get(R.string.hql_settings_sec_panel);
+            case SEC_TRIP:
+                return Str.get(R.string.hql_settings_sec_trip);
+            case SEC_CONN:
+                return Str.get(R.string.hql_settings_connection);
+            default:
+                return Str.get(R.string.hql_image);
+        }
+    }
+
+    /** Lo que está puesto, debajo del nombre de la sección. */
+    private String sectionSummary(String s) {
+        switch (s) {
+            case SEC_PANEL:
+                return Str.get(R.string.hql_settings_sec_panel_sub);
+            case SEC_TRIP:
+                return String.format(java.util.Locale.getDefault(), "%.2f €/kWh", cfg.electricityPrice())
+                        + (cfg.radarVoice() ? " · " + Str.get(R.string.hql_radar_voice) : "");
+            case SEC_CONN:
+                return Ui.linkTitle(LinkState.linkModeFor(cfg));
+            default: {
+                String choice = cfg.videoProfileChoice();
+                String eff = choice.isEmpty() ? VideoProfile.recommended(host.context()) : choice;
+                String name = choice.isEmpty() ? Str.get(R.string.hql_profile_auto) + " (" + VideoProfile.title(eff) + ")" : VideoProfile.title(eff);
+                return VideoProfile.of(eff).followsCar ? name + " · " + cfg.fluidity() + " fps" : name;
+            }
+        }
+    }
+
+    private void showSection(String s, boolean keepScroll) {
+        if (!keepScroll) scrollY = 0;
+        section = s;
+        for (int i = 0; i < nav.getChildCount(); i++) {
+            View r = nav.getChildAt(i);
+            if (r.getTag() == null) continue;
+            boolean sel = s.equals(r.getTag());
+            r.setBackground(sel ? CarStyle.round(CarStyle.ACCENT_BG, 30) : null);
+            ImageView icon = (ImageView) ((LinearLayout) r).getChildAt(0);
+            icon.setColorFilter(sel ? CarStyle.ACCENT : CarStyle.TEXT_DIM);
+            TextView t = (TextView) ((LinearLayout) ((LinearLayout) r).getChildAt(1)).getChildAt(0);
+            t.setTextColor(sel ? CarStyle.ACCENT : CarStyle.TEXT);
+        }
+        Context c = host.context();
+        profilePills.clear();
+        fluidPills.clear();
+        apply = null;
+        detail = null;
         LinearLayout col = new LinearLayout(c);
         col.setOrientation(LinearLayout.VERTICAL);
-        col.setPadding(40, 30, 40, 30);
+        col.setPadding(16, 30, 40, 40);
+        switch (s) {
+            case SEC_PANEL:
+                buildPanel(c, col);
+                break;
+            case SEC_TRIP:
+                buildTrip(c, col);
+                break;
+            case SEC_CONN:
+                buildConnection(c, col);
+                break;
+            default:
+                buildImage(c, col);
+                break;
+        }
+        pane.removeAllViews();
+        pane.addView(col);
+        int y = scrollY;
+        if (y > 0) pane.post(() -> pane.scrollTo(0, y));
+    }
 
-        // Imagen.
-        LinearLayout img = CarStyle.card(c);
-        img.addView(title(c, Str.get(R.string.hql_image)));
-        LinearLayout row = new LinearLayout(c);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(0, 18, 0, 8);
+    /** Vuelve a escribir lo que está puesto debajo de cada sección. */
+    private void refreshSummaries() {
+        for (int i = 0; i < nav.getChildCount(); i++) {
+            View r = nav.getChildAt(i);
+            if (r.getTag() == null) continue;
+            TextView sub = (TextView) ((LinearLayout) ((LinearLayout) r).getChildAt(1)).getChildAt(1);
+            sub.setText(sectionSummary((String) r.getTag()));
+        }
+    }
+
+    // ------------------------------------------------------------------ Imagen
+
+    private void buildImage(Context c, LinearLayout col) {
+        String rec = VideoProfile.recommended(c);
+        LinearLayout img = card(c, Str.get(R.string.hql_settings_profile));
         String[] ids = new String[VideoProfile.ALL.length + 1];
         ids[0] = "";
         System.arraycopy(VideoProfile.ALL, 0, ids, 1, VideoProfile.ALL.length);
+        GridLayout grid = new GridLayout(c);
+        grid.setColumnCount(4);
+        grid.setPadding(0, 14, 0, 4);
         for (String id : ids) {
             String name = id.isEmpty() ? Str.get(R.string.hql_profile_auto) : VideoProfile.title(id);
             if (rec.equals(id)) name += "  ★";
             TextView p = CarStyle.pill(c, name);
             p.setTag(id);
-            p.setPadding(34, 18, 34, 18);
+            p.setPadding(20, 22, 20, 22);
+            p.setSingleLine(true);
             p.setOnClickListener(v -> select(id));
+            GridLayout.LayoutParams glp = new GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED),
+                    GridLayout.spec(GridLayout.UNDEFINED, 1f));
+            glp.width = 0;
+            glp.setMargins(0, 0, 14, 14);
             profilePills.add(p);
-            row.addView(p);
+            grid.addView(p, glp);
         }
-        // Con el perfil Coche ya son 7: si no caben, la fila se desplaza.
-        android.widget.HorizontalScrollView rowScroll = new android.widget.HorizontalScrollView(c);
-        rowScroll.setHorizontalScrollBarEnabled(false);
-        rowScroll.addView(row);
-        img.addView(rowScroll);
+        img.addView(grid);
         detail = CarStyle.text(c, "", 22, CarStyle.TEXT_DIM);
-        detail.setPadding(6, 6, 0, 0);
+        detail.setPadding(4, 4, 0, 0);
         img.addView(detail);
+        col.addView(img, cardLp());
+
         // Fluidez: 30 fps (lo que pide el coche, menos calor) o 60; solo cuenta con Coche (y Automático si es Coche).
-        LinearLayout fluidRow = new LinearLayout(c);
-        fluidRow.setOrientation(LinearLayout.HORIZONTAL);
-        fluidRow.setGravity(Gravity.CENTER_VERTICAL);
-        fluidRow.setPadding(0, 14, 0, 4);
-        TextView fluidLabel = CarStyle.text(c, Str.get(R.string.hql_fluidity), 24, CarStyle.TEXT);
-        fluidLabel.setPadding(6, 0, 20, 0);
-        fluidRow.addView(fluidLabel);
+        LinearLayout fluid = card(c, Str.get(R.string.hql_fluidity));
+        LinearLayout seg = new LinearLayout(c);
+        seg.setOrientation(LinearLayout.HORIZONTAL);
+        seg.setPadding(0, 14, 0, 4);
         for (int f : new int[]{VideoProfile.FLUID_30, VideoProfile.FLUID_60}) {
             TextView p = CarStyle.pill(c, Str.get(f == VideoProfile.FLUID_60 ? R.string.hql_fluidity_60 : R.string.hql_fluidity_30));
             p.setTag(f);
-            p.setPadding(34, 18, 34, 18);
+            p.setPadding(20, 22, 20, 22);
             p.setOnClickListener(v -> {
                 pendingFluid = f;
                 refresh();
             });
-            LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            plp.rightMargin = 12;
+            LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            plp.rightMargin = 14;
             fluidPills.add(p);
-            fluidRow.addView(p, plp);
+            seg.addView(p, plp);
         }
-        android.widget.HorizontalScrollView fluidScroll = new android.widget.HorizontalScrollView(c);
-        fluidScroll.setHorizontalScrollBarEnabled(false);
-        fluidScroll.addView(fluidRow);
-        img.addView(fluidScroll);
-        apply = CarStyle.pill(c, Str.get(R.string.hql_apply_reconnect));
-        apply.setBackground(CarStyle.accent(28));
-        apply.setTextColor(CarStyle.ON_ACCENT);
-        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        alp.topMargin = 16;
-        img.addView(apply, alp);
-        apply.setOnClickListener(v -> applyProfile());
-        col.addView(img, cardLp());
+        fluid.addView(seg);
+        col.addView(fluid, cardLp());
 
-        // Panel e interacción.
-        LinearLayout ui = CarStyle.card(c);
-        ui.addView(title(c, Str.get(R.string.hql_screen)));
-        ui.addView(toggle(c, Str.get(R.string.hql_autohide_panel), cfg.panelAutoHide(), on -> {
+        apply = CarStyle.pill(c, Str.get(R.string.hql_apply_reconnect));
+        apply.setBackground(CarStyle.accent(32));
+        apply.setTextColor(CarStyle.ON_ACCENT);
+        apply.setPadding(40, 22, 40, 22);
+        apply.setOnClickListener(v -> applyProfile());
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        alp.bottomMargin = 20;
+        col.addView(apply, alp);
+
+        LinearLayout more = card(c, null);
+        more.addView(toggle(c, Str.get(R.string.hql_low_latency_reconnect), null, cfg.lowLatency(),
+                on -> cfg.putBool(Config.LOW_LATENCY, on)));
+        col.addView(more, cardLp());
+
+        TextView note = CarStyle.text(c, Str.get(R.string.hql_settings_reconnect_note), 20, CarStyle.TEXT_DIM);
+        note.setPadding(8, 0, 8, 10);
+        col.addView(note);
+        TextView info = CarStyle.text(c, Str.get(R.string.hql_settings_info, LinkState.video.isEmpty() ? "—" : LinkState.video, VideoProfile.reason()), 20, CarStyle.TEXT_DIM);
+        info.setPadding(8, 0, 8, 0);
+        col.addView(info);
+        refresh();
+    }
+
+    // ------------------------------------------------------------------ Panel lateral
+
+    private void buildPanel(Context c, LinearLayout col) {
+        LinearLayout ui = card(c, Str.get(R.string.hql_settings_behaviour));
+        ui.addView(toggle(c, Str.get(R.string.hql_autohide_panel), null, cfg.panelAutoHide(), on -> {
             cfg.putBool(Config.PANEL_AUTOHIDE, on);
             CarUi.applyAutoHide(on);
         }));
-        ui.addView(toggle(c, Str.get(R.string.hql_low_latency_reconnect), cfg.lowLatency(),
-                on -> cfg.putBool(Config.LOW_LATENCY, on)));
-        ui.addView(toggle(c, Str.get(R.string.hql_radar_voice), cfg.radarVoice(),
-                on -> cfg.putBool(Config.RADAR_VOICE, on)));
-        ui.addView(panelColorRow(c));
-        ui.addView(toggle(c, Str.get(R.string.hql_panel_right), cfg.panelRight(), on -> {
+        ui.addView(toggle(c, Str.get(R.string.hql_panel_right), null, cfg.panelRight(), on -> {
             cfg.putBool(Config.PANEL_RIGHT, on);
             CarUi.applyPanelRight(on);
         }));
-        ui.addView(panelButtonsRows(c));
         col.addView(ui, cardLp());
 
+        LinearLayout color = card(c, Str.get(R.string.hql_panel_color));
+        color.addView(panelColorRow(c));
+        col.addView(color, cardLp());
+
+        LinearLayout buttons = card(c, Str.get(R.string.hql_panel_buttons));
+        buttons.addView(panelButtonsRows(c));
+        col.addView(buttons, cardLp());
+    }
+
+    // ------------------------------------------------------------------ Viaje
+
+    private void buildTrip(Context c, LinearLayout col) {
+        LinearLayout alerts = card(c, null);
+        alerts.addView(toggle(c, Str.get(R.string.hql_radar_voice), null, cfg.radarVoice(), on -> {
+            cfg.putBool(Config.RADAR_VOICE, on);
+            refreshSummaries();
+        }));
+        col.addView(alerts, cardLp());
+
         // Energía: €/kWh para el coste de los viajes y la pestaña Eficiencia.
-        LinearLayout energy = CarStyle.card(c);
-        energy.addView(title(c, Str.get(R.string.hql_settings_energy)));
+        LinearLayout energy = card(c, Str.get(R.string.hql_settings_energy));
         LinearLayout priceRow = new LinearLayout(c);
         priceRow.setOrientation(LinearLayout.HORIZONTAL);
         priceRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -132,17 +323,22 @@ final class SettingsScreen implements CarScreen {
         TextView priceLabel = CarStyle.text(c, Str.get(R.string.hql_settings_price_kwh), 24, CarStyle.TEXT);
         priceRow.addView(priceLabel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView minus = CarStyle.pill(c, "−");
-        TextView value = CarStyle.text(c, "", 30, CarStyle.TEXT);
+        TextView value = CarStyle.text(c, "", 32, CarStyle.TEXT);
         value.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         value.setGravity(Gravity.CENTER);
-        value.setMinWidth(190);
+        value.setMinWidth(210);
         TextView plus = CarStyle.pill(c, "+");
-        minus.setMinWidth(80);
-        plus.setMinWidth(80);
+        minus.setMinWidth(90);
+        plus.setMinWidth(90);
+        minus.setPadding(26, 18, 26, 18);
+        plus.setPadding(26, 18, 26, 18);
         priceRow.addView(minus);
         priceRow.addView(value);
         priceRow.addView(plus);
-        Runnable showPrice = () -> value.setText(String.format(java.util.Locale.getDefault(), "%.2f €/kWh", cfg.electricityPrice()));
+        Runnable showPrice = () -> {
+            value.setText(String.format(java.util.Locale.getDefault(), "%.2f €/kWh", cfg.electricityPrice()));
+            refreshSummaries();
+        };
         showPrice.run();
         minus.setOnClickListener(v -> {
             cfg.setElectricityPrice(cfg.electricityPrice() - 0.01);
@@ -154,35 +350,32 @@ final class SettingsScreen implements CarScreen {
         });
         energy.addView(priceRow);
         TextView priceHelp = CarStyle.text(c, Str.get(R.string.hql_settings_price_help), 20, CarStyle.TEXT_DIM);
-        priceHelp.setPadding(6, 6, 0, 0);
+        priceHelp.setPadding(4, 8, 0, 0);
         energy.addView(priceHelp);
         col.addView(energy, cardLp());
+    }
 
-        // Conexión (solo lectura): modo, motor, coche e interfaz local (qdauto §5.2).
-        LinearLayout conn = CarStyle.card(c);
-        conn.addView(title(c, Str.get(R.string.hql_settings_connection)));
+    // ------------------------------------------------------------------ Conexión
+
+    /** Solo lectura: modo, motor, coche e interfaz local (qdauto §5.2). */
+    private void buildConnection(Context c, LinearLayout col) {
+        LinearLayout conn = card(c, null);
         // La del servicio en marcha, no la configurada (un cambio en marcha se aplica al volver a conectar).
         String engineName = Config.ENGINE_QDAUTO.equals(LinkState.engineFor(cfg)) ? Str.get(R.string.hql_engine_qdauto) : Str.get(R.string.hql_engine_original);
-        TextView connLine = CarStyle.text(c, Str.get(R.string.hql_settings_link_line, Ui.linkTitle(LinkState.linkModeFor(cfg)), engineName), 22, CarStyle.TEXT);
-        connLine.setPadding(6, 14, 0, 0);
+        TextView connLine = CarStyle.text(c, Str.get(R.string.hql_settings_link_line, Ui.linkTitle(LinkState.linkModeFor(cfg)), engineName), 24, CarStyle.TEXT);
+        connLine.setPadding(4, 4, 0, 0);
         conn.addView(connLine);
-        String detail = LinkState.linkDetail;
+        String det = LinkState.linkDetail;
         String net = LinkState.network;
-        TextView connDetail = CarStyle.text(c, (detail.isEmpty() ? "" : Str.get(R.string.hql_settings_car_line, detail))
-                + (!detail.isEmpty() && !net.isEmpty() ? "\n" : "") + net, 20, CarStyle.TEXT_DIM);
-        connDetail.setPadding(6, 6, 0, 0);
-        if (detail.isEmpty() && net.isEmpty()) connDetail.setVisibility(View.GONE);
+        TextView connDetail = CarStyle.text(c, (det.isEmpty() ? "" : Str.get(R.string.hql_settings_car_line, det))
+                + (!det.isEmpty() && !net.isEmpty() ? "\n" : "") + net, 21, CarStyle.TEXT_DIM);
+        connDetail.setPadding(4, 10, 0, 0);
+        if (det.isEmpty() && net.isEmpty()) connDetail.setVisibility(View.GONE);
         conn.addView(connDetail);
         col.addView(conn, cardLp());
-
         TextView info = CarStyle.text(c, Str.get(R.string.hql_settings_info, LinkState.video.isEmpty() ? "—" : LinkState.video, VideoProfile.reason()), 20, CarStyle.TEXT_DIM);
-        info.setPadding(8, 8, 8, 0);
+        info.setPadding(8, 0, 8, 0);
         col.addView(info);
-
-        refresh();
-        ScrollView sv = new ScrollView(c);
-        sv.addView(col);
-        return sv;
     }
 
     /**
@@ -192,10 +385,7 @@ final class SettingsScreen implements CarScreen {
     private View panelColorRow(Context c) {
         LinearLayout box = new LinearLayout(c);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(0, 22, 0, 4);
-        TextView label = CarStyle.text(c, Str.get(R.string.hql_panel_color), 24, CarStyle.TEXT);
-        label.setPadding(0, 0, 0, 12);
-        box.addView(label);
+        box.setPadding(0, 16, 0, 4);
         int fixed = cfg.panelFixedColor();
         LinearLayout row = new LinearLayout(c);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -332,15 +522,13 @@ final class SettingsScreen implements CarScreen {
     }
 
     /**
-     * Botones del panel: una fila por botón con «Sí/No» (se ve o no) y flechas para ordenarlos. «Auto» y «Ajustes»
-     * no se tocan. Se aplica al momento.
+     * Botones del panel: una fila por botón con su interruptor (se ve o no) y flechas para ordenarlos. «Auto» y
+     * «Ajustes» no se tocan. Se aplica al momento.
      */
     private View panelButtonsRows(Context c) {
         LinearLayout box = new LinearLayout(c);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(0, 22, 0, 4);
-        TextView label = CarStyle.text(c, Str.get(R.string.hql_panel_buttons), 24, CarStyle.TEXT);
-        box.addView(label);
+        box.setPadding(0, 6, 0, 0);
         java.util.List<String> shown = cfg.panelButtons();
         // Los que se ven, en su orden, y después los ocultos en el orden de siempre.
         java.util.List<String> all = new java.util.ArrayList<>(shown);
@@ -351,24 +539,23 @@ final class SettingsScreen implements CarScreen {
             LinearLayout r = new LinearLayout(c);
             r.setOrientation(LinearLayout.HORIZONTAL);
             r.setGravity(Gravity.CENTER_VERTICAL);
-            r.setPadding(0, 10, 0, 0);
-            TextView t = CarStyle.text(c, CarUi.navLabel(id), 23, on ? CarStyle.TEXT : CarStyle.TEXT_DIM);
+            r.setPadding(0, 10, 0, 10);
+            TextView t = CarStyle.text(c, CarUi.navLabel(id), 24, on ? CarStyle.TEXT : CarStyle.TEXT_DIM);
             r.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             int pos = shown.indexOf(id);
-            TextView up = CarStyle.pill(c, "\u25b2");
-            up.setMinWidth(80);
-            up.setAlpha(on && pos > 0 ? 1f : 0.3f);
+            TextView up = CarStyle.pill(c, "▲");
+            up.setMinWidth(84);
+            up.setAlpha(on && pos > 0 ? 1f : 0.25f);
             up.setOnClickListener(v -> moveButton(id, -1));
             r.addView(up);
-            TextView down = CarStyle.pill(c, "\u25bc");
-            down.setMinWidth(80);
-            down.setAlpha(on && pos < shown.size() - 1 ? 1f : 0.3f);
+            TextView down = CarStyle.pill(c, "▼");
+            down.setMinWidth(84);
+            down.setAlpha(on && pos < shown.size() - 1 ? 1f : 0.25f);
             down.setOnClickListener(v -> moveButton(id, 1));
-            r.addView(down);
-            TextView sw = CarStyle.pill(c, Str.get(on ? R.string.hql_on_yes : R.string.hql_on_no));
-            sw.setMinWidth(110);
-            sw.setBackground(on ? CarStyle.accent(28) : CarStyle.round(CarStyle.PILL_BG, 28));
-            sw.setTextColor(on ? CarStyle.ON_ACCENT : CarStyle.TEXT);
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            dlp.rightMargin = 26;
+            r.addView(down, dlp);
+            View sw = switchView(c, on);
             sw.setOnClickListener(v -> {
                 java.util.List<String> ids = cfg.panelButtons();
                 if (ids.contains(id)) ids.remove(id);
@@ -376,7 +563,8 @@ final class SettingsScreen implements CarScreen {
                 cfg.setPanelButtons(ids);
                 CarUi.applyPanelButtons();
             });
-            r.addView(sw);
+            r.addView(sw, new LinearLayout.LayoutParams(96, 56));
+            if (i > 0) box.addView(divider(c));
             box.addView(r);
         }
         return box;
@@ -405,35 +593,69 @@ final class SettingsScreen implements CarScreen {
         return lp;
     }
 
-    private static TextView title(Context c, String s) {
-        TextView t = CarStyle.text(c, s, 30, CarStyle.TEXT);
-        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        return t;
+    /** Tarjeta con su título (o sin él). */
+    private static LinearLayout card(Context c, String title) {
+        LinearLayout card = CarStyle.card(c);
+        card.setPadding(32, 26, 32, 22);
+        if (title != null) {
+            TextView t = CarStyle.text(c, title, 27, CarStyle.TEXT);
+            t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            card.addView(t);
+        }
+        return card;
     }
 
-    /** Fila con texto y un interruptor en píldora (Sí / No). */
-    private static View toggle(Context c, String label, boolean initial, java.util.function.Consumer<Boolean> onChange) {
+    private static View divider(Context c) {
+        View d = new View(c);
+        d.setBackgroundColor(CarKit.alpha(CarStyle.TEXT_DIM, 0.18f));
+        d.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
+        return d;
+    }
+
+    /** Interruptor como los de Android Auto: pista redondeada y botón; con el acento cuando está encendido. */
+    private static View switchView(Context c, boolean on) {
+        android.widget.FrameLayout sw = new android.widget.FrameLayout(c);
+        sw.setBackground(CarStyle.round(on ? CarStyle.ACCENT : CarStyle.PILL_BG, 28));
+        View thumb = new View(c);
+        android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
+        d.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        d.setColor(on ? CarStyle.ON_ACCENT : CarStyle.TEXT_DIM);
+        thumb.setBackground(d);
+        android.widget.FrameLayout.LayoutParams tlp = new android.widget.FrameLayout.LayoutParams(40, 40,
+                Gravity.CENTER_VERTICAL | (on ? Gravity.END : Gravity.START));
+        tlp.setMargins(8, 0, 8, 0);
+        sw.addView(thumb, tlp);
+        sw.setContentDescription(Str.get(on ? R.string.hql_on_yes : R.string.hql_on_no));
+        return sw;
+    }
+
+    /** Fila con texto (y una línea de ayuda) y un interruptor; se toca la fila entera. */
+    private static View toggle(Context c, String label, String help, boolean initial, java.util.function.Consumer<Boolean> onChange) {
         LinearLayout r = new LinearLayout(c);
         r.setOrientation(LinearLayout.HORIZONTAL);
         r.setGravity(Gravity.CENTER_VERTICAL);
-        r.setPadding(0, 16, 0, 4);
-        TextView t = CarStyle.text(c, label, 24, CarStyle.TEXT);
-        r.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView sw = CarStyle.pill(c, "");
+        r.setPadding(0, 18, 0, 18);
+        LinearLayout texts = new LinearLayout(c);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        texts.addView(CarStyle.text(c, label, 24, CarStyle.TEXT));
+        if (help != null) {
+            TextView h = CarStyle.text(c, help, 20, CarStyle.TEXT_DIM);
+            h.setPadding(0, 4, 0, 0);
+            texts.addView(h);
+        }
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        tlp.rightMargin = 24;
+        r.addView(texts, tlp);
         boolean[] on = {initial};
-        Runnable style = () -> {
-            sw.setText(on[0] ? Str.get(R.string.hql_on_yes) : Str.get(R.string.hql_on_no));
-            sw.setBackground(on[0] ? CarStyle.accent(28) : CarStyle.round(CarStyle.PILL_BG, 28));
-            sw.setTextColor(on[0] ? CarStyle.ON_ACCENT : CarStyle.TEXT);
-        };
-        style.run();
-        sw.setMinWidth(110);
-        sw.setOnClickListener(v -> {
+        android.widget.FrameLayout holder = new android.widget.FrameLayout(c);
+        holder.addView(switchView(c, on[0]), new android.widget.FrameLayout.LayoutParams(96, 56));
+        r.addView(holder, new LinearLayout.LayoutParams(96, 56));
+        r.setOnClickListener(v -> {
             on[0] = !on[0];
-            style.run();
+            holder.removeAllViews();
+            holder.addView(switchView(c, on[0]), new android.widget.FrameLayout.LayoutParams(96, 56));
             onChange.accept(on[0]);
         });
-        r.addView(sw);
         return r;
     }
 
@@ -443,9 +665,11 @@ final class SettingsScreen implements CarScreen {
     }
 
     private void refresh() {
+        if (detail == null || apply == null) return;
         for (TextView p : profilePills) {
             boolean sel = pending.equals(p.getTag());
-            p.setBackground(CarStyle.round(sel ? CarStyle.ACCENT_BG : CarStyle.PILL_BG, 28));
+            p.setBackground(sel ? CarKit.outlined(CarStyle.ACCENT_BG, CarStyle.ACCENT, 28) : CarStyle.round(CarStyle.PILL_BG, 28));
+            p.setTextColor(sel ? CarStyle.ACCENT : CarStyle.TEXT);
         }
         String eff = pending.isEmpty() ? VideoProfile.recommended(host.context()) : pending;
         detail.setText((pending.isEmpty() ? Str.get(R.string.hql_follows_recommended, VideoProfile.title(eff)) + " · " : "")
@@ -454,7 +678,8 @@ final class SettingsScreen implements CarScreen {
         boolean fluidCounts = VideoProfile.of(eff).followsCar;
         for (TextView p : fluidPills) {
             boolean sel = pendingFluid == (int) p.getTag();
-            p.setBackground(CarStyle.round(sel ? CarStyle.ACCENT_BG : CarStyle.PILL_BG, 28));
+            p.setBackground(sel ? CarKit.outlined(CarStyle.ACCENT_BG, CarStyle.ACCENT, 28) : CarStyle.round(CarStyle.PILL_BG, 28));
+            p.setTextColor(sel ? CarStyle.ACCENT : CarStyle.TEXT);
             p.setAlpha(fluidCounts ? 1f : 0.5f);
         }
         boolean changed = !pending.equals(cfg.videoProfileChoice()) || pendingFluid != cfg.fluidity();

@@ -929,4 +929,10 @@
 &lt;p&gt;&lt;b&gt;6. Licencia y aceptación&lt;/b&gt;&lt;br&gt;El software se distribuye bajo la licencia GNU AGPL-3.0. Son aplicables sus secciones 15 y 16, relativas a la ausencia de garantías y a la limitación de responsabilidad. Estas condiciones no modifican los derechos que concede esa licencia ni excluyen responsabilidades o derechos que la legislación aplicable no permita excluir. Al marcar la casilla, el usuario declara haber leído y aceptado estas condiciones. La aceptación se guarda localmente al finalizar la configuración.&lt;/p&gt;</string>
     <string name="hql_tv_fill">Rellenar</string>
     <string name="hql_tv_fit">Ajustar</string>
+    <string name="hql_settings_sec_panel">Panel lateral</string>
+    <string name="hql_settings_sec_panel_sub">Lado, color y botones</string>
+    <string name="hql_settings_sec_trip">Viaje</string>
+    <string name="hql_settings_profile">Perfil de imagen</string>
+    <string name="hql_settings_behaviour">Comportamiento</string>
+    <string name="hql_settings_reconnect_note">Cambiar el perfil o la fluidez reconecta el coche y Android Auto (unos segundos).</string>
 </resources>

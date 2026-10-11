@@ -928,4 +928,10 @@
 &lt;p&gt;&lt;b&gt;6. License and acceptance&lt;/b&gt;&lt;br&gt;The software is distributed under GNU AGPL-3.0. Sections 15 and 16 concerning warranty disclaimers and limitation of liability apply. These terms do not change the rights granted by that license or exclude liabilities or rights that applicable law does not allow to be excluded. By checking the box, the user declares that these terms have been read and accepted. Acceptance is stored locally upon completion of setup.&lt;/p&gt;</string>
     <string name="hql_tv_fill">Fill screen</string>
     <string name="hql_tv_fit">Fit picture</string>
+    <string name="hql_settings_sec_panel">Side panel</string>
+    <string name="hql_settings_sec_panel_sub">Side, colour and buttons</string>
+    <string name="hql_settings_sec_trip">Trip</string>
+    <string name="hql_settings_profile">Image profile</string>
+    <string name="hql_settings_behaviour">Behaviour</string>
+    <string name="hql_settings_reconnect_note">Changing the profile or the smoothness reconnects the car and Android Auto (a few seconds).</string>
 </resources>
