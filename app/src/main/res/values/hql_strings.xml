@@ -23,17 +23,17 @@
     <string name="hql_auto_not_responding">Auto is not responding: %1$s</string>
     <string name="hql_autohide_panel">Hide the side panel after a few seconds</string>
     <string name="hql_nes">NES</string>
-    <string name="hql_nes_sub">Your ROMs, with a gamepad</string>
-    <string name="hql_nes_folder">NES games: ROM folder</string>
-    <string name="hql_nes_folder_set">ROM folder saved. In the car: Games › NES.</string>
-    <string name="hql_nes_no_folder">Choose the ROM folder on the phone: ⚙ menu › "NES games: ROM folder".</string>
-    <string name="hql_nes_empty">No .nes files in this folder.</string>
+    <string name="hql_nes_sub">Nestopia · your games, gamepad or touch</string>
+    <string name="hql_nes_folder">Games folder (NES, Mega Drive)</string>
+    <string name="hql_nes_folder_set">Games folder saved. In the car: Games › NES or Mega Drive.</string>
+    <string name="hql_nes_no_folder">Choose the games folder on the phone: ⚙ menu › Games › \"Games folder\". .zip files work too.</string>
+    <string name="hql_nes_empty">No %1$s games in this folder (.zip files work too).</string>
     <string name="hql_nes_pad_title">Gamepad connected to the car</string>
     <string name="hql_nes_pad_text">Play with the gamepad on the car screen. Press back to leave this screen.</string>
     <string name="hql_nes_pad_notification">Tap to open the gamepad screen while you play %1$s.</string>
     <string name="hql_nes_reset">Reset</string>
     <string name="hql_nes_touch">Touch buttons</string>
-    <string name="hql_nes_error">Could not open the ROM: %1$s</string>
+    <string name="hql_nes_error">Could not open the game: %1$s</string>
     <string name="hql_update_install">Download and install</string>
     <string name="hql_update_allow_unknown">To install the update from the app, allow HeadQLink to install unknown apps. Then tap "Download and install" again.</string>
     <string name="hql_update_open_setting">Open setting</string>
@@ -819,4 +819,12 @@
     <string name="hql_split_warn_title">Split screen</string>
     <string name="hql_split_warn_text">We recommend using it only with the car stopped: video and the web are distracting while driving. You use it at your own risk.</string>
     <string name="hql_split_accept">I accept</string>
+    <string name="hql_md">Mega Drive</string>
+    <string name="hql_md_sub">ClownMDEmu · your games, 6-button pad</string>
+    <string name="hql_menu_car">Car</string>
+    <string name="hql_menu_content">Extended mode content</string>
+    <string name="hql_menu_app">App</string>
+    <string name="hql_games_consoles">Consoles</string>
+    <string name="hql_games_quick">For the wait</string>
+    <string name="hql_games_play">Play</string>
 </resources>

@@ -566,9 +566,14 @@ To connect without opening the app:
 
 ## 5. Useful settings
 
-Everything is in the ⚙ menu on the main screen: "Requirements check", "Picture settings", "TV list" and "Radio list"
-(only in "Auto extended"), "Language", "Add widget to the home screen", "Add button to Quick Settings" (Android 13+) and
-"Diagnostics".
+Everything is in the ⚙ menu on the main screen, a panel that slides up from the bottom. "Virtual car" is at the top and
+"Diagnostics" at the bottom. In between, groups that open when tapped (each one says how many options it has):
+
+- **Car:** "Requirements check", "Picture settings" and "Car data".
+- **Extended mode content** (only in "Auto extended"): "TV list", "Radio list" and "Web bookmarks".
+- **Games** (only in "Auto extended"): "Games folder".
+- **App:** "Check for new version", "Language", "Add widget to the home screen" and "Add button to Quick Settings"
+  (Android 13+).
 
 ### "Picture settings"
 
@@ -664,12 +669,15 @@ Paste the URL of an M3U list or tap "Choose file". Without a radio list, the car
 The shortcuts on the car's "Web" screen (YouTube, Google, Wikipedia and Twitch by default). Add your own with a
 name and an address, remove them or reorder them with the arrows; "Defaults" puts back the original four.
 
-### "NES games: ROM folder" ("Auto extended")
+### "Games folder": NES and Mega Drive ("Auto extended")
 
-Pick the phone folder with your NES ROMs (.nes files; the app ships none). In the car, Games › NES opens that folder
-and its subfolders; tap a game to play, with touch buttons or a Bluetooth gamepad connected to the phone (d-pad, A,
-B, Start and Select). When a game starts, the phone shows "Gamepad connected to the car": keep it in front so the
-whole gamepad reaches the game. Only with the car stopped. Games with saved progress save it by themselves.
+⚙ menu › Games. Pick the phone folder with your games: one folder for every console, and .zip files work as they are
+(the app ships none). In the car, Games › NES or Games › Mega Drive open that folder and its subfolders, each with its
+own games (.nes; .md, .gen, .bin or .smd; and the .zip files that contain them). Tap a game to play, with touch buttons
+or a Bluetooth gamepad connected to the phone. On the Mega Drive, the gamepad's X, A and B are A, B and C; LB, Y and RB
+are X, Y and Z (six-button games), and Select is Mode. When a game starts, the phone shows "Gamepad connected to the
+car": keep it in front so the whole gamepad reaches the game. Only with the car stopped. Games with saved progress save
+it by themselves. The cores are RetroArch's: Nestopia (NES) and ClownMDEmu (Mega Drive).
 
 ### "Diagnostics"
 

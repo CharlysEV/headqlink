@@ -23,17 +23,17 @@
     <string name="hql_auto_not_responding">Android Auto reageert niet: %1$s</string>
     <string name="hql_autohide_panel">Zijpaneel na een paar seconden verbergen</string>
     <string name="hql_nes">NES</string>
-    <string name="hql_nes_sub">Je ROMs, met gamepad</string>
-    <string name="hql_nes_folder">NES-spellen: ROM-map</string>
-    <string name="hql_nes_folder_set">ROM-map opgeslagen. In de auto: Spellen › NES.</string>
-    <string name="hql_nes_no_folder">Kies de ROM-map op de telefoon: menu ⚙ › \'NES-spellen: ROM-map\'.</string>
-    <string name="hql_nes_empty">Geen .nes-bestanden in deze map.</string>
+    <string name="hql_nes_sub">Nestopia · je spellen, controller of aanraken</string>
+    <string name="hql_nes_folder">Spellenmap (NES, Mega Drive)</string>
+    <string name="hql_nes_folder_set">Spellenmap opgeslagen. In de auto: Spellen › NES of Mega Drive.</string>
+    <string name="hql_nes_no_folder">Kies de spellenmap op de telefoon: menu ⚙ › Spellen › \"Spellenmap\". .zip-bestanden werken ook.</string>
+    <string name="hql_nes_empty">Geen %1$s-spellen in deze map (.zip-bestanden werken ook).</string>
     <string name="hql_nes_pad_title">Gamepad verbonden met de auto</string>
     <string name="hql_nes_pad_text">Speel met de gamepad op het autoscherm. Druk op terug om dit scherm te verlaten.</string>
     <string name="hql_nes_pad_notification">Tik om het gamepadscherm te openen terwijl je %1$s speelt.</string>
     <string name="hql_nes_reset">Opnieuw</string>
     <string name="hql_nes_touch">Aanraakknoppen</string>
-    <string name="hql_nes_error">Kon de ROM niet openen: %1$s</string>
+    <string name="hql_nes_error">Kan het spel niet openen: %1$s</string>
     <string name="hql_update_install">Downloaden en installeren</string>
     <string name="hql_update_allow_unknown">Om de nieuwe versie vanuit de app te installeren, sta HeadQLink toe onbekende apps te installeren. Tik daarna opnieuw op \'Downloaden en installeren\'.</string>
     <string name="hql_update_open_setting">Instelling openen</string>
@@ -819,4 +819,12 @@
     <string name="hql_split_warn_title">Gesplitst scherm</string>
     <string name="hql_split_warn_text">We raden aan het alleen te gebruiken als de auto stilstaat: video en het web leiden af tijdens het rijden. Gebruik is op eigen risico.</string>
     <string name="hql_split_accept">Ik ga akkoord</string>
+    <string name="hql_md">Mega Drive</string>
+    <string name="hql_md_sub">ClownMDEmu · je spellen, 6-knops controller</string>
+    <string name="hql_menu_car">Auto</string>
+    <string name="hql_menu_content">Inhoud van de uitgebreide modus</string>
+    <string name="hql_menu_app">App</string>
+    <string name="hql_games_consoles">Consoles</string>
+    <string name="hql_games_quick">Voor het wachten</string>
+    <string name="hql_games_play">Spelen</string>
 </resources>

@@ -11,9 +11,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.andrerinas.openheadunit.R;
@@ -23,7 +25,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-/** Juegos sencillos para las esperas con el coche parado: 2048, memoria, tres en raya, Autonomía y coche volador. */
+/**
+ * Juegos con el coche parado: las consolas (NES y Mega Drive, con tus juegos) y juegos rápidos para las esperas: 2048,
+ * memoria, tres en raya, Autonomía y coche volador.
+ */
 final class GamesScreen implements CarScreen {
     private Host host;
     private View menu;
@@ -36,12 +41,14 @@ final class GamesScreen implements CarScreen {
             {R.string.hql_game_ttt, R.string.hql_game_ttt_sub},
             {R.string.hql_game_range, R.string.hql_game_range_sub},
             {R.string.hql_game_fly, R.string.hql_game_fly_sub},
-            {R.string.hql_nes, R.string.hql_nes_sub}};
+            {R.string.hql_nes, R.string.hql_nes_sub},
+            {R.string.hql_md, R.string.hql_md_sub}};
     private static final int[] ICONS = {R.drawable.hql_ic_game_2048, R.drawable.hql_ic_game_memory, R.drawable.hql_ic_game_ttt,
-            R.drawable.hql_ic_game_range, R.drawable.hql_ic_game_fly, R.drawable.hql_ic_games};
-    private static final int[] TINTS = {0xFFFDD663, 0xFF81C995, 0xFF8AB4F8, 0xFFF6AEA9, 0xFFC58AF9, 0xFFE8EAED};
-    /** Emulador NES (ROMs del usuario): navegador y juego dentro de esta pantalla. */
+            R.drawable.hql_ic_game_range, R.drawable.hql_ic_game_fly, R.drawable.hql_ic_games, R.drawable.hql_ic_games};
+    private static final int[] TINTS = {0xFFFDD663, 0xFF81C995, 0xFF8AB4F8, 0xFFF6AEA9, 0xFFC58AF9, 0xFFE8EAED, 0xFF78D9EC};
+    /** Emuladores (ROMs del usuario): navegador y juego dentro de esta pantalla. */
     private NesScreen nes;
+    private NesScreen md;
 
     private boolean running;
     /** Solo la vista previa: abrir este juego en modo demostración al crear la pantalla (-1: menú). */
@@ -51,33 +58,30 @@ final class GamesScreen implements CarScreen {
     public View create(Host h) {
         host = h;
         Context c = h.context();
-        LinearLayout row = new LinearLayout(c);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER);
-        for (int i = 0; i < GAMES.length; i++) {
-            int idx = i;
-            LinearLayout card = CarStyle.card(c);
-            card.setGravity(Gravity.CENTER);
-            ImageView icon = new ImageView(c);
-            icon.setImageResource(ICONS[i]);
-            icon.setImageTintList(ColorStateList.valueOf(0xFF202124));
-            icon.setBackground(CarStyle.round(TINTS[i], 60));
-            icon.setPadding(26, 26, 26, 26);
-            card.addView(icon, new LinearLayout.LayoutParams(120, 120));
-            TextView title = CarStyle.text(c, Str.get(GAMES[i][0]), 34, CarStyle.TEXT);
-            title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-            title.setPadding(0, 26, 0, 6);
-            title.setGravity(Gravity.CENTER);
-            card.addView(title);
-            TextView sub = CarStyle.text(c, Str.get(GAMES[i][1]), 22, CarStyle.TEXT_DIM);
-            sub.setGravity(Gravity.CENTER);
-            card.addView(sub);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(255, 330);
-            lp.setMargins(8, 0, 8, 0);
-            row.addView(card, lp);
-            card.setOnClickListener(v -> open(idx));
-        }
-        menu = row;
+        // Dos bloques: arriba las consolas (tus juegos de la carpeta), en tarjetas grandes con su color; debajo, los juegos
+        // rápidos para las esperas. Los anchos van por peso: se ajustan con el panel desplegado o la pantalla partida.
+        LinearLayout col = new LinearLayout(c);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER_VERTICAL);
+        col.setPadding(28, 20, 28, 20);
+        col.addView(section(c, Str.get(R.string.hql_games_consoles)));
+        LinearLayout consoles = new LinearLayout(c);
+        consoles.setOrientation(LinearLayout.HORIZONTAL);
+        consoles.addView(consoleCard(c, 5, "NES", Str.get(R.string.hql_nes_sub), 0xFFB71C1C, 0xFF3A3F47, "8-BIT"), weighted(250));
+        consoles.addView(consoleCard(c, 6, "MEGA DRIVE", Str.get(R.string.hql_md_sub), 0xFF0D47A1, 0xFF111317, "16-BIT"), weighted(250));
+        col.addView(consoles);
+        TextView quickLabel = section(c, Str.get(R.string.hql_games_quick));
+        quickLabel.setPadding(10, 34, 0, 12);
+        col.addView(quickLabel);
+        LinearLayout quick = new LinearLayout(c);
+        quick.setOrientation(LinearLayout.HORIZONTAL);
+        for (int i = 0; i < 5; i++) quick.addView(quickCard(c, i), weighted(230));
+        col.addView(quick);
+        ScrollView scroll = new ScrollView(c);
+        scroll.setFillViewport(true);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.addView(col, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        menu = scroll;
         if (previewGame >= 0) {
             int g = previewGame;
             previewGame = -1;
@@ -86,14 +90,107 @@ final class GamesScreen implements CarScreen {
                 if (current != null) current.demo();
             });
         }
-        return row;
+        return scroll;
+    }
+
+    private static LinearLayout.LayoutParams weighted(int height) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, height, 1f);
+        lp.setMargins(10, 0, 10, 0);
+        return lp;
+    }
+
+    /** Título de bloque en mayúsculas pequeñas, en el color de acento. */
+    private static TextView section(Context c, String text) {
+        TextView t = CarStyle.text(c, text.toUpperCase(java.util.Locale.getDefault()), 22, CarStyle.ACCENT);
+        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        t.setLetterSpacing(0.12f);
+        t.setPadding(10, 0, 0, 12);
+        return t;
+    }
+
+    /**
+     * Tarjeta de consola: degradado en su color, el nombre grande, una etiqueta («8-BIT», «16-BIT»), el núcleo y «Jugar ›».
+     * Sin logotipos de marca: solo texto.
+     */
+    private View consoleCard(Context c, int game, String name, String sub, int color, int dark, String bits) {
+        LinearLayout card = new LinearLayout(c);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(34, 26, 30, 26);
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{color, dark});
+        bg.setCornerRadius(32);
+        card.setBackground(bg);
+        ImageView icon = new ImageView(c);
+        icon.setImageResource(R.drawable.hql_ic_games);
+        icon.setImageTintList(ColorStateList.valueOf(0xFFFFFFFF));
+        icon.setBackground(CarStyle.round(0x33FFFFFF, 40));
+        icon.setPadding(30, 30, 30, 30);
+        card.addView(icon, new LinearLayout.LayoutParams(140, 140));
+        LinearLayout text = new LinearLayout(c);
+        text.setOrientation(LinearLayout.VERTICAL);
+        text.setPadding(30, 0, 12, 0);
+        TextView tag = CarStyle.text(c, bits, 18, 0xCCFFFFFF);
+        tag.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        tag.setLetterSpacing(0.2f);
+        tag.setPadding(12, 4, 12, 4);
+        tag.setBackground(CarStyle.round(0x33000000, 12));
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        text.addView(tag, tlp);
+        TextView title = CarStyle.text(c, name, 46, 0xFFFFFFFF);
+        title.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
+        title.setSingleLine(true);
+        title.setPadding(0, 8, 0, 2);
+        text.addView(title);
+        TextView s2 = CarStyle.text(c, sub, 22, 0xDDFFFFFF);
+        s2.setMaxLines(2);
+        text.addView(s2);
+        card.addView(text, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView play = CarStyle.text(c, Str.get(R.string.hql_games_play) + "  ›", 24, 0xFF101114);
+        play.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        play.setPadding(28, 14, 28, 14);
+        play.setBackground(CarStyle.round(0xFFFFFFFF, 30));
+        card.addView(play);
+        card.setOnClickListener(v -> open(game));
+        play.setOnClickListener(v -> open(game));
+        return card;
+    }
+
+    /** Tarjeta de juego rápido: icono en su círculo de color, nombre y una línea. */
+    private View quickCard(Context c, int i) {
+        LinearLayout card = CarStyle.card(c);
+        card.setGravity(Gravity.CENTER);
+        card.setPadding(16, 20, 16, 20);
+        ImageView icon = new ImageView(c);
+        icon.setImageResource(ICONS[i]);
+        icon.setImageTintList(ColorStateList.valueOf(0xFF202124));
+        icon.setBackground(CarStyle.round(TINTS[i], 50));
+        icon.setPadding(22, 22, 22, 22);
+        card.addView(icon, new LinearLayout.LayoutParams(100, 100));
+        TextView title = CarStyle.text(c, Str.get(GAMES[i][0]), 28, CarStyle.TEXT);
+        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        title.setPadding(0, 16, 0, 4);
+        title.setGravity(Gravity.CENTER);
+        title.setSingleLine(true);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        card.addView(title);
+        TextView sub = CarStyle.text(c, Str.get(GAMES[i][1]), 19, CarStyle.TEXT_DIM);
+        sub.setGravity(Gravity.CENTER);
+        sub.setMaxLines(2);
+        card.addView(sub);
+        card.setOnClickListener(v -> open(i));
+        return card;
     }
 
     private void open(int game) {
         Context c = host.context();
         if (game == 5) {
-            if (nes == null) nes = new NesScreen(host, () -> host.setContent(menu));
+            if (nes == null) nes = new NesScreen(host, () -> host.setContent(menu), GameConsole.NES);
             host.setContent(nes.browser());
+            return;
+        }
+        if (game == 6) {
+            if (md == null) md = new NesScreen(host, () -> host.setContent(menu), GameConsole.MD);
+            host.setContent(md.browser());
             return;
         }
         Board board = game == 0 ? new Game2048(c) : game == 1 ? new Memory(c) : game == 2 ? new TicTacToe(c)
@@ -911,6 +1008,7 @@ final class GamesScreen implements CarScreen {
     @Override
     public void destroy() {
         if (nes != null) nes.stopEngine();
+        if (md != null) md.stopEngine();
         running = false;
     }
 }

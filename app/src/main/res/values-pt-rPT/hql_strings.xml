@@ -23,17 +23,17 @@
     <string name="hql_auto_not_responding">O Auto não responde: %1$s</string>
     <string name="hql_autohide_panel">Ocultar o painel lateral após alguns segundos</string>
     <string name="hql_nes">NES</string>
-    <string name="hql_nes_sub">As suas ROMs, com comando</string>
-    <string name="hql_nes_folder">Jogos NES: pasta de ROMs</string>
-    <string name="hql_nes_folder_set">Pasta de ROMs guardada. No carro: Jogos › NES.</string>
-    <string name="hql_nes_no_folder">Escolha a pasta de ROMs no telemóvel: menu ⚙ › «Jogos NES: pasta de ROMs».</string>
-    <string name="hql_nes_empty">Não há ficheiros .nes nesta pasta.</string>
+    <string name="hql_nes_sub">Nestopia · os seus jogos, comando ou toque</string>
+    <string name="hql_nes_folder">Pasta de jogos (NES, Mega Drive)</string>
+    <string name="hql_nes_folder_set">Pasta de jogos guardada. No carro: Jogos › NES ou Mega Drive.</string>
+    <string name="hql_nes_no_folder">Escolha a pasta de jogos no telemóvel: menu ⚙ › Jogos › «Pasta de jogos». Ficheiros .zip também servem.</string>
+    <string name="hql_nes_empty">Não há jogos de %1$s nesta pasta (ficheiros .zip também servem).</string>
     <string name="hql_nes_pad_title">Comando ligado ao carro</string>
     <string name="hql_nes_pad_text">Jogue com o comando no ecrã do carro. Prima retroceder para sair deste ecrã.</string>
     <string name="hql_nes_pad_notification">Toque para abrir o ecrã do comando enquanto joga %1$s.</string>
     <string name="hql_nes_reset">Reiniciar</string>
     <string name="hql_nes_touch">Botões táteis</string>
-    <string name="hql_nes_error">Não foi possível abrir a ROM: %1$s</string>
+    <string name="hql_nes_error">Não foi possível abrir o jogo: %1$s</string>
     <string name="hql_update_install">Transferir e instalar</string>
     <string name="hql_update_allow_unknown">Para instalar a nova versão a partir da aplicação, permita ao HeadQLink instalar aplicações desconhecidas. Depois toque outra vez em «Transferir e instalar».</string>
     <string name="hql_update_open_setting">Abrir a definição</string>
@@ -820,4 +820,12 @@
     <string name="hql_split_warn_title">Ecrã dividido</string>
     <string name="hql_split_warn_text">Recomenda-se usar com o carro parado: o vídeo e a web distraem durante a condução. A utilização é da sua responsabilidade.</string>
     <string name="hql_split_accept">Aceito</string>
+    <string name="hql_md">Mega Drive</string>
+    <string name="hql_md_sub">ClownMDEmu · os seus jogos, comando de 6 botões</string>
+    <string name="hql_menu_car">Carro</string>
+    <string name="hql_menu_content">Conteúdo do modo alargado</string>
+    <string name="hql_menu_app">App</string>
+    <string name="hql_games_consoles">Consolas</string>
+    <string name="hql_games_quick">Para a espera</string>
+    <string name="hql_games_play">Jogar</string>
 </resources>

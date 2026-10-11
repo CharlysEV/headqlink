@@ -2446,3 +2446,31 @@ Prueba: `NesInputTest.flickeringSpritesBlendInsteadOfVanishingAt30Fps`.
 
 - **Juego ×4:** sin cabecera, el juego usa todo el alto. `NesView.scale` busca el mayor aumento entero que quepa recortando como mucho 2 líneas arriba y abajo (`MAX_CROP`, el borde que las teles no enseñaban): en el C10, ×4 con 220 líneas (1024x880) en vez de ×3 (768x672). «‹ NES» y el título arriba a la izquierda, «Reiniciar» y «Botones táctiles» arriba a la derecha, cruceta y B/A abajo a los lados, Select y Start a media altura. Medido: 30 fps estables (150 fotogramas nuevos cada 5 s).
 - **Panel:** se recoge solo a los 8 s sin tocar también con nuestras pantallas (fotos, TV, juegos…), no solo con AA: `CarUi.setHidden` ya no exige AA y `open()` programa el ocultado.
+
+### 32.6 Núcleo Nestopia (el de RetroArch) con halfNES de reserva (0.2.45)
+
+- **Por qué:** Super Pang no abría («Unsupported mapper: 141», Sachen 8259A): halfNES no tiene ese cartucho. Nestopia sí (`NstBoardSachenS8259`) y es más fiel en general.
+- **Licencia:** se descartó FCEUmm porque varios de sus ficheros (y el README) dicen solo «GPL v2», sin «o posterior», y no se pueden combinar con la AGPL v3. En Nestopia los 623 ficheros de `source/core` dicen «any later version»; `nes_ntsc` es LGPL 2.1 o posterior. Del frontend de libretro (`libretro/`) no se copia nada.
+- **Cómo:** `app/src/main/cpp/nestopia` (sin cambios, ver su `UPSTREAM.md`) + `hql_nes.cpp` (puente JNI propio) → `libhqlnes`. `NestopiaEngine` hace lo mismo que `NesEngine`: 256x224 sin las 8 líneas de arriba y abajo, tres Bitmap, mezcla de dos en dos a 30 fps, estadísticas cada 5 s. El sonido (44,1 kHz mono, AudioTrack con escritura bloqueante y 4 fotogramas de búfer) marca el ritmo, con un reloj de 60 fps de reserva. El mando es un `PuppetController` que además guarda los botones en el orden de bits de Nestopia (`NestopiaEngine.Pad`), así `NesInput` no cambia. La partida de la pila se guarda en `<rom>.sav`, como hacía halfNES. La base de datos de cartuchos (`assets/nes/NstDatabase.xml`) corrige cabeceras mal puestas.
+- **Reserva:** `NesCore.open` prueba Nestopia y, si la librería no carga o no lee la ROM, halfNES. Las NSF van a halfNES.
+- **Pulsaciones cortas:** el mando (`RetroPad`) recuerda lo pulsado desde la última lectura, así un toque más corto que un fotograma (16 ms) también llega al juego.
+
+### 32.7 Mega Drive, carpeta única con .zip y menú ⚙ por grupos (0.2.45)
+
+- **Núcleo:** ClownMDEmu (Clownacy), el de RetroArch. Es AGPL v3 o posterior, la misma licencia que HeadQLink. Genesis Plus GX y PicoDrive quedan fuera por sus cláusulas «no comercial»: aunque HeadQLink no se venda, la AGPL deja a cualquiera hacerlo, así que no se pueden combinar. Va en `app/src/main/cpp/clownmdemu` (núcleo + `mixer.h` + clownresampler, 0BSD; ver `UPSTREAM.md`) con el puente propio `hql_md.c` → `libhqlmd`. El sonido sale del mezclador a la frecuencia del PSG (~224 kHz) y clownresampler lo pasa a 44,1 kHz estéreo. La imagen es de 320x224 (o 256x224 en modo estrecho; 240 líneas en PAL; hasta 320x480 entrelazada). Es PAL solo si la cabecera dice únicamente Europa. La SRAM del cartucho se guarda en `<rom>.sav`. Sin Mega CD.
+- **Común a las dos consolas:**
+  - `GameCore`: la interfaz de los núcleos. `GameCore.open` elige el núcleo según la consola.
+  - `NativeCore`: el hilo, los Bitmap por tamaño, la mezcla a 30 fps, el AudioTrack que marca el ritmo, las estadísticas y el .sav.
+  - `RetroPad`: el mando. Sus bits siguen el orden de ClownMDEmu; `nesBits` los convierte para Nestopia y halfNES recibe los suyos por su `PuppetController`.
+  - `GameConsole`: las extensiones de cada consola, la subcarpeta de `files/` y el reparto de botones del mando Bluetooth. Mega Drive: X/A/B → A/B/C, LB/Y/RB → X/Y/Z, Select → Mode.
+  - `NesScreen` sirve a las dos consolas: botones táctiles A-B-C en diagonal en Mega Drive, aumento entero según el tamaño del fotograma (×4 en el C10 también para 320x224).
+- **Carpeta única:** una sola «Carpeta de juegos» para todas las consolas. Cada una lista sus archivos, y los .zip según el primer archivo de juego que llevan dentro (se leen solo las cabeceras y se recuerda por documento). Al jugar, la ROM se saca del .zip a `files/<consola>/`.
+- **Juegos:** la fila de tarjetas se desliza (siete ya no caben).
+- **Menú ⚙:** un panel inferior en vez del menú desplegable.
+  - Arriba, «Coche virtual»; abajo, «Diagnóstico».
+  - En medio, los grupos plegables «Coche», «Contenido del modo extendido», «Juegos» y «App». Cada grupo muestra su número de opciones y recuerda si estaba abierto mientras viva la app.
+- **Sin estela a 30 fps:** la mezcla de dos en dos (§32.4) dejaba estela en lo que se mueve (Sonic). Ahora `NativeCore.flickerBlend` solo mezcla el píxel que es igual en dos pares seguidos y distinto en el impar de en medio, es decir, lo que parpadea. Lo que se mueve o hace scroll cambia también entre pares y se enseña limpio. Mario tocado sigue viéndose a medias. Vale también para halfNES.
+- **Pantalla Juegos:** dos bloques. «Consolas» lleva NES y Mega Drive en tarjetas grandes con degradado de su color, etiqueta 8-BIT/16-BIT, núcleo y «Jugar ›», sin logotipos de marca. «Para la espera» lleva los cinco juegos rápidos. Los anchos van por peso.
+- **Probado en el coche virtual (S25 Ultra):**
+  - Super Pang (mapper 141) y Mario con Nestopia: 60,2 fps emulados, 30 entregados, 0 cortes de audio.
+  - Sonic 1 desde .zip con ClownMDEmu: 60 fps, 320x224 a ×4, 0 cortes; Start y cruceta llegan al juego.

@@ -574,9 +574,14 @@ Para conectar sin abrir la app:
 
 ## 5. Ajustes útiles
 
-Todo está en el menú ⚙ de la pantalla principal: «Comprobación», «Ajustes de imagen», «Lista de TV» y «Lista de radio»
-(solo en «Auto extendido»), «Idioma», «Añadir widget a la pantalla de inicio», «Añadir botón a los ajustes rápidos»
-(Android 13+) y «Diagnóstico».
+Todo está en el menú ⚙ de la pantalla principal, un panel que sube desde abajo. Arriba está «Coche virtual» y abajo
+«Diagnóstico». En medio, grupos que se despliegan al tocarlos (cada uno dice cuántas opciones tiene):
+
+- **Coche:** «Comprobación», «Ajustes de imagen» y «Datos del coche».
+- **Contenido del modo extendido** (solo en «Auto extendido»): «Lista de TV», «Lista de radio» y «Marcadores web».
+- **Juegos** (solo en «Auto extendido»): «Carpeta de juegos».
+- **App:** «Buscar versión nueva», «Idioma», «Añadir widget a la pantalla de inicio» y «Añadir botón a los ajustes
+  rápidos» (Android 13+).
 
 ### «Ajustes de imagen»
 
@@ -675,13 +680,15 @@ populares.
 Los accesos de la pantalla «Web» del coche (de serie, YouTube, Google, Wikipedia y Twitch). Añade los tuyos con
 nombre y dirección, quítalos o cámbialos de orden con las flechas; «Los de serie» los deja como venían.
 
-### «Juegos NES: carpeta de ROMs» («Auto extendido»)
+### «Carpeta de juegos»: NES y Mega Drive («Auto extendido»)
 
-Elige la carpeta del móvil donde tienes tus ROMs de NES (archivos .nes; la app no lleva ninguna). En el coche, Juegos ›
-NES abre esa carpeta con sus subcarpetas; toca un juego para jugar, con botones táctiles o con un mando Bluetooth
-conectado al móvil (cruceta, A, B, Start y Select). Al empezar, en el móvil se abre «Mando conectado al coche»: déjala
-delante para que el mando entero llegue al juego. Solo con el coche parado. Los juegos con partida guardada la guardan
-solos.
+Menú ⚙ › Juegos. Elige la carpeta del móvil donde tienes tus juegos: una sola carpeta para todas las consolas, y valen
+tal cual los .zip (la app no lleva ninguno). En el coche, Juegos › NES o Juegos › Mega Drive abren esa carpeta con sus
+subcarpetas, cada uno con sus juegos (.nes; .md, .gen, .bin o .smd; y los .zip que los llevan dentro). Toca un juego
+para jugar, con botones táctiles o con un mando Bluetooth conectado al móvil. En la Mega Drive, X, A y B del mando son
+A, B y C; LB, Y y RB son X, Y y Z (juegos de seis botones), y Select es Mode. Al empezar, en el móvil se abre «Mando
+conectado al coche»: déjala delante para que el mando entero llegue al juego. Solo con el coche parado. Los juegos con
+partida guardada la guardan solos. Los núcleos son los de RetroArch: Nestopia (NES) y ClownMDEmu (Mega Drive).
 
 ### «Diagnóstico»
 

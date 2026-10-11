@@ -585,9 +585,14 @@ Per connetterti senza aprire l'app:
 
 ## 5. Impostazioni utili
 
-È tutto nel menu ⚙ della schermata principale: «Verifica requisiti», «Impostazioni immagine», «Lista TV» e «Lista radio»
-(solo in «Auto esteso»), «Lingua», «Aggiungi widget alla schermata Home», «Aggiungi pulsante a Impostazioni rapide»
-(Android 13+) e «Diagnostica».
+È tutto nel menu ⚙ della schermata principale, un pannello che sale dal basso. In alto c'è «Auto virtuale» e in basso
+«Diagnostica». In mezzo, gruppi che si aprono toccandoli (ognuno dice quante opzioni ha):
+
+- **Auto:** «Verifica requisiti», «Impostazioni immagine» e «Dati dell'auto».
+- **Contenuti della modalità estesa** (solo in «Auto esteso»): «Lista TV», «Lista radio» e «Segnalibri web».
+- **Giochi** (solo in «Auto esteso»): «Cartella giochi».
+- **App:** «Cerca nuova versione», «Lingua», «Aggiungi widget alla schermata Home» e «Aggiungi pulsante a Impostazioni
+  rapide» (Android 13+).
 
 ### «Impostazioni immagine»
 
@@ -688,13 +693,15 @@ Incolla l'URL di una lista M3U o tocca «Scegli file». Senza una lista radio, l
 Le scorciatoie della schermata «Web» dell'auto (di default YouTube, Google, Wikipedia e Twitch). Aggiungi i tuoi con
 nome e indirizzo, toglili o riordinali con le frecce; «Predefiniti» rimette i quattro originali.
 
-### «Giochi NES: cartella delle ROM» («Auto esteso»)
+### «Cartella giochi»: NES e Mega Drive («Auto esteso»)
 
-Scegli la cartella del telefono con le tue ROM NES (file .nes; l'app non ne include). In auto, Giochi › NES apre
-quella cartella con le sottocartelle; tocca un gioco per giocare, con i pulsanti touch o con un gamepad Bluetooth
-collegato al telefono (croce, A, B, Start e Select). All'avvio, sul telefono compare «Gamepad collegato all'auto»:
-lasciala davanti perché tutto il gamepad arrivi al gioco. Solo a veicolo fermo. I giochi con salvataggio lo fanno da
-soli.
+Menu ⚙ › Giochi. Scegli la cartella del telefono con i tuoi giochi: una sola cartella per tutte le console, e i .zip
+vanno bene così come sono (l'app non ne include). In auto, Giochi › NES o Giochi › Mega Drive aprono quella cartella con
+le sottocartelle, ognuno con i suoi giochi (.nes; .md, .gen, .bin o .smd; e i .zip che li contengono). Tocca un gioco
+per giocare, con i pulsanti touch o con un gamepad Bluetooth collegato al telefono. Sul Mega Drive, X, A e B del
+gamepad sono A, B e C; LB, Y e RB sono X, Y e Z (giochi a sei tasti), e Select è Mode. All'avvio, sul telefono compare
+«Gamepad collegato all'auto»: lasciala davanti perché tutto il gamepad arrivi al gioco. Solo a veicolo fermo. I giochi
+con salvataggio lo fanno da soli. I core sono quelli di RetroArch: Nestopia (NES) e ClownMDEmu (Mega Drive).
 
 ### «Diagnostica»
 

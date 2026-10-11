@@ -85,3 +85,23 @@ target_link_libraries(hur_soft_hevc PRIVATE ${log-lib} ${android-lib})
 # =========================================================================
 add_library(hqlnet SHARED hql_netstat.c)
 target_link_libraries(hqlnet log)
+
+# =========================================================================
+# headqlink: emulador NES con el núcleo de Nestopia (nestopia/, GPL v2 o posterior) y un puente JNI propio (hql_nes.cpp)
+# =========================================================================
+file(GLOB_RECURSE HQL_NESTOPIA_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/nestopia/source/core/*.cpp")
+add_library(hqlnes SHARED hql_nes.cpp ${HQL_NESTOPIA_SOURCES})
+target_include_directories(hqlnes PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_options(hqlnes PRIVATE -O2 -fexceptions -frtti -Wno-c++11-narrowing -w)
+target_compile_definitions(hqlnes PRIVATE NDEBUG)
+target_link_libraries(hqlnes PRIVATE log z)
+
+# =========================================================================
+# headqlink: emulador de Mega Drive con el núcleo ClownMDEmu (clownmdemu/, AGPL v3 o posterior) y un puente JNI propio
+# (hql_md.c). core/unity.c compila todo el núcleo (68000, Z80, VDP, FM, PSG) en una sola unidad.
+# =========================================================================
+add_library(hqlmd SHARED hql_md.c clownmdemu/core/unity.c clownmdemu/clownresampler/clownresampler.c)
+target_include_directories(hqlmd PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_options(hqlmd PRIVATE -O2 -w)
+target_compile_definitions(hqlmd PRIVATE NDEBUG)
+target_link_libraries(hqlmd PRIVATE log m)

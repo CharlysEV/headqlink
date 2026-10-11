@@ -34,8 +34,22 @@ three.js (3D car in the Status tab):
   app/src/main/assets/three/three.min.js is three.js r149 (https://threejs.org), Copyright 2010-2023
   three.js authors, MIT License (app/src/main/assets/three/LICENSE).
 
+Mega Drive emulator (Games > Mega Drive, the user's own ROM files):
+  The core is ClownMDEmu by Clownacy (https://github.com/Clownacy/clownmdemu-core, through clownmdemu-libretro and
+  clownmdemu-frontend-common), copied unmodified into app/src/main/cpp/clownmdemu: the emulator core, clown68000,
+  clownz80 and the audio mixer are licensed under the GNU Affero General Public License v3 or later, like HeadQLink;
+  clowncommon and clownresampler are 0BSD. See clownmdemu/UPSTREAM.md and the LICENCE.txt files there. The libretro
+  frontend is not used: app/src/main/cpp/hql_md.c is HeadQLink's own JNI bridge. Sega and Mega Drive are trademarks of
+  Sega; HeadQLink is not affiliated with Sega.
+
 NES emulator (Games > NES, the user's own ROM files):
-  The nescore module is halfNES (https://github.com/andrew-hoffman/halfnes) by Andrew Hoffman, licensed under the
+  The main core is Nestopia (libretro port, https://github.com/libretro/nestopia, based on Nestopia JG,
+  https://gitlab.com/jgemu/nestopia), copied unmodified into app/src/main/cpp/nestopia (source/core: GNU General
+  Public License v2 or later; source/nes_ntsc by Shay Green: GNU Lesser General Public License v2.1 or later;
+  see the COPYING and license.txt files there). Its cartridge database (app/src/main/assets/nes/NstDatabase.xml)
+  comes from the same project. The libretro frontend is not used: app/src/main/cpp/hql_nes.cpp is HeadQLink's own
+  JNI bridge. Both are combined with HeadQLink under the "or later" terms and section 13 of the AGPL v3.
+  The fallback core, the nescore module, is halfNES (https://github.com/andrew-hoffman/halfnes) by Andrew Hoffman, licensed under the
   GNU General Public License v3.0 and combined with HeadQLink under section 13 of both licenses. Its desktop parts
   (Swing, AWT, JavaFX, JInput) were removed; see nescore/UPSTREAM.md for the changes. HeadQLink ships no game ROMs:
   the user picks a folder with their own files. Nintendo and NES are trademarks of Nintendo; HeadQLink is not

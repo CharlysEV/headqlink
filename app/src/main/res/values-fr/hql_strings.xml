@@ -23,17 +23,17 @@
     <string name="hql_auto_not_responding">Auto ne répond pas : %1$s</string>
     <string name="hql_autohide_panel">Masquer le panneau latéral après quelques secondes</string>
     <string name="hql_nes">NES</string>
-    <string name="hql_nes_sub">Vos ROM, avec une manette</string>
-    <string name="hql_nes_folder">Jeux NES : dossier des ROM</string>
-    <string name="hql_nes_folder_set">Dossier des ROM enregistré. Dans la voiture : Jeux › NES.</string>
-    <string name="hql_nes_no_folder">Choisissez le dossier des ROM sur le téléphone : menu ⚙ › « Jeux NES : dossier des ROM ».</string>
-    <string name="hql_nes_empty">Aucun fichier .nes dans ce dossier.</string>
+    <string name="hql_nes_sub">Nestopia · vos jeux, manette ou tactile</string>
+    <string name="hql_nes_folder">Dossier des jeux (NES, Mega Drive)</string>
+    <string name="hql_nes_folder_set">Dossier des jeux enregistré. Dans la voiture : Jeux › NES ou Mega Drive.</string>
+    <string name="hql_nes_no_folder">Choisissez le dossier des jeux sur le téléphone : menu ⚙ › Jeux › « Dossier des jeux ». Les .zip fonctionnent aussi.</string>
+    <string name="hql_nes_empty">Aucun jeu %1$s dans ce dossier (les .zip fonctionnent aussi).</string>
     <string name="hql_nes_pad_title">Manette connectée à la voiture</string>
     <string name="hql_nes_pad_text">Jouez avec la manette sur l\'écran de la voiture. Appuyez sur retour pour quitter cet écran.</string>
     <string name="hql_nes_pad_notification">Touchez pour ouvrir l\'écran de la manette pendant que vous jouez à %1$s.</string>
     <string name="hql_nes_reset">Réinitialiser</string>
     <string name="hql_nes_touch">Boutons tactiles</string>
-    <string name="hql_nes_error">Impossible d\'ouvrir la ROM : %1$s</string>
+    <string name="hql_nes_error">Impossible d’ouvrir le jeu : %1$s</string>
     <string name="hql_update_install">Télécharger et installer</string>
     <string name="hql_update_allow_unknown">Pour installer la nouvelle version depuis l\'app, autorisez HeadQLink à installer des apps inconnues. Puis touchez à nouveau « Télécharger et installer ».</string>
     <string name="hql_update_open_setting">Ouvrir le réglage</string>
@@ -820,4 +820,12 @@
     <string name="hql_split_warn_title">Écran partagé</string>
     <string name="hql_split_warn_text">Il est recommandé de l\'utiliser à l\'arrêt : en conduisant, la vidéo et le web distraient. Vous l\'utilisez sous votre responsabilité.</string>
     <string name="hql_split_accept">J\'accepte</string>
+    <string name="hql_md">Mega Drive</string>
+    <string name="hql_md_sub">ClownMDEmu · vos jeux, manette 6 boutons</string>
+    <string name="hql_menu_car">Voiture</string>
+    <string name="hql_menu_content">Contenu du mode étendu</string>
+    <string name="hql_menu_app">Appli</string>
+    <string name="hql_games_consoles">Consoles</string>
+    <string name="hql_games_quick">Pour patienter</string>
+    <string name="hql_games_play">Jouer</string>
 </resources>

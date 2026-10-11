@@ -23,17 +23,17 @@
     <string name="hql_auto_not_responding">Android Auto non risponde: %1$s</string>
     <string name="hql_autohide_panel">Nascondi il pannello laterale dopo qualche secondo</string>
     <string name="hql_nes">NES</string>
-    <string name="hql_nes_sub">Le tue ROM, con il gamepad</string>
-    <string name="hql_nes_folder">Giochi NES: cartella delle ROM</string>
-    <string name="hql_nes_folder_set">Cartella delle ROM salvata. In auto: Giochi › NES.</string>
-    <string name="hql_nes_no_folder">Scegli la cartella delle ROM sul telefono: menu ⚙ › «Giochi NES: cartella delle ROM».</string>
-    <string name="hql_nes_empty">Nessun file .nes in questa cartella.</string>
+    <string name="hql_nes_sub">Nestopia · i tuoi giochi, gamepad o touch</string>
+    <string name="hql_nes_folder">Cartella giochi (NES, Mega Drive)</string>
+    <string name="hql_nes_folder_set">Cartella giochi salvata. In auto: Giochi › NES o Mega Drive.</string>
+    <string name="hql_nes_no_folder">Scegli la cartella dei giochi sul telefono: menu ⚙ › Giochi › «Cartella giochi». Vanno bene anche i .zip.</string>
+    <string name="hql_nes_empty">Nessun gioco %1$s in questa cartella (vanno bene anche i .zip).</string>
     <string name="hql_nes_pad_title">Gamepad collegato all\'auto</string>
     <string name="hql_nes_pad_text">Gioca con il gamepad sullo schermo dell\'auto. Premi indietro per uscire da questa schermata.</string>
     <string name="hql_nes_pad_notification">Tocca per aprire la schermata del gamepad mentre giochi a %1$s.</string>
     <string name="hql_nes_reset">Riavvia</string>
     <string name="hql_nes_touch">Pulsanti touch</string>
-    <string name="hql_nes_error">Impossibile aprire la ROM: %1$s</string>
+    <string name="hql_nes_error">Impossibile aprire il gioco: %1$s</string>
     <string name="hql_update_install">Scarica e installa</string>
     <string name="hql_update_allow_unknown">Per installare la nuova versione dall\'app, consenti a HeadQLink di installare app sconosciute. Poi tocca di nuovo «Scarica e installa».</string>
     <string name="hql_update_open_setting">Apri l\'impostazione</string>
@@ -820,4 +820,12 @@
     <string name="hql_split_warn_title">Schermo diviso</string>
     <string name="hql_split_warn_text">Si consiglia di usarlo a veicolo fermo: durante la guida, video e web distraggono. Lo usi sotto la tua responsabilità.</string>
     <string name="hql_split_accept">Accetto</string>
+    <string name="hql_md">Mega Drive</string>
+    <string name="hql_md_sub">ClownMDEmu · i tuoi giochi, pad a 6 tasti</string>
+    <string name="hql_menu_car">Auto</string>
+    <string name="hql_menu_content">Contenuti della modalità estesa</string>
+    <string name="hql_menu_app">App</string>
+    <string name="hql_games_consoles">Console</string>
+    <string name="hql_games_quick">Per l\'attesa</string>
+    <string name="hql_games_play">Gioca</string>
 </resources>

@@ -14,18 +14,11 @@ import com.grapeshot.halfnes.ui.PuppetController;
 import com.grapeshot.halfnes.video.NesColors;
 
 /**
- * Emulador NES (núcleo halfNES, módulo :nescore) dentro de HeadQLink: corre en su hilo a 60 fps, dibuja cada fotograma en
+ * Emulador NES de reserva (núcleo halfNES, módulo :nescore; el principal es NestopiaEngine) dentro de HeadQLink: corre en su hilo a 60 fps, dibuja cada fotograma en
  * un Bitmap de 256x224 (sin las 8 líneas de arriba y abajo, como halfNES) y saca el sonido por un AudioTrack. Los mandos
  * son PuppetController: NesInput los mueve con las teclas del mando Bluetooth o los botones táctiles.
  */
-final class NesEngine implements GUIInterface {
-    interface Listener {
-        /** Fotograma nuevo (hilo del emulador). */
-        void onFrame(Bitmap frame);
-
-        void onMessage(String text);
-    }
-
+final class NesEngine implements GUIInterface, GameCore {
     static final int W = 256;
     static final int H = 224;
     private static final int CLIP = 8;
@@ -33,12 +26,14 @@ final class NesEngine implements GUIInterface {
     private final NES nes;
     private final PuppetController pad1 = new PuppetController();
     private final PuppetController pad2 = new PuppetController();
+    private final RetroPad pad = new RetroPad(pad1);
     /** Tres búferes: el que se escribe nunca es el que la pantalla puede estar dibujando. */
     private final Bitmap[] frames = {Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888), Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888),
             Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)};
     private final int[] argb = new int[W * H];
     /** El fotograma impar anterior, para mezclarlo con el par cuando la sesión va a 30 fps. */
     private final int[] prev = new int[W * H];
+    private final int[] lastEven = new int[W * H];
     private int loggedRate;
     private int frameIdx;
     /** Fotogramas emulados: la pantalla del coche va a 30 Hz, así que solo se entrega uno de cada dos (los pares). */
@@ -64,23 +59,27 @@ final class NesEngine implements GUIInterface {
         nes.setControllers(pad1, pad2);
     }
 
-    void setListener(Listener l) {
+    @Override
+    public void setListener(Listener l) {
         listener = l;
     }
 
-    PuppetController pad1() {
-        return pad1;
+    @Override
+    public RetroPad pad() {
+        return pad;
     }
 
     /** Carga la ROM (ruta real; la copia de la carpeta elegida). Devuelve el error, o null si arranca. */
-    String load(String path) {
+    @Override
+    public String load(String path) {
         lastError = null;
         nes.loadROM(path);
         if (lastError != null) return lastError;
         return nes.runEmulation ? null : "no arranca";
     }
 
-    void start() {
+    @Override
+    public void start() {
         if (thread != null) return;
         thread = new Thread(() -> {
             // Como el audio: que no lo desplacen los hilos de dibujo (los saltos de imagen venían de ahí y del redibujo a 60).
@@ -98,12 +97,14 @@ final class NesEngine implements GUIInterface {
         nes.resume();
     }
 
-    void reset() {
+    @Override
+    public void reset() {
         nes.reset();
     }
 
     /** Para el emulador y guarda la SRAM del juego (partidas de los juegos que la tienen). */
-    void stop() {
+    @Override
+    public void stop() {
         listener = null;
         nes.quit();
         Thread t = thread;
@@ -119,7 +120,8 @@ final class NesEngine implements GUIInterface {
         if (a != null) a.destroy();
     }
 
-    String romInfo() {
+    @Override
+    public String romInfo() {
         return nes.getrominfo();
     }
 
@@ -153,27 +155,20 @@ final class NesEngine implements GUIInterface {
         boolean full = rate >= 50;
         if (rate != loggedRate) {
             loggedRate = rate;
-            L.i("NES: sesión a " + rate + " fps: " + (full ? "todos los fotogramas" : "fotogramas mezclados de dos en dos (los parpadeos se ven)"));
+            L.i("NES: sesión a " + rate + " fps: " + (full ? "todos los fotogramas" : "de dos en dos, mezclando solo lo que parpadea (sin estela en lo que se mueve)"));
         }
         if (!full) {
             if ((emulated & 1) != 0) {
                 System.arraycopy(argb, 0, prev, 0, W * H);
                 return;
             }
-            blend(prev, argb);
+            NativeCore.flickerBlend(prev, argb, lastEven, W * H);
         }
         shown++;
         Bitmap b = frames[frameIdx];
         frameIdx = (frameIdx + 1) % frames.length;
         b.setPixels(argb, 0, W, 0, 0, W, H);
         l.onFrame(b);
-    }
-
-    /** Puro: mezcla al 50 % (por canal) el fotograma anterior a con el actual b, en b. */
-    static void blend(int[] a, int[] b) {
-        for (int i = 0; i < b.length; i++) {
-            b[i] = 0xFF000000 | (((a[i] & 0xFEFEFE) >>> 1) + ((b[i] & 0xFEFEFE) >>> 1));
-        }
     }
 
     /** Cada 5 s, al log: fotogramas emulados y entregados por segundo y veces que el audio se quedó sin datos. */

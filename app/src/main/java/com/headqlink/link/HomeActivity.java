@@ -516,78 +516,149 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         });
     }
 
+    /** Grupos del menú desplegados (mientras viva la app): se abren como se dejaron. */
+    private static final java.util.Set<Integer> openGroups = new java.util.HashSet<>();
+
+    /**
+     * Menú ⚙: panel inferior con el coche virtual arriba, los ajustes en grupos que se despliegan (Coche, Contenido del modo
+     * extendido, Juegos, App) y Diagnóstico abajo. Así crece sin hacerse una lista interminable (más emuladores, más
+     * listas…).
+     */
     private void showMenu(View anchor) {
-        android.widget.PopupMenu pm = new android.widget.PopupMenu(this, anchor);
-        android.view.Menu m = pm.getMenu();
         boolean ext = Config.MODE_AA_EXT.equals(cfg.mode());
-        m.add(0, 7, 0, Str.get(R.string.hql_req_title));
-        m.add(0, 1, 1, Str.get(R.string.hql_image_settings));
-        if (ext) {
-            m.add(0, 2, 2, Str.get(R.string.hql_tv_list));
-            m.add(0, 3, 3, Str.get(R.string.hql_radio_list));
-            m.add(0, 12, 3, Str.get(R.string.hql_web_bookmarks));
-            m.add(0, 14, 3, Str.get(R.string.hql_nes_folder));
-        }
-        // Datos reales del coche (cuenta Leapmotor, opcional y de solo lectura): CarCloudActivity.
-        m.add(0, 10, 3, Str.get(R.string.hql_cloud_menu));
-        m.add(0, 13, 3, Str.get(R.string.hql_update_check));
-        if (android.os.Build.VERSION.SDK_INT >= 33) m.add(0, 4, 4, Str.get(R.string.hql_language));
-        if (android.os.Build.VERSION.SDK_INT >= 26) m.add(0, 8, 5, Str.get(R.string.hql_w_add_widget));
-        if (android.os.Build.VERSION.SDK_INT >= 33) m.add(0, 9, 5, Str.get(R.string.hql_w_add_tile));
+        com.google.android.material.bottomsheet.BottomSheetDialog sheet = new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        float d = getResources().getDisplayMetrics().density;
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setPadding(0, Math.round(8 * d), 0, Math.round(16 * d));
+        col.setBackgroundColor(0xFF161C24);
         // Coche virtual: la pantalla del coche en el móvil (Android Auto, nuestras pantallas y rutas reales), sin coche.
-        m.add(0, 11, 6, Str.get(R.string.hql_sim_menu));
-        m.add(0, 6, 6, Str.get(R.string.hql_diagnostics));
-        pm.setOnMenuItemClickListener(item -> {
-            switch (item.getItemId()) {
-                case 1:
-                    showVideoSettings();
-                    break;
-                case 2:
-                    showList(false);
-                    break;
-                case 3:
-                    showList(true);
-                    break;
-                case 4:
-                    showLanguage();
-                    break;
-                case 7:
-                    startActivity(new Intent(this, ChecklistActivity.class));
-                    break;
-                case 8:
-                    WidgetUpdater.requestPin(this);
-                    break;
-                case 9:
-                    LinkTileService.requestAdd(this);
-                    break;
-                case 10:
-                    startActivity(new Intent(this, CarCloudActivity.class));
-                    break;
-                case 12:
-                    showBookmarks();
-                    break;
-                case 13:
-                    checkUpdateNow();
-                    break;
-                case 14:
-                    // Carpeta de ROMs: permiso persistente sobre el árbol elegido (ver onActivityResult).
-                    startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_NES_TREE);
-                    break;
-                case 11:
-                    if (LinkState.running && (LinkState.car == LinkState.Car.CONNECTED || LinkState.car == LinkState.Car.RECONNECTING)) {
-                        // Con el coche de verdad conectado, no.
-                        android.widget.Toast.makeText(this, Str.get(R.string.hql_preview_busy), android.widget.Toast.LENGTH_LONG).show();
-                    } else {
-                        // Si solo está buscando el coche, el coche virtual para la búsqueda y entra.
-                        startActivity(new Intent(this, CarSimActivity.class));
-                    }
-                    break;
-                default:
-                    startActivity(new Intent(this, LogActivity.class));
-            }
-            return true;
+        col.addView(menuRow(sheet, 11, Str.get(R.string.hql_sim_menu), false));
+        int[][] coche = {{7, R.string.hql_req_title}, {1, R.string.hql_image_settings}, {10, R.string.hql_cloud_menu}};
+        menuGroup(sheet, col, 1, Str.get(R.string.hql_menu_car), coche);
+        if (ext) {
+            menuGroup(sheet, col, 2, Str.get(R.string.hql_menu_content),
+                    new int[][]{{2, R.string.hql_tv_list}, {3, R.string.hql_radio_list}, {12, R.string.hql_web_bookmarks}});
+            // Una sola carpeta para todas las consolas: cada emulador coge sus archivos.
+            menuGroup(sheet, col, 3, Str.get(R.string.hql_games), new int[][]{{14, R.string.hql_nes_folder}});
+        }
+        java.util.List<int[]> app = new java.util.ArrayList<>();
+        app.add(new int[]{13, R.string.hql_update_check});
+        if (android.os.Build.VERSION.SDK_INT >= 33) app.add(new int[]{4, R.string.hql_language});
+        if (android.os.Build.VERSION.SDK_INT >= 26) app.add(new int[]{8, R.string.hql_w_add_widget});
+        if (android.os.Build.VERSION.SDK_INT >= 33) app.add(new int[]{9, R.string.hql_w_add_tile});
+        menuGroup(sheet, col, 4, Str.get(R.string.hql_menu_app), app.toArray(new int[0][]));
+        col.addView(menuRow(sheet, 6, Str.get(R.string.hql_diagnostics), false));
+        android.widget.ScrollView sv = new android.widget.ScrollView(this);
+        sv.addView(col);
+        sheet.setContentView(sv);
+        sheet.getBehavior().setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+        sheet.getBehavior().setSkipCollapsed(true);
+        sheet.show();
+        // El fondo del panel, del mismo color que la lista (si no, queda una franja de otro tono arriba).
+        View box = sheet.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+        if (box != null) box.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF161C24));
+    }
+
+    /** Un grupo plegable del menú: cabecera con ▸/▾ y sus opciones debajo, ocultas hasta tocarla. */
+    private void menuGroup(android.app.Dialog sheet, LinearLayout col, int key, String title, int[][] items) {
+        float d = getResources().getDisplayMetrics().density;
+        TextView head = new TextView(this);
+        head.setTextColor(0xFF00E5C7);
+        head.setTextSize(15);
+        head.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
+        head.setLetterSpacing(0.08f);
+        head.setPadding(Math.round(24 * d), Math.round(16 * d), Math.round(24 * d), Math.round(16 * d));
+        head.setBackgroundResource(selectable());
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        for (int[] it : items) box.addView(menuRow(sheet, it[0], Str.get(it[1]), true));
+        Runnable sync = () -> {
+            boolean open = openGroups.contains(key);
+            box.setVisibility(open ? View.VISIBLE : View.GONE);
+            head.setText((open ? "▾   " : "▸   ") + title.toUpperCase(java.util.Locale.getDefault()) + "   ·  " + items.length);
+        };
+        head.setOnClickListener(v -> {
+            if (!openGroups.remove(key)) openGroups.add(key);
+            sync.run();
         });
-        pm.show();
+        sync.run();
+        View line = new View(this);
+        line.setBackgroundColor(0xFF242C36);
+        col.addView(line, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, Math.round(d))));
+        col.addView(head);
+        col.addView(box);
+    }
+
+    private TextView menuRow(android.app.Dialog sheet, int id, String text, boolean inGroup) {
+        float d = getResources().getDisplayMetrics().density;
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextColor(0xFFEAF2F7);
+        t.setTextSize(inGroup ? 16 : 17);
+        t.setPadding(Math.round((inGroup ? 48 : 24) * d), Math.round(14 * d), Math.round(24 * d), Math.round(14 * d));
+        t.setBackgroundResource(selectable());
+        t.setOnClickListener(v -> {
+            sheet.dismiss();
+            onMenuItem(id);
+        });
+        return t;
+    }
+
+    private int selectable() {
+        android.util.TypedValue tv = new android.util.TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
+        return tv.resourceId;
+    }
+
+    private void onMenuItem(int id) {
+        switch (id) {
+            case 1:
+                showVideoSettings();
+                break;
+            case 2:
+                showList(false);
+                break;
+            case 3:
+                showList(true);
+                break;
+            case 4:
+                showLanguage();
+                break;
+            case 7:
+                startActivity(new Intent(this, ChecklistActivity.class));
+                break;
+            case 8:
+                WidgetUpdater.requestPin(this);
+                break;
+            case 9:
+                LinkTileService.requestAdd(this);
+                break;
+            case 10:
+                startActivity(new Intent(this, CarCloudActivity.class));
+                break;
+            case 12:
+                showBookmarks();
+                break;
+            case 13:
+                checkUpdateNow();
+                break;
+            case 14:
+                // Carpeta de ROMs: permiso persistente sobre el árbol elegido (ver onActivityResult).
+                startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_NES_TREE);
+                break;
+            case 11:
+                if (LinkState.running && (LinkState.car == LinkState.Car.CONNECTED || LinkState.car == LinkState.Car.RECONNECTING)) {
+                    // Con el coche de verdad conectado, no.
+                    android.widget.Toast.makeText(this, Str.get(R.string.hql_preview_busy), android.widget.Toast.LENGTH_LONG).show();
+                } else {
+                    // Si solo está buscando el coche, el coche virtual para la búsqueda y entra.
+                    startActivity(new Intent(this, CarSimActivity.class));
+                }
+                break;
+            default:
+                startActivity(new Intent(this, LogActivity.class));
+        }
     }
 
     /**

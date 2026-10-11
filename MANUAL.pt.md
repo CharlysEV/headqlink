@@ -588,9 +588,14 @@ Para ligar sem abrir a aplicação:
 
 ## 5. Definições úteis
 
-Está tudo no menu ⚙ do ecrã principal: «Verificação», «Definições de imagem», «Lista de TV» e «Lista de rádio» (só no
-«Auto estendido»), «Idioma», «Adicionar widget ao ecrã principal», «Adicionar botão às definições rápidas» (Android 13+)
-e «Diagnóstico».
+Está tudo no menu ⚙ do ecrã principal, um painel que sobe de baixo. Em cima está «Carro virtual» e em baixo
+«Diagnóstico». No meio, grupos que se abrem ao tocar (cada um diz quantas opções tem):
+
+- **Carro:** «Verificação», «Definições de imagem» e «Dados do carro».
+- **Conteúdo do modo alargado** (só no «Auto estendido»): «Lista de TV», «Lista de rádio» e «Marcadores web».
+- **Jogos** (só no «Auto estendido»): «Pasta de jogos».
+- **App:** «Procurar versão nova», «Idioma», «Adicionar widget ao ecrã principal» e «Adicionar botão às definições
+  rápidas» (Android 13+).
 
 ### «Definições de imagem»
 
@@ -689,12 +694,15 @@ Cole o URL de uma lista M3U ou toque em «Escolher ficheiro». Sem lista de rád
 Os atalhos do ecrã «Web» do carro (de origem, YouTube, Google, Wikipedia e Twitch). Adicione os seus com nome e
 endereço, retire-os ou mude a ordem com as setas; «Os de origem» repõe os quatro iniciais.
 
-### «Jogos NES: pasta de ROMs» («Auto estendido»)
+### «Pasta de jogos»: NES e Mega Drive («Auto estendido»)
 
-Escolha a pasta do telemóvel com as suas ROMs de NES (ficheiros .nes; a aplicação não traz nenhuma). No carro, Jogos ›
-NES abre essa pasta com as subpastas; toque num jogo para jogar, com botões táteis ou com um comando Bluetooth ligado
-ao telemóvel (direcional, A, B, Start e Select). Ao começar, no telemóvel aparece «Comando ligado ao carro»: deixe-a à
-frente para que todo o comando chegue ao jogo. Só com o carro parado. Os jogos com gravação gravam sozinhos.
+Menu ⚙ › Jogos. Escolha a pasta do telemóvel com os seus jogos: uma só pasta para todas as consolas, e os .zip servem
+tal como estão (a aplicação não traz nenhum). No carro, Jogos › NES ou Jogos › Mega Drive abrem essa pasta com as
+subpastas, cada um com os seus jogos (.nes; .md, .gen, .bin ou .smd; e os .zip que os contêm). Toque num jogo para
+jogar, com botões táteis ou com um comando Bluetooth ligado ao telemóvel. Na Mega Drive, X, A e B do comando são A, B e
+C; LB, Y e RB são X, Y e Z (jogos de seis botões), e Select é Mode. Ao começar, no telemóvel aparece «Comando ligado ao
+carro»: deixe-a à frente para que todo o comando chegue ao jogo. Só com o carro parado. Os jogos com gravação gravam
+sozinhos. Os núcleos são os do RetroArch: Nestopia (NES) e ClownMDEmu (Mega Drive).
 
 ### «Diagnóstico»
 
