@@ -2547,3 +2547,31 @@ Registro del 11-10-2026 (varias horas de conducción). Se vieron tres fallos.
   - **Cargas:** las de `ChargeLog` de 0,5 kWh o más, con una curva pequeña de kW frente a %. Al tocar una, se abre en grande.
   - **Recorridos:** los viajes con trazado de 1 km o más, con su silueta (`PhoneCharts.TrackThumb`). Al tocar uno, `TripMapActivity` abre el mismo mapa que el coche (`TripDetail.mapHtml`) con fecha, km, tiempo, consumo, coste, desnivel, velocidad máxima y paradas.
 - Las gráficas (`PhoneCharts`) se dibujan a mano con los colores de la app.
+
+## 34. Casa (Home Assistant) y Material 3 en el móvil (0.2.46)
+
+### 34.1 Home Assistant
+- `HomeAssistant` usa la API REST oficial con la dirección de la casa y un token de acceso de larga duración.
+  - La dirección y los elementos elegidos van en `SharedPreferences`.
+  - El token va cifrado con su propia clave del Keystore (`KeystoreBox("hql_ha_v1")`; antes la clase solo tenía la de la nube) y fuera de las copias de seguridad.
+  - Nunca se registran la dirección, el token ni los nombres de los elementos: solo el tipo de acción y los motivos de error.
+- Qué hace un toque (`action`, puro y probado):
+  - luces, enchufes, `input_boolean`, ventiladores, automatizaciones y reproductores: conmutar;
+  - garaje y persianas: abrir o cerrar según estén;
+  - cerraduras: abrir o cerrar;
+  - escenas y scripts: lanzar;
+  - botones: pulsar;
+  - sensores, clima y alarma: solo se miran.
+  - Cerraduras y puertas (`device_class` door) piden confirmar.
+- **En el móvil:** ⚙ › Contenido del modo extendido › Home Assistant (`HomeAssistantActivity`, Material 3) tiene dirección, token, «Probar y guardar», «Olvidar» y la lista de elementos por tipos (chips) con casillas. Cada casilla se guarda al momento.
+- **En el coche:** «Casa» en el panel (`HomeScreen`; aparece sola la primera vez que está configurada). Muestra una cuadrícula de 4 columnas con botones grandes y su estado, que se actualiza cada 5 s mientras se ve.
+- **Pestaña «Casa» en la app del móvil** (`PhoneHome`): los mismos elementos en tarjetas de Material 3 de dos en dos.
+
+### 34.2 Material 3
+- `com.google.android.material` sube a la 1.14.0, que exige `minSdk` 23. La app pasa a pedir Android 6 o superior; Android Auto ya exige Android 9. Con la 1.14 hay que añadir `androidx.localbroadcastmanager` (antes venía de rebote) y usar `androidx.appcompat.R.attr` para `colorPrimary` y `borderlessButtonStyle`.
+- Lo que estaba hecho a mano pasa a componentes de Material 3:
+  - **pestañas del móvil:** `BottomNavigationView`, con la píldora de la pestaña activa;
+  - **menú ⚙:** lista con icono y tipografía M3, `MaterialDivider`, flecha que gira y asa del panel;
+  - **tarjetas de Viajes:** `MaterialCardView` con contorno y tipografía M3;
+  - **diálogos:** campos con contorno (`TextInputLayout`, utilidad `M3`), `MaterialButton`, `MaterialRadioButton` y `MaterialCheckBox`, también en `hql_dialog_video` y `hql_dialog_qd_options`.
+- La pantalla del coche sigue con su dibujo propio: es vídeo que se manda al coche, hecho para parecerse a Android Auto.

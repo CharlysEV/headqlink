@@ -350,8 +350,18 @@ final class CarCloudStore {
      * bloqueado en el coche. Formato: largo del IV (1 byte), el IV (12) y el texto cifrado con su etiqueta (16).
      */
     static final class KeystoreBox implements Box {
-        private static final String ALIAS = "hql_carcloud_v1";
+        private static final String ALIAS_CLOUD = "hql_carcloud_v1";
         private static final String KS = "AndroidKeyStore";
+        /** Cada uso con su clave (la nube y Home Assistant): borrar una no estropea la otra. */
+        private final String ALIAS;
+
+        KeystoreBox() {
+            this(ALIAS_CLOUD);
+        }
+
+        KeystoreBox(String alias) {
+            this.ALIAS = alias;
+        }
 
         private SecretKey key() throws GeneralSecurityException {
             try {

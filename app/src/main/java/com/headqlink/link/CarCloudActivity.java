@@ -550,13 +550,13 @@ public class CarCloudActivity extends Activity {
 
     private void askPassword(List<LeapTls.Picked> files, boolean wrong) {
         L.i("nube Leapmotor: importar certificado: " + (wrong ? "contraseña incorrecta; la pido otra vez" : "tiene contraseña; la pido"));
-        EditText in = new EditText(this);
+        EditText in = M3.field(this);
         in.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         in.setHint(R.string.hql_cloud_cert_password_hint);
         LinearLayout box = new LinearLayout(this);
         int pad = Math.round(24 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad / 3, pad, 0);
-        box.addView(in, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        box.addView(M3.outlined(in));
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.hql_cloud_cert_password_title)
                 .setMessage(wrong ? R.string.hql_cloud_cert_err_wrong_password : R.string.hql_cloud_cert_err_needs_password)
@@ -668,14 +668,14 @@ public class CarCloudActivity extends Activity {
     }
 
     private void askCustomKwh() {
-        EditText in = new EditText(this);
+        EditText in = M3.field(this);
         in.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         double cur = store.customKwh();
         if (cur >= 10) in.setText(String.format(Locale.US, "%.1f", cur));
         LinearLayout box = new LinearLayout(this);
         int pad = Math.round(24 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad / 3, pad, 0);
-        box.addView(in, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        box.addView(M3.outlined(in));
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.hql_cloud_profile_custom_title)
                 .setView(box)

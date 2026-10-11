@@ -608,11 +608,20 @@ final class Config {
 
     /** Botones del panel que se ven, en su orden (entre «Auto», fijo arriba, y «Ajustes», fijo abajo). */
     static final String PANEL_BUTTONS = "panel_buttons";
-    static final String[] PANEL_BUTTONS_ALL = {"car", "photos", "videos", "web", "tv", "radio", "games"};
+    static final String[] PANEL_BUTTONS_ALL = {"car", "photos", "videos", "web", "tv", "radio", "games", "home"};
 
+    /**
+     * Los botones del panel. «Casa» (Home Assistant) solo si está configurada; y la primera vez que lo está aparece sola
+     * aunque la lista se guardara antes (si luego se quita en Ajustes, se respeta).
+     */
     java.util.List<String> panelButtons() {
         String v = sp.getString(PANEL_BUTTONS, null);
-        return panelButtonsFrom(v);
+        java.util.List<String> out = panelButtonsFrom(v);
+        boolean ha = new HomeAssistant(app).configured();
+        if (!ha) out.remove("home");
+        else if (v != null && !out.contains("home") && !sp.getBoolean("panel_home_seen", false)) out.add("home");
+        if (ha && !sp.getBoolean("panel_home_seen", false)) sp.edit().putBoolean("panel_home_seen", true).apply();
+        return out;
     }
 
     /** Puro: la lista guardada («car,web,radio»), o todos si no hay nada guardado; ignora lo que no exista. */
@@ -630,7 +639,7 @@ final class Config {
     }
 
     void setPanelButtons(java.util.List<String> ids) {
-        sp.edit().putString(PANEL_BUTTONS, String.join(",", ids)).apply();
+        sp.edit().putString(PANEL_BUTTONS, String.join(",", ids)).putBoolean("panel_home_seen", true).apply();
     }
 
     /** Aviso de versión nueva (UpdateCheck): cuándo se consultó GitHub y la última release recordada. */

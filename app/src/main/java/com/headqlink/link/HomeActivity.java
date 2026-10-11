@@ -139,6 +139,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         super.onResume();
         if (modeView == null) return;
         if (insights != null && tab == 1) insights.show();
+        if (phoneHome != null && tab == 2) phoneHome.show();
         LinkState.addListener(this);
         // El perfil de imagen pudo cambiar: los máximos de las barras se recalculan con el próximo dato.
         fpsMax = 0;
@@ -183,6 +184,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     @Override
     protected void onPause() {
         if (insights != null) insights.hide();
+        if (phoneHome != null) phoneHome.hide();
         LinkState.removeListener(this);
         pulse(false);
         super.onPause();
@@ -400,11 +402,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         TextView info = new TextView(this);
         info.setText(Str.get(R.string.hql_bt_auto_info)
                 + (pm.isIgnoringBatteryOptimizations(getPackageName()) ? "" : "\n\n" + Str.get(R.string.hql_bt_auto_battery)));
-        EditText name = new EditText(this);
+        EditText name = M3.field(this);
         name.setSingleLine(true);
         name.setText(cfg.btAutoName());
         box.addView(info);
-        box.addView(name);
+        box.addView(M3.outlined(name));
         new MaterialAlertDialogBuilder(this)
                 .setTitle(Str.get(R.string.hql_bt_auto_title))
                 .setView(box)
@@ -531,9 +533,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
 
     /** Las dos partes de la app: «Conexión» (lo de siempre: modo, estado, conectar, ajustes) y «Viajes» (PhoneInsights). */
     private PhoneInsights insights;
+    /** Pestaña «Casa» (Home Assistant). */
+    private PhoneHome phoneHome;
     private View connectionPage;
     private int tab;
-    private TextView[] tabViews;
+    private com.google.android.material.bottomnavigation.BottomNavigationView navBar;
 
     /**
      * Pone debajo una barra con dos pestañas y, encima, la pantalla de siempre o la de Viajes. La de siempre se saca del
@@ -552,38 +556,28 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         pages.addView(connectionPage);
         insights = new PhoneInsights(this);
         pages.addView(insights.view());
+        phoneHome = new PhoneHome(this);
+        pages.addView(phoneHome.view());
         shell.addView(pages, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
-        LinearLayout bar = new LinearLayout(this);
-        bar.setOrientation(LinearLayout.HORIZONTAL);
+        // Barra de navegación de Material 3 (con la píldora en la pestaña activa).
+        com.google.android.material.bottomnavigation.BottomNavigationView bar =
+                new com.google.android.material.bottomnavigation.BottomNavigationView(this);
         bar.setBackgroundColor(0xFF0D131B);
-        float d = getResources().getDisplayMetrics().density;
-        bar.setPadding(0, Math.round(6 * d), 0, Math.round(6 * d));
-        int[][] items = {{R.drawable.hql_ic_aa, R.string.hql_tab_connection}, {R.drawable.hql_ic_efficiency, R.string.hql_tab_trips}};
-        tabViews = new TextView[items.length];
-        for (int i = 0; i < items.length; i++) {
-            int idx = i;
-            TextView t = new TextView(this);
-            t.setText(Str.get(items[i][1]));
-            t.setGravity(android.view.Gravity.CENTER);
-            t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13);
-            t.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
-            android.graphics.drawable.Drawable ic = getDrawable(items[i][0]);
-            if (ic != null) {
-                ic = ic.mutate();
-                int sz = Math.round(24 * d);
-                ic.setBounds(0, 0, sz, sz);
-                t.setCompoundDrawables(null, ic, null, null);
-            }
-            t.setCompoundDrawablePadding(Math.round(3 * d));
-            t.setPadding(0, Math.round(4 * d), 0, Math.round(4 * d));
-            t.setBackgroundResource(selectable());
-            t.setOnClickListener(v -> selectTab(idx));
-            tabViews[i] = t;
-            bar.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        }
-        View line = new View(this);
-        line.setBackgroundColor(0xFF1E2935);
-        shell.addView(line, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, Math.round(d))));
+        bar.setLabelVisibilityMode(com.google.android.material.navigation.NavigationBarView.LABEL_VISIBILITY_LABELED);
+        android.view.Menu menu = bar.getMenu();
+        menu.add(0, 0, 0, Str.get(R.string.hql_tab_connection)).setIcon(R.drawable.hql_ic_aa);
+        menu.add(0, 1, 1, Str.get(R.string.hql_tab_trips)).setIcon(R.drawable.hql_ic_efficiency);
+        menu.add(0, 2, 2, Str.get(R.string.hql_ha_title)).setIcon(R.drawable.hql_ic_home);
+        int[][] states = {{android.R.attr.state_checked}, {}};
+        android.content.res.ColorStateList fg = new android.content.res.ColorStateList(states, new int[]{0xFF00E5C7, 0xFF8296A9});
+        bar.setItemIconTintList(fg);
+        bar.setItemTextColor(fg);
+        bar.setItemActiveIndicatorColor(android.content.res.ColorStateList.valueOf(0xFF0E3B37));
+        bar.setOnItemSelectedListener(item -> {
+            selectTab(item.getItemId());
+            return true;
+        });
+        navBar = bar;
         shell.addView(bar, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         setContentView(shell);
         tab = getSharedPreferences("hql_home", MODE_PRIVATE).getInt("tab", 0);
@@ -600,14 +594,12 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     private void applyTab() {
         connectionPage.setVisibility(tab == 0 ? View.VISIBLE : View.GONE);
         insights.view().setVisibility(tab == 1 ? View.VISIBLE : View.GONE);
-        for (int i = 0; i < tabViews.length; i++) {
-            int col = i == tab ? 0xFF00E5C7 : 0xFF8296A9;
-            tabViews[i].setTextColor(col);
-            android.graphics.drawable.Drawable[] ds = tabViews[i].getCompoundDrawables();
-            if (ds[1] != null) ds[1].setTint(col);
-        }
+        phoneHome.view().setVisibility(tab == 2 ? View.VISIBLE : View.GONE);
+        if (navBar.getSelectedItemId() != tab) navBar.setSelectedItemId(tab);
         if (tab == 1) insights.show();
         else insights.hide();
+        if (tab == 2) phoneHome.show();
+        else phoneHome.hide();
     }
 
     private void showMenu(View anchor) {
@@ -616,26 +608,32 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         float d = getResources().getDisplayMetrics().density;
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
-        col.setPadding(0, Math.round(8 * d), 0, Math.round(16 * d));
+        col.setPadding(0, 0, 0, Math.round(16 * d));
         col.setBackgroundColor(0xFF161C24);
         // Coche virtual: la pantalla del coche en el móvil (Android Auto, nuestras pantallas y rutas reales), sin coche.
-        col.addView(menuRow(sheet, 11, Str.get(R.string.hql_sim_menu), false));
+        // Asa del panel (Material 3) y, arriba, el coche virtual.
+        com.google.android.material.bottomsheet.BottomSheetDragHandleView handle =
+                new com.google.android.material.bottomsheet.BottomSheetDragHandleView(this);
+        col.addView(handle, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        col.addView(menuRow(sheet, 11, Str.get(R.string.hql_sim_menu), R.drawable.hql_ic_aa));
         int[][] coche = {{7, R.string.hql_req_title}, {1, R.string.hql_image_settings}, {10, R.string.hql_cloud_menu},
                 {15, MapsNavListener.granted(this) ? R.string.hql_maps_read_on : R.string.hql_maps_read}};
-        menuGroup(sheet, col, 1, Str.get(R.string.hql_menu_car), coche);
+        menuGroup(sheet, col, 1, Str.get(R.string.hql_menu_car), R.drawable.hql_ic_gauges, coche);
         if (ext) {
-            menuGroup(sheet, col, 2, Str.get(R.string.hql_menu_content),
-                    new int[][]{{2, R.string.hql_tv_list}, {3, R.string.hql_radio_list}, {12, R.string.hql_web_bookmarks}});
+            menuGroup(sheet, col, 2, Str.get(R.string.hql_menu_content), R.drawable.hql_ic_tv,
+                    new int[][]{{2, R.string.hql_tv_list}, {3, R.string.hql_radio_list}, {12, R.string.hql_web_bookmarks},
+                            {16, R.string.hql_ha_menu}});
             // Una sola carpeta para todas las consolas: cada emulador coge sus archivos.
-            menuGroup(sheet, col, 3, Str.get(R.string.hql_games), new int[][]{{14, R.string.hql_nes_folder}});
+            menuGroup(sheet, col, 3, Str.get(R.string.hql_games), R.drawable.hql_ic_games, new int[][]{{14, R.string.hql_nes_folder}});
         }
         java.util.List<int[]> app = new java.util.ArrayList<>();
         app.add(new int[]{13, R.string.hql_update_check});
         if (android.os.Build.VERSION.SDK_INT >= 33) app.add(new int[]{4, R.string.hql_language});
         if (android.os.Build.VERSION.SDK_INT >= 26) app.add(new int[]{8, R.string.hql_w_add_widget});
         if (android.os.Build.VERSION.SDK_INT >= 33) app.add(new int[]{9, R.string.hql_w_add_tile});
-        menuGroup(sheet, col, 4, Str.get(R.string.hql_menu_app), app.toArray(new int[0][]));
-        col.addView(menuRow(sheet, 6, Str.get(R.string.hql_diagnostics), false));
+        menuGroup(sheet, col, 4, Str.get(R.string.hql_menu_app), R.drawable.hql_ic_settings, app.toArray(new int[0][]));
+        col.addView(divider());
+        col.addView(menuRow(sheet, 6, Str.get(R.string.hql_diagnostics), R.drawable.hql_ic_notif));
         android.widget.ScrollView sv = new android.widget.ScrollView(this);
         sv.addView(col);
         sheet.setContentView(sv);
@@ -647,49 +645,93 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         if (box != null) box.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF161C24));
     }
 
-    /** Un grupo plegable del menú: cabecera con ▸/▾ y sus opciones debajo, ocultas hasta tocarla. */
-    private void menuGroup(android.app.Dialog sheet, LinearLayout col, int key, String title, int[][] items) {
+    /**
+     * Un grupo plegable del menú (lista de Material 3): icono, título, cuántas opciones tiene y una flecha que gira al
+     * desplegarlo; debajo, sus opciones.
+     */
+    private void menuGroup(android.app.Dialog sheet, LinearLayout col, int key, String title, int icon, int[][] items) {
         float d = getResources().getDisplayMetrics().density;
-        TextView head = new TextView(this);
-        head.setTextColor(0xFF00E5C7);
-        head.setTextSize(15);
-        head.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
-        head.setLetterSpacing(0.08f);
-        head.setPadding(Math.round(24 * d), Math.round(16 * d), Math.round(24 * d), Math.round(16 * d));
+        LinearLayout head = new LinearLayout(this);
+        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        head.setMinimumHeight(Math.round(56 * d));
+        head.setPadding(Math.round(16 * d), 0, Math.round(16 * d), 0);
         head.setBackgroundResource(selectable());
+        head.addView(leading(icon, 0xFF00E5C7));
+        TextView t = new TextView(this);
+        t.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium);
+        t.setTextColor(0xFFEAF2F7);
+        t.setText(title);
+        head.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        TextView n = new TextView(this);
+        n.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_LabelLarge);
+        n.setTextColor(0xFF8296A9);
+        n.setText(String.valueOf(items.length));
+        n.setPadding(0, 0, Math.round(8 * d), 0);
+        head.addView(n);
+        android.widget.ImageView chevron = new android.widget.ImageView(this);
+        chevron.setImageResource(R.drawable.hql_ic_expand);
+        chevron.setImageTintList(android.content.res.ColorStateList.valueOf(0xFFA3B3C2));
+        int cs = Math.round(24 * d);
+        head.addView(chevron, new LinearLayout.LayoutParams(cs, cs));
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        for (int[] it : items) box.addView(menuRow(sheet, it[0], Str.get(it[1]), true));
+        for (int[] it : items) box.addView(menuRow(sheet, it[0], Str.get(it[1]), 0));
+        boolean[] first = {true};
         Runnable sync = () -> {
             boolean open = openGroups.contains(key);
             box.setVisibility(open ? View.VISIBLE : View.GONE);
-            head.setText((open ? "▾   " : "▸   ") + title.toUpperCase(java.util.Locale.getDefault()) + "   ·  " + items.length);
+            float rot = open ? 90 : 0;
+            if (first[0]) chevron.setRotation(rot);
+            else chevron.animate().rotation(rot).setDuration(180).start();
+            first[0] = false;
         };
         head.setOnClickListener(v -> {
             if (!openGroups.remove(key)) openGroups.add(key);
             sync.run();
         });
         sync.run();
-        View line = new View(this);
-        line.setBackgroundColor(0xFF242C36);
-        col.addView(line, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, Math.round(d))));
+        col.addView(divider());
         col.addView(head);
         col.addView(box);
     }
 
-    private TextView menuRow(android.app.Dialog sheet, int id, String text, boolean inGroup) {
+    private View divider() {
+        com.google.android.material.divider.MaterialDivider dv = new com.google.android.material.divider.MaterialDivider(this);
+        dv.setDividerColor(0xFF242C36);
+        return dv;
+    }
+
+    private android.widget.ImageView leading(int icon, int color) {
         float d = getResources().getDisplayMetrics().density;
+        android.widget.ImageView iv = new android.widget.ImageView(this);
+        iv.setImageResource(icon);
+        iv.setImageTintList(android.content.res.ColorStateList.valueOf(color));
+        int s = Math.round(24 * d);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(s, s);
+        lp.rightMargin = Math.round(16 * d);
+        iv.setLayoutParams(lp);
+        return iv;
+    }
+
+    /** Una fila de la lista: con icono (las sueltas) o sangrada bajo su grupo (icon 0). */
+    private View menuRow(android.app.Dialog sheet, int id, String text, int icon) {
+        float d = getResources().getDisplayMetrics().density;
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setMinimumHeight(Math.round(52 * d));
+        row.setPadding(Math.round((icon != 0 ? 16 : 56) * d), Math.round(6 * d), Math.round(16 * d), Math.round(6 * d));
+        row.setBackgroundResource(selectable());
+        if (icon != 0) row.addView(leading(icon, 0xFFA3B3C2));
         TextView t = new TextView(this);
-        t.setText(text);
+        t.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyLarge);
         t.setTextColor(0xFFEAF2F7);
-        t.setTextSize(inGroup ? 16 : 17);
-        t.setPadding(Math.round((inGroup ? 48 : 24) * d), Math.round(14 * d), Math.round(24 * d), Math.round(14 * d));
-        t.setBackgroundResource(selectable());
-        t.setOnClickListener(v -> {
+        t.setText(text);
+        row.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        row.setOnClickListener(v -> {
             sheet.dismiss();
             onMenuItem(id);
         });
-        return t;
+        return row;
     }
 
     private int selectable() {
@@ -729,6 +771,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 break;
             case 13:
                 checkUpdateNow();
+                break;
+            case 16:
+                startActivity(new Intent(this, HomeAssistantActivity.class));
                 break;
             case 15:
                 // Acceso a notificaciones para leer la de navegación de Google Maps (ruta en metros y hora de llegada).
@@ -810,16 +855,16 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         LinearLayout rows = new LinearLayout(this);
         rows.setOrientation(LinearLayout.VERTICAL);
         box.addView(rows);
-        EditText name = new EditText(this);
+        EditText name = M3.field(this);
         name.setHint(Str.get(R.string.hql_bookmark_name));
         name.setSingleLine(true);
-        EditText url = new EditText(this);
+        EditText url = M3.field(this);
         url.setHint(Str.get(R.string.hql_bookmark_url));
         url.setSingleLine(true);
         url.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
-        box.addView(name);
-        box.addView(url);
-        android.widget.Button add = new android.widget.Button(this);
+        box.addView(M3.outlined(name));
+        box.addView(M3.outlined(url));
+        android.widget.Button add = M3.button(this, "", true);
         add.setText(Str.get(R.string.hql_bookmark_add));
         box.addView(add);
         Runnable[] render = new Runnable[1];
@@ -840,7 +885,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 String[] glyphs = {"\u25b2", "\u25bc", "\u2715"};
                 for (int k = 0; k < 3; k++) {
                     int op = k;
-                    android.widget.Button b = new android.widget.Button(this, null, android.R.attr.borderlessButtonStyle);
+                    android.widget.Button b = M3.button(this, "", false);
                     b.setText(glyphs[k]);
                     b.setMinWidth(0);
                     b.setMinimumWidth(0);
@@ -887,7 +932,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         box.setOrientation(LinearLayout.VERTICAL);
         int pad = Math.round(24 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad / 2, pad, 0);
-        EditText url = new EditText(this);
+        EditText url = M3.field(this);
         url.setHint(Str.get(R.string.hql_list_url_hint));
         url.setSingleLine(true);
         String cur = radio ? cfg.radioSource() : cfg.iptvSource();
@@ -896,7 +941,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         info.setText(cur.startsWith("content://") ? Str.get(R.string.hql_list_now_file) : Str.get(R.string.hql_list_paste)
                 + (radio ? " " + Str.get(R.string.hql_list_radio_default) : ""));
         box.addView(info);
-        box.addView(url);
+        box.addView(M3.outlined(url));
         new MaterialAlertDialogBuilder(this)
                 .setTitle(radio ? Str.get(R.string.hql_radio_list) : Str.get(R.string.hql_tv_list))
                 .setView(box)
@@ -979,7 +1024,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         ids[0] = "";
         System.arraycopy(VideoProfile.ALL, 0, ids, 1, VideoProfile.ALL.length);
         for (int i = 0; i < ids.length; i++) {
-            android.widget.RadioButton rb = new android.widget.RadioButton(this);
+            android.widget.RadioButton rb = new com.google.android.material.radiobutton.MaterialRadioButton(this);
             rb.setId(View.generateViewId());
             rb.setTag(ids[i]);
             String title = ids[i].isEmpty() ? Str.get(R.string.hql_profile_auto_named, VideoProfile.title(rec)) : VideoProfile.title(ids[i]);
@@ -1027,7 +1072,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         RadioGroup carWait = v.findViewById(R.id.hql_v_car_wait);
         int waitBefore = cfg.carWaitMin();
         for (int min : Config.CAR_WAIT_CHOICES) {
-            android.widget.RadioButton rb = new android.widget.RadioButton(this);
+            android.widget.RadioButton rb = new com.google.android.material.radiobutton.MaterialRadioButton(this);
             rb.setId(View.generateViewId());
             rb.setTag(min);
             rb.setText(min == Config.DEFAULT_CAR_WAIT_MIN

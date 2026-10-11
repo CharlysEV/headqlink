@@ -673,6 +673,12 @@
             android:foregroundServiceType="connectedDevice|location" />
 
         <activity
+            android:name="com.headqlink.link.HomeAssistantActivity"
+            android:exported="false"
+            android:theme="@style/Theme.HeadQLink"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name="com.headqlink.link.TripMapActivity"
             android:exported="false"
             android:theme="@style/Theme.HeadQLink" />

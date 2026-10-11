@@ -3,7 +3,6 @@ package com.headqlink.link;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.TypedValue;
@@ -143,12 +142,12 @@ final class PhoneInsights {
         CarCloud.Snapshot s = d.cloud;
         if (!d.account) {
             c.addView(note(Str.get(R.string.hql_ins_no_cloud)));
-            col.addView(c, cardLp());
+            addCard(c);
             return;
         }
         if (s == null || !s.hasData()) {
             c.addView(note(Str.get(R.string.hql_ins_cloud_wait)));
-            col.addView(c, cardLp());
+            addCard(c);
             return;
         }
         LeapStatus st = s.status;
@@ -172,7 +171,7 @@ final class PhoneInsights {
         facts.addView(ago);
         row.addView(facts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         c.addView(row);
-        col.addView(c, cardLp());
+        addCard(c);
     }
 
     private void monthCard(Data d) {
@@ -214,7 +213,7 @@ final class PhoneInsights {
         }
         if (n == 0) {
             c.addView(note(Str.get(R.string.hql_ins_no_drives)));
-            col.addView(c, cardLp());
+            addCard(c);
             return;
         }
         double per100 = km >= 1 ? kwh / km * 100 : Double.NaN;
@@ -243,7 +242,7 @@ final class PhoneInsights {
                 : R.string.hql_ins_from_app));
         legend.setPadding(0, dp(6), 0, 0);
         c.addView(legend);
-        col.addView(c, cardLp());
+        addCard(c);
     }
 
     private void howCard(Data d) {
@@ -318,7 +317,7 @@ final class PhoneInsights {
             b.setPadding(0, dp(10), 0, 0);
             c.addView(b);
         }
-        col.addView(c, cardLp());
+        addCard(c);
     }
 
     private void chargesCard(Data d) {
@@ -333,7 +332,7 @@ final class PhoneInsights {
         list.sort((a, b) -> Long.compare(b.startMs, a.startMs));
         if (list.isEmpty()) {
             c.addView(note(Str.get(R.string.hql_ins_no_charges)));
-            col.addView(c, cardLp());
+            addCard(c);
             return;
         }
         int shown = 0;
@@ -369,7 +368,7 @@ final class PhoneInsights {
             row.setOnClickListener(v -> openCurve(day(s.startMs) + " · " + where, soc, kw));
             c.addView(row);
         }
-        col.addView(c, cardLp());
+        addCard(c);
     }
 
     /** La curva de una carga en grande. */
@@ -396,7 +395,7 @@ final class PhoneInsights {
         for (TripLog.Trip t : d.trips) if (t.track != null && t.track.length >= 2 && t.km >= 1) list.add(t);
         if (list.isEmpty()) {
             c.addView(note(Str.get(R.string.hql_ins_no_drives)));
-            col.addView(c, cardLp());
+            addCard(c);
             return;
         }
         int shown = 0;
@@ -428,29 +427,38 @@ final class PhoneInsights {
                     .putExtra(TripMapActivity.EXTRA_START, t.startMs)));
             c.addView(row);
         }
-        col.addView(c, cardLp());
+        addCard(c);
     }
 
     // ------------------------------------------------------------------ piezas
 
+    /**
+     * Tarjeta de Material 3 (con contorno, en el color de superficie de la app) con su título; se devuelve el contenido
+     * y addCard la pone en la columna.
+     */
     private LinearLayout card(String title) {
+        com.google.android.material.card.MaterialCardView mc = new com.google.android.material.card.MaterialCardView(act, null,
+                com.google.android.material.R.attr.materialCardViewOutlinedStyle);
+        mc.setCardBackgroundColor(0xFF111821);
+        mc.setStrokeColor(0xFF243140);
+        mc.setRadius(dp(22));
         LinearLayout c = new LinearLayout(act);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setPadding(dp(18), dp(16), dp(18), dp(16));
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xFF111821);
-        bg.setCornerRadius(dp(22));
-        bg.setStroke(dp(1), 0xFF243140);
-        c.setBackground(bg);
+        mc.addView(c);
+        c.setTag(mc);
         TextView t = new TextView(act);
+        t.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_LabelLarge);
         t.setText(title.toUpperCase(Locale.getDefault()));
         t.setTextColor(PhoneCharts.ACCENT);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         t.setLetterSpacing(0.12f);
-        t.setTypeface(PhoneCharts.MEDIUM);
         t.setPadding(0, 0, 0, dp(12));
         c.addView(t);
         return c;
+    }
+
+    private void addCard(LinearLayout content) {
+        col.addView((View) content.getTag(), cardLp());
     }
 
     private LinearLayout.LayoutParams cardLp() {
@@ -469,10 +477,9 @@ final class PhoneInsights {
         l.setPadding(0, 0, 0, dp(8));
         l.addView(small(label));
         TextView v = new TextView(act);
+        v.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleLarge);
         v.setText(unit.isEmpty() ? value : value + " " + unit);
         v.setTextColor(PhoneCharts.TEXT);
-        v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
-        v.setTypeface(PhoneCharts.MEDIUM);
         l.addView(v);
         return l;
     }
@@ -481,10 +488,9 @@ final class PhoneInsights {
         LinearLayout l = new LinearLayout(act);
         l.setOrientation(LinearLayout.VERTICAL);
         TextView v = new TextView(act);
+        v.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleLarge);
         v.setText(value);
         v.setTextColor(PhoneCharts.TEXT);
-        v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
-        v.setTypeface(PhoneCharts.MEDIUM);
         v.setSingleLine(true);
         l.addView(v);
         TextView u = small(unit);
@@ -495,10 +501,9 @@ final class PhoneInsights {
 
     private TextView title(String s) {
         TextView t = new TextView(act);
+        t.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
         t.setText(s);
         t.setTextColor(PhoneCharts.TEXT);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        t.setTypeface(PhoneCharts.MEDIUM);
         t.setSingleLine(true);
         t.setEllipsize(android.text.TextUtils.TruncateAt.END);
         return t;
@@ -506,23 +511,22 @@ final class PhoneInsights {
 
     private TextView small(String s) {
         TextView t = new TextView(act);
+        t.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodySmall);
         t.setText(s);
         t.setTextColor(PhoneCharts.DIM);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         return t;
     }
 
     private TextView note(String s) {
         TextView t = small(s);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        t.setLineSpacing(0, 1.15f);
+        t.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium);
+        t.setTextColor(PhoneCharts.DIM);
         return t;
     }
 
     private View divider() {
-        View v = new View(act);
-        v.setBackgroundColor(0xFF1E2935);
-        v.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(1))));
+        com.google.android.material.divider.MaterialDivider v = new com.google.android.material.divider.MaterialDivider(act);
+        v.setDividerColor(0xFF1E2935);
         return v;
     }
 

@@ -96,7 +96,8 @@ android {
         // changed to Open Headunit. The code package and namespace stay openheadunit, so the
         // applicationId deliberately differs from the namespace, like com.google.talk for Hangouts.
         applicationId = "com.headqlink.app" // headqlink: identificador propio del fork
-        minSdk = 16
+        // Android 6+: lo pide Material 3 (1.14) y, de todas formas, Android Auto ya exige Android 9 en el móvil.
+        minSdk = 23
         targetSdk = 36
         versionCode = 27
         versionName = "0.2.45-qdauto"
@@ -121,11 +122,11 @@ android {
     productFlavors {
         create("playstore") {
             dimension = "distribution"
-            minSdk = 21
+            minSdk = 23
         }
         create("github") {
             dimension = "distribution"
-            // Default minSdk 16 from defaultConfig is used
+            // Default minSdk 23 from defaultConfig is used
         }
     }
 
@@ -269,12 +270,14 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation("androidx.media:media:1.6.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
-    // headqlink: reproductor de vÃ­deo e IPTV (HLS) en la pantalla del coche. 1.3.x admite minSdk 16.
+    // headqlink: reproductor de vídeo e IPTV (HLS) en la pantalla del coche. 1.3.x admite minSdk 16.
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-exoplayer-hls:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1")
-    implementation("com.google.android.material:material:1.10.0")
+    implementation("com.google.android.material:material:1.14.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
+    // Material 1.14 ya no lo trae de rebote; lo usa el código de open-headunit (avisos entre pantallas).
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
     implementation("androidx.startup:startup-runtime:1.1.1")
     implementation("com.google.android.gms:play-services-nearby:19.3.0")
     // ViewModel and LiveData

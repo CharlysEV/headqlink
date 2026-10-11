@@ -15,32 +15,32 @@
         android:paddingBottom="8dp"
         android:text="@string/hql_qd_options_help" />
 
-    <CheckBox
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/hql_qd_keep_video"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/hql_qd_keep_video" />
 
-    <CheckBox
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/hql_qd_supersede"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/hql_qd_supersede" />
 
-    <CheckBox
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/hql_qd_peer_strict"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/hql_qd_peer_strict" />
 
-    <CheckBox
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/hql_qd_phone_info"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/hql_qd_phone_info_qdlink" />
 
     <!-- headqlink: prueba de la trama del cable USB desde el PC (qdsim con la opción usb-framing) -->
-    <CheckBox
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/hql_qd_usb_over_tcp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -53,13 +53,19 @@
         android:layout_marginTop="16dp"
         android:text="@string/hql_qd_car_gone" />
 
-    <EditText
-        android:id="@+id/hql_qd_car_gone"
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="30"
-        android:importantForAutofill="no"
-        android:inputType="number" />
+        android:hint="30">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/hql_qd_car_gone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:importantForAutofill="no"
+            android:inputType="number" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <TextView
         style="@style/HQL.Text.Body"

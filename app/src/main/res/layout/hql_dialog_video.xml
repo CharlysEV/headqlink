@@ -42,13 +42,13 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <RadioButton
+        <com.google.android.material.radiobutton.MaterialRadioButton
             android:id="@+id/hql_v_fluid_30"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/hql_fluidity_30" />
 
-        <RadioButton
+        <com.google.android.material.radiobutton.MaterialRadioButton
             android:id="@+id/hql_v_fluid_60"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -63,14 +63,14 @@
         android:text="@string/hql_fluidity_help"
         android:textSize="12sp" />
 
-    <CheckBox
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/hql_v_autohide"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="@string/hql_autohide_panel_ext" />
 
-    <CheckBox
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/hql_v_keep_screen"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -90,19 +90,19 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <RadioButton
+        <com.google.android.material.radiobutton.MaterialRadioButton
             android:id="@+id/hql_v_thermal_normal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/hql_thermal_normal" />
 
-        <RadioButton
+        <com.google.android.material.radiobutton.MaterialRadioButton
             android:id="@+id/hql_v_thermal_soft"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/hql_thermal_soft" />
 
-        <RadioButton
+        <com.google.android.material.radiobutton.MaterialRadioButton
             android:id="@+id/hql_v_thermal_off"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -147,22 +147,34 @@
         android:layout_marginTop="16dp"
         android:orientation="horizontal">
 
-        <EditText
-            android:id="@+id/hql_v_fps"
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="fps"
-            android:inputType="number" />
+            android:hint="fps">
 
-        <EditText
-            android:id="@+id/hql_v_kbps"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/hql_v_fps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
             android:layout_weight="1"
-            android:hint="kbps"
-            android:inputType="number" />
+            android:layout_marginStart="12dp"
+            android:hint="kbps">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/hql_v_kbps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number" />
+        </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
     <LinearLayout
@@ -170,22 +182,34 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <EditText
-            android:id="@+id/hql_v_w"
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="@string/hql_width"
-            android:inputType="number" />
+            android:hint="@string/hql_width">
 
-        <EditText
-            android:id="@+id/hql_v_h"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/hql_v_w"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
             android:layout_weight="1"
-            android:hint="@string/hql_height"
-            android:inputType="number" />
+            android:layout_marginStart="12dp"
+            android:hint="@string/hql_height">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/hql_v_h"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number" />
+        </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
     <TextView
@@ -201,19 +225,19 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <RadioButton
+        <com.google.android.material.radiobutton.MaterialRadioButton
             android:id="@+id/hql_v_baseline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Baseline" />
 
-        <RadioButton
+        <com.google.android.material.radiobutton.MaterialRadioButton
             android:id="@+id/hql_v_main"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Main" />
 
-        <RadioButton
+        <com.google.android.material.radiobutton.MaterialRadioButton
             android:id="@+id/hql_v_high"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -227,24 +251,30 @@
         android:layout_marginTop="16dp"
         android:text="@string/hql_mode_aa" />
 
-    <CheckBox
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/hql_v_lowlatency"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/hql_low_latency_profile" />
 
-    <CheckBox
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/hql_v_brake"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/hql_brake" />
 
-    <EditText
-        android:id="@+id/hql_v_window"
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/hql_brake_window"
-        android:inputType="number" />
+        android:hint="@string/hql_brake_window">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/hql_v_window"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <TextView
         style="@style/HQL.Text.Body"
@@ -267,13 +297,13 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <RadioButton
+        <com.google.android.material.radiobutton.MaterialRadioButton
             android:id="@+id/hql_v_engine_qdauto"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/hql_engine_qdauto" />
 
-        <RadioButton
+        <com.google.android.material.radiobutton.MaterialRadioButton
             android:id="@+id/hql_v_engine_original"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -328,13 +358,13 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <RadioButton
+            <com.google.android.material.radiobutton.MaterialRadioButton
                 android:id="@+id/hql_v_aa_server_auto"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/hql_aa_server_start_auto" />
 
-            <RadioButton
+            <com.google.android.material.radiobutton.MaterialRadioButton
                 android:id="@+id/hql_v_aa_server_manual"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

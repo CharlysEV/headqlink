@@ -1018,6 +1018,7 @@ final class CarUi {
             case "tv": return "TV";
             case "radio": return Str.get(R.string.hql_radio);
             case "games": return Str.get(R.string.hql_games);
+            case "home": return Str.get(R.string.hql_ha_title);
             default: return id;
         }
     }
@@ -1031,6 +1032,7 @@ final class CarUi {
             case "tv": return R.drawable.hql_ic_tv;
             case "radio": return R.drawable.hql_ic_radio;
             case "games": return R.drawable.hql_ic_games;
+            case "home": return R.drawable.hql_ic_home;
             default: return R.drawable.hql_ic_settings;
         }
     }
@@ -1255,6 +1257,8 @@ final class CarUi {
                 return GamesScreen::new;
             case "radio":
                 return RadioScreen::new;
+            case "home":
+                return HomeScreen::new;
             case "settings":
                 return SettingsScreen::new;
             case "car":
