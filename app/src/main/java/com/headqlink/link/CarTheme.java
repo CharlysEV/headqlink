@@ -96,9 +96,11 @@ final class CarTheme {
      * Colores que se pueden dejar fijos en la barra (Ajustes del coche): negros y grises para fundirse con las barras
      * del C10, blanco, y colores. 0 en Config = automático.
      */
+    static final int PANEL_DAY_SWATCH = 0xFFF1F3F4;
+    static final int PANEL_NIGHT_SWATCH = 0xFF1E1E20;
     static final int[] PANEL_COLORS = {
-            0xFF000000, 0xFF1E1E20, 0xFF2E3238, 0xFF5F6368,
-            0xFFBDC1C6, 0xFFF1F3F4, 0xFF0D2B4E, 0xFF1967D2,
+            0xFF000000, PANEL_NIGHT_SWATCH, 0xFF2E3238, 0xFF5F6368,
+            0xFFBDC1C6, PANEL_DAY_SWATCH, 0xFF0D2B4E, 0xFF1967D2,
             0xFF00695C, 0xFF137333, 0xFF4E5B31, 0xFFF9AB00,
             0xFFE8710A, 0xFFC5221F, 0xFF6D1B2B, 0xFF6A1B9A,
     };

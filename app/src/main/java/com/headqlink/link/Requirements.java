@@ -41,7 +41,7 @@ final class Requirements {
     enum Id {
         ANDROID_AUTO, AA_VERSION, AA_SERVER, ACCESSIBILITY, SERVER_MANUAL_OFFER, AA_DEVMODE, TARGET_APP,
         NEARBY_WIFI, WIFI_ON, HOTSPOT_OFF, HOTSPOT_ON, HOTSPOT_BAND, USB_CABLE,
-        QDLINK, NOTIFICATIONS, BLUETOOTH, BATTERY, BATTERY_OEM, OVERLAY, MEDIA, BG_LOCATION
+        QDLINK, NOTIFICATIONS, MICROPHONE, PHONE, BLUETOOTH, BATTERY, BATTERY_OEM, OVERLAY, MEDIA, BG_LOCATION
     }
 
     /** INFO: solo informa (nunca cuenta en «Faltan N» ni bloquea). */
@@ -126,6 +126,8 @@ final class Requirements {
         boolean targetAppChosen = true;
 
         Perm notifications = Perm.GRANTED;
+        Perm microphone = Perm.GRANTED;
+        Perm phone = Perm.GRANTED;
         /** NEARBY_WIFI_DEVICES (Android 13+) o ubicación (antes). */
         Perm nearby = Perm.GRANTED;
         Perm bluetooth = Perm.GRANTED;
@@ -268,6 +270,10 @@ final class Requirements {
 
         // Permisos y segundo plano.
         out.add(perm(Id.NOTIFICATIONS, Importance.RECOMMENDED, s.notifications));
+        if (aa) {
+            out.add(perm(Id.MICROPHONE, Importance.RECOMMENDED, s.microphone));
+            out.add(perm(Id.PHONE, Importance.RECOMMENDED, s.phone));
+        }
         if (s.btAuto) out.add(perm(Id.BLUETOOTH, Importance.REQUIRED, s.bluetooth));
         out.add(new Item(Id.BATTERY, Importance.RECOMMENDED, s.batteryUnrestricted ? Status.OK : Status.MISSING,
                 s.btAuto ? Hint.BT_AUTO : Hint.NONE));

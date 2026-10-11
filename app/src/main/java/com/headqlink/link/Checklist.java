@@ -49,6 +49,8 @@ final class Checklist {
     /** Prefijo de «este permiso ya se pidió» (para distinguir «se puede pedir» de «denegado para siempre»). */
     private static final String ASKED = "req_asked_";
     private static final String KEY_NOTIF = "notif";
+    private static final String KEY_MIC = "mic";
+    private static final String KEY_PHONE = "phone";
     private static final String KEY_NEARBY = "nearby";
     static final String KEY_BT = "bt";
     private static final String KEY_MEDIA = "media";
@@ -311,6 +313,8 @@ final class Checklist {
             s.notifications = notifOn ? Requirements.Perm.GRANTED : Requirements.Perm.BLOCKED;
         }
         s.nearby = perm(a, cfg, KEY_NEARBY, nearbyPerms());
+        s.microphone = perm(a, cfg, KEY_MIC, Manifest.permission.RECORD_AUDIO);
+        s.phone = perm(a, cfg, KEY_PHONE, Manifest.permission.READ_PHONE_STATE);
         s.bluetooth = sdk >= 31 ? perm(a, cfg, KEY_BT, Manifest.permission.BLUETOOTH_CONNECT) : Requirements.Perm.GRANTED;
         s.media = perm(a, cfg, KEY_MEDIA, mediaPerms());
         s.fineLocation = LocationAccess.fine(a);
@@ -653,6 +657,16 @@ final class Checklist {
                             Uri.parse("package:" + act.getPackageName()))));
                 }
                 return r;
+            }
+            case MICROPHONE: {
+                Row r = new Row(Str.get(R.string.hql_req_microphone), ok ? Str.get(R.string.hql_allowed)
+                        : blocked ? Str.get(R.string.hql_req_blocked) : Str.get(R.string.hql_req_microphone_why));
+                return ok ? r : permAction(r, blocked, KEY_MIC, Manifest.permission.RECORD_AUDIO);
+            }
+            case PHONE: {
+                Row r = new Row(Str.get(R.string.hql_req_phone), ok ? Str.get(R.string.hql_allowed)
+                        : blocked ? Str.get(R.string.hql_req_blocked) : Str.get(R.string.hql_req_phone_why));
+                return ok ? r : permAction(r, blocked, KEY_PHONE, Manifest.permission.READ_PHONE_STATE);
             }
             case BG_LOCATION: {
                 Row r = new Row(Str.get(R.string.hql_req_bgloc), ok ? Str.get(R.string.hql_req_bgloc_ok)

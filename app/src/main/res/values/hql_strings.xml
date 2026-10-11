@@ -827,4 +827,23 @@
     <string name="hql_games_consoles">Consoles</string>
     <string name="hql_games_quick">For the wait</string>
     <string name="hql_games_play">Play</string>
+    <string name="hql_use_responsibility">I have read and accept the Terms of Use. I acknowledge that I use HeadQLink at my own risk and accept the absence of warranties and the limitation of liability to the extent permitted by applicable law.</string>
+    <string name="hql_panel_day">Day</string>
+    <string name="hql_panel_night">Night</string>
+    <string name="hql_req_microphone">Microphone</string>
+    <string name="hql_req_microphone_why">For voice commands and the assistant in Android Auto.</string>
+    <string name="hql_req_phone">Phone calls</string>
+    <string name="hql_req_phone_why">Allow access to phone call status while connected to the car.</string>
+    <string name="hql_responsibility_title">Safety and liability</string>
+    <string name="hql_responsibility_summary">HeadQLink is an independent, experimental project provided “as is” without warranties. The user is responsible for safe use, compliance with traffic regulations and refraining from entertainment functions while driving.</string>
+    <string name="hql_terms_title">Terms of Use</string>
+    <string name="hql_terms_read">Read the Terms of Use</string>
+    <string name="hql_terms_detail">&lt;p&gt;&lt;b&gt;1. Independent and experimental software&lt;/b&gt;&lt;br&gt;HeadQLink is a personal, experimental open-source project. It relies on undocumented protocols and interfaces and on third-party services. It may fail, stop working or behave unexpectedly at any time, including after updates to the phone, vehicle or those services.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;2. Safe use and user responsibility&lt;/b&gt;&lt;br&gt;The driver is responsible for keeping attention on the road, driving safely and complying with applicable traffic regulations. Installation, configuration and interaction with the app must take place with the vehicle stationary in a safe location. Do not watch videos, games, web pages or other entertainment content while driving. The app does not replace vehicle safety systems or guarantee the accuracy of navigation or vehicle data.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;3. No warranties&lt;/b&gt;&lt;br&gt;The software is provided “as is”, without express or implied warranties to the extent permitted by applicable law. Its operation, availability, compatibility, safety, suitability for a particular purpose and non-infringement of third-party rights are not guaranteed. The user assumes the risks associated with installation and use.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;4. Limitation of liability&lt;/b&gt;&lt;br&gt;To the extent permitted by applicable law, and unless required by law or expressly agreed in writing, authors, contributors and distributors assume no liability for direct or indirect damages arising from use, misuse or inability to use the software. These include accidents, injuries, damage to the vehicle, phone or third parties, loss or inaccuracy of data, financial losses, fines or penalties, loss of vehicle or device warranties and violations of third-party service terms. This limitation also applies to use contrary to applicable law.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;5. No affiliation and third-party services&lt;/b&gt;&lt;br&gt;HeadQLink is independent and is not affiliated with, endorsed by or sponsored by Leapmotor, Google, Neusoft, Open Headunit or its authors. Mentioned trademarks belong to their respective owners and describe compatibility. Third-party services are subject to their own terms and may change or become unavailable.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;6. License and acceptance&lt;/b&gt;&lt;br&gt;The software is distributed under GNU AGPL-3.0. Sections 15 and 16 concerning warranty disclaimers and limitation of liability apply. These terms do not change the rights granted by that license or exclude liabilities or rights that applicable law does not allow to be excluded. By checking the box, the user declares that these terms have been read and accepted. Acceptance is stored locally upon completion of setup.&lt;/p&gt;</string>
+    <string name="hql_tv_fill">Fill screen</string>
+    <string name="hql_tv_fit">Fit picture</string>
 </resources>

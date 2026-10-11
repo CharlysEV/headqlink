@@ -35,6 +35,7 @@ final class WebScreen implements CarScreen {
 
     private Host host;
     private WebView web;
+    private WebAudio webAudio;
     private FrameLayout body;
     private View home;
     private TextView address;
@@ -142,6 +143,7 @@ final class WebScreen implements CarScreen {
 
     @Override
     public void destroy() {
+        if (webAudio != null) webAudio.close();
         if (web != null) {
             web.stopLoading();
             web.loadUrl("about:blank");
@@ -175,6 +177,7 @@ final class WebScreen implements CarScreen {
     }
 
     private void showHome() {
+        if (webAudio != null) webAudio.pause();
         body.removeAllViews();
         body.addView(home, CarStyle.match());
         address.setText(Str.get(R.string.hql_web_address));
@@ -197,6 +200,7 @@ final class WebScreen implements CarScreen {
     private WebView ensureWeb() {
         if (web != null) return web;
         web = new WebView(host.context());
+        webAudio = new WebAudio(web);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -209,8 +213,13 @@ final class WebScreen implements CarScreen {
         web.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView v, String url, Bitmap favicon) {
+                webAudio.navigation();
                 address.setText(url);
                 address.setTextColor(CarStyle.TEXT);
+            }
+            @Override
+            public void onPageFinished(WebView v, String url) {
+                webAudio.pageFinished();
             }
         });
         web.setWebChromeClient(new WebChromeClient() {

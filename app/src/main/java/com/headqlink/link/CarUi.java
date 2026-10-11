@@ -98,6 +98,7 @@ final class CarUi {
     private boolean autoHide;
     private boolean hidden;
     private View expand;
+    private View panelSpacer;
     private View radioMini;
     private ImageView radioLogo;
     private FrameLayout root;
@@ -406,12 +407,36 @@ final class CarUi {
         lp.width = width - pw - aaW;
         content.setLayoutParams(lp);
         renderSplitButton(rail);
+        fitPanelButtons(rail, pw);
         // Solo importa a AA cuando se ve (el modo compacto es de nuestras pantallas).
         if (sp) {
             listener.onAaRegion(aaX, aaW);
         } else if (!compact) {
             listener.onAaRegion(aaX, width - pw);
         }
+    }
+
+    /** En la barra reducida, todos los botones guardan la misma separación y cabe la flecha inferior. */
+    private void fitPanelButtons(boolean rail, int panelWidth) {
+        LinearLayout.LayoutParams spacer = (LinearLayout.LayoutParams) panelSpacer.getLayoutParams();
+        spacer.weight = rail ? 0 : 1;
+        panelSpacer.setLayoutParams(spacer);
+        int buttonHeight = 72;
+        if (rail) {
+            railInfo.measure(View.MeasureSpec.makeMeasureSpec(Math.max(1, panelWidth - 24), View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+            int footer = railInfo.getMeasuredHeight() + (hidden ? 72 : 0);
+            int buttons = navButtons.size() + (splitButton.getVisibility() == View.VISIBLE ? 1 : 0);
+            buttonHeight = Math.max(40, Math.min(72, (height - 40 - footer) / buttons - 6));
+        }
+        for (LinearLayout button : navButtons) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) button.getLayoutParams();
+            lp.height = buttonHeight;
+            button.setLayoutParams(lp);
+        }
+        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) splitButton.getLayoutParams();
+        lp.height = buttonHeight;
+        splitButton.setLayoutParams(lp);
     }
 
     /** Botón «Partir pantalla» de la barra: solo en las pantallas que lo admiten; marcado con la pantalla partida. */
@@ -983,6 +1008,7 @@ final class CarUi {
 
         View spacer = new View(c);
         p.addView(spacer, new LinearLayout.LayoutParams(1, 0, 1f));
+        panelSpacer = spacer;
         p.addView(navButton(c, Str.get(R.string.hql_settings), "settings", R.drawable.hql_ic_settings));
         // Desplegar el panel minimizado.
         ImageView ex = new ImageView(c);
@@ -998,7 +1024,6 @@ final class CarUi {
             scheduleHide();
         });
         LinearLayout.LayoutParams elp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 72);
-        elp.topMargin = 6;
         p.addView(ex, elp);
         expand = ex;
         battery = CarStyle.text(c, "", 22, CarTheme.navTextDim());
@@ -1070,6 +1095,7 @@ final class CarUi {
         double soc = cs.hasData() ? cs.status.socBest() : Double.NaN;
         railSoc.setText(Double.isNaN(soc) ? "" : Math.round(soc) + " %");
         railSoc.setVisibility(Double.isNaN(soc) ? View.GONE : View.VISIBLE);
+        fitPanelButtons(true, layoutPanelW());
         main.postDelayed(railTick, 30_000);
     }
 
@@ -1089,7 +1115,6 @@ final class CarUi {
         t.setSingleLine(true);
         b.addView(t);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 72);
-        lp.topMargin = 12;
         lp.bottomMargin = 6;
         b.setLayoutParams(lp);
         b.setOnClickListener(v -> toggleSplit());
@@ -1233,6 +1258,7 @@ final class CarUi {
             content.addView(splash, CarStyle.match());
         }
         aaShown = factory == null;
+        if (aaShown) hidden = true;
         markNav();
         // La pantalla partida depende de la pantalla abierta: se recoloca todo y AA se ve si va sola o al lado.
         applyLayout();

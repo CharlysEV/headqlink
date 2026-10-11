@@ -59,6 +59,8 @@ final class IptvScreen implements CarScreen {
     private RecyclerView.Adapter<RecyclerView.ViewHolder> adapter;
     private View listView;
     private ExoPlayer player;
+    private MediaFocus mediaFocus;
+    private PlaybackMetadata metadata;
     private volatile boolean destroyed;
 
     @Override
@@ -195,26 +197,51 @@ final class IptvScreen implements CarScreen {
         FrameLayout f = new FrameLayout(c);
         f.setBackgroundColor(Color.BLACK);
         player = new ExoPlayer.Builder(c.getApplicationContext()).build();
+        player.setAudioAttributes(new androidx.media3.common.AudioAttributes.Builder()
+                .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC).build(), false);
+        mediaFocus = MediaFocus.bind(c, player);
+        metadata = new PlaybackMetadata(c, player, "TV", () -> {
+            player.seekToDefaultPosition();
+            player.prepare();
+            player.play();
+        }, () -> {
+            releasePlayer();
+            host.setFullscreen(false);
+            host.setContent(listView);
+        }, () -> play((index - 1 + shown.size()) % shown.size()),
+                () -> play((index + 1) % shown.size()));
+        metadata.setChannel(ch.name, "TV", ch.logo);
         PlayerView pv = CarStyle.player(c);
         pv.setPlayer(player);
         f.addView(pv, CarStyle.match());
-        TextView status = CarStyle.text(c, ch.name, 26, CarStyle.TEXT);
+        LinearLayout overlay = new LinearLayout(c);
+        overlay.setOrientation(LinearLayout.VERTICAL);
+        overlay.setPadding(16, 16, 16, 8);
+        TextView status = CarStyle.text(c, ch.name, 26, Color.WHITE);
         status.setShadowLayer(6, 0, 0, Color.BLACK);
-        status.setPadding(20, 24, 20, 20);
-        f.addView(status, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
+        status.setPadding(8, 12, 8, 8);
+        status.setSingleLine(true);
+        status.setEllipsize(android.text.TextUtils.TruncateAt.END);
 
         LinearLayout top = new LinearLayout(c);
         top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setPadding(16, 16, 16, 16);
         TextView back = CarStyle.pill(c, "‹  " + Str.get(R.string.hql_channels));
         TextView prev = CarStyle.pill(c, Str.get(R.string.hql_channel) + " −");
         TextView next = CarStyle.pill(c, Str.get(R.string.hql_channel) + " +");
+        TextView fill = CarStyle.pill(c, Str.get(R.string.hql_tv_fill));
         top.addView(back);
         top.addView(prev);
         top.addView(next);
-        f.addView(top, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+        top.addView(fill);
+        HorizontalScrollView options = new HorizontalScrollView(c);
+        options.setHorizontalScrollBarEnabled(false);
+        options.addView(top);
+        overlay.addView(options);
+        overlay.addView(status);
+        f.addView(overlay, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START));
+        TvPlayerControls.bind(c, pv, overlay, fill);
         back.setOnClickListener(v -> {
             releasePlayer();
             host.setFullscreen(false);
@@ -227,6 +254,7 @@ final class IptvScreen implements CarScreen {
             @Override
             public void onPlayerError(PlaybackException e) {
                 status.setText(ch.name + " · " + Str.get(R.string.hql_cannot_play, e.getErrorCodeName()));
+                pv.showController();
                 L.w("IPTV: " + ch.name + ": " + e);
             }
         });
@@ -235,10 +263,15 @@ final class IptvScreen implements CarScreen {
         player.play();
         host.setContent(f);
         host.setFullscreen(true);
+        pv.showController();
     }
 
     private void releasePlayer() {
         if (player != null) {
+            metadata.close();
+            metadata = null;
+            mediaFocus.close();
+            mediaFocus = null;
             player.release();
             player = null;
         }

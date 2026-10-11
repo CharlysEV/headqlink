@@ -209,7 +209,15 @@ final class SettingsScreen implements CarScreen {
         alp.rightMargin = 18;
         row.addView(auto, alp);
         for (int pc : CarTheme.PANEL_COLORS) {
-            View sw = new View(c);
+            TextView sw = new TextView(c);
+            sw.setGravity(Gravity.CENTER);
+            sw.setText(pc == CarTheme.PANEL_DAY_SWATCH ? "D" : pc == CarTheme.PANEL_NIGHT_SWATCH ? "N" : "");
+            sw.setTextSize(20);
+            sw.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            sw.setTextColor(CarTheme.isDark(pc) ? 0xFFFFFFFF : 0xFF22282E);
+            sw.setContentDescription(pc == CarTheme.PANEL_DAY_SWATCH ? Str.get(R.string.hql_panel_day)
+                    : pc == CarTheme.PANEL_NIGHT_SWATCH ? Str.get(R.string.hql_panel_night)
+                    : String.format(java.util.Locale.ROOT, "#%06X", pc & 0xFFFFFF));
             android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
             d.setShape(android.graphics.drawable.GradientDrawable.OVAL);
             d.setColor(pc);

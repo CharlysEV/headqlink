@@ -9,7 +9,7 @@
         rikka.shizuku.api, rikka.shizuku.shared, rikka.shizuku.aidl, com.topjohnwu.superuser,
         androidx.media3.exoplayer.hls, androidx.media3.exoplayer, androidx.media3.ui, androidx.media3.common,
         androidx.media3.datasource, androidx.media3.decoder, androidx.media3.extractor, androidx.media3.container,
-        androidx.media3.database, androidx.media, androidx.test, androidx.test.core, androidx.test.monitor,
+        androidx.media3.database, androidx.media, androidx.webkit, androidx.test, androidx.test.core, androidx.test.monitor,
         androidx.test.runner, androidx.test.services.storage, androidx.test.espresso.core, androidx.test.espresso.idling,
         androidx.test.espresso.idling.resource, androidx.test.ext.junit, androidx.tracing, androidx.concurrent.futures" />
 </manifest>

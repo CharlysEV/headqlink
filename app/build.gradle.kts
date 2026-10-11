@@ -268,6 +268,7 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.8.2")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation("androidx.media:media:1.6.0")
+    implementation("androidx.webkit:webkit:1.10.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     // headqlink: reproductor de vÃ­deo e IPTV (HLS) en la pantalla del coche. 1.3.x admite minSdk 16.
     implementation("androidx.media3:media3-exoplayer:1.3.1")

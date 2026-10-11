@@ -37,12 +37,14 @@ public class SetupActivity extends Activity {
     private boolean resumed;
     /** Ya se avisó de que la conexión nueva se aplica al volver a conectar. */
     private boolean warnedPending;
+    private boolean responsibilityAccepted;
 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         L.init(this);
         cfg = new Config(this);
+        responsibilityAccepted = b != null && b.getBoolean("responsibility_accepted", false);
         mode = cfg.mode();
         linkMode = cfg.linkMode();
         setContentView(R.layout.hql_activity_setup);
@@ -62,13 +64,15 @@ public class SetupActivity extends Activity {
             if (i > 0) lp.setMarginStart(dp(8));
             steps.addView(bar, lp);
         }
-        show(b != null ? b.getInt(EXTRA_STEP) : getIntent().getIntExtra(EXTRA_STEP, 0));
+        int requestedStep = b != null ? b.getInt(EXTRA_STEP) : getIntent().getIntExtra(EXTRA_STEP, 0);
+        show(!cfg.setupDone() && !responsibilityAccepted ? 0 : requestedStep);
     }
 
     @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
         out.putInt(EXTRA_STEP, step);
+        out.putBoolean("responsibility_accepted", responsibilityAccepted);
     }
 
     @Override
@@ -103,6 +107,18 @@ public class SetupActivity extends Activity {
             case 0:
                 inf.inflate(R.layout.hql_setup_welcome, container, true);
                 next.setText(Str.get(R.string.hql_setup_start));
+                android.widget.CheckBox consent = container.findViewById(R.id.hql_responsibility_accept);
+                consent.setVisibility(cfg.setupDone() ? View.GONE : View.VISIBLE);
+                consent.setChecked(responsibilityAccepted);
+                if (!cfg.setupDone()) {
+                    consent.setOnCheckedChangeListener((button, accepted) -> {
+                        responsibilityAccepted = accepted;
+                        next.setEnabled(accepted);
+                    });
+                }
+                TextView termsLink = container.findViewById(R.id.hql_terms_link);
+                termsLink.setPaintFlags(termsLink.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
+                termsLink.setOnClickListener(v -> TermsOfUse.show(this));
                 break;
             case 1:
                 inf.inflate(R.layout.hql_setup_mode, container, true);
@@ -113,6 +129,7 @@ public class SetupActivity extends Activity {
                 inf.inflate(R.layout.hql_setup_check, container, true);
                 next.setText(Str.get(R.string.hql_finish));
         }
+        next.setEnabled(cfg.setupDone() || responsibilityAccepted);
         if (step == 2) {
             checklist.refresh();
             if (resumed) checklist.start();
@@ -122,6 +139,7 @@ public class SetupActivity extends Activity {
     }
 
     private void onNext() {
+        if (!cfg.setupDone() && !responsibilityAccepted) return;
         if (step < STEPS - 1) {
             if (step == 1) {
                 cfg.setMode(mode);
@@ -145,6 +163,8 @@ public class SetupActivity extends Activity {
 
     /** anyway: terminado con algo obligatorio pendiente (ya avisado: la pantalla principal no vuelve a avisar al conectar). */
     private void finishSetup(boolean anyway) {
+        if (!cfg.setupDone() && !responsibilityAccepted) return;
+        if (responsibilityAccepted) cfg.putBool("responsibility_accepted", true);
         cfg.setMode(mode);
         cfg.setLinkMode(linkMode);
         warnIfPending();
