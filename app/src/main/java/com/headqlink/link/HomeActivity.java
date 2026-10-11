@@ -76,6 +76,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             return;
         }
         setContentView(R.layout.hql_activity_home);
+        installTabs();
         modeView = findViewById(R.id.hql_home_mode);
         modeDetail = findViewById(R.id.hql_home_mode_detail);
         hint = findViewById(R.id.hql_home_hint);
@@ -137,6 +138,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     protected void onResume() {
         super.onResume();
         if (modeView == null) return;
+        if (insights != null && tab == 1) insights.show();
         LinkState.addListener(this);
         // El perfil de imagen pudo cambiar: los máximos de las barras se recalculan con el próximo dato.
         fpsMax = 0;
@@ -180,6 +182,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
 
     @Override
     protected void onPause() {
+        if (insights != null) insights.hide();
         LinkState.removeListener(this);
         pulse(false);
         super.onPause();
@@ -524,6 +527,89 @@ public class HomeActivity extends Activity implements LinkState.Listener {
      * extendido, Juegos, App) y Diagnóstico abajo. Así crece sin hacerse una lista interminable (más emuladores, más
      * listas…).
      */
+    // ------------------------------------------------------------------ pestañas
+
+    /** Las dos partes de la app: «Conexión» (lo de siempre: modo, estado, conectar, ajustes) y «Viajes» (PhoneInsights). */
+    private PhoneInsights insights;
+    private View connectionPage;
+    private int tab;
+    private TextView[] tabViews;
+
+    /**
+     * Pone debajo una barra con dos pestañas y, encima, la pantalla de siempre o la de Viajes. La de siempre se saca del
+     * layout tal cual (sus vistas siguen donde estaban). Se recuerda la última pestaña.
+     */
+    private void installTabs() {
+        android.view.ViewGroup content = findViewById(android.R.id.content);
+        connectionPage = content.getChildAt(0);
+        content.removeView(connectionPage);
+        connectionPage.setFitsSystemWindows(false);
+        LinearLayout shell = new LinearLayout(this);
+        shell.setOrientation(LinearLayout.VERTICAL);
+        shell.setFitsSystemWindows(true);
+        shell.setBackgroundColor(0xFF0A0E14);
+        android.widget.FrameLayout pages = new android.widget.FrameLayout(this);
+        pages.addView(connectionPage);
+        insights = new PhoneInsights(this);
+        pages.addView(insights.view());
+        shell.addView(pages, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        LinearLayout bar = new LinearLayout(this);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setBackgroundColor(0xFF0D131B);
+        float d = getResources().getDisplayMetrics().density;
+        bar.setPadding(0, Math.round(6 * d), 0, Math.round(6 * d));
+        int[][] items = {{R.drawable.hql_ic_aa, R.string.hql_tab_connection}, {R.drawable.hql_ic_efficiency, R.string.hql_tab_trips}};
+        tabViews = new TextView[items.length];
+        for (int i = 0; i < items.length; i++) {
+            int idx = i;
+            TextView t = new TextView(this);
+            t.setText(Str.get(items[i][1]));
+            t.setGravity(android.view.Gravity.CENTER);
+            t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13);
+            t.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
+            android.graphics.drawable.Drawable ic = getDrawable(items[i][0]);
+            if (ic != null) {
+                ic = ic.mutate();
+                int sz = Math.round(24 * d);
+                ic.setBounds(0, 0, sz, sz);
+                t.setCompoundDrawables(null, ic, null, null);
+            }
+            t.setCompoundDrawablePadding(Math.round(3 * d));
+            t.setPadding(0, Math.round(4 * d), 0, Math.round(4 * d));
+            t.setBackgroundResource(selectable());
+            t.setOnClickListener(v -> selectTab(idx));
+            tabViews[i] = t;
+            bar.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        }
+        View line = new View(this);
+        line.setBackgroundColor(0xFF1E2935);
+        shell.addView(line, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, Math.round(d))));
+        shell.addView(bar, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        setContentView(shell);
+        tab = getSharedPreferences("hql_home", MODE_PRIVATE).getInt("tab", 0);
+        applyTab();
+    }
+
+    private void selectTab(int i) {
+        if (i == tab) return;
+        tab = i;
+        getSharedPreferences("hql_home", MODE_PRIVATE).edit().putInt("tab", i).apply();
+        applyTab();
+    }
+
+    private void applyTab() {
+        connectionPage.setVisibility(tab == 0 ? View.VISIBLE : View.GONE);
+        insights.view().setVisibility(tab == 1 ? View.VISIBLE : View.GONE);
+        for (int i = 0; i < tabViews.length; i++) {
+            int col = i == tab ? 0xFF00E5C7 : 0xFF8296A9;
+            tabViews[i].setTextColor(col);
+            android.graphics.drawable.Drawable[] ds = tabViews[i].getCompoundDrawables();
+            if (ds[1] != null) ds[1].setTint(col);
+        }
+        if (tab == 1) insights.show();
+        else insights.hide();
+    }
+
     private void showMenu(View anchor) {
         boolean ext = Config.MODE_AA_EXT.equals(cfg.mode());
         com.google.android.material.bottomsheet.BottomSheetDialog sheet = new com.google.android.material.bottomsheet.BottomSheetDialog(this);

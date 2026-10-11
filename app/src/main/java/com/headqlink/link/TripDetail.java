@@ -102,6 +102,11 @@ final class TripDetail {
 
     /** La página del mapa con los datos del viaje dentro (sin puente con Java: no hace falta). */
     private String html() {
+        return mapHtml(t, stops);
+    }
+
+    /** La página del mapa de un viaje (también la usa TripMapActivity en el móvil). */
+    static String mapHtml(TripLog.Trip t, java.util.List<TripStops.Stop> stops) {
         JSONObject d = new JSONObject();
         try {
             JSONArray pts = new JSONArray();

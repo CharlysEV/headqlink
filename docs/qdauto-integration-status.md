@@ -2534,3 +2534,16 @@ Registro del 11-10-2026 (varias horas de conducción). Se vieron tres fallos.
 
 ### 33.7 Otros
 - Al salir de la vista previa, su carga de demostración se colaba en el coche virtual. Ahora `ChargeWatch` la marca como de la demostración y la quita al salir.
+
+### 33.8 La app del móvil: «Conexión» y «Viajes»
+- La pantalla principal tiene abajo dos pestañas (`HomeActivity.installTabs`): «Conexión» (la de siempre) y «Viajes» (`PhoneInsights`). Se recuerda la última que se abrió.
+- «Viajes», con datos que se leen en otro hilo al entrar y cada minuto mientras se mira (la nube se pide con `CarCloud.acquire("phone-trips")` y se suelta al salir):
+  - **Tu coche ahora:** anillo de batería, autonomía, cuentakilómetros, si carga (kW y «lleno en») y la edad del dato.
+  - **Últimos 30 días:** km, viajes, kWh/100, coste (precio de Ajustes) y kWh. Debajo, una gráfica con los km de cada día en barras y el consumo del día en línea. Los datos salen del historial del coche (todos los viajes, también sin HeadQLink) o, sin cuenta, de los viajes de la app.
+  - **Cómo gastas:**
+    - el consumo de los últimos 24 viajes frente a la media;
+    - el consumo según lo largo del viaje (< 5, 5–20, 20–50, > 50 km), con el aviso de lo que pesan los viajes cortos;
+    - el mejor viaje de 10 km o más.
+  - **Cargas:** las de `ChargeLog` de 0,5 kWh o más, con una curva pequeña de kW frente a %. Al tocar una, se abre en grande.
+  - **Recorridos:** los viajes con trazado de 1 km o más, con su silueta (`PhoneCharts.TrackThumb`). Al tocar uno, `TripMapActivity` abre el mismo mapa que el coche (`TripDetail.mapHtml`) con fecha, km, tiempo, consumo, coste, desnivel, velocidad máxima y paradas.
+- Las gráficas (`PhoneCharts`) se dibujan a mano con los colores de la app.

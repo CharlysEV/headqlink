@@ -672,6 +672,11 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice|location" />
 
+        <activity
+            android:name="com.headqlink.link.TripMapActivity"
+            android:exported="false"
+            android:theme="@style/Theme.HeadQLink" />
+
         <!-- Lee la notificación de navegación de Google Maps (ruta en metros y hora de llegada) para el plan de ruta. -->
         <service
             android:name="com.headqlink.link.MapsNavListener"

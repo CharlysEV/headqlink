@@ -800,7 +800,8 @@ final class RoutePlanner {
             }
             // Fuera del coche solo en un viaje o en carga rápida (en casa, en alterna y sin ruta, no hace falta vigilar
             // horas); en las capturas de la demostración, nunca.
-            ChargeWatch.begin(ctx, s, (p != null || s.dc) && (!cs.demo || DemoMode.live()), cs.demo);
+            // La demostración nunca vigila fuera del coche (si no, sus avisos seguían en el móvil al salir de ella).
+            ChargeWatch.begin(ctx, s, (p != null || s.dc) && !cs.demo, cs.demo);
         }
         if (s != null && p != null && p.n >= 2) sessionTarget(s, p);
         ChargeWatch.tick(ctx, cs);
