@@ -933,4 +933,10 @@
     <string name="hql_usb_busy_title">Das Autokabel ist von einer anderen App belegt</string>
     <string name="hql_usb_busy_qdlink">Wahrscheinlich die originale QDLink-App. Hier tippen und „Beenden erzwingen“: HeadQLink übernimmt das Kabel.</string>
     <string name="hql_usb_busy_other">Schließe die App, die es nutzt, oder stecke das Kabel aus und wieder ein.</string>
+    <string name="hql_float_card">Karte mit dem nächsten Halt über Android Auto</string>
+    <string name="hql_float_card_help">Antippen öffnet die Route; gedrückt halten, um sie zu verschieben.</string>
+    <string name="hql_float_stop_sub">in %1$.0f km · Ankunft mit %2$.0f %%</string>
+    <string name="hql_float_dest">Ankunft mit %1$.0f %%</string>
+    <string name="hql_float_no_stop">Ohne Halt</string>
+    <string name="hql_float_no_charger">Keine Ladesäule in Reichweite</string>
 </resources>

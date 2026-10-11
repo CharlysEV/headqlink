@@ -934,4 +934,10 @@
     <string name="hql_usb_busy_title">Il cavo dell\'auto è occupato da un\'altra app</string>
     <string name="hql_usb_busy_qdlink">Probabilmente l\'app QDLink originale. Tocca qui e poi «Forza interruzione»: HeadQLink prenderà il cavo.</string>
     <string name="hql_usb_busy_other">Chiudi l\'app che lo sta usando, oppure scollega e ricollega il cavo.</string>
+    <string name="hql_float_card">Scheda della prossima sosta sopra Android Auto</string>
+    <string name="hql_float_card_help">Toccala per aprire il percorso; tienila premuta per spostarla.</string>
+    <string name="hql_float_stop_sub">tra %1$.0f km · arrivi con il %2$.0f %%</string>
+    <string name="hql_float_dest">Arrivi con il %1$.0f %%</string>
+    <string name="hql_float_no_stop">Senza soste</string>
+    <string name="hql_float_no_charger">Nessun caricatore raggiungibile</string>
 </resources>

@@ -933,4 +933,10 @@
     <string name="hql_usb_busy_title">De autokabel is bezet door een andere app</string>
     <string name="hql_usb_busy_qdlink">Waarschijnlijk de originele QDLink-app. Tik hier en dan „Gedwongen stoppen”: HeadQLink neemt de kabel over.</string>
     <string name="hql_usb_busy_other">Sluit de app die hem gebruikt, of trek de kabel uit en steek hem weer in.</string>
+    <string name="hql_float_card">Kaart met de volgende stop boven Android Auto</string>
+    <string name="hql_float_card_help">Tik om de route te openen; houd ingedrukt om hem te verplaatsen.</string>
+    <string name="hql_float_stop_sub">over %1$.0f km · je komt aan met %2$.0f %%</string>
+    <string name="hql_float_dest">Je komt aan met %1$.0f %%</string>
+    <string name="hql_float_no_stop">Zonder stops</string>
+    <string name="hql_float_no_charger">Geen laadpaal binnen bereik</string>
 </resources>

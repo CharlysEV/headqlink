@@ -311,6 +311,18 @@ final class GlFrameRelay {
     }
 
     /** AA visible en su zona (false: nuestra interfaz ocupa toda la pantalla). */
+    /**
+     * Tarjeta flotante de nuestra interfaz sobre AA: {x, y, ancho, alto} en px de la capa de la interfaz, o null. Tras
+     * dibujar AA se vuelve a pintar ese trozo de la capa encima, con las esquinas redondeadas transparentes.
+     */
+    /** Radio de las esquinas de la tarjeta flotante (px de la interfaz; FloatCard dibuja 24). */
+    private static final float FLOAT_RADIUS = 24f;
+    private volatile int[] floatRect;
+
+    void setFloatRect(int[] r) {
+        floatRect = r;
+    }
+
     void setAaVisible(boolean v) {
         aaVisible = v;
         if (h != null) h.post(() -> {
@@ -580,7 +592,11 @@ final class GlFrameRelay {
             // zona si está visible (y ya ha dado imagen: antes se ve la animación de carga), con
             // las esquinas redondeadas sobre el gris del panel.
             drawLayer(layer, layerM, 0, 0, outW, outH, 0f, 0f, 1f, 1f, 0f);
-            if (aaVisible && aaHasFrame) drawAa(aaOutX, aaOutW, AA_CORNER_RADIUS * outW / (float) ovW);
+            if (aaVisible && aaHasFrame) {
+                drawAa(aaOutX, aaOutW, AA_CORNER_RADIUS * outW / (float) ovW);
+                int[] fr = floatRect;
+                if (fr != null) drawFloat(layer, layerM, fr);
+            }
         } else {
             drawAa(0, outW, 0f);
         }
@@ -590,6 +606,21 @@ final class GlFrameRelay {
         // Dibujar + entregar al encoder (el swap se bloquea si el encoder no ha soltado un búfer).
         PerfTrace.event("swap_ms", (System.nanoTime() - now) / 1_000_000);
         if (t0 - now > 0) PerfTrace.event("gl_ms", (t0 - now) / 1_000_000);
+    }
+
+    /** Trozo (x, y, w, h en px de la capa de la interfaz) de la capa encima de lo dibujado, con esquinas transparentes. */
+    private void drawFloat(int layer, float[] layerM, int[] r) {
+        float sx = outW / (float) ovW;
+        float sy = outH / (float) ovH;
+        int x = Math.round(r[0] * sx);
+        int w = Math.round(r[2] * sx);
+        int h = Math.round(r[3] * sy);
+        int yGl = outH - Math.round(r[1] * sy) - h;
+        GLES20.glEnable(GLES20.GL_BLEND);
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        drawLayer(layer, layerM, x, yGl, w, h, r[0] / (float) ovW, 1f - (r[1] + r[3]) / (float) ovH,
+                r[2] / (float) ovW, r[3] / (float) ovH, FLOAT_RADIUS * sx, 0f);
+        GLES20.glDisable(GLES20.GL_BLEND);
     }
 
     /** AA: franja superior izquierda de regionW x outH de su frame, en la zona (x, regionW) de la salida. */
@@ -604,12 +635,18 @@ final class GlFrameRelay {
      * con radius > 0, con esquinas redondeadas sobre bgColor.
      */
     private void drawLayer(int texture, float[] m, int x, int y, int w, int hh, float cu, float cv, float cw, float ch, float radius) {
+        drawLayer(texture, m, x, y, w, hh, cu, cv, cw, ch, radius, 1f);
+    }
+
+    /** bgAlpha: opacidad de lo de fuera de las esquinas redondeadas (0 = transparente, para la tarjeta flotante). */
+    private void drawLayer(int texture, float[] m, int x, int y, int w, int hh, float cu, float cv, float cw, float ch, float radius,
+                           float bgAlpha) {
         GLES20.glViewport(x, y, w, hh);
         GLES20.glUniform4f(GLES20.glGetUniformLocation(program, "uRect"), x, y, w, hh);
         GLES20.glUniform1f(GLES20.glGetUniformLocation(program, "uRadius"), radius);
         int bg = bgColor;
         GLES20.glUniform4f(GLES20.glGetUniformLocation(program, "uBg"), ((bg >> 16) & 0xff) / 255f,
-                ((bg >> 8) & 0xff) / 255f, (bg & 0xff) / 255f, 1f);
+                ((bg >> 8) & 0xff) / 255f, (bg & 0xff) / 255f, bgAlpha);
         int aPos = GLES20.glGetAttribLocation(program, "aPos");
         int aTex = GLES20.glGetAttribLocation(program, "aTex");
         quad.position(0);

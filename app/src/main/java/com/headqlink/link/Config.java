@@ -588,6 +588,26 @@ final class Config {
         return sp.getBoolean(RADAR_VOICE, true);
     }
 
+    /** Tarjeta flotante con la próxima parada sobre Android Auto (CarUi/FloatCard). */
+    static final String FLOAT_CARD = "float_card";
+
+    boolean floatCard() {
+        return sp.getBoolean(FLOAT_CARD, true);
+    }
+
+    /** Posición de la tarjeta flotante: fracciones (0-1) de la zona de AA; -1 = sin guardar (arriba a la derecha). */
+    float floatX() {
+        return sp.getFloat("float_x", -1f);
+    }
+
+    float floatY() {
+        return sp.getFloat("float_y", -1f);
+    }
+
+    void setFloatPos(float x, float y) {
+        sp.edit().putFloat("float_x", x).putFloat("float_y", y).apply();
+    }
+
     /** Panel del modo extendido a la derecha (AA pegado al conductor en coches con volante a la derecha, o a gusto). */
     static final String PANEL_RIGHT = "panel_right";
 

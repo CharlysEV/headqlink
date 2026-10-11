@@ -578,6 +578,11 @@ final class AaPassthroughSource implements VideoSource {
                 public void onPanelColor(int color) {
                     r.setBackgroundColor(color);
                 }
+
+                @Override
+                public void onFloatRect(int[] rect) {
+                    r.setFloatRect(rect);
+                }
             });
             carUi.setRefreshRate(fps);
             carUi.start(r.overlayInput(), r.manualOverlayInput(), r::setManualOverlay);
@@ -645,7 +650,8 @@ final class AaPassthroughSource implements VideoSource {
             if (aaDown.isEmpty() && first.action == 1) {
                 // A nuestra interfaz si AA no se ve, o si el toque cae fuera de su zona (la barra, o la otra mitad con la
                 // pantalla partida).
-                touchToUi = !ui.aaVisible() || first.x < aaCarX() || first.x >= aaCarX() + aaCarW();
+                touchToUi = !ui.aaVisible() || first.x < aaCarX() || first.x >= aaCarX() + aaCarW()
+                        || ui.floatHit(first.x, first.y);
                 ui.noteTouch(touchToUi);
             }
             if (touchToUi) {

@@ -938,4 +938,10 @@
     <string name="hql_usb_busy_title">The car cable is taken by another app</string>
     <string name="hql_usb_busy_qdlink">The original QDLink app probably has it. Tap, then «Force stop», and HeadQLink will take the cable.</string>
     <string name="hql_usb_busy_other">Close the app that is using it, or unplug and plug the cable back in.</string>
+    <string name="hql_float_card">Next stop card over Android Auto</string>
+    <string name="hql_float_card_help">Tap it to open the route; press and hold to move it.</string>
+    <string name="hql_float_stop_sub">in %1$.0f km · you arrive with %2$.0f %%</string>
+    <string name="hql_float_dest">You arrive with %1$.0f %%</string>
+    <string name="hql_float_no_stop">No stops</string>
+    <string name="hql_float_no_charger">No charger in reach</string>
 </resources>

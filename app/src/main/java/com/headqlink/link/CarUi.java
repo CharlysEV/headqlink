@@ -63,6 +63,13 @@ final class CarUi {
         /** Color del panel (fondo de las esquinas redondeadas de AA). */
         default void onPanelColor(int color) {
         }
+
+        /**
+         * Tarjeta flotante sobre AA: {x, y, ancho, alto} en px de la pantalla del coche, o null si no se ve. Su trozo de
+         * nuestra interfaz se pinta encima de la imagen de AA (GlFrameRelay) y sus toques vienen a nuestra interfaz.
+         */
+        default void onFloatRect(int[] rect) {
+        }
     }
 
     /** Instancia en marcha, para ajustar el color del panel en vivo desde el móvil. */
@@ -122,6 +129,22 @@ final class CarUi {
     private boolean aaReady;
     private SplashView splash;
     private volatile boolean aaShown = true;
+    /** Tarjeta flotante sobre AA (próxima parada) y la zona de AA en la que se mueve. */
+    private FloatCard floatCard;
+    private int aaRegX;
+    private int aaRegW;
+    private volatile int[] floatRect;
+    private int dragLeft;
+    private int dragTop;
+    private static final int FLOAT_MARGIN = 20;
+    private static final long FLOAT_TICK_MS = 5000;
+    private final Runnable floatTick = new Runnable() {
+        @Override
+        public void run() {
+            refreshFloat();
+            main.postDelayed(this, FLOAT_TICK_MS);
+        }
+    };
     /**
      * Pantalla partida (lo pide el usuario con el botón de la barra en Web, Vídeos o TV): AA a la izquierda, junto a la
      * barra, y nuestra pantalla a la derecha (splitAaWidth). Dura la sesión con el coche: al volver a una de esas
@@ -416,6 +439,9 @@ final class CarUi {
         } else if (!compact) {
             listener.onAaRegion(aaX, width - pw);
         }
+        aaRegX = aaX;
+        aaRegW = sp ? aaW : width - pw;
+        refreshFloat();
     }
 
     /** En la barra reducida, todos los botones guardan la misma separación y cabe la flecha inferior. */
@@ -655,6 +681,7 @@ final class CarUi {
             RoadInfo.start(ctx);
             open("aa");
             if (autoHide) setHidden(true);
+            main.postDelayed(floatTick, FLOAT_TICK_MS);
         });
     }
 
@@ -675,6 +702,8 @@ final class CarUi {
             main.removeCallbacks(hideTask);
             main.removeCallbacks(alertExpire);
             main.removeCallbacks(railTick);
+            main.removeCallbacks(floatTick);
+            setFloatRect(null);
             if (RoutePlanner.chargeAlerts == chargeAlert) RoutePlanner.chargeAlerts = null;
             SspSession.setDrivingUi(true);
             try {
@@ -888,7 +917,98 @@ final class CarUi {
         alp.rightMargin = 12;
         alp.bottomMargin = 12;
         root.addView(buildAlert(c), alp);
+        floatCard = new FloatCard(c, new FloatCard.Listener() {
+            @Override
+            public void onTap() {
+                // A la ruta (sección Coche, pestaña Ruta).
+                CarHubScreen.selectTab(0);
+                open("car");
+            }
+
+            @Override
+            public void onDrag(float dx, float dy) {
+                int[] r = floatRect;
+                if (r == null) return;
+                placeFloatAt(dragLeft + Math.round(dx), dragTop + Math.round(dy));
+            }
+
+            @Override
+            public void onDrop() {
+                int[] r = floatRect;
+                if (r == null) return;
+                // Se guarda como fracción de la zona de AA: vale con el panel recogido o desplegado.
+                int spanX = Math.max(1, aaRegW - FloatCard.W - 2 * FLOAT_MARGIN);
+                int spanY = Math.max(1, height - FloatCard.H - 2 * FLOAT_MARGIN);
+                float fx = Math.max(0f, Math.min(1f, (r[0] - aaRegX - FLOAT_MARGIN) / (float) spanX));
+                float fy = Math.max(0f, Math.min(1f, (r[1] - FLOAT_MARGIN) / (float) spanY));
+                new Config(ctx).setFloatPos(fx, fy);
+                L.i(String.format(java.util.Locale.ROOT, "CarUi: tarjeta flotante movida a %.2f, %.2f", fx, fy));
+                dragLeft = r[0];
+                dragTop = r[1];
+            }
+        });
+        floatCard.setVisibility(View.GONE);
+        root.addView(floatCard, new FrameLayout.LayoutParams(FloatCard.W, FloatCard.H, Gravity.TOP | Gravity.LEFT));
         return root;
+    }
+
+    /** ¿Cae (x, y) en la tarjeta flotante? Hilo del coche: sus toques van a nuestra interfaz, no a AA. */
+    boolean floatHit(float x, float y) {
+        int[] r = floatRect;
+        return r != null && x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + r[3];
+    }
+
+    /** La tarjeta flotante desde Ajustes (encendida o apagada). */
+    static void applyFloatCard() {
+        CarUi ui = current;
+        if (ui != null) ui.main.post(ui::refreshFloat);
+    }
+
+    /** Enseña u oculta la tarjeta flotante (solo con AA a la vista, sin pantalla partida y con plan) y la coloca. */
+    private void refreshFloat() {
+        if (floatCard == null) return;
+        boolean show = aaShown && !splitActive() && !compact && aaRegW > FloatCard.W + 2 * FLOAT_MARGIN
+                && new Config(ctx).floatCard() && floatCard.update();
+        floatCard.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (!show) {
+            setFloatRect(null);
+            return;
+        }
+        Config cfg = new Config(ctx);
+        float fx = cfg.floatX();
+        float fy = cfg.floatY();
+        // Sin posición guardada: arriba a la derecha, donde AA (Maps) no pone nada.
+        int spanX = Math.max(0, aaRegW - FloatCard.W - 2 * FLOAT_MARGIN);
+        int spanY = Math.max(0, height - FloatCard.H - 2 * FLOAT_MARGIN);
+        int left = aaRegX + FLOAT_MARGIN + Math.round((fx < 0 ? 1f : fx) * spanX);
+        int top = FLOAT_MARGIN + Math.round((fy < 0 ? 0f : fy) * spanY);
+        placeFloatAt(left, top);
+        int[] r = floatRect;
+        if (r != null) {
+            dragLeft = r[0];
+            dragTop = r[1];
+        }
+    }
+
+    /** Coloca la tarjeta (dentro de la zona de AA) y avisa de su rectángulo. */
+    private void placeFloatAt(int left, int top) {
+        int minX = aaRegX + FLOAT_MARGIN;
+        int maxX = aaRegX + aaRegW - FloatCard.W - FLOAT_MARGIN;
+        int x = Math.max(minX, Math.min(maxX, left));
+        int y = Math.max(FLOAT_MARGIN, Math.min(height - FloatCard.H - FLOAT_MARGIN, top));
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) floatCard.getLayoutParams();
+        if (lp.leftMargin != x || lp.topMargin != y) {
+            lp.leftMargin = x;
+            lp.topMargin = y;
+            floatCard.setLayoutParams(lp);
+        }
+        setFloatRect(new int[]{x, y, FloatCard.W, FloatCard.H});
+    }
+
+    private void setFloatRect(int[] r) {
+        if (java.util.Arrays.equals(r, floatRect)) return;
+        floatRect = r;
+        listener.onFloatRect(r);
     }
 
     /** Tarjeta del aviso del plan de carga: qué ha cambiado, «Ir» (Google Maps con las paradas nuevas) y «Ruta». */
@@ -1272,6 +1392,7 @@ final class CarUi {
         }
         aaShown = factory == null;
         if (aaShown) hidden = true;
+        refreshFloat();
         markNav();
         // La pantalla partida depende de la pantalla abierta: se recoloca todo y AA se ve si va sola o al lado.
         applyLayout();

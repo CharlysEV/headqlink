@@ -934,4 +934,10 @@
     <string name="hql_usb_busy_title">O cabo do carro está com outra aplicação</string>
     <string name="hql_usb_busy_qdlink">Provavelmente a aplicação QDLink original. Toque aqui e em «Forçar paragem»: o HeadQLink vai ficar com o cabo.</string>
     <string name="hql_usb_busy_other">Feche a aplicação que o está a usar, ou desligue e volte a ligar o cabo.</string>
+    <string name="hql_float_card">Cartão da próxima paragem sobre o Android Auto</string>
+    <string name="hql_float_card_help">Toque para abrir a rota; mantenha premido para o mover.</string>
+    <string name="hql_float_stop_sub">a %1$.0f km · chega com %2$.0f %%</string>
+    <string name="hql_float_dest">Chega com %1$.0f %%</string>
+    <string name="hql_float_no_stop">Sem paragens</string>
+    <string name="hql_float_no_charger">Nenhum carregador ao alcance</string>
 </resources>

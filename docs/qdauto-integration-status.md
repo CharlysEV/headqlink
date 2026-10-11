@@ -2644,3 +2644,21 @@ Registro del 11-10-2026 (varias horas de conducción). Se vieron tres fallos.
 ### 36.6 Cable ocupado por otra app
 - **Aviso:** `UsbLink` cuenta las aperturas fallidas seguidas (`openAccessory` da null). A la segunda, `UsbBusyNotice` avisa en el móvil, y con la QDLink original instalada el aviso abre su ficha para «Forzar detención». Se quita al abrir el cable.
 - **Nota:** el filtro de QDLink pide la versión «1» y el C10 manda «1.0», así que Android no la abriría sola. Lo probable es el diálogo de qué app abre el cable (ver §35.2).
+
+### 36.7 Tarjeta flotante sobre Android Auto (próxima parada)
+- **Qué enseña** (`FloatCard`):
+  - la próxima parada del plan de carga: ⚡, nombre, km que faltan y % al llegar;
+  - sin paradas, 🏁 con qué % se llega y la hora de llegada de Maps;
+  - si no hay cargador alcanzable, en ámbar.
+- **Cuándo sale:** solo con AA a la vista, sin pantalla partida y con plan. Se actualiza cada 5 s y al recolocarse la interfaz.
+- **Toques:**
+  - un toque abre Coche › Ruta;
+  - mantener pulsado 450 ms y arrastrar la mueve dentro de la zona de AA;
+  - la posición se guarda como fracción de la zona de AA (`float_x/float_y`), así vale con el panel recogido o desplegado.
+- **Ajuste:** Ajustes › Viaje (`float_card`, encendido de serie).
+- **Cómo se ve encima de AA:**
+  - `GlFrameRelay` pinta primero nuestra interfaz y AA encima, opaco.
+  - Con la tarjeta, tras AA vuelve a pintar ese trozo de la capa de la interfaz (`drawFloat`), con mezcla alfa y las esquinas redondeadas transparentes (`uBg` con alfa 0).
+  - `CarUi` avisa del rectángulo (`Listener.onFloatRect`).
+- **Toques que caen en ella:** van a nuestra interfaz (`AaPassthroughSource.touchMulti` → `CarUi.floatHit`), no a AA.
+- **Probado en el coche virtual** con una ruta de prueba: se ve sobre el mapa, se mueve con pulsación larga y un toque abre la ruta.
