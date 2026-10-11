@@ -476,7 +476,7 @@
     <string name="hql_req_band_why">No se puede leer desde aquí: en los ajustes de la zona Wi-Fi elige 5 GHz y quita el apagado automático</string>
     <string name="hql_req_port_title">Puerto 18463</string>
     <string name="hql_req_port_busy">Ocupado: QDLink (u otra app) está abierta y el coche no encuentra a HeadQLink. Fuerza su detención.</string>
-    <string name="hql_req_qdlink_why">Instalada: ciérrala antes de conectar (ocupa el puerto 18463). Info. de la app › Forzar detención.</string>
+    <string name="hql_req_qdlink_why">Instalada: ciérrala antes de conectar (ocupa el puerto 18463). Info. de la app › Forzar detención. Si enchufas el cable del coche, Android puede dárselo a QDLink: elige HeadQLink y «Siempre».</string>
     <string name="hql_req_force_stop">Forzar detención</string>
     <string name="hql_req_bt">Bluetooth (dispositivos cercanos)</string>
     <string name="hql_req_bt_why">Para reconocer el Bluetooth del coche y conectar sola</string>
@@ -908,4 +908,6 @@
     <string name="hql_ha_yes">Sí</string>
     <string name="hql_ha_setup">Configurar Home Assistant</string>
     <string name="hql_ha_edit">Elegir</string>
+    <string name="hql_web_recent">Visitadas hace poco</string>
+    <string name="hql_web_listening">Escuchando… di qué buscar</string>
 </resources>

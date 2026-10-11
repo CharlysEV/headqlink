@@ -47,7 +47,7 @@ Ci sono due modalità:
 
 | | |
 |---|---|
-| Auto | Leapmotor C10 con la sua app di mirroring (proiezione del telefono) sullo schermo. |
+| Auto | Leapmotor C10 con la sua app di mirroring (proiezione del telefono) sullo schermo. Funziona anche su una **T03** con Android Auto normale (confermato da un utente). |
 | Telefono | Android con **Android Auto** installato. È consigliato **Android 10 o successivo**; per scegliere la lingua dell'app serve Android 13. |
 | Provato su | Samsung Galaxy **S25 Ultra** con **Android 16** e Android Auto 17.7. Altri telefoni potrebbero funzionare, ma non sono stati provati. |
 | Android Auto 17.4 o successivo | Devi attivare una volta la **modalità sviluppatore** di Android Auto e il servizio di **accessibilità** di HeadQLink. L'app ti guida (sezione 3). Con le versioni precedenti non serve nessuna delle due. |

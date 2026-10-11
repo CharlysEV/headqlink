@@ -476,7 +476,7 @@
     <string name="hql_req_band_why">Non si può leggere da qui: nelle impostazioni dell\'hotspot scegli 5 GHz e disattiva lo spegnimento automatico</string>
     <string name="hql_req_port_title">Porta 18463</string>
     <string name="hql_req_port_busy">Occupata: QDLink (o un\'altra app) è aperta e l\'auto non trova HeadQLink. Forzane l\'interruzione.</string>
-    <string name="hql_req_qdlink_why">Installata: chiudila prima di connetterti (occupa la porta 18463). Info app › Forza interruzione.</string>
+    <string name="hql_req_qdlink_why">Installata: chiudila prima di connetterti (occupa la porta 18463). Info app › Forza interruzione. Se colleghi il cavo dell\'auto, Android può darlo a QDLink: scegli HeadQLink e «Sempre».</string>
     <string name="hql_req_force_stop">Forza interruzione</string>
     <string name="hql_req_bt">Bluetooth (dispositivi nelle vicinanze)</string>
     <string name="hql_req_bt_why">Per riconoscere il Bluetooth dell\'auto e connettersi da sola</string>
@@ -908,4 +908,6 @@
     <string name="hql_ha_yes">Sì</string>
     <string name="hql_ha_setup">Configura Home Assistant</string>
     <string name="hql_ha_edit">Scegli</string>
+    <string name="hql_web_recent">Visitati di recente</string>
+    <string name="hql_web_listening">In ascolto… di\' cosa cercare</string>
 </resources>

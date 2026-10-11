@@ -2575,3 +2575,33 @@ Registro del 11-10-2026 (varias horas de conducción). Se vieron tres fallos.
   - **tarjetas de Viajes:** `MaterialCardView` con contorno y tipografía M3;
   - **diálogos:** campos con contorno (`TextInputLayout`, utilidad `M3`), `MaterialButton`, `MaterialRadioButton` y `MaterialCheckBox`, también en `hql_dialog_video` y `hql_dialog_qd_options`.
 - La pantalla del coche sigue con su dibujo propio: es vídeo que se manda al coche, hecho para parecerse a Android Auto.
+
+## 35. Navegador del coche y cable enchufado yendo por Wi-Fi (0.2.47)
+
+### 35.1 Navegador (`WebScreen`)
+- **Teclado solo:** al entrar en la página se inyecta un guion que avisa (`HqlKeyboard.focus`) de cuándo un campo de texto gana o pierde el foco. El teclado del coche sale solo y se va al salir del campo; si lo abrió el usuario, se queda.
+- **Barra:**
+  - 🎤 para buscar o dictar una dirección (`SpeechRecognizer`, resultados parciales en la barra);
+  - ⟳ pasa a ✕ mientras carga, con barra de progreso en el color de acento;
+  - la página se ve como «🔒 título · dominio».
+- **Inicio:**
+  - buscador grande con micrófono;
+  - marcadores en 6 columnas, con su icono: el que guardó la propia web al visitarla (`files/web_icons`) o, si no hay, su `apple-touch-icon`/`favicon.ico`, pedidos a la propia web y no a un servicio de terceros; si tampoco, su inicial sobre un color fijo;
+  - «Visitadas hace poco»: las 8 últimas webs, una por dominio, en `SharedPreferences` `hql_web`.
+- **De noche,** las webs sin modo oscuro se oscurecen (`androidx.webkit`, `ALGORITHMIC_DARKENING` o `FORCE_DARK`).
+- **Ventanas nuevas** (`target=_blank`): se abren en la misma vista, solo si las pide un toque.
+- **Al volver al navegador,** sigue en la última página si se dejó hace menos de 12 h.
+- **Teclado y campo:** al salir el teclado, la página encoge y el campo se centra en lo que queda visible (`scrollIntoView`).
+- **«PC»:** la web como en un ordenador. Usa el agente de usuario de Chrome para Linux con la misma versión que la WebView (`desktopUa`, puro y probado) y se recuerda.
+- **Contenido protegido (Widevine):** se concede sin preguntar; cámara y micrófono, no.
+  - **Prueba (2026-10-11):** la demo DRM de Bitmovin (Widevine, sin cuenta) se ve en el coche virtual, que compone igual que el coche (pantalla virtual sin capa segura).
+  - Netflix y Disney+ con «PC» quedan por probar con una cuenta. Si una web exige la ruta segura (L1, `HW_SECURE`), saldrá en negro.
+- Nunca se registran direcciones ni búsquedas.
+
+### 35.2 Cable enchufado yendo por Wi-Fi
+- **Lo que pasa:** al enchufar el cable con la sesión por Wi-Fi en marcha, el coche corta el Wi-Fi (`Connection reset`) y pasa al cable. Tarda unos 20 s en poner el móvil en modo accesorio. Si el accesorio no es de HeadQLink, la pantalla del coche se queda congelada: puede ser porque Android pregunta qué app lo abre o porque se lo da a QDLink si está instalada.
+- **Cambio en `UsbLink`:**
+  - En espera (Wi-Fi), si aparece el accesorio del coche sin permiso, se pide el permiso una vez por enchufada. El diálogo de Android deja marcar HeadQLink como predeterminada.
+  - Con el permiso concedido, el cable pasa por delante (`onUsbCarPresent`).
+  - Antes solo se anotaba en el sondeo.
+- **Requisitos:** con QDLink instalada, el aviso de las conexiones Wi-Fi también explica lo del cable.

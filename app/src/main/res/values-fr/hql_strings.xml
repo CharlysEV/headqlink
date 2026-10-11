@@ -476,7 +476,7 @@
     <string name="hql_req_band_why">Impossible à vérifier d\'ici : dans les paramètres du point d\'accès, choisissez 5 GHz et désactivez l\'arrêt automatique</string>
     <string name="hql_req_port_title">Port 18463</string>
     <string name="hql_req_port_busy">Occupé : QDLink ou une autre appli l\'utilise, et la voiture ne trouve pas HeadQLink. Forcez son arrêt.</string>
-    <string name="hql_req_qdlink_why">Installé : fermez-le avant de vous connecter (il occupe le port 18463). Infos sur l\'appli › Forcer l\'arrêt.</string>
+    <string name="hql_req_qdlink_why">Installé : fermez-le avant de vous connecter (il occupe le port 18463). Infos sur l\'appli › Forcer l\'arrêt. Si vous branchez le câble de la voiture, Android peut le donner à QDLink : choisissez HeadQLink et « Toujours ».</string>
     <string name="hql_req_force_stop">Forcer l\'arrêt</string>
     <string name="hql_req_bt">Bluetooth (appareils à proximité)</string>
     <string name="hql_req_bt_why">Pour reconnaître le Bluetooth de la voiture et se connecter tout seul</string>
@@ -908,4 +908,6 @@
     <string name="hql_ha_yes">Oui</string>
     <string name="hql_ha_setup">Configurer Home Assistant</string>
     <string name="hql_ha_edit">Choisir</string>
+    <string name="hql_web_recent">Visités récemment</string>
+    <string name="hql_web_listening">J\'écoute… dites ce qu\'il faut chercher</string>
 </resources>

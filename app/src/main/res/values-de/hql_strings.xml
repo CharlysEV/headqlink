@@ -475,7 +475,7 @@
     <string name="hql_req_band_why">Von hier nicht prüfbar: in den Hotspot-Einstellungen 5 GHz wählen und das automatische Ausschalten deaktivieren</string>
     <string name="hql_req_port_title">Port 18463</string>
     <string name="hql_req_port_busy">Belegt: QDLink (oder eine andere App) ist offen, und das Fahrzeug findet HeadQLink nicht. Beenden erzwingen.</string>
-    <string name="hql_req_qdlink_why">Installiert: vor dem Verbinden schließen (belegt Port 18463). App-Info › Beenden erzwingen.</string>
+    <string name="hql_req_qdlink_why">Installiert: vor dem Verbinden schließen (belegt Port 18463). App-Info › Beenden erzwingen. Steckst du das Autokabel ein, kann Android es QDLink geben: HeadQLink und „Immer“ wählen.</string>
     <string name="hql_req_force_stop">Beenden erzwingen</string>
     <string name="hql_req_bt">Bluetooth (Geräte in der Nähe)</string>
     <string name="hql_req_bt_why">Um das Bluetooth des Fahrzeugs zu erkennen und selbst zu verbinden</string>
@@ -907,4 +907,6 @@
     <string name="hql_ha_yes">Ja</string>
     <string name="hql_ha_setup">Home Assistant einrichten</string>
     <string name="hql_ha_edit">Auswählen</string>
+    <string name="hql_web_recent">Kürzlich besucht</string>
+    <string name="hql_web_listening">Ich höre zu… sag, wonach du suchst</string>
 </resources>

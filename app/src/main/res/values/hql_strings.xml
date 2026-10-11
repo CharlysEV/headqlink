@@ -475,7 +475,7 @@
     <string name="hql_req_band_why">Can\'t be read from here: in the hotspot settings choose 5 GHz and turn off auto-off</string>
     <string name="hql_req_port_title">Port 18463</string>
     <string name="hql_req_port_busy">Busy: QDLink (or another app) is open and the car can\'t find HeadQLink. Force stop it.</string>
-    <string name="hql_req_qdlink_why">Installed: close it before connecting (it takes port 18463). App info › Force stop.</string>
+    <string name="hql_req_qdlink_why">Installed: close it before connecting (it takes port 18463). App info › Force stop. If you plug in the car cable, Android may hand it to QDLink: pick HeadQLink and «Always».</string>
     <string name="hql_req_force_stop">Force stop</string>
     <string name="hql_req_bt">Bluetooth (nearby devices)</string>
     <string name="hql_req_bt_why">To recognise the car\'s Bluetooth and connect by itself</string>
@@ -907,4 +907,6 @@
     <string name="hql_ha_yes">Yes</string>
     <string name="hql_ha_setup">Set up Home Assistant</string>
     <string name="hql_ha_edit">Choose</string>
+    <string name="hql_web_recent">Recently visited</string>
+    <string name="hql_web_listening">Listening… say what to search for</string>
 </resources>

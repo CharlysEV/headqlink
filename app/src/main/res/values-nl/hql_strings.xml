@@ -475,7 +475,7 @@
     <string name="hql_req_band_why">Niet uit te lezen vanaf hier: kies in de hotspotinstellingen 5 GHz en zet automatisch uitschakelen uit</string>
     <string name="hql_req_port_title">Poort 18463</string>
     <string name="hql_req_port_busy">Bezet: QDLink (of een andere app) staat open en de auto vindt HeadQLink niet. Stop die app met ‘Gedwongen stoppen’.</string>
-    <string name="hql_req_qdlink_why">Geïnstalleerd: sluit het vóór het verbinden (het bezet poort 18463). App-info › Gedwongen stoppen.</string>
+    <string name="hql_req_qdlink_why">Geïnstalleerd: sluit het vóór het verbinden (het bezet poort 18463). App-info › Gedwongen stoppen. Steek je de autokabel in, dan kan Android hem aan QDLink geven: kies HeadQLink en „Altijd”.</string>
     <string name="hql_req_force_stop">Gedwongen stoppen</string>
     <string name="hql_req_bt">Bluetooth (apparaten in de buurt)</string>
     <string name="hql_req_bt_why">Om de Bluetooth van de auto te herkennen en vanzelf te verbinden</string>
@@ -907,4 +907,6 @@
     <string name="hql_ha_yes">Ja</string>
     <string name="hql_ha_setup">Home Assistant instellen</string>
     <string name="hql_ha_edit">Kiezen</string>
+    <string name="hql_web_recent">Onlangs bezocht</string>
+    <string name="hql_web_listening">Aan het luisteren… zeg wat je zoekt</string>
 </resources>

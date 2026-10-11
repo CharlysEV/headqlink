@@ -128,6 +128,10 @@ internal class UsbLink(
     /** Accesorio para el que ya se pidió permiso (un diálogo, no uno por intento). */
     @Volatile
     private var permissionAskedFor: String? = null
+
+    /** En espera (Wi-Fi): accesorio para el que ya se pidió permiso en esta enchufada (no a cada USB_STATE). */
+    @Volatile
+    private var standbyAskedFor: String? = null
     private var registered = false
 
     private val receiver = object : BroadcastReceiver() {
@@ -269,6 +273,7 @@ internal class UsbLink(
         }
         // Al pasar a modo accesorio la lista puede tardar un poco: hasta 5 intentos (como QDLink).
         if (changed || mode == true) lookForCar("USB_STATE", expectAccessory = mode == true)
+        if (mode == false && changed) standbyAskedFor = null
         if (mode == false && changed && active && (session != null || openedAtMs != 0L)) {
             onDetached(null)
         }
@@ -278,6 +283,7 @@ internal class UsbLink(
         if (acc != null) UsbProbe.step("accesorio desconectado: ${UsbProbe.describe(acc)}")
         if (acc != null && !UsbProbe.isNeusoft(acc)) return
         lastListText = ""
+        standbyAskedFor = null
         val s = session
         if (s != null && !s.isClosed) {
             UsbProbe.step("cierro la sesión S${s.id}: cable USB desconectado")
@@ -315,7 +321,10 @@ internal class UsbLink(
         val acc = UsbProbe.accessoryFrom(i)
         UsbProbe.step("permiso para ${UsbProbe.shortName(acc)}: ${if (granted) "concedido" else "denegado"}")
         permissionAskedFor = null
-        if (granted) {
+        if (granted && !active) {
+            // En espera (Wi-Fi): con el permiso, el cable pasa por delante (onUsbCarPresent).
+            lookForCar("permiso concedido", expectAccessory = false)
+        } else if (granted) {
             submit { tryOpen("permiso concedido", requestPermission = false, preferred = acc) }
         } else {
             network(LinkState.Level.ERROR, Str.get(R.string.hql_usb_net_denied))
@@ -336,10 +345,18 @@ internal class UsbLink(
                 UsbProbe.step("accesorio del coche presente (${UsbProbe.shortName(car)}) con permiso: el cable tiene prioridad sobre el Wi-Fi")
                 main.post { if (!stopping && !active) callbacks.onUsbCarPresent(UsbProbe.shortName(car)) }
             } else if (car != null) {
-                UsbProbe.log(
-                    "accesorio del coche presente (${UsbProbe.shortName(car)}) sin permiso para HeadQLink: lo tendrá otra app (¿QDLink?) " +
-                        "o hay que elegir HeadQLink al enchufar el cable",
-                )
+                // Se enchufó el cable yendo por Wi-Fi: el coche corta el Wi-Fi y pasa al cable, pero el accesorio no es
+                // nuestro (Android pregunta qué app lo abre o se lo dio a QDLink). Sin pedir permiso, la pantalla del coche
+                // se queda congelada. Se pide una vez por enchufada (el diálogo deja marcar HeadQLink como predeterminada).
+                val key = UsbProbe.shortName(car)
+                if (standbyAskedFor != key) {
+                    standbyAskedFor = key
+                    UsbProbe.step(
+                        "accesorio del coche presente ($key) sin permiso para HeadQLink (¿Android pregunta qué app lo abre " +
+                            "o lo tiene QDLink?): pido permiso para que el cable tenga prioridad",
+                    )
+                    askPermission(car)
+                }
             }
             return@submit
         }

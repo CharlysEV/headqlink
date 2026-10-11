@@ -47,7 +47,7 @@ There are two modes:
 
 | | |
 |---|---|
-| Car | Leapmotor C10 with its mirroring (phone projection) app on the screen. |
+| Car | Leapmotor C10 with its mirroring (phone projection) app on the screen. It also works on a **T03** with plain Android Auto (confirmed by a user). |
 | Phone | Android with **Android Auto** installed. **Android 10 or later** is recommended; choosing the app language needs Android 13. |
 | Tested on | Samsung Galaxy **S25 Ultra** with **Android 16** and Android Auto 17.7. Other phones may work but haven't been tested. |
 | Android Auto 17.4 or later | You need to turn on Android Auto's **developer mode** once and HeadQLink's **accessibility** service. The app guides you (section 3). Older versions don't need either. |

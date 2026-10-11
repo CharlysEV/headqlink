@@ -47,7 +47,7 @@ Puedes elegir entre dos modos:
 
 | | |
 |---|---|
-| Coche | Leapmotor C10 con su app de espejo (proyección del móvil) en la pantalla. |
+| Coche | Leapmotor C10 con su app de espejo (proyección del móvil) en la pantalla. También funciona en un **T03** con Android Auto normal (comprobado por un usuario). |
 | Móvil | Android con **Android Auto** instalado. Se recomienda **Android 10 o superior**; elegir el idioma de la app necesita Android 13. |
 | Probado en | Samsung Galaxy **S25 Ultra** con **Android 16** y Android Auto 17.7. Otros móviles pueden funcionar, pero no se han probado. |
 | Android Auto 17.4 o superior | Hace falta activar una vez su **modo desarrollador** y el servicio de **accesibilidad** de HeadQLink. La app te guía (sección 3). Con versiones anteriores no hace falta. |
