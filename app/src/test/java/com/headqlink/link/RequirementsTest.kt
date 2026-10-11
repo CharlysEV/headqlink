@@ -37,7 +37,7 @@ class RequirementsTest {
         assertEquals(
             listOf(
                 Id.ANDROID_AUTO, Id.AA_VERSION, Id.ACCESSIBILITY, Id.AA_DEVMODE, Id.NEARBY_WIFI, Id.WIFI_ON, Id.HOTSPOT_OFF,
-                Id.NOTIFICATIONS, Id.BATTERY, Id.OVERLAY, Id.MEDIA, Id.BG_LOCATION,
+                Id.NOTIFICATIONS, Id.MICROPHONE, Id.PHONE, Id.BATTERY, Id.OVERLAY, Id.MEDIA, Id.BG_LOCATION,
             ),
             ids(items),
         )
@@ -57,6 +57,22 @@ class RequirementsTest {
         assertEquals(Importance.RECOMMENDED, item(items, Id.QDLINK).importance)
         assertEquals(Importance.OPTIONAL, item(items, Id.OVERLAY).importance)
         assertEquals(Importance.OPTIONAL, item(items, Id.MEDIA).importance)
+    }
+
+    @Test
+    fun microphoneAndCallsCanBeGrantedDuringSetupWithoutBlockingConnection() {
+        for (mode in listOf(Config.MODE_AA, Config.MODE_AA_EXT)) {
+            val items = eval { this.mode = mode; microphone = Perm.ASK; phone = Perm.BLOCKED }
+            assertEquals(Status.MISSING, item(items, Id.MICROPHONE).status)
+            assertEquals(Importance.RECOMMENDED, item(items, Id.MICROPHONE).importance)
+            assertEquals(Hint.BLOCKED, item(items, Id.PHONE).hint)
+            assertEquals(Importance.OPTIONAL, item(items, Id.PHONE).importance)
+            assertEquals(1, Requirements.missingCount(items))
+            assertTrue(Requirements.blocking(items).isEmpty())
+        }
+        val app = eval { mode = Config.MODE_APP; microphone = Perm.ASK; phone = Perm.ASK }
+        assertFalse(Id.MICROPHONE in ids(app))
+        assertFalse(Id.PHONE in ids(app))
     }
 
     @Test
@@ -315,7 +331,7 @@ class RequirementsTest {
         assertEquals(
             listOf(
                 Id.ANDROID_AUTO, Id.AA_VERSION, Id.AA_SERVER, Id.ACCESSIBILITY, Id.AA_DEVMODE, Id.NEARBY_WIFI, Id.WIFI_ON, Id.HOTSPOT_OFF,
-                Id.NOTIFICATIONS, Id.BATTERY, Id.OVERLAY, Id.MEDIA, Id.BG_LOCATION,
+                Id.NOTIFICATIONS, Id.MICROPHONE, Id.PHONE, Id.BATTERY, Id.OVERLAY, Id.MEDIA, Id.BG_LOCATION,
             ),
             ids(items),
         )

@@ -98,6 +98,7 @@ final class CarUi {
     private boolean autoHide;
     private boolean hidden;
     private View expand;
+    private View panelSpacer;
     private View radioMini;
     private ImageView radioLogo;
     private FrameLayout root;
@@ -152,7 +153,9 @@ final class CarUi {
     private TextView railTime;
     private TextView railTemp;
     private TextView railSoc;
-    private final Runnable railTick = this::renderRailInfo;
+    private final Runnable railTick = () -> {
+        if (renderRailInfo()) fitPanelButtons(true, layoutPanelW());
+    };
     private CarScreen screen;
     private String screenName = "aa";
     /**
@@ -406,11 +409,42 @@ final class CarUi {
         lp.width = width - pw - aaW;
         content.setLayoutParams(lp);
         renderSplitButton(rail);
+        fitPanelButtons(rail, pw);
         // Solo importa a AA cuando se ve (el modo compacto es de nuestras pantallas).
         if (sp) {
             listener.onAaRegion(aaX, aaW);
         } else if (!compact) {
             listener.onAaRegion(aaX, width - pw);
+        }
+    }
+
+    /** En la barra reducida, todos los botones guardan la misma separación y cabe la flecha inferior. */
+    private void fitPanelButtons(boolean rail, int panelWidth) {
+        LinearLayout.LayoutParams spacer = (LinearLayout.LayoutParams) panelSpacer.getLayoutParams();
+        float weight = rail ? 0 : 1;
+        if (spacer.weight != weight) {
+            spacer.weight = weight;
+            panelSpacer.setLayoutParams(spacer);
+        }
+        int buttonHeight = 72;
+        if (rail) {
+            railInfo.measure(View.MeasureSpec.makeMeasureSpec(Math.max(1, panelWidth - 24), View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+            int footer = railInfo.getMeasuredHeight() + (hidden ? 72 : 0);
+            int buttons = navButtons.size() + (splitButton.getVisibility() == View.VISIBLE ? 1 : 0);
+            buttonHeight = Math.max(40, Math.min(72, (height - 40 - footer) / buttons - 6));
+        }
+        for (LinearLayout button : navButtons) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) button.getLayoutParams();
+            if (lp.height != buttonHeight) {
+                lp.height = buttonHeight;
+                button.setLayoutParams(lp);
+            }
+        }
+        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) splitButton.getLayoutParams();
+        if (lp.height != buttonHeight) {
+            lp.height = buttonHeight;
+            splitButton.setLayoutParams(lp);
         }
     }
 
@@ -983,6 +1017,7 @@ final class CarUi {
 
         View spacer = new View(c);
         p.addView(spacer, new LinearLayout.LayoutParams(1, 0, 1f));
+        panelSpacer = spacer;
         p.addView(navButton(c, Str.get(R.string.hql_settings), "settings", R.drawable.hql_ic_settings));
         // Desplegar el panel minimizado.
         ImageView ex = new ImageView(c);
@@ -998,7 +1033,6 @@ final class CarUi {
             scheduleHide();
         });
         LinearLayout.LayoutParams elp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 72);
-        elp.topMargin = 6;
         p.addView(ex, elp);
         expand = ex;
         battery = CarStyle.text(c, "", 22, CarTheme.navTextDim());
@@ -1061,9 +1095,11 @@ final class CarUi {
         return l;
     }
 
-    private void renderRailInfo() {
+    private boolean renderRailInfo() {
         main.removeCallbacks(railTick);
-        if (railInfo == null || railInfo.getVisibility() != View.VISIBLE) return;
+        if (railInfo == null || railInfo.getVisibility() != View.VISIBLE) return false;
+        int oldTempVisibility = railTemp.getVisibility();
+        int oldSocVisibility = railSoc.getVisibility();
         railTime.setText(new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(new java.util.Date()));
         double t = CarSensors.outsideTempC();
         railTemp.setText(Double.isNaN(t) ? "" : Math.round(t) + "\u00b0");
@@ -1073,6 +1109,7 @@ final class CarUi {
         railSoc.setText(Double.isNaN(soc) ? "" : Math.round(soc) + " %");
         railSoc.setVisibility(Double.isNaN(soc) ? View.GONE : View.VISIBLE);
         main.postDelayed(railTick, 30_000);
+        return oldTempVisibility != railTemp.getVisibility() || oldSocVisibility != railSoc.getVisibility();
     }
 
     /** Elemento del panel al estilo de AA: icono + texto; el activo, en una píldora de color. */
@@ -1091,7 +1128,6 @@ final class CarUi {
         t.setSingleLine(true);
         b.addView(t);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 72);
-        lp.topMargin = 12;
         lp.bottomMargin = 6;
         b.setLayoutParams(lp);
         b.setOnClickListener(v -> toggleSplit());
@@ -1235,6 +1271,7 @@ final class CarUi {
             content.addView(splash, CarStyle.match());
         }
         aaShown = factory == null;
+        if (aaShown) hidden = true;
         markNav();
         // La pantalla partida depende de la pantalla abierta: se recoloca todo y AA se ve si va sola o al lado.
         applyLayout();

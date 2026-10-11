@@ -628,6 +628,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         }
         java.util.List<int[]> app = new java.util.ArrayList<>();
         app.add(new int[]{13, R.string.hql_update_check});
+        app.add(new int[]{17, R.string.hql_terms_title});
         if (android.os.Build.VERSION.SDK_INT >= 33) app.add(new int[]{4, R.string.hql_language});
         if (android.os.Build.VERSION.SDK_INT >= 26) app.add(new int[]{8, R.string.hql_w_add_widget});
         if (android.os.Build.VERSION.SDK_INT >= 33) app.add(new int[]{9, R.string.hql_w_add_tile});
@@ -796,6 +797,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 // Carpeta de ROMs: permiso persistente sobre el árbol elegido (ver onActivityResult).
                 startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_NES_TREE);
                 break;
+            case 17:
+                TermsOfUse.show(this);
+                break;
             case 11:
                 if (LinkState.running && (LinkState.car == LinkState.Car.CONNECTED || LinkState.car == LinkState.Car.RECONNECTING)) {
                     // Con el coche de verdad conectado, no.
@@ -947,8 +951,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 .setView(box)
                 .setPositiveButton(Str.get(R.string.hql_save), (d, w) -> {
                     String s = url.getText().toString().trim();
-                    if (radio) cfg.setRadioSource(s.isEmpty() && cur.startsWith("http") ? "" : s.isEmpty() ? cur : s);
-                    else if (!s.isEmpty()) cfg.setIptvSource(s);
+                    String source = s.isEmpty() && cur.startsWith("content://") ? cur : s;
+                    if (radio) cfg.setRadioSource(source);
+                    else cfg.setIptvSource(source);
                 })
                 .setNeutralButton(Str.get(R.string.hql_choose_file), (d, w) -> {
                     Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");

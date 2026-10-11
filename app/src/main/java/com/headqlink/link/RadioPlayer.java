@@ -30,6 +30,8 @@ final class RadioPlayer {
     }
 
     private static ExoPlayer player;
+    private static MediaFocus mediaFocus;
+    private static PlaybackMetadata metadata;
     private static final List<Station> list = new ArrayList<>();
     private static int index = -1;
     /** Título que emite la emisora (ICY StreamTitle), o "" si no manda. */
@@ -77,13 +79,15 @@ final class RadioPlayer {
         if (player == null) {
             player = new ExoPlayer.Builder(app).build();
             player.setAudioAttributes(new AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true);
+                    .setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), false);
+            mediaFocus = MediaFocus.bind(app, player);
             // Con la pantalla del móvil apagada la radio sigue: CPU y WiFi despiertos mientras suena.
             player.setWakeMode(C.WAKE_MODE_NETWORK);
             player.addListener(new Player.Listener() {
                 @Override
                 public void onMediaMetadataChanged(MediaMetadata m) {
                     nowTitle = m.title != null ? m.title.toString() : "";
+                    publishMetadata();
                     changed();
                 }
 
@@ -105,9 +109,12 @@ final class RadioPlayer {
                     changed();
                 }
             });
+            metadata = new PlaybackMetadata(app, player, "Radio", RadioPlayer::resume,
+                    RadioPlayer::stop, () -> step(app, -1), () -> step(app, 1));
         }
         nowTitle = "";
         error = "";
+        publishMetadata();
         player.setMediaItem(new MediaItem.Builder().setUri(s.url)
                 .setMediaMetadata(new MediaMetadata.Builder().setStation(s.name).build()).build());
         player.prepare();
@@ -129,12 +136,23 @@ final class RadioPlayer {
         if (player.getPlayWhenReady()) {
             player.pause();
         } else {
-            // Radio en directo: al seguir, se vuelve al directo y no a donde se pausó.
-            player.seekToDefaultPosition();
-            player.prepare();
-            player.play();
+            resume();
         }
         changed();
+    }
+
+    private static void resume() {
+        if (player == null) return;
+        // Radio en directo: al seguir, vuelve al directo, también desde los controles Bluetooth.
+        player.seekToDefaultPosition();
+        player.prepare();
+        player.play();
+    }
+
+    private static void publishMetadata() {
+        Station station = current();
+        if (metadata != null && station != null) metadata.setChannel(station.name,
+                nowTitle.isEmpty() ? Str.get(R.string.hql_radio) : nowTitle, station.logo);
     }
 
     static void step(Context ctx, int delta) {
@@ -145,6 +163,10 @@ final class RadioPlayer {
 
     static void stop() {
         if (player != null) {
+            metadata.close();
+            metadata = null;
+            mediaFocus.close();
+            mediaFocus = null;
             player.release();
             player = null;
         }

@@ -910,4 +910,23 @@
     <string name="hql_ha_edit">Elegir</string>
     <string name="hql_web_recent">Visitadas hace poco</string>
     <string name="hql_web_listening">Escuchando… di qué buscar</string>
+    <string name="hql_use_responsibility">He leído y acepto los Términos de uso. Reconozco que utilizo HeadQLink bajo mi responsabilidad y acepto la ausencia de garantías y la limitación de responsabilidad en los términos permitidos por la legislación aplicable.</string>
+    <string name="hql_panel_day">Día</string>
+    <string name="hql_panel_night">Noche</string>
+    <string name="hql_req_microphone">Micrófono</string>
+    <string name="hql_req_microphone_why">Para los comandos de voz y el asistente de Android Auto.</string>
+    <string name="hql_req_phone">Llamadas</string>
+    <string name="hql_req_phone_why">Permite acceder al estado de las llamadas durante la conexión con el coche.</string>
+    <string name="hql_responsibility_title">Seguridad y responsabilidad</string>
+    <string name="hql_responsibility_summary">HeadQLink es un proyecto independiente y experimental, suministrado «tal cual» y sin garantías. El usuario es responsable de utilizarlo de forma segura, respetar la normativa de tráfico y no utilizar funciones de ocio durante la conducción.</string>
+    <string name="hql_terms_title">Términos de uso</string>
+    <string name="hql_terms_read">Leer los Términos de uso</string>
+    <string name="hql_terms_detail">&lt;p&gt;&lt;b&gt;1. Carácter independiente y experimental&lt;/b&gt;&lt;br&gt;HeadQLink es un proyecto personal y experimental de código abierto. Utiliza protocolos e interfaces no documentados y servicios de terceros. Puede fallar, dejar de funcionar o comportarse de forma inesperada en cualquier momento, incluso después de una actualización del móvil, del vehículo o de esos servicios.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;2. Uso seguro y responsabilidad del usuario&lt;/b&gt;&lt;br&gt;El conductor es responsable de mantener la atención en la carretera, conducir de forma segura y cumplir la normativa de tráfico aplicable. La instalación, configuración y manipulación de la aplicación deben realizarse con el vehículo detenido en un lugar seguro. No deben visualizarse vídeos, juegos, páginas web u otros contenidos de ocio durante la conducción. La aplicación no sustituye los sistemas de seguridad del vehículo ni garantiza la exactitud de los datos de navegación o del coche.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;3. Ausencia de garantías&lt;/b&gt;&lt;br&gt;El software se proporciona «tal cual», sin garantías expresas o implícitas en la medida permitida por la legislación aplicable. No se garantiza su funcionamiento, disponibilidad, compatibilidad, seguridad, adecuación a un fin determinado ni ausencia de infracción de derechos de terceros. El usuario asume los riesgos asociados a su instalación y utilización.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;4. Limitación de responsabilidad&lt;/b&gt;&lt;br&gt;En la medida permitida por la legislación aplicable y salvo obligación legal o compromiso expreso por escrito, los autores, colaboradores y distribuidores no asumirán responsabilidad por daños directos o indirectos derivados del uso, uso indebido o imposibilidad de utilizar el software. Esto incluye accidentes, lesiones, daños al vehículo, al móvil o a terceros, pérdida o inexactitud de datos, pérdidas económicas, multas o sanciones, pérdida de garantías del vehículo o del dispositivo e incumplimiento de condiciones de servicios de terceros. Esta limitación se aplica también al uso contrario a la legislación vigente.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;5. Ausencia de afiliación y servicios de terceros&lt;/b&gt;&lt;br&gt;HeadQLink es independiente y no está afiliado, respaldado ni patrocinado por Leapmotor, Google, Neusoft, Open Headunit ni sus autores. Las marcas citadas pertenecen a sus respectivos titulares y se mencionan para describir la compatibilidad. Los servicios de terceros están sujetos a sus propias condiciones y pueden cambiar o dejar de estar disponibles.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;6. Licencia y aceptación&lt;/b&gt;&lt;br&gt;El software se distribuye bajo la licencia GNU AGPL-3.0. Son aplicables sus secciones 15 y 16, relativas a la ausencia de garantías y a la limitación de responsabilidad. Estas condiciones no modifican los derechos que concede esa licencia ni excluyen responsabilidades o derechos que la legislación aplicable no permita excluir. Al marcar la casilla, el usuario declara haber leído y aceptado estas condiciones. La aceptación se guarda localmente al finalizar la configuración.&lt;/p&gt;</string>
+    <string name="hql_tv_fill">Rellenar</string>
+    <string name="hql_tv_fit">Ajustar</string>
 </resources>
