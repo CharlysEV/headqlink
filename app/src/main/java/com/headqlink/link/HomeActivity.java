@@ -669,7 +669,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         n.setPadding(0, 0, Math.round(8 * d), 0);
         head.addView(n);
         android.widget.ImageView chevron = new android.widget.ImageView(this);
-        chevron.setImageResource(R.drawable.hql_ic_expand);
+        chevron.setImageResource(R.drawable.ic_chevron_right);
         chevron.setImageTintList(android.content.res.ColorStateList.valueOf(0xFFA3B3C2));
         int cs = Math.round(24 * d);
         head.addView(chevron, new LinearLayout.LayoutParams(cs, cs));

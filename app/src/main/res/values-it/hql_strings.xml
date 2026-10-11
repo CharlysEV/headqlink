@@ -874,7 +874,7 @@
     <string name="hql_ha_intro">Controlla il tuo Home Assistant dallo schermo dell\'auto (modalità estesa › Casa): luci, prese, garage, tapparelle, scene… Usa l\'indirizzo esterno di casa (Nabu Casa o il tuo dominio): in auto il telefono usa i dati mobili. Il token si crea in Home Assistant › il tuo profilo › Sicurezza › Token di accesso di lunga durata. Resta cifrato su questo telefono e non va mai nel registro.</string>
     <string name="hql_ha_url">Indirizzo di Home Assistant</string>
     <string name="hql_ha_url_help">Per esempio https://xxxx.ui.nabu.casa</string>
-    <string name="hql_ha_token">Token di accesso di lunga durata</string>
+    <string name="hql_ha_token">Token di accesso</string>
     <string name="hql_ha_token_saved">Token salvato (lascia vuoto per mantenerlo)</string>
     <string name="hql_ha_test">Prova e salva</string>
     <string name="hql_ha_forget">Dimentica</string>

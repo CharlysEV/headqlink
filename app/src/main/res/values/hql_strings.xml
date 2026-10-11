@@ -873,7 +873,7 @@
     <string name="hql_ha_intro">Control your Home Assistant from the car screen (Extended mode › Home): lights, plugs, garage door, blinds, scenes… Use your home\'s outside address (Nabu Casa or your own domain): in the car the phone uses mobile data. The token is created in Home Assistant › your profile › Security › Long-lived access tokens. It is stored encrypted on this phone and never written to the log.</string>
     <string name="hql_ha_url">Home Assistant address</string>
     <string name="hql_ha_url_help">For example https://xxxx.ui.nabu.casa</string>
-    <string name="hql_ha_token">Long-lived access token</string>
+    <string name="hql_ha_token">Access token</string>
     <string name="hql_ha_token_saved">Token saved (leave empty to keep it)</string>
     <string name="hql_ha_test">Test and save</string>
     <string name="hql_ha_forget">Forget</string>

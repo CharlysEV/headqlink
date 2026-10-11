@@ -478,14 +478,18 @@ final class PhoneCharts {
                     cv.drawRoundRect(x0, cy - dp(this, 6), (float) (x0 + (x1 - x0) * values[i] / max), cy + dp(this, 6), dp(this, 6),
                             dp(this, 6), p);
                 }
-                p.setColor(TEXT);
-                p.setTypeface(MEDIUM);
-                p.setTextAlign(Paint.Align.RIGHT);
-                cv.drawText(Double.isNaN(values[i]) ? "—" : String.format(Locale.getDefault(), "%.1f", values[i]), w - dp(this, 40), cy + dp(this, 5), p);
+                // La nota («62 viajes») a la derecha y el valor justo antes, sin pisarse.
+                String note = notes.length > i && notes[i] != null ? notes[i] : "";
                 p.setTypeface(Typeface.DEFAULT);
                 p.setTextSize(dp(this, 10));
                 p.setColor(FAINT);
-                cv.drawText(notes.length > i && notes[i] != null ? notes[i] : "", w, cy + dp(this, 5), p);
+                p.setTextAlign(Paint.Align.RIGHT);
+                cv.drawText(note, w, cy + dp(this, 5), p);
+                float noteW = note.isEmpty() ? 0 : p.measureText(note) + dp(this, 6);
+                p.setTextSize(dp(this, 13));
+                p.setColor(TEXT);
+                p.setTypeface(MEDIUM);
+                cv.drawText(Double.isNaN(values[i]) ? "—" : String.format(Locale.getDefault(), "%.1f", values[i]), w - noteW, cy + dp(this, 5), p);
             }
         }
     }

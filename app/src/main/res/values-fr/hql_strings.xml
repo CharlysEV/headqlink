@@ -874,7 +874,7 @@
     <string name="hql_ha_intro">Pilotez votre Home Assistant depuis l’écran de la voiture (mode étendu › Maison) : lumières, prises, garage, volets, scènes… Utilisez l’adresse extérieure de votre maison (Nabu Casa ou votre domaine) : dans la voiture le téléphone passe par les données mobiles. Le jeton se crée dans Home Assistant › votre profil › Sécurité › Jetons d’accès longue durée. Il est chiffré sur ce téléphone et n’apparaît jamais dans le journal.</string>
     <string name="hql_ha_url">Adresse de Home Assistant</string>
     <string name="hql_ha_url_help">Par exemple https://xxxx.ui.nabu.casa</string>
-    <string name="hql_ha_token">Jeton d’accès longue durée</string>
+    <string name="hql_ha_token">Jeton d’accès</string>
     <string name="hql_ha_token_saved">Jeton enregistré (laissez vide pour le garder)</string>
     <string name="hql_ha_test">Tester et enregistrer</string>
     <string name="hql_ha_forget">Oublier</string>

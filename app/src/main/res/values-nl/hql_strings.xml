@@ -873,7 +873,7 @@
     <string name="hql_ha_intro">Bedien je Home Assistant vanaf het scherm van de auto (uitgebreide modus › Thuis): lampen, stekkers, garage, rolluiken, scènes… Gebruik het externe adres van je huis (Nabu Casa of je eigen domein): in de auto gebruikt de telefoon mobiele data. Het token maak je in Home Assistant › je profiel › Beveiliging › Langlevende toegangstokens. Het wordt versleuteld op deze telefoon bewaard en komt nooit in het logboek.</string>
     <string name="hql_ha_url">Adres van Home Assistant</string>
     <string name="hql_ha_url_help">Bijvoorbeeld https://xxxx.ui.nabu.casa</string>
-    <string name="hql_ha_token">Langlevend toegangstoken</string>
+    <string name="hql_ha_token">Toegangstoken</string>
     <string name="hql_ha_token_saved">Token opgeslagen (leeg laten om het te houden)</string>
     <string name="hql_ha_test">Testen en opslaan</string>
     <string name="hql_ha_forget">Vergeten</string>
