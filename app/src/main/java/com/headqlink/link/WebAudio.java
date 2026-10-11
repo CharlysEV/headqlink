@@ -22,7 +22,7 @@ final class WebAudio {
 
     WebAudio(WebView web) {
         this.web = web;
-        focus = new MediaFocus(web.getContext(), this::pause);
+        focus = new MediaFocus(web.getContext(), this::pause, () -> send("suspend"), () -> send("resume"));
         try (InputStream in = web.getContext().getAssets().open("web_audio.js")) {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buffer = new byte[4096];
@@ -34,16 +34,28 @@ final class WebAudio {
         }
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             messaging = true;
+            // El navegador abre sitios y iframes de cualquier origen, de ahí "*". El puente
+            // está expuesto a esas páginas: solo acepta estados de audio acotados, sin acceso
+            // a archivos, credenciales ni ejecución de órdenes nativas arbitrarias.
             WebViewCompat.addWebMessageListener(web, "HqlAudio", java.util.Collections.singleton("*"),
                     (view, message, origin, mainFrame, reply) -> {
                         if (closed) return;
                         String text = message.getData();
                         if (text == null || text.length() > 100) return;
+                        int colon = text.indexOf(':');
+                        if (colon < 1) return;
+                        String id = text.substring(colon + 1);
+                        if (!id.matches("[a-z0-9]{1,64}")) return;
                         if (text.startsWith("play:")) {
-                            playing.put(text.substring(5), reply);
-                            if (!focus.acquire()) pause();
+                            if (playing.size() >= 64 && !playing.containsKey(id)) {
+                                reply.postMessage("pause");
+                                return;
+                            }
+                            playing.put(id, reply);
+                            if (focus.isInterrupted()) reply.postMessage("suspend");
+                            else if (!focus.acquire()) pause();
                         } else if (text.startsWith("idle:")) {
-                            playing.remove(text.substring(5));
+                            playing.remove(id);
                             if (playing.isEmpty()) focus.release();
                         }
                     });
@@ -54,9 +66,13 @@ final class WebAudio {
     }
 
     void pause() {
-        for (JavaScriptReplyProxy reply : new java.util.ArrayList<>(playing.values())) reply.postMessage("pause");
+        send("pause");
         playing.clear();
         focus.release();
+    }
+
+    private void send(String command) {
+        for (JavaScriptReplyProxy reply : new java.util.ArrayList<>(playing.values())) reply.postMessage(command);
     }
 
     void navigation() {

@@ -66,8 +66,8 @@ class RequirementsTest {
             assertEquals(Status.MISSING, item(items, Id.MICROPHONE).status)
             assertEquals(Importance.RECOMMENDED, item(items, Id.MICROPHONE).importance)
             assertEquals(Hint.BLOCKED, item(items, Id.PHONE).hint)
-            assertEquals(Importance.RECOMMENDED, item(items, Id.PHONE).importance)
-            assertEquals(2, Requirements.missingCount(items))
+            assertEquals(Importance.OPTIONAL, item(items, Id.PHONE).importance)
+            assertEquals(1, Requirements.missingCount(items))
             assertTrue(Requirements.blocking(items).isEmpty())
         }
         val app = eval { mode = Config.MODE_APP; microphone = Perm.ASK; phone = Perm.ASK }

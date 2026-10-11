@@ -24,12 +24,14 @@ import org.robolectric.annotation.ConscryptMode
 class PlaybackMetadataTest {
     @Test fun sessionPublishesChannelAndPlaybackAndRegistersChannelControls() {
         var playing = true
+        var suppressed = Player.PLAYBACK_SUPPRESSION_REASON_NONE
         var skips = 0
         val player = mock<Player> {
             on { playbackState } doReturn Player.STATE_READY
             on { currentPosition } doReturn 0L
         }
         whenever(player.playWhenReady).thenAnswer { playing }
+        whenever(player.playbackSuppressionReason).thenAnswer { suppressed }
         val metadata = PlaybackMetadata(RuntimeEnvironment.getApplication(), player, "Radio",
             { playing = true }, {}, { skips-- }, { skips++ })
         val session = session(metadata)
@@ -44,6 +46,13 @@ class PlaybackMetadataTest {
             (sessionField(session, "mCallback") as MediaSessionCompat.Callback).onSkipToNext()
             shadowOf(Looper.getMainLooper()).idle()
             assertEquals(1, skips)
+            suppressed = Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+            listener.firstValue.onEvents(player, mock())
+            assertEquals(PlaybackStateCompat.STATE_PAUSED, publishedState(session).state)
+            assertFalse(session.isActive)
+            suppressed = Player.PLAYBACK_SUPPRESSION_REASON_NONE
+            listener.firstValue.onEvents(player, mock())
+            assertEquals(PlaybackStateCompat.STATE_PLAYING, publishedState(session).state)
             playing = false
             listener.firstValue.onEvents(player, mock())
             assertEquals(PlaybackStateCompat.STATE_PAUSED, publishedState(session).state)

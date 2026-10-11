@@ -28,7 +28,7 @@ class CarAutoReturnTest {
         val hide = CarUi::class.java.getDeclaredMethod("setHidden", Boolean::class.javaPrimitiveType).apply { isAccessible = true }
         val fit = CarUi::class.java.getDeclaredMethod("fitPanelButtons", Boolean::class.javaPrimitiveType, Int::class.javaPrimitiveType)
             .apply { isAccessible = true }
-        fun field(name: String): Any = CarUi::class.java.getDeclaredField(name).apply { isAccessible = true }.get(ui)
+        fun field(name: String): Any = CarUi::class.java.getDeclaredField(name).apply { isAccessible = true }.get(ui)!!
         val root = build.invoke(ui, context) as View
         try {
             open.invoke(ui, "tv")

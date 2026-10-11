@@ -104,7 +104,7 @@ final class PlaybackMetadata implements AutoCloseable {
     private void updateState(Runnable previous, Runnable next) {
         if (closed) return;
         int playback = player.getPlaybackState();
-        boolean playing = player.getPlayWhenReady();
+        boolean playing = player.getPlayWhenReady() && player.getPlaybackSuppressionReason() == Player.PLAYBACK_SUPPRESSION_REASON_NONE;
         int state = playback == Player.STATE_IDLE || playback == Player.STATE_ENDED ? PlaybackStateCompat.STATE_STOPPED
                 : !playing ? PlaybackStateCompat.STATE_PAUSED
                 : playback == Player.STATE_BUFFERING ? PlaybackStateCompat.STATE_BUFFERING : PlaybackStateCompat.STATE_PLAYING;

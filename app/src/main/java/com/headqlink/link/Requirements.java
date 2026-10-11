@@ -272,7 +272,7 @@ final class Requirements {
         out.add(perm(Id.NOTIFICATIONS, Importance.RECOMMENDED, s.notifications));
         if (aa) {
             out.add(perm(Id.MICROPHONE, Importance.RECOMMENDED, s.microphone));
-            out.add(perm(Id.PHONE, Importance.RECOMMENDED, s.phone));
+            out.add(perm(Id.PHONE, Importance.OPTIONAL, s.phone));
         }
         if (s.btAuto) out.add(perm(Id.BLUETOOTH, Importance.REQUIRED, s.bluetooth));
         out.add(new Item(Id.BATTERY, Importance.RECOMMENDED, s.batteryUnrestricted ? Status.OK : Status.MISSING,
