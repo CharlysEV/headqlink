@@ -88,3 +88,6 @@ key.properties
 
 # headqlink: notas locales (referencias a QDLink, textos originales), no se publican
 local/
+
+# Investigación iOS local, fuera de los cambios Android por ahora.
+/ios/

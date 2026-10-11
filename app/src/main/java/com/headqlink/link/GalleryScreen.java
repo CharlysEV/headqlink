@@ -37,6 +37,7 @@ final class GalleryScreen implements CarScreen {
     private Host host;
     private View grid;
     private ExoPlayer player;
+    private MediaFocus mediaFocus;
 
     GalleryScreen(boolean videos) {
         this.videos = videos;
@@ -135,6 +136,10 @@ final class GalleryScreen implements CarScreen {
         FrameLayout f = new FrameLayout(c);
         f.setBackgroundColor(Color.BLACK);
         player = new ExoPlayer.Builder(c.getApplicationContext()).build();
+        player.setAudioAttributes(new androidx.media3.common.AudioAttributes.Builder()
+                .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC).build(), false);
+        mediaFocus = MediaFocus.bind(c, player);
         PlayerView pv = CarStyle.player(c);
         pv.setPlayer(player);
         f.addView(pv, CarStyle.match());
@@ -152,6 +157,8 @@ final class GalleryScreen implements CarScreen {
 
     private void releasePlayer() {
         if (player != null) {
+            mediaFocus.close();
+            mediaFocus = null;
             player.release();
             player = null;
         }

@@ -32,7 +32,52 @@
         android:layout_marginTop="14dp"
         android:text="@string/hql_welcome_body" />
 
+    <LinearLayout
+        android:id="@+id/hql_responsibility_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/HQL.Text.RowTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/hql_responsibility_title" />
+
+        <TextView
+            style="@style/HQL.Text.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/hql_responsibility_summary" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/hql_responsibility_accept"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="48dp"
+            android:text="@string/hql_use_responsibility"
+            android:textColor="@color/hql_text"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/hql_terms_link"
+            style="@style/HQL.Text.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="48dp"
+            android:text="@string/hql_terms_read"
+            android:textColor="@color/hql_accent" />
+    </LinearLayout>
+
     <TextView
+        android:id="@+id/hql_before_start"
         style="@style/HQL.Text.Label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
