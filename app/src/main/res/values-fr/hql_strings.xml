@@ -930,4 +930,8 @@
     <string name="hql_settings_profile">Profil d\'image</string>
     <string name="hql_settings_behaviour">Comportement</string>
     <string name="hql_settings_reconnect_note">Changer le profil ou la fluidité reconnecte la voiture et Android Auto (quelques secondes).</string>
+    <string name="hql_usb_busy_channel">Câble de la voiture</string>
+    <string name="hql_usb_busy_title">Le câble de la voiture est pris par une autre appli</string>
+    <string name="hql_usb_busy_qdlink">Sans doute l\'appli QDLink d\'origine. Touchez ici puis « Forcer l\'arrêt » : HeadQLink prendra le câble.</string>
+    <string name="hql_usb_busy_other">Fermez l\'appli qui l\'utilise, ou débranchez et rebranchez le câble.</string>
 </resources>

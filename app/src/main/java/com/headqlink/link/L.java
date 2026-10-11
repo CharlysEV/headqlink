@@ -154,7 +154,6 @@ final class L {
                     try {
                         file.write(line);
                         file.write('\n');
-                        if (!LowLatency.enabled) file.flush();
                         written += line.length() + 1;
                         if (written > MAX_FILE_CHARS) rotate();
                     } catch (IOException ignored) {

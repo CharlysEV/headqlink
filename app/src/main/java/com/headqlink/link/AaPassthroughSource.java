@@ -112,6 +112,19 @@ final class AaPassthroughSource implements VideoSource {
         return App.Companion.provide(ctx).getCommManager();
     }
 
+    /**
+     * Tecla del coche (QdSessionBridge.onKey) a Android Auto: pulsar y soltar. false si AA no está conectado (CommManager
+     * la descarta igualmente).
+     */
+    static boolean carKey(Context ctx, int keyCode) {
+        CommManager cm = App.Companion.provide(ctx).getCommManager();
+        if (!cm.isConnected()) return false;
+        long down = android.os.SystemClock.uptimeMillis();
+        cm.sendKey(keyCode, true, down, "car");
+        cm.sendKey(keyCode, false, down, "car");
+        return true;
+    }
+
     @Override
     public boolean usesEncoder() {
         return reencode;
@@ -403,8 +416,8 @@ final class AaPassthroughSource implements VideoSource {
         // AA a 30 o 60 fps según el perfil: en reenvío directo, a 60 fps y bitrate alto el coche
         // acumula frames en los movimientos rápidos.
         settings.setFpsLimit(targetFps <= 30 ? 30 : 60);
-        // Decodificador en modo baja latencia (KEY_LOW_LATENCY y extensiones) con el ajuste encendido.
-        settings.setDebugVideoLowLatency(LowLatency.enabled);
+        // Decodificador en modo baja latencia (KEY_LOW_LATENCY y extensiones): siempre, no cuesta calor (LowLatency).
+        settings.setDebugVideoLowLatency(true);
         // Resolución de AA según el perfil: 720p o 1080p (el lienzo es el tamaño del vídeo, así AA
         // pone su interfaz en la franja que enviamos). Con AA ya conectado, se aplica al reconectarlo.
         boolean hd720 = videoW <= 1280;

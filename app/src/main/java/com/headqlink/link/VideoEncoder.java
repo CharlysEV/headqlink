@@ -168,7 +168,12 @@ final class VideoEncoder {
         if (p.maxClocks) f.setInteger(MediaFormat.KEY_OPERATING_RATE, Short.MAX_VALUE);
         if (p.prependSpsPps) f.setInteger(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES, 1);
         f.setInteger(MediaFormat.KEY_PROFILE, profileConst(p.profile));
-        f.setInteger(MediaFormat.KEY_LEVEL, levelFor(p.width, p.height, p.fps));
+        // Baseline: el nivel de siempre (el que el C10 lleva recibiendo). Main/High (experimental): el nivel que de verdad
+        // pide el tamaño (1920x882 son 6720 macrobloques, más de los 5120 del 3.2) y sin B-frames (añaden un fotograma de
+        // retraso y el decodificador del coche quizá no los espera).
+        boolean baseline = profileConst(p.profile) == MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline;
+        f.setInteger(MediaFormat.KEY_LEVEL, baseline ? levelFor(p.width, p.height, p.fps) : levelForSize(p.width, p.height, p.fps));
+        if (!baseline && android.os.Build.VERSION.SDK_INT >= 29) f.setInteger(MediaFormat.KEY_MAX_B_FRAMES, 0);
 
         bitrate = p.bitrate;
 
@@ -675,6 +680,21 @@ final class VideoEncoder {
             default:
                 return MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline;
         }
+    }
+
+    /**
+     * Puro: nivel mínimo H.264 por tamaño de fotograma (MaxFS) y por macrobloques/segundo (MaxMBPS), tabla A-1 de la
+     * norma. 1920x882 a 30 fps: 4; a 60 fps: 4.2.
+     */
+    static int levelForSize(int w, int h, int fps) {
+        long fs = (long) ((w + 15) / 16) * ((h + 15) / 16);
+        long mbs = fs * fps;
+        if (fs <= 3600 && mbs <= 108_000) return MediaCodecInfo.CodecProfileLevel.AVCLevel31;
+        if (fs <= 5120 && mbs <= 216_000) return MediaCodecInfo.CodecProfileLevel.AVCLevel32;
+        if (fs <= 8192 && mbs <= 245_760) return MediaCodecInfo.CodecProfileLevel.AVCLevel4;
+        if (fs <= 8704 && mbs <= 522_240) return MediaCodecInfo.CodecProfileLevel.AVCLevel42;
+        if (fs <= 22_080 && mbs <= 589_824) return MediaCodecInfo.CodecProfileLevel.AVCLevel5;
+        return MediaCodecInfo.CodecProfileLevel.AVCLevel51;
     }
 
     /** Nivel mínimo H.264 por macrobloques/segundo. */

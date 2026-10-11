@@ -683,7 +683,7 @@ final class SspSession {
             // Bitrate del perfil (adaptable en Alto y Muy alto; en Coche, el que pide el coche), salvo kbps manual.
             VideoProfile prof = cfg.videoProfile();
             if (cfg.getInt(Config.KBPS) <= 0) {
-                vp.bitrate = prof.startBitrate(carBitrate, videoW);
+                vp.bitrate = prof.startBitrate(carBitrate, carFps, videoW);
                 if (prof.adaptiveBitrate()) {
                     abrBps = vp.bitrate;
                     abrMin = prof.minBitrate;
@@ -721,7 +721,7 @@ final class SspSession {
                 public void onCodecConfig(byte[] csd) {
                     spsPps = csd;
                     needConfig = true;
-                    L.i("SPS/PPS " + csd.length + " bytes: " + L.hex(csd, 0, Math.min(48, csd.length)));
+                    L.i("SPS/PPS " + csd.length + " bytes: " + L.hex(csd, 0, Math.min(48, csd.length)) + " · " + H264Info.describe(csd));
                 }
 
                 @Override
@@ -933,12 +933,11 @@ final class SspSession {
         }
         // Todos los dedos a la vez (multitáctil: el coche manda hasta 3).
         if (source != null) source.touchMulti(Proto.touchAction(p, off, len), fingers);
-        // Con "Optimizaciones de latencia" solo se registran el inicio y el fin de cada gesto (los
-        // movimientos siguen en el diario del coche y en la traza de rendimiento).
-        boolean onlyEdges = LowLatency.enabled;
+        // Solo el inicio y el fin de cada gesto (los movimientos siguen en el diario del coche y en la
+        // traza de rendimiento): el registro de cada uno iba en el hilo que lee del coche.
         boolean edge = false;
         for (Proto.Finger f : fingers) if (f != null && f.action != 3) edge = true;
-        if (!onlyEdges || edge) L.i(sb + "  raw=" + L.hex(p, off, Math.min(len, 32)));
+        if (edge) L.i(sb + "  raw=" + L.hex(p, off, Math.min(len, 32)));
     }
 
     // ---------------------------------------------------------------- cierre

@@ -158,7 +158,6 @@ final class CarTrace {
                     out.write(" | ");
                     out.write(msg);
                     out.write('\n');
-                    if (!LowLatency.enabled) out.flush();
                 } catch (IOException ignored) {
                 }
             }

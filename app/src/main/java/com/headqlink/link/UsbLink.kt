@@ -129,6 +129,9 @@ internal class UsbLink(
     @Volatile
     private var permissionAskedFor: String? = null
 
+    /** Aperturas seguidas que han fallado (openAccessory da null: el accesorio lo tiene otra app). Hilo hql-usb. */
+    private var openFails = 0
+
     /** En espera (Wi-Fi): accesorio para el que ya se pidió permiso en esta enchufada (no a cada USB_STATE). */
     @Volatile
     private var standbyAskedFor: String? = null
@@ -459,11 +462,16 @@ internal class UsbLink(
             null
         }
         if (pfd == null) {
+            openFails++
             UsbProbe.warn("no se pudo abrir $name (¿lo tiene abierto otra app, como QDLink?); reintento en ${RETRY_OPEN_MS / 1000} s")
             network(LinkState.Level.ERROR, Str.get(R.string.hql_usb_net_open_failed, name))
+            // A la segunda: aviso en el móvil, con la ficha de QDLink para detenerla si está instalada.
+            if (openFails == 2) UsbBusyNotice.show(ctx)
             scheduleRetry(RETRY_OPEN_MS, "reintento de apertura")
             return
         }
+        if (openFails >= 2) UsbBusyNotice.clear(ctx)
+        openFails = 0
         UsbProbe.step("accesorio $name conectado · abierto ($why)")
         book.noteAck(System.nanoTime())
         val fd = pfd.fileDescriptor

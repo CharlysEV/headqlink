@@ -297,7 +297,7 @@ final class VideoPipeline {
             vp.repeatAfterUs = 100_000;
             if (cfg.getInt(Config.KBPS) <= 0) {
                 // El del perfil; en Coche, el que pide el coche (VIDEO_ARGS BitRate; con Fluidez 60, 8-12 Mbit/s).
-                vp.bitrate = prof.startBitrate(carBitrate, plan.videoW);
+                vp.bitrate = prof.startBitrate(carBitrate, carFps, plan.videoW);
                 if (prof.adaptiveBitrate()) {
                     abrBps = vp.bitrate;
                     abrInitial = vp.bitrate;
@@ -333,7 +333,7 @@ final class VideoPipeline {
         encoder = new VideoEncoder(vp, new VideoEncoder.Sink() {
             @Override
             public void onCodecConfig(byte[] c) {
-                L.i("SPS/PPS " + c.length + " bytes: " + L.hex(c, 0, Math.min(48, c.length)));
+                L.i("SPS/PPS " + c.length + " bytes: " + L.hex(c, 0, Math.min(48, c.length)) + " · " + H264Info.describe(c));
                 synchronized (csdLock) {
                     csd = c;
                     SessionPort p = active;

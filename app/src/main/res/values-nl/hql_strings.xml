@@ -929,4 +929,8 @@
     <string name="hql_settings_profile">Beeldprofiel</string>
     <string name="hql_settings_behaviour">Gedrag</string>
     <string name="hql_settings_reconnect_note">Het profiel of de vloeiendheid wijzigen verbindt de auto en Android Auto opnieuw (een paar seconden).</string>
+    <string name="hql_usb_busy_channel">Autokabel</string>
+    <string name="hql_usb_busy_title">De autokabel is bezet door een andere app</string>
+    <string name="hql_usb_busy_qdlink">Waarschijnlijk de originele QDLink-app. Tik hier en dan „Gedwongen stoppen”: HeadQLink neemt de kabel over.</string>
+    <string name="hql_usb_busy_other">Sluit de app die hem gebruikt, of trek de kabel uit en steek hem weer in.</string>
 </resources>

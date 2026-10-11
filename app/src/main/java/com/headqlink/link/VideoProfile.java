@@ -117,9 +117,19 @@ final class VideoProfile {
      * ajuste manual), 5 Mbps a 720p y 8 a resolución completa.
      */
     int startBitrate(int carBitrate, int videoW) {
+        return startBitrate(carBitrate, 0, videoW);
+    }
+
+    /**
+     * Como {@link #startBitrate(int, int)}, sabiendo los fps que pide el coche. Por el cable USB el C10 pide 60 fps con
+     * el mismo bitrate que a 30 por Wi-Fi (5 Mbit/s): la mitad de bits por fotograma. Pidiendo 50 o más, en Coche se da
+     * lo de Fluidez 60 (8-12 Mbit/s): probado en el C10 por cable a 10 Mbit/s y 60 fps sin cortes (doc §14).
+     * El adaptable al enlace (LinkRateController) y la protección térmica siguen bajándolo si hace falta.
+     */
+    int startBitrate(int carBitrate, int carFps, int videoW) {
         if (followsCar) {
             int car = carBitrate > 0 ? carBitrate : CAR_DEFAULT_BPS;
-            if (fluidity >= FLUID_60) return Math.min(FLUID_60_MAX_BPS, Math.max(car, FLUID_60_MIN_BPS));
+            if (fluidity >= FLUID_60 || carFps >= 50) return Math.min(FLUID_60_MAX_BPS, Math.max(car, FLUID_60_MIN_BPS));
             return car;
         }
         if (bitrate > 0) return bitrate;

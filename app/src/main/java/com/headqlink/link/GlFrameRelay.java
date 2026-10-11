@@ -74,7 +74,7 @@ final class GlFrameRelay {
     private static final float AA_CORNER_RADIUS = 28f;
 
     private final HandlerThread thread = new HandlerThread("c10-gl",
-            LowLatency.enabled ? android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY : android.os.Process.THREAD_PRIORITY_DEFAULT);
+            android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY);
     private Handler h;
     private final Surface output;
     private final int outW;

@@ -286,8 +286,9 @@ internal class QdSessionBridge(
         }
         // Todos los dedos a la vez (multitáctil: el coche manda hasta 3).
         hub.touch(event.action, fingers)
-        // Con "Optimizaciones de latencia" solo se registran el inicio y el fin de cada gesto.
-        if (!LowLatency.enabled || edge) L.i("$sb  global=${event.action}")
+        // Solo el inicio y el fin de cada gesto (los movimientos, en el diario del coche y en la traza): el registro
+        // de cada movimiento, uno cada ~16 ms, iba en este hilo, el que lee del coche.
+        if (edge) L.i("$sb  global=${event.action}")
     }
 
     override fun onAppMessage(message: AppMessage) {
@@ -314,7 +315,11 @@ internal class QdSessionBridge(
     }
 
     override fun onKey(key: CarKey) {
-        L.i("tecla del coche: $key")
+        // Las del coche por QDLink (PHONE_KEYS y `Music/…`), a Android Auto como sus teclas. Los mandos del volante del
+        // C10 van por Bluetooth (AVRCP → MediaSession de HeadQLink → AA); estas, por si otro coche o versión las manda.
+        val code = carKeyToAndroid(key)
+        val sent = code != 0 && AaPassthroughSource.carKey(ctx, code)
+        L.i("tecla del coche: $key" + if (code == 0) " (sin equivalente en Android Auto)" else if (sent) " → Android Auto" else " (Android Auto no conectado)")
     }
 
     override fun onPhoneKey(code: Int, message: ControlMessage) {
@@ -660,4 +665,17 @@ internal class QdSessionBridge(
         /** Espera máxima al sello del fin de la sesión anterior tras el primer IDR. */
         const val GAP_WAIT_NS = 5_000_000_000L
     }
+}
+
+/** Puro: tecla del coche → código de tecla de Android que entiende Android Auto (0 = ninguna). */
+internal fun carKeyToAndroid(key: CarKey): Int = when (key) {
+    CarKey.HOME -> android.view.KeyEvent.KEYCODE_HOME
+    CarKey.BACK -> android.view.KeyEvent.KEYCODE_BACK
+    CarKey.MEDIA_PLAY_PAUSE -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+    CarKey.MEDIA_PLAY -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY
+    CarKey.MEDIA_PAUSE -> android.view.KeyEvent.KEYCODE_MEDIA_PAUSE
+    CarKey.MEDIA_PREVIOUS -> android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS
+    CarKey.MEDIA_NEXT -> android.view.KeyEvent.KEYCODE_MEDIA_NEXT
+    // Android Auto no tiene «recientes» ni silencio propio.
+    CarKey.RECENTS, CarKey.MUTE_TOGGLE -> 0
 }

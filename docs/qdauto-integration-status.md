@@ -2606,3 +2606,41 @@ Registro del 11-10-2026 (varias horas de conducción). Se vieron tres fallos.
   - Con el permiso concedido, el cable pasa por delante (`onUsbCarPresent`).
   - Antes solo se anotaba en el sondeo.
 - **Requisitos:** con QDLink instalada, el aviso de las conexiones Wi-Fi también explica lo del cable.
+
+## 36. Ajustes del coche en dos columnas, e imagen y conexión (0.2.48)
+
+### 36.1 Ajustes (`SettingsScreen`)
+- **Diseño en dos columnas, como los ajustes de Android Auto.**
+  - A la izquierda, las secciones con lo que está puesto debajo: Imagen, Panel lateral, Viaje y Conexión.
+  - A la derecha, su contenido en tarjetas: perfiles en rejilla de 4, fluidez en dos botones e interruptores dibujados (pista y botón) en lugar de «Sí/No».
+- **Al cambiar el panel** (color, lado, botones), `CarUi` rehace la interfaz. La sección y el desplazamiento se guardan en estáticos, así que la pantalla vuelve al mismo sitio (probado reordenando botones).
+
+### 36.2 Perfil H.264 por encima de Baseline (experimental, sin probar en el coche)
+- **Baseline no cambia:** sigue con el nivel que el C10 lleva recibiendo.
+- **Con `profile` main o high** (Avanzado, en el móvil):
+  - `KEY_MAX_B_FRAMES` 0, porque un B-frame añade un fotograma de retraso;
+  - el nivel que pide el tamaño (`VideoEncoder.levelForSize`, tabla A-1): 1920x882 son 6720 macrobloques, así que nivel 4 a 30 fps y 4.2 a 60.
+- **Registro:** `H264Info.describe` añade a cada «SPS/PPS» lo que lleva de verdad: perfil, nivel y CABAC o CAVLC. Así se ve si el códec hace caso al perfil pedido.
+- **QDLink original:** usa Baseline 3.1. Que el C10 acepte Main/High está sin comprobar.
+
+### 36.3 Más bitrate cuando el coche pide 60 fps (cable)
+- **Lo que pasaba:** por cable el C10 pide 60 fps con el mismo bitrate que a 30 fps por Wi-Fi (5,08 Mbit/s), así que la mitad de bits por fotograma.
+- **Ahora:** con el perfil Coche, si pide 50 fps o más se arranca como con Fluidez 60, es decir max(coche, 8 Mbit/s) con tope de 12 (`VideoProfile.startBitrate(car, carFps, w)`).
+- **Lo siguen bajando** `LinkRateController` (techo = ese bitrate) y la protección térmica.
+- **Antecedente:** en S29 (§14) iba a 10 Mbit/s a 60 fps por cable, sin cortes.
+
+### 36.4 Latencia del táctil
+- **Siempre encendido** (antes solo con «Optimizaciones de latencia», apagado en Coche), porque no cuesta calor:
+  - el registro en su hilo (`LowLatency.log`), que vuelca a disco al quedarse sin nada pendiente;
+  - solo el inicio y el fin de cada gesto en el registro (antes cada movimiento, uno cada ~16 ms, se escribía y vaciaba a disco en el hilo que lee del coche);
+  - el descodificador de AA en baja latencia;
+  - prioridad de pantalla para los hilos de vídeo y lectura.
+- **Con el ajuste, solo lo que calienta:** la extensión de baja latencia del encoder y los relojes al máximo.
+
+### 36.5 Teclas del coche
+- **Envío a AA:** `QdSessionBridge.onKey` pasa PHONE_KEYS y `Music/…` a Android Auto (`carKeyToAndroid` y `AaPassthroughSource.carKey`): Inicio, Atrás y controles de música.
+- **En el C10 no han llegado nunca:** los mandos del volante van por Bluetooth (AVRCP → MediaSession → AA) y eso ya funciona. Esto es por si otro coche o versión las manda.
+
+### 36.6 Cable ocupado por otra app
+- **Aviso:** `UsbLink` cuenta las aperturas fallidas seguidas (`openAccessory` da null). A la segunda, `UsbBusyNotice` avisa en el móvil, y con la QDLink original instalada el aviso abre su ficha para «Forzar detención». Se quita al abrir el cable.
+- **Nota:** el filtro de QDLink pide la versión «1» y el C10 manda «1.0», así que Android no la abriría sola. Lo probable es el diálogo de qué app abre el cable (ver §35.2).
