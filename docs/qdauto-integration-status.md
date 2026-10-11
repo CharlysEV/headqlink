@@ -2595,7 +2595,8 @@ Registro del 11-10-2026 (varias horas de conducción). Se vieron tres fallos.
 - **«PC»:** la web como en un ordenador. Usa el agente de usuario de Chrome para Linux con la misma versión que la WebView (`desktopUa`, puro y probado) y se recuerda.
 - **Contenido protegido (Widevine):** se concede sin preguntar; cámara y micrófono, no.
   - **Prueba (2026-10-11):** la demo DRM de Bitmovin (Widevine, sin cuenta) se ve en el coche virtual, que compone igual que el coche (pantalla virtual sin capa segura).
-  - Netflix y Disney+ con «PC» quedan por probar con una cuenta. Si una web exige la ruta segura (L1, `HW_SECURE`), saldrá en negro.
+  - Disney+ con «PC» se ve (2026-10-11, con la cuenta del usuario). Netflix queda por probar. Si una web exige la ruta segura (L1, `HW_SECURE`), saldrá en negro.
+- **Teclado de día:** el fondo y el texto encima de las teclas siguen el tema. Antes, de día, el texto salía gris oscuro sobre la franja oscura.
 - Nunca se registran direcciones ni búsquedas.
 
 ### 35.2 Cable enchufado yendo por Wi-Fi

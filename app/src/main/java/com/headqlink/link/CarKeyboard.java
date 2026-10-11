@@ -42,7 +42,8 @@ final class CarKeyboard extends LinearLayout {
         super(c);
         this.listener = listener;
         setOrientation(VERTICAL);
-        setBackgroundColor(0xFF15181C);
+        // Con los colores del tema (día o noche): CarUi rehace las vistas al cambiar.
+        setBackgroundColor(CarTheme.night() ? 0xFF15181C : CarStyle.BG);
         setPadding(10, 10, 10, 10);
         echo = CarStyle.text(c, "", 30, CarStyle.TEXT);
         echo.setSingleLine(true);
@@ -101,8 +102,8 @@ final class CarKeyboard extends LinearLayout {
     void showText(CharSequence text, CharSequence hint) {
         boolean empty = text == null || text.length() == 0;
         echo.setText(empty ? hint : text + "▏");
-        echo.setTextColor(empty ? 0xFF8296A9 : CarStyle.TEXT);
-        echo.setBackground(CarStyle.round(0xFF0F1318, 12));
+        echo.setTextColor(empty ? CarStyle.TEXT_DIM : CarStyle.TEXT);
+        echo.setBackground(CarStyle.round(CarTheme.night() ? 0xFF0F1318 : CarStyle.CARD, 12));
         echo.setVisibility(VISIBLE);
     }
 
