@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Paso hecho o actual de la configuración. -->
+<!-- Paso hecho de la configuración: como el indicador de progreso de Material 3. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <corners android:radius="3dp" />
-    <gradient
-        android:angle="0"
-        android:endColor="@color/hql_accent_2"
-        android:startColor="@color/hql_accent" />
+    <corners android:radius="2dp" />
+    <solid android:color="?attr/colorPrimary" />
 </shape>

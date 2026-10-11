@@ -96,6 +96,7 @@ public class CarCloudActivity extends Activity {
         L.init(this);
         Str.init(this);
         setContentView(R.layout.hql_activity_cloud);
+        ((com.google.android.material.appbar.MaterialToolbar) findViewById(R.id.hql_toolbar)).setNavigationOnClickListener(v -> finish());
         if (!CarCloudStore.supported()) {
             findViewById(R.id.hql_cloud_unsupported).setVisibility(View.VISIBLE);
             findViewById(R.id.hql_cloud_body).setVisibility(View.GONE);

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Fondo de las etiquetas RECOMENDADO / COMPATIBLE. -->
+<!-- Insignia de Material 3: píldora en el contenedor principal. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <corners android:radius="6dp" />
-    <solid android:color="#2400E5C7" />
+    <corners android:radius="100dp" />
+    <solid android:color="?attr/colorPrimaryContainer" />
 </shape>

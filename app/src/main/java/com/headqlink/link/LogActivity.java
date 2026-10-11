@@ -34,6 +34,7 @@ public class LogActivity extends Activity {
         super.onCreate(b);
         L.init(this);
         setContentView(R.layout.hql_activity_log);
+        ((com.google.android.material.appbar.MaterialToolbar) findViewById(R.id.hql_toolbar)).setNavigationOnClickListener(v -> finish());
         text = findViewById(R.id.hql_log_text);
         scroll = findViewById(R.id.hql_log_scroll);
         File f = L.currentFile();

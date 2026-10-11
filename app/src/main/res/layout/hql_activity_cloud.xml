@@ -26,19 +26,17 @@
             android:paddingEnd="20dp"
             android:paddingBottom="28dp">
 
-            <TextView
-                style="@style/HQL.Text.Label.Accent"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/hql_cloud_label" />
-
-            <TextView
-                style="@style/HQL.Text.Title"
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/hql_toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/hql_cloud_menu"
-                android:textSize="24sp" />
+                android:layout_height="?attr/actionBarSize"
+                android:layout_marginStart="-20dp"
+                android:layout_marginTop="-16dp"
+                android:layout_marginEnd="-20dp"
+                app:navigationIcon="@drawable/ic_arrow_back"
+                app:navigationIconTint="?attr/colorOnSurface"
+                app:title="@string/hql_cloud_menu"
+                app:titleTextAppearance="?attr/textAppearanceTitleLarge" />
 
             <!-- Qué es, qué no hace y la privacidad -->
             <TextView

@@ -419,9 +419,12 @@ final class PhoneInsights {
             if (!Double.isNaN(cost) && cost > 0) line += String.format(Locale.getDefault(), " · %.2f €", cost);
             txt.addView(small(line));
             row.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            TextView go = small("›");
-            go.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
-            row.addView(go);
+            android.widget.ImageView go = new android.widget.ImageView(act);
+            go.setImageResource(R.drawable.ic_chevron_right);
+            go.setImageTintList(android.content.res.ColorStateList.valueOf(act.getColor(R.color.hql_text_dim)));
+            go.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            int gs = Math.round(24 * act.getResources().getDisplayMetrics().density);
+            row.addView(go, new LinearLayout.LayoutParams(gs, gs));
             row.setBackgroundResource(selectable());
             row.setOnClickListener(v -> act.startActivity(new Intent(act, TripMapActivity.class)
                     .putExtra(TripMapActivity.EXTRA_START, t.startMs)));
@@ -448,10 +451,9 @@ final class PhoneInsights {
         mc.addView(c);
         c.setTag(mc);
         TextView t = new TextView(act);
-        t.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_LabelLarge);
-        t.setText(title.toUpperCase(Locale.getDefault()));
+        t.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium);
+        t.setText(title);
         t.setTextColor(PhoneCharts.ACCENT);
-        t.setLetterSpacing(0.12f);
         t.setPadding(0, 0, 0, dp(12));
         c.addView(t);
         return c;

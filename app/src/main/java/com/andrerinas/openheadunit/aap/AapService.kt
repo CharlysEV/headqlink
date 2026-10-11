@@ -3219,16 +3219,11 @@ class AapService : Service() {
             else PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        // Tap the notification to go back to the projection screen (if connected) or home
-        val (notificationIntent, requestCode) = if (commManager.isConnected) {
-            AapProjectionActivity.intent(this).apply {
-                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            } to 100
-        } else {
-            Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            } to 101
-        }
+        // headqlink: tocar la notificación abre HeadQLink (su pantalla de inicio, Material 3), no las pantallas de Open
+        // Headunit: la proyección va a la pantalla del coche y AapProjectionActivity se cierra sola.
+        val (notificationIntent, requestCode) = Intent(this, com.headqlink.link.HomeActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        } to 101
 
         val contentText = if (commManager.isConnected)
             getString(R.string.notification_projection_active)

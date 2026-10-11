@@ -293,14 +293,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
 
         toggle.setText(starting ? Str.get(R.string.hql_preparing) : running ? Str.get(R.string.hql_disconnect) : Str.get(R.string.hql_connect));
         toggle.setEnabled(!starting);
-        // CONECTAR en degradado con brillo cian; en marcha, DESCONECTAR oscuro con filo rojo (hql_btn_primary).
+        // Conectar: botón relleno de Material 3 en el acento; en marcha, Desconectar en el contenedor de error (HQL.Button).
         toggle.setActivated(running && !starting);
-        toggle.setElevation(starting ? 0 : 10 * getResources().getDisplayMetrics().density);
-        if (android.os.Build.VERSION.SDK_INT >= 28) {
-            int glow = getColor(running ? R.color.hql_error : R.color.hql_accent);
-            toggle.setOutlineSpotShadowColor(glow);
-            toggle.setOutlineAmbientShadowColor(glow);
-        }
         boolean waitServer = waitingForAaServer();
         hint.setOnClickListener(waitServer ? v -> openAaForServer() : null);
         hint.setClickable(waitServer);
@@ -483,9 +477,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     .show();
             return;
         }
-        android.widget.ProgressBar bar = new android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        com.google.android.material.progressindicator.LinearProgressIndicator bar =
+                new com.google.android.material.progressindicator.LinearProgressIndicator(this);
         bar.setMax(100);
         bar.setIndeterminate(true);
+        bar.setTrackCornerRadius(Math.round(2 * getResources().getDisplayMetrics().density));
         int pad = Math.round(24 * getResources().getDisplayMetrics().density);
         bar.setPadding(pad, pad / 2, pad, 0);
         androidx.appcompat.app.AlertDialog dlg = new MaterialAlertDialogBuilder(this)
@@ -886,13 +882,15 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 t.setMaxLines(2);
                 t.setEllipsize(android.text.TextUtils.TruncateAt.END);
                 r.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-                String[] glyphs = {"\u25b2", "\u25bc", "\u2715"};
+                int[] icons = {R.drawable.ic_arrow_up, R.drawable.ic_arrow_down, R.drawable.ic_close_white};
+                String[] names = {Str.get(R.string.hql_move_up), Str.get(R.string.hql_move_down), Str.get(R.string.hql_remove)};
                 for (int k = 0; k < 3; k++) {
                     int op = k;
-                    android.widget.Button b = M3.button(this, "", false);
-                    b.setText(glyphs[k]);
-                    b.setMinWidth(0);
-                    b.setMinimumWidth(0);
+                    com.google.android.material.button.MaterialButton b = new com.google.android.material.button.MaterialButton(
+                            this, null, com.google.android.material.R.attr.materialIconButtonStyle);
+                    b.setIconResource(icons[k]);
+                    b.setIconTint(android.content.res.ColorStateList.valueOf(getColor(R.color.hql_text_dim)));
+                    b.setContentDescription(names[k]);
                     b.setEnabled(op == 2 || (op == 0 ? idx > 0 : idx < list.length - 1));
                     b.setOnClickListener(v -> {
                         java.util.List<String[]> l = new java.util.ArrayList<>(java.util.Arrays.asList(cfg.webShortcuts()));

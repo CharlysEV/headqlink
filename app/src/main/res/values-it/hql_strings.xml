@@ -940,4 +940,6 @@
     <string name="hql_float_dest">Arrivi con il %1$.0f %%</string>
     <string name="hql_float_no_stop">Senza soste</string>
     <string name="hql_float_no_charger">Nessun caricatore raggiungibile</string>
+    <string name="hql_move_up">Sposta su</string>
+    <string name="hql_move_down">Sposta giù</string>
 </resources>

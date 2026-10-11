@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- headqlink: pantalla «Comprobación» (ChecklistActivity). El FrameLayout aplica los insets del sistema. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true">
@@ -12,27 +13,17 @@
         android:paddingStart="24dp"
         android:paddingEnd="24dp">
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:importantForAccessibility="no"
-                android:src="@drawable/hql_ln_shield"
-                android:tint="@color/hql_accent" />
-
-            <TextView
-                style="@style/HQL.Text.Label.Accent"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="@string/hql_req_title" />
-        </LinearLayout>
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/hql_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:layout_marginStart="-24dp"
+            android:layout_marginTop="0dp"
+            android:layout_marginEnd="-24dp"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="?attr/colorOnSurface"
+            app:title="@string/hql_req_title"
+            app:titleTextAppearance="?attr/textAppearanceTitleLarge" />
 
         <ScrollView
             android:layout_width="match_parent"

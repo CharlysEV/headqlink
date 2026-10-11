@@ -40,6 +40,7 @@ public class ChecklistActivity extends Activity {
         cfg = new Config(this);
         gate = getIntent().getBooleanExtra(EXTRA_GATE, false);
         setContentView(R.layout.hql_activity_checklist);
+        ((com.google.android.material.appbar.MaterialToolbar) findViewById(R.id.hql_toolbar)).setNavigationOnClickListener(v -> finish());
         title = findViewById(R.id.hql_check_title);
         body = findViewById(R.id.hql_check_body);
         list = findViewById(R.id.hql_check_list);

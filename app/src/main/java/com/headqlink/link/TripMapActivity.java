@@ -58,14 +58,15 @@ public class TripMapActivity extends Activity {
         w.loadDataWithBaseURL("file:///android_asset/", TripDetail.mapHtml(trip, stops), "text/html", "utf-8", null);
         root.addView(w, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
+        com.google.android.material.card.MaterialCardView frame = new com.google.android.material.card.MaterialCardView(this);
+        frame.setCardBackgroundColor(getColor(R.color.hql_surface_hi));
+        frame.setStrokeWidth(0);
+        frame.setRadius(dp(12));
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(16);
         card.setPadding(pad, dp(12), pad, dp(12));
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xE60A0E14);
-        bg.setCornerRadius(dp(20));
-        card.setBackground(bg);
+        frame.addView(card);
         TextView head = text(new SimpleDateFormat("EEEE d MMMM · HH:mm", Locale.getDefault()).format(new Date(trip.startMs)), 15,
                 PhoneCharts.ACCENT);
         head.setTypeface(PhoneCharts.MEDIUM);
@@ -88,7 +89,7 @@ public class TripMapActivity extends Activity {
         FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP);
         clp.setMargins(dp(12), dp(12), dp(12), 0);
-        root.addView(card, clp);
+        root.addView(frame, clp);
         setContentView(root);
     }
 

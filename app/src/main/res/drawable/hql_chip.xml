@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Chip de estado (blanco: lo tiñe Ui.chip con el color del estado, translúcido). -->
+<!-- Chip de Material 3 (esquinas de 8dp); el color lo pone Ui.chip con el tinte. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <corners android:radius="10dp" />
+    <corners android:radius="8dp" />
     <solid android:color="#FFFFFFFF" />
 </shape>

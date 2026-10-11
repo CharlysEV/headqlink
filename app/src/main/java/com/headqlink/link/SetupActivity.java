@@ -116,9 +116,7 @@ public class SetupActivity extends Activity {
                         next.setEnabled(accepted);
                     });
                 }
-                TextView termsLink = container.findViewById(R.id.hql_terms_link);
-                termsLink.setPaintFlags(termsLink.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-                termsLink.setOnClickListener(v -> TermsOfUse.show(this));
+                container.findViewById(R.id.hql_terms_link).setOnClickListener(v -> TermsOfUse.show(this));
                 break;
             case 1:
                 inf.inflate(R.layout.hql_setup_mode, container, true);

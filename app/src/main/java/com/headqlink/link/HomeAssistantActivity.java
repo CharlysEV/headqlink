@@ -50,6 +50,7 @@ public class HomeAssistantActivity extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         setContentView(R.layout.hql_activity_ha);
+        ((com.google.android.material.appbar.MaterialToolbar) findViewById(R.id.hql_toolbar)).setNavigationOnClickListener(v -> finish());
         ha = new HomeAssistant(this);
         TextInputEditText url = findViewById(R.id.hql_ha_url);
         TextInputEditText token = findViewById(R.id.hql_ha_token);
@@ -189,7 +190,7 @@ public class HomeAssistantActivity extends Activity {
             row.setGravity(android.view.Gravity.CENTER_VERTICAL);
             MaterialCheckBox cb = new MaterialCheckBox(this);
             cb.setText(e.name);
-            cb.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            cb.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyLarge);
             cb.setTextColor(getColor(R.color.hql_text));
             cb.setChecked(chosen.contains(e.id));
             cb.setOnCheckedChangeListener((v, on) -> {
@@ -203,7 +204,7 @@ public class HomeAssistantActivity extends Activity {
             TextView st = new TextView(this);
             st.setText(e.value());
             st.setTextColor(getColor(R.color.hql_text_faint));
-            st.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            st.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium);
             st.setSingleLine(true);
             row.addView(st);
             list.addView(row);

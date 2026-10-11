@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- headqlink: tema «Eléctrico», siempre oscuro (en el coche se ve mejor y no deslumbra de noche). La pantalla de
+<!-- headqlink: Material 3 oscuro con el acento «Eléctrico» (en el coche se ve mejor y no deslumbra de noche) (en el coche se ve mejor y no deslumbra de noche). La pantalla de
      inicio de Android 12+ está en values-v31. -->
 <resources>
     <style name="Base.Theme.HeadQLink" parent="Theme.Material3.Dark.NoActionBar">
@@ -10,9 +10,6 @@
         <item name="android:navigationBarColor">@color/hql_bg</item>
         <item name="android:colorBackground">@color/hql_bg</item>
         <item name="colorOnBackground">@color/hql_text</item>
-        <!-- Sombras algo más intensas: en las vistas con sombra cian (tarjeta de estado, CONECTAR) dan el brillo. -->
-        <item name="android:spotShadowAlpha">0.32</item>
-        <item name="android:ambientShadowAlpha">0.1</item>
 
         <item name="colorPrimary">@color/hql_accent</item>
         <item name="colorOnPrimary">@color/hql_on_accent</item>
@@ -54,11 +51,6 @@
         <item name="materialButtonStyle">@style/HQL.Button</item>
         <item name="materialAlertDialogTheme">@style/HQL.Dialog</item>
 
-        <!-- Menú del engranaje (PopupMenu del sistema): tarjeta elevada y filas altas, fáciles de tocar -->
-        <item name="android:popupMenuStyle">@style/HQL.PopupMenu</item>
-        <item name="android:textAppearanceLargePopupMenu">@style/HQL.PopupMenu.Text</item>
-        <item name="android:textAppearanceSmallPopupMenu">@style/HQL.PopupMenu.Text</item>
-        <item name="android:listPreferredItemHeightSmall">52dp</item>
     </style>
 
     <style name="Theme.HeadQLink" parent="Base.Theme.HeadQLink" />
@@ -90,18 +82,10 @@
 
     <style name="HQL.AlertDialog.Title" parent="MaterialAlertDialog.Material3.Title.Text">
         <item name="android:textColor">@color/hql_text</item>
-        <item name="android:textSize">21sp</item>
-        <item name="android:fontFamily">sans-serif</item>
-        <item name="android:textStyle">bold</item>
     </style>
 
     <style name="HQL.AlertDialog.Button" parent="Widget.Material3.Button.TextButton.Dialog">
         <item name="android:textColor">@color/hql_accent</item>
-        <item name="android:textSize">15sp</item>
-        <item name="android:fontFamily">sans-serif-condensed</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="android:letterSpacing">0.08</item>
         <item name="android:minHeight">48dp</item>
         <item name="rippleColor">@color/hql_ripple</item>
     </style>
@@ -110,58 +94,31 @@
         <item name="android:textColor">@color/hql_text_dim</item>
     </style>
 
-    <style name="HQL.PopupMenu" parent="@android:style/Widget.Material.PopupMenu">
-        <item name="android:popupBackground">@drawable/hql_popup_bg</item>
-        <item name="android:popupElevation">12dp</item>
-    </style>
 
-    <style name="HQL.PopupMenu.Text" parent="@android:style/TextAppearance.Material.Widget.PopupMenu.Large">
-        <item name="android:textColor">@color/hql_text</item>
-        <item name="android:textSize">16sp</item>
-    </style>
 
     <!-- ============================================================ botones -->
 
     <!-- Principal (CONECTAR, Continuar, Exportar…): degradado cian → verde. Activado (setActivated) = Desconectar. -->
+    <!-- Principal (Conectar, Continuar, Exportar…): botón relleno de Material 3 en el acento. Activado (setActivated) =
+         Desconectar, en el contenedor de error. Alto: se toca bien con el móvil en el soporte. -->
     <style name="HQL.Button" parent="Widget.Material3.Button">
-        <item name="android:background">@drawable/hql_btn_primary</item>
-        <item name="backgroundTint">@null</item>
+        <item name="backgroundTint">@color/hql_btn_fill</item>
         <item name="android:textColor">@color/hql_btn_primary_text</item>
-        <item name="android:minHeight">58dp</item>
+        <item name="android:textAppearance">?attr/textAppearanceTitleMedium</item>
+        <item name="android:minHeight">56dp</item>
         <item name="android:paddingStart">24dp</item>
         <item name="android:paddingEnd">24dp</item>
-        <item name="android:textSize">16sp</item>
-        <item name="android:fontFamily">sans-serif-condensed</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="android:letterSpacing">0.1</item>
-        <item name="android:stateListAnimator">@null</item>
     </style>
 
     <style name="HQL.Button.Quiet" parent="Widget.Material3.Button.TextButton">
         <item name="android:minHeight">48dp</item>
-        <item name="android:paddingStart">12dp</item>
-        <item name="android:paddingEnd">12dp</item>
-        <item name="android:textSize">14sp</item>
         <item name="android:textColor">@color/hql_accent</item>
-        <item name="android:fontFamily">sans-serif-condensed</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="android:letterSpacing">0.08</item>
         <item name="rippleColor">@color/hql_ripple</item>
     </style>
 
     <style name="HQL.Button.Outline" parent="Widget.Material3.Button.OutlinedButton">
         <item name="android:minHeight">48dp</item>
-        <item name="android:paddingStart">18dp</item>
-        <item name="android:paddingEnd">18dp</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:textColor">@color/hql_accent</item>
-        <item name="cornerRadius">12dp</item>
-        <item name="strokeColor">@color/hql_accent</item>
-        <item name="strokeWidth">1.5dp</item>
-        <item name="backgroundTint">@color/hql_accent_tint</item>
         <item name="rippleColor">@color/hql_ripple</item>
     </style>
 
@@ -172,37 +129,24 @@
     <style name="HQL.Text" />
 
     <!-- Títulos grandes y legibles con el móvil a un brazo de distancia -->
-    <style name="HQL.Text.Title">
-        <item name="android:textSize">26sp</item>
+    <style name="HQL.Text.Title" parent="TextAppearance.Material3.HeadlineSmall">
         <item name="android:textColor">@color/hql_text</item>
-        <item name="android:fontFamily">sans-serif</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">-0.01</item>
-        <item name="android:lineSpacingExtra">2dp</item>
     </style>
 
-    <style name="HQL.Text.Title.Display">
-        <item name="android:textSize">30sp</item>
-        <item name="android:lineSpacingExtra">0dp</item>
+    <style name="HQL.Text.Title.Display" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textColor">@color/hql_text</item>
     </style>
 
-    <style name="HQL.Text.Body">
-        <item name="android:textSize">15sp</item>
+    <style name="HQL.Text.Body" parent="TextAppearance.Material3.BodyLarge">
         <item name="android:textColor">@color/hql_text_dim</item>
-        <item name="android:lineSpacingExtra">3dp</item>
     </style>
 
     <!-- Etiquetas de sección: condensadas, en mayúsculas y espaciadas -->
-    <style name="HQL.Text.Label">
-        <item name="android:textSize">12sp</item>
-        <item name="android:textColor">@color/hql_text_faint</item>
-        <item name="android:letterSpacing">0.16</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="android:fontFamily">sans-serif-condensed</item>
-        <item name="android:textStyle">bold</item>
+    <style name="HQL.Text.Label" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textColor">@color/hql_text_dim</item>
     </style>
 
-    <style name="HQL.Text.Label.Accent">
+    <style name="HQL.Text.Label.Accent" parent="TextAppearance.Material3.TitleSmall">
         <item name="android:textColor">@color/hql_accent</item>
     </style>
 
@@ -215,76 +159,55 @@
         <item name="android:textStyle">bold</item>
     </style>
 
-    <style name="HQL.Text.RowTitle">
-        <item name="android:textSize">16sp</item>
+    <style name="HQL.Text.RowTitle" parent="TextAppearance.Material3.TitleMedium">
         <item name="android:textColor">@color/hql_text</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
     </style>
 
-    <style name="HQL.Text.RowDetail">
-        <item name="android:textSize">13sp</item>
+    <style name="HQL.Text.RowDetail" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:textColor">@color/hql_text_dim</item>
-        <item name="android:lineSpacingExtra">2dp</item>
     </style>
 
     <!-- Nombre de una fila de estado (COCHE, RED…) -->
-    <style name="HQL.Text.RowLabel">
-        <item name="android:textSize">14sp</item>
+    <style name="HQL.Text.RowLabel" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:textColor">@color/hql_text_dim</item>
-        <item name="android:letterSpacing">0.08</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="android:fontFamily">sans-serif-condensed</item>
-        <item name="android:textStyle">bold</item>
     </style>
 
     <!-- Cifras del panel en directo (fps, Mbps) -->
-    <style name="HQL.Text.Meter">
-        <item name="android:textSize">34sp</item>
+    <style name="HQL.Text.Meter" parent="TextAppearance.Material3.DisplaySmall">
         <item name="android:textColor">@color/hql_text</item>
-        <item name="android:fontFamily">sans-serif-condensed</item>
-        <item name="android:textStyle">bold</item>
         <item name="android:fontFeatureSettings">tnum</item>
         <item name="android:includeFontPadding">false</item>
     </style>
 
-    <style name="HQL.Text.Unit">
-        <item name="android:textSize">13sp</item>
+    <style name="HQL.Text.Unit" parent="TextAppearance.Material3.LabelMedium">
         <item name="android:textColor">@color/hql_accent</item>
-        <item name="android:letterSpacing">0.1</item>
-        <item name="android:fontFamily">sans-serif-condensed</item>
-        <item name="android:textStyle">bold</item>
     </style>
 
     <!-- Chip de estado: lo colorea Ui.chip (verde, ámbar, rojo o gris, con su icono) -->
-    <style name="HQL.Text.Chip">
+    <!-- Chip de estado (como un chip de ayuda de Material 3): lo colorea Ui.chip (verde, ámbar, rojo o gris, con su icono) -->
+    <style name="HQL.Text.Chip" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:background">@drawable/hql_chip</item>
         <item name="android:backgroundTint">@color/hql_surface_top</item>
-        <item name="android:minHeight">34dp</item>
-        <item name="android:paddingStart">10dp</item>
-        <item name="android:paddingEnd">12dp</item>
+        <item name="android:minHeight">32dp</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">16dp</item>
         <item name="android:paddingTop">6dp</item>
         <item name="android:paddingBottom">6dp</item>
-        <item name="android:drawablePadding">6dp</item>
+        <item name="android:drawablePadding">8dp</item>
         <item name="android:gravity">center_vertical|start</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:textColor">@color/hql_text_dim</item>
         <item name="android:maxLines">3</item>
         <item name="android:ellipsize">end</item>
     </style>
 
     <!-- Etiqueta pequeña sobre fondo de acento (RECOMENDADO, COMPATIBLE) -->
-    <style name="HQL.Text.Tag">
+    <!-- Etiqueta pequeña (Recomendado, Compatible): como una insignia de Material 3, en el contenedor del acento -->
+    <style name="HQL.Text.Tag" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:background">@drawable/hql_tag</item>
         <item name="android:paddingStart">8dp</item>
         <item name="android:paddingEnd">8dp</item>
-        <item name="android:paddingTop">3dp</item>
-        <item name="android:paddingBottom">3dp</item>
-        <item name="android:textSize">11sp</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="android:paddingBottom">2dp</item>
         <item name="android:textColor">@color/hql_accent</item>
-        <item name="android:letterSpacing">0.12</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="android:fontFamily">sans-serif-condensed</item>
-        <item name="android:textStyle">bold</item>
     </style>
 </resources>

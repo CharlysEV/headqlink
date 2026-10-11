@@ -2662,3 +2662,36 @@ Registro del 11-10-2026 (varias horas de conducción). Se vieron tres fallos.
   - `CarUi` avisa del rectángulo (`Listener.onFloatRect`).
 - **Toques que caen en ella:** van a nuestra interfaz (`AaPassthroughSource.touchMulti` → `CarUi.floatHit`), no a AA.
 - **Probado en el coche virtual** con una ruta de prueba: se ve sobre el mapa, se mueve con pulsación larga y un toque abre la ruta.
+
+## 37. Material 3 en todo el móvil
+
+Tras un inventario de todas las pantallas del móvil: los diálogos ya eran Material 3. Faltaban los paneles y botones hechos a mano, los estilos propios de texto y algunas cabeceras.
+
+- **Estilos comunes (`hql_styles.xml`):**
+  - **Botones:** `HQL.Button` es el botón relleno de Material 3 en el acento (`hql_btn_fill`; Desconectar va en el contenedor de error) con `TitleMedium`. Ya no lleva degradado, mayúsculas condensadas ni brillo de color. `Quiet` y `Outline` son los de texto y con contorno de Material 3, sin mayúsculas.
+  - **Textos:** los `HQL.Text.*` heredan de las apariencias de Material 3 (`HeadlineSmall`, `BodyLarge`, `TitleSmall`, `TitleMedium`, `LabelLarge`, `DisplaySmall`…) con los colores de la app.
+  - Se quita el menú emergente del sistema, que ya no se usaba.
+- **Dibujos con los tokens de Material 3:**
+  - tarjeta rellena (`colorSurfaceContainerHigh`, 12dp);
+  - tarjeta destacada con contorno principal;
+  - opción elegible (contenedor secundario y contorno principal);
+  - botón de icono tonal;
+  - pasos como el indicador de progreso;
+  - insignia en el contenedor principal y chip de 8dp;
+  - fondo liso.
+  - No se envuelven en `MaterialCardView` porque varias son textos o interruptores que el código enciende y apaga.
+- **Barra superior (`MaterialToolbar`, flecha atrás)** en Comprobación, Diagnóstico, cuenta de Leapmotor y Home Assistant.
+- **Detalles:**
+  - descarga de la versión nueva con `LinearProgressIndicator`;
+  - marcadores con botones de icono (subir, bajar, quitar);
+  - la tarjeta del mapa de un viaje es una `MaterialCardView`;
+  - flecha de Viajes con el icono de Material y títulos de Viajes en `TitleMedium`, sin mayúsculas;
+  - términos de uso con un botón de texto;
+  - el mando y Home Assistant con las apariencias de Material 3;
+  - la fila de botones de Diagnóstico salta de línea (`ChipGroup`).
+- **Notificación de Android Auto:** tocarla abre HeadQLink, no las pantallas de Open Headunit.
+- **Sin convertir:**
+  - **widget:** RemoteViews no admite componentes de Material;
+  - **pantallas heredadas de Open Headunit:** ya no se llega a ellas desde la notificación;
+  - **pantalla del coche:** se dibuja a propósito como Android Auto.
+- **`PhoneScreensRenderTest`** dibuja en el PC las pantallas del móvil (`-Ppreview`, `app/build/preview/movil_*.png`), como `CarPanelRenderTest` con las del coche.
