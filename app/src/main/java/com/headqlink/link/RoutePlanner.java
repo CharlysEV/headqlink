@@ -73,6 +73,10 @@ final class RoutePlanner {
         double overheadTripKwh;
         double totalKm;
         long totalSeconds;
+        /** Los tiempos son los de Google (con tráfico), repartidos por tramos. */
+        boolean googleTime;
+        /** Al hacerlo, ninguna ruta se parecía a la de Google (va a otro sitio): no se rehace por diferir de ella. */
+        boolean googleMismatch;
         double destTemp = Double.NaN;
         double destWind = Double.NaN;
         double destRain = Double.NaN;
@@ -368,7 +372,7 @@ final class RoutePlanner {
         if (p != null && !p.missingTiles.isEmpty() && SystemClock.elapsedRealtime() - lastChargerRetryMs > CHARGER_RETRY_MS) {
             lastChargerRetryMs = SystemClock.elapsedRealtime();
             L.i("ruta: reintento los cargadores que faltan (" + p.missingTiles.size() + " zonas)");
-            refreshChargers(p, false);
+            chargersInBackground(p, false);
         }
         followChargeSession(p);
         if (p != null) followCharge(p);
@@ -380,7 +384,16 @@ final class RoutePlanner {
             if (p == null) status = noRoute();
             return;
         }
-        if (p != null && dest.equals(p.destination)) return;
+        boolean replan = false;
+        if (p != null && dest.equals(p.destination)) {
+            // La misma ruta: se rehace solo si nos hemos salido del trazado o Google ha cambiado la suya (un desvío, un atasco).
+            String why = origin == null ? replanReason(p, s, nav, dest) : null;
+            long t = SystemClock.elapsedRealtime();
+            if (why == null || t - lastReplanMs < REPLAN_GAP_MS) return;
+            lastReplanMs = t;
+            L.i("ruta: " + why + "; recalculo desde aquí");
+            replan = true;
+        }
         double oLat = origin != null ? origin.lat : s.lat;
         double oLon = origin != null ? origin.lon : s.lon;
         if (Double.isNaN(oLat)) {
@@ -388,12 +401,14 @@ final class RoutePlanner {
             return;
         }
         long now = SystemClock.elapsedRealtime();
-        if (dest.equals(failedDestination) && now - lastAttemptMs < 120_000) return;
-        if (lastAttemptMs > 0 && now - lastAttemptMs < 20_000) return;
+        if (dest.equals(failedDestination) && now - lastAttemptMs < failRetryMs) return;
+        if (!replan && lastAttemptMs > 0 && now - lastAttemptMs < 20_000) return;
         lastAttemptMs = now;
-        status = Str.get(R.string.hql_route_calculating, dest);
+        if (!replan) status = Str.get(R.string.hql_route_calculating, dest);
         try {
-            Plan np = useManual ? build(dest, oLat, oLon, m.lat, m.lon) : build(dest, oLat, oLon, Double.NaN, Double.NaN);
+            // Al recalcular, el destino ya está situado: no se vuelve a buscar.
+            Plan np = replan ? build(dest, oLat, oLon, p.destLat, p.destLon)
+                    : useManual ? build(dest, oLat, oLon, m.lat, m.lon) : build(dest, oLat, oLon, Double.NaN, Double.NaN);
             np.builtAtMs = System.currentTimeMillis();
             plan = np;
             failedDestination = null;
@@ -404,9 +419,164 @@ final class RoutePlanner {
                     np.overheadTripKwh, np.factor, np.chargers.size()));
         } catch (Exception e) {
             failedDestination = dest;
-            status = Str.get(R.string.hql_route_failed, e.getMessage());
+            // Sin red (sin cobertura un momento) se reintenta a los 30 s; si el servicio falla, a los 2 min.
+            failRetryMs = noNetwork(e) ? 30_000 : 120_000;
+            if (!replan) status = Str.get(R.string.hql_route_failed, e.getMessage());
             L.w("ruta: " + Http.safeError(e));
         }
+    }
+
+    private long failRetryMs = 120_000;
+
+    static boolean noNetwork(Throwable e) {
+        return e instanceof java.net.UnknownHostException || e instanceof java.net.ConnectException
+                || e instanceof java.net.SocketTimeoutException || e instanceof java.net.NoRouteToHostException;
+    }
+
+    /** Entre dos recálculos de la misma ruta, como poco. */
+    static final long REPLAN_GAP_MS = 60_000;
+    /** Fuera del trazado: a más de esto del plan… */
+    static final double OFF_ROUTE_KM = 0.35;
+    /** …durante esto (un túnel o un GPS que salta no cuentan). */
+    static final long OFF_ROUTE_MS = 15_000;
+    /** Google y el plan no coinciden en lo que falta: más de esto (km) y del 12 %… */
+    static final double GOOGLE_GAP_KM = 3;
+    /** …durante esto. */
+    static final long GOOGLE_GAP_MS = 30_000;
+    private long lastReplanMs;
+    private long offRouteSinceMs;
+    private long googleGapSinceMs;
+
+    /**
+     * ¿Hay que rehacer el plan de esta ruta? Devuelve el motivo (para el log, sin ubicaciones) o null. Dos casos: el
+     * coche va lejos del trazado del plan (Google ha mandado por otro sitio o nos hemos desviado) o Google dice que
+     * falta bastante más o menos que el plan (ha cambiado de ruta). Antes el plan se quedaba con la ruta de la salida y
+     * su avance se paraba en el punto más cercano: parecía colgado.
+     */
+    private String replanReason(Plan p, CarSensors.Snapshot s, NavTap.Info nav, String dest) {
+        long t = SystemClock.elapsedRealtime();
+        if (Double.isNaN(s.lat) || p.n < 2) return null;
+        double off = offRouteKm(p, s.lat, s.lon);
+        if (off > OFF_ROUTE_KM) {
+            if (offRouteSinceMs == 0) offRouteSinceMs = t;
+            if (t - offRouteSinceMs >= OFF_ROUTE_MS) {
+                offRouteSinceMs = 0;
+                return String.format(Locale.US, "fuera del trazado del plan (a %.1f km)", off);
+            }
+        } else {
+            offRouteSinceMs = 0;
+        }
+        Google gl = p.googleMismatch ? null : google(dest);
+        if (gl != null) {
+            double google = gl.remainingM / 1000.0;
+            double ours = p.totalKm - p.km[Math.min(Math.max(0, p.progress), p.n - 1)];
+            if (googleDisagrees(ours, google)) {
+                if (googleGapSinceMs == 0) googleGapSinceMs = t;
+                if (t - googleGapSinceMs >= GOOGLE_GAP_MS) {
+                    googleGapSinceMs = 0;
+                    return String.format(Locale.US, "Google ha cambiado de ruta (quedan %.0f km según Google, %.0f según el plan)", google, ours);
+                }
+            } else {
+                googleGapSinceMs = 0;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Puro: lo bien que una ruta de OSRM encaja con la de Google (menos es mejor): la diferencia relativa de distancia,
+     * con un pequeño premio por cada carretera de las que anuncia Google que también está en la ruta.
+     */
+    static double matchScore(double routeM, double googleM, int roadHits) {
+        return Math.abs(routeM - googleM) / Math.max(1, googleM) - 0.02 * roadHits;
+    }
+
+    /** Puro: factor para pasar los tiempos de OSRM a los de Google (entre 0,6 y 2,5: lo demás sería un dato raro). */
+    static double timeFactor(long googleSec, long osrmSec) {
+        if (googleSec <= 0 || osrmSec <= 0) return 1;
+        return Math.max(0.6, Math.min(2.5, googleSec / (double) osrmSec));
+    }
+
+    /** Nombre de carretera para comparar: minúsculas, sin acentos, guiones ni espacios («A-2» = «a2»). */
+    static String norm(String road) {
+        String n = java.text.Normalizer.normalize(road.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD);
+        return n.replaceAll("[^a-z0-9]", "");
+    }
+
+    /** Cuántas carreteras de las que anuncia Google salen en los pasos de esta ruta de OSRM (nombre o referencia). */
+    static int roadHits(JSONObject route, java.util.Set<String> googleRoads) {
+        if (googleRoads.isEmpty()) return 0;
+        java.util.Set<String> mine = new java.util.HashSet<>();
+        JSONArray legs = route.optJSONArray("legs");
+        for (int l = 0; legs != null && l < legs.length(); l++) {
+            JSONArray steps = legs.optJSONObject(l).optJSONArray("steps");
+            for (int i = 0; steps != null && i < steps.length(); i++) {
+                JSONObject st = steps.optJSONObject(i);
+                String name = st.optString("name");
+                String ref = st.optString("ref");
+                if (!name.isEmpty()) mine.add(norm(name));
+                for (String r : ref.split(";")) if (!r.trim().isEmpty()) mine.add(norm(r));
+            }
+        }
+        int hits = 0;
+        for (String g : googleRoads) {
+            for (String m : mine) {
+                if (!g.isEmpty() && !m.isEmpty() && (m.equals(g) || (g.length() >= 4 && (m.contains(g) || g.contains(m))))) {
+                    hits++;
+                    break;
+                }
+            }
+        }
+        return hits;
+    }
+
+    /** Lo que Google Maps dice de la ruta en curso: metros y segundos que faltan y carreteras que anuncia. */
+    static final class Google {
+        double remainingM = -1;
+        long remainingSec = -1;
+        java.util.Set<String> roads = new java.util.HashSet<>();
+        /** De dónde sale: «Android Auto» o «notificación». */
+        String source;
+    }
+
+    /**
+     * Lo que dice Google de la ruta a dest, o null si no se sabe. Primero Android Auto (si manda ese destino y lo que
+     * falta; hoy Google Maps no lo manda); si no, la notificación de navegación de Google Maps en el móvil, que es de la
+     * ruta que esté siguiendo: se da por hecho que es a nuestro destino (el que se eligió aquí y se abrió con «Ir»).
+     */
+    static Google google(String dest) {
+        NavTap.Info nav = NavTap.getInfo();
+        if (nav.active && dest != null && dest.equals(nav.destination) && nav.remainingMeters > 0) {
+            Google g = new Google();
+            g.remainingM = nav.remainingMeters;
+            g.remainingSec = nav.remainingSeconds;
+            for (String rd : new String[]{nav.road, nav.nextRoad, nav.thenRoad}) if (rd != null && rd.trim().length() > 1) g.roads.add(norm(rd));
+            g.source = "Android Auto";
+            return g;
+        }
+        MapsNavListener.Info mi = MapsNavListener.current();
+        if (mi != null && mi.remainingM > 0) {
+            Google g = new Google();
+            g.remainingM = mi.remainingM;
+            g.remainingSec = mi.etaMs > 0 ? Math.max(0, (mi.etaMs - System.currentTimeMillis()) / 1000) : -1;
+            g.source = "notificación";
+            return g;
+        }
+        return null;
+    }
+
+    /** Puro: ¿lo que falta según Google y según el plan es demasiado distinto? */
+    static boolean googleDisagrees(double oursKm, double googleKm) {
+        return Math.abs(oursKm - googleKm) > Math.max(GOOGLE_GAP_KM, 0.12 * googleKm);
+    }
+
+    /** Distancia (km) del punto al trazado del plan, mirando los tramos cerca del avance. */
+    static double offRouteKm(Plan p, double lat, double lon) {
+        int from = Math.max(0, p.progress - 10);
+        int to = Math.min(p.n - 1, Math.max(p.progress, 0) + 40);
+        double best = Double.MAX_VALUE;
+        for (int i = Math.max(1, from); i <= to; i++) best = Math.min(best, distToRouteKm(p.lat, p.lon, i, lat, lon));
+        return best;
     }
 
     // ------------------------------------------------------------------ plan de carga vivo
@@ -461,8 +631,51 @@ final class RoutePlanner {
     double[] battery(CarCloud.Snapshot cs) {
         if (testMode) return new double[]{socNow(), cs != null && cs.hasData() ? cs.capacityKwh : EnergyModel.USABLE_KWH, 0};
         double real = cs == null ? Double.NaN : cs.soc(DemoMode.wallClockMs(), CarCloud.SOC_MAX_AGE_MS);
-        if (!Double.isNaN(real)) return new double[]{real, cs.capacityKwh, 1};
+        if (!Double.isNaN(real)) {
+            double est = sinceReading(real, cs.capacityKwh, cs.dataTimeMs(), sensors.snapshot().kwhTotal);
+            return new double[]{est, cs.capacityKwh, 1};
+        }
         return new double[]{socNow(), EnergyModel.USABLE_KWH, 0};
+    }
+
+    /** El dato de la nube del que se parte y la energía del modelo en ese momento. */
+    private long socAnchorDataMs = Long.MIN_VALUE;
+    private double socAnchorKwh;
+    private boolean socEstimateLogged;
+
+    /**
+     * El % de la nube menos lo que el modelo ha gastado desde que llegó. Si la nube falla (sin cobertura) o repite el
+     * mismo dato un rato, el plan no se queda con el % de hace media hora: sigue bajando con lo que se conduce, y se
+     * corrige con el siguiente dato real.
+     */
+    private double sinceReading(double soc, double capKwh, long dataMs, double kwhNow) {
+        synchronized (socLock) {
+            return sinceReadingLocked(soc, capKwh, dataMs, kwhNow);
+        }
+    }
+
+    private final Object socLock = new Object();
+
+    private double sinceReadingLocked(double soc, double capKwh, long dataMs, double kwhNow) {
+        if (dataMs != socAnchorDataMs || kwhNow < socAnchorKwh) {
+            socAnchorDataMs = dataMs;
+            socAnchorKwh = kwhNow;
+            socEstimateLogged = false;
+        }
+        double used = kwhNow - socAnchorKwh;
+        double est = estimatedSoc(soc, capKwh, used);
+        if (!socEstimateLogged && soc - est >= 2) {
+            socEstimateLogged = true;
+            L.i(String.format(Locale.US, "ruta: la nube no da un dato nuevo; batería estimada %.0f %% (el último real, %.0f %%, menos %.1f kWh "
+                    + "gastados desde entonces)", est, soc, used));
+        }
+        return est;
+    }
+
+    /** Puro: % que queda tras gastar usedKwh desde un % real. */
+    static double estimatedSoc(double soc, double capKwh, double usedKwh) {
+        if (!(usedKwh > 0) || !(capKwh > 0)) return soc;
+        return Math.max(0, soc - usedKwh / capKwh * 100);
     }
 
     /**
@@ -587,7 +800,7 @@ final class RoutePlanner {
             }
             // Fuera del coche solo en un viaje o en carga rápida (en casa, en alterna y sin ruta, no hace falta vigilar
             // horas); en las capturas de la demostración, nunca.
-            ChargeWatch.begin(ctx, s, (p != null || s.dc) && (!cs.demo || DemoMode.live()));
+            ChargeWatch.begin(ctx, s, (p != null || s.dc) && (!cs.demo || DemoMode.live()), cs.demo);
         }
         if (s != null && p != null && p.n >= 2) sessionTarget(s, p);
         ChargeWatch.tick(ctx, cs);
@@ -850,19 +1063,58 @@ final class RoutePlanner {
         if (!Double.isNaN(dLat)) {
             p.destLat = dLat;
             p.destLon = dLon;
+        }
+
+        // 2. Ruta (OSRM) con alternativas, y la que encaja con la de Google: lo que falta según Google (Android Auto lo
+        // manda) y las carreteras que anuncia. Si el destino no está claro (el texto puede valer para varios sitios), se
+        // prueban hasta tres y se queda el que da una ruta como la de Google.
+        Google gl = google(destination);
+        double googleM = gl != null ? gl.remainingM : -1;
+        List<double[]> places = new ArrayList<>();
+        if (!Double.isNaN(dLat)) {
+            places.add(new double[]{dLat, dLon});
         } else {
-            String geo = Http.get("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" + Uri.encode(destination)
+            String geo = Http.get("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=" + (googleM > 0 ? 3 : 1) + "&q="
+                    + Uri.encode(destination)
                     + String.format(Locale.US, "&viewbox=%.3f,%.3f,%.3f,%.3f", lon0 - 2, lat0 + 2, lon0 + 2, lat0 - 2));
             JSONArray ga = new JSONArray(geo);
             if (ga.length() == 0) throw new IllegalStateException("destino no encontrado");
-            p.destLat = ga.getJSONObject(0).getDouble("lat");
-            p.destLon = ga.getJSONObject(0).getDouble("lon");
+            for (int i = 0; i < ga.length(); i++) places.add(new double[]{ga.getJSONObject(i).getDouble("lat"), ga.getJSONObject(i).getDouble("lon")});
         }
-
-        // 2. Ruta (OSRM): geometría y duración por tramo.
-        String r = Http.get(String.format(Locale.US, "https://router.project-osrm.org/route/v1/driving/%.6f,%.6f;%.6f,%.6f"
-                + "?overview=full&geometries=geojson&annotations=distance,duration", lon0, lat0, p.destLon, p.destLat));
-        JSONObject route = new JSONObject(r).getJSONArray("routes").getJSONObject(0);
+        java.util.Set<String> googleRoads = new java.util.HashSet<>();
+        if (gl != null) googleRoads.addAll(gl.roads);
+        JSONObject route = null;
+        double bestScore = Double.MAX_VALUE;
+        int bestAlt = 0;
+        int alts = 0;
+        for (int c = 0; c < places.size(); c++) {
+            double[] pl = places.get(c);
+            String r = Http.get(String.format(Locale.US, "https://router.project-osrm.org/route/v1/driving/%.6f,%.6f;%.6f,%.6f"
+                    + "?overview=full&geometries=geojson&annotations=distance,duration&steps=true&alternatives=%s", lon0, lat0, pl[1], pl[0],
+                    googleM > 0 ? "3" : "false"));
+            JSONArray routes = new JSONObject(r).getJSONArray("routes");
+            for (int i = 0; i < routes.length(); i++) {
+                JSONObject ro = routes.getJSONObject(i);
+                double score = googleM > 0 ? matchScore(ro.getDouble("distance"), googleM, roadHits(ro, googleRoads)) : i;
+                if (score < bestScore) {
+                    bestScore = score;
+                    route = ro;
+                    bestAlt = i;
+                    alts = routes.length();
+                    p.destLat = pl[0];
+                    p.destLon = pl[1];
+                }
+            }
+            // Con una que encaje bien (menos de un 3 % de diferencia) no hace falta probar más sitios.
+            if (googleM <= 0 || bestScore < 0.03) break;
+        }
+        if (route == null) throw new IllegalStateException("sin ruta");
+        if (googleM > 0) {
+            L.i(String.format(Locale.US, "ruta: como la de Google (%s): alternativa %d de %d (%.1f km; Google %.1f km)", gl.source,
+                    bestAlt + 1, alts, route.getDouble("distance") / 1000, googleM / 1000));
+            // Ninguna se parece (más de un 25 %): Google va a otro sitio. No se insiste en igualarla con esta ruta.
+            p.googleMismatch = bestScore > 0.25;
+        }
         JSONArray coords = route.getJSONObject("geometry").getJSONArray("coordinates");
         JSONObject ann = route.getJSONArray("legs").getJSONObject(0).getJSONObject("annotation");
         JSONArray dist = ann.getJSONArray("distance");
@@ -902,6 +1154,14 @@ final class RoutePlanner {
             segS[i] = q[3];
         }
         p.totalKm = p.km[n - 1];
+        // Los tiempos, los de Google (con el tráfico de ahora) si la ruta encaja con la suya: se reparte su hora de llegada
+        // entre los tramos. Así la hora de cada parada y la velocidad de cada tramo (y su gasto) son las de hoy.
+        if (gl != null && gl.remainingSec > 0 && googleM > 0 && bestScore < 0.15 && p.totalSeconds > 0) {
+            double f = timeFactor(gl.remainingSec, p.totalSeconds);
+            for (int i = 0; i < n; i++) segS[i] *= f;
+            p.totalSeconds = Math.round(p.totalSeconds * f);
+            p.googleTime = true;
+        }
 
         // 3. Elevación (Open-Meteo, 100 puntos por petición), suavizada.
         p.elev = new double[n];
@@ -1055,7 +1315,29 @@ final class RoutePlanner {
                 DgtChargers.refreshIfStale(ctx);
             }
         }
-        refreshChargers(p, true);
+        // Con lo que ya hay (DGT y caché) el plan sale ya; lo que falte se pide a OpenStreetMap en otro hilo y la lista se
+        // rehace al llegar. Antes se esperaba aquí: con Overpass saturado, la ruta tardaba minutos en salir.
+        rebuildChargers(p);
+        chargersInBackground(p, true);
+    }
+
+    private volatile boolean chargersBusy;
+
+    /** refreshChargers en otro hilo (uno a la vez): el bucle del planificador no espera a OpenStreetMap. */
+    private void chargersInBackground(Plan p, boolean all) {
+        if (demo || chargersBusy) return;
+        chargersBusy = true;
+        Thread t = new Thread(() -> {
+            try {
+                refreshChargers(p, all);
+            } catch (RuntimeException e) {
+                L.w("ruta: cargadores: " + Http.safeError(e));
+            } finally {
+                chargersBusy = false;
+            }
+        }, "hql-chargers");
+        t.setPriority(Thread.MIN_PRIORITY);
+        t.start();
     }
 
     /**
@@ -1076,10 +1358,15 @@ final class RoutePlanner {
                 fetched += part.size();
             } catch (Exception e) {
                 L.w("ruta: cargadores: " + part.size() + " zonas sin respuesta de OpenStreetMap (" + Http.safeError(e) + ")");
-                if (!all) break;
+                // En pausa (Overpass saturado o sin red): no tiene sentido seguir con las demás tandas ahora.
+                if (!all || e instanceof Http.OverpassPausedException) break;
             }
         }
-        rebuildChargers(p);
+        // Se llama desde otro hilo: la lista se rehace con el planificador quieto, y solo si sigue siendo su ruta.
+        synchronized (this) {
+            if (plan != p) return;
+            rebuildChargers(p);
+        }
         L.i(String.format(Locale.US, "ruta: cargadores: %d zonas con datos, %d pedidas ahora, %d sin datos · %d junto a la ruta "
                 + "(%d de la DGT; %d zonas por completar con OpenStreetMap)", cached, fetched, p.missingTiles.size(), p.chargers.size(),
                 p.dgtCount, p.osmPending.size()));
@@ -1110,6 +1397,7 @@ final class RoutePlanner {
                     } catch (Exception e) {
                         L.w("ruta: cargadores de OpenStreetMap (además de la DGT): " + part.size() + " zonas sin respuesta ("
                                 + Http.safeError(e) + ")");
+                        if (e instanceof Http.OverpassPausedException) break;
                     }
                 }
                 if (ok > 0) {
@@ -1201,6 +1489,7 @@ final class RoutePlanner {
                     fetchTiles(part, now);
                 } catch (Exception e) {
                     L.w("cargadores cerca: " + part.size() + " zonas sin respuesta de OpenStreetMap (" + Http.safeError(e) + ")");
+                    if (e instanceof Http.OverpassPausedException) break;
                 }
             }
             done.run();

@@ -534,7 +534,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         col.setBackgroundColor(0xFF161C24);
         // Coche virtual: la pantalla del coche en el móvil (Android Auto, nuestras pantallas y rutas reales), sin coche.
         col.addView(menuRow(sheet, 11, Str.get(R.string.hql_sim_menu), false));
-        int[][] coche = {{7, R.string.hql_req_title}, {1, R.string.hql_image_settings}, {10, R.string.hql_cloud_menu}};
+        int[][] coche = {{7, R.string.hql_req_title}, {1, R.string.hql_image_settings}, {10, R.string.hql_cloud_menu},
+                {15, MapsNavListener.granted(this) ? R.string.hql_maps_read_on : R.string.hql_maps_read}};
         menuGroup(sheet, col, 1, Str.get(R.string.hql_menu_car), coche);
         if (ext) {
             menuGroup(sheet, col, 2, Str.get(R.string.hql_menu_content),
@@ -642,6 +643,23 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 break;
             case 13:
                 checkUpdateNow();
+                break;
+            case 15:
+                // Acceso a notificaciones para leer la de navegación de Google Maps (ruta en metros y hora de llegada).
+                Intent ni;
+                if (android.os.Build.VERSION.SDK_INT >= 30) {
+                    ni = new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS);
+                    ni.putExtra(android.provider.Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
+                            new android.content.ComponentName(this, MapsNavListener.class).flattenToString());
+                } else {
+                    ni = new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+                }
+                android.widget.Toast.makeText(this, Str.get(R.string.hql_maps_read_help), android.widget.Toast.LENGTH_LONG).show();
+                try {
+                    startActivity(ni);
+                } catch (RuntimeException e) {
+                    startActivity(new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+                }
                 break;
             case 14:
                 // Carpeta de ROMs: permiso persistente sobre el árbol elegido (ver onActivityResult).

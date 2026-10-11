@@ -150,6 +150,38 @@ public class TouchService extends AccessibilityService {
         return NesInput.key(e.getKeyCode(), e.getAction());
     }
 
+    /**
+     * Cruceta y stick del mando (MotionEvent de ejes) mientras hay un juego: Android solo los manda a la ventana que está
+     * delante, así que antes hacía falta la pantalla «Mando conectado al coche» abierta en el móvil. Desde Android 14 el
+     * servicio de accesibilidad puede pedirlos (setMotionEventSources) y llegan aquí estén donde estén. Solo durante el
+     * juego: al acabar se devuelven a las apps.
+     */
+    static void gamepadAxes(boolean on) {
+        TouchService t = instance;
+        if (t == null || android.os.Build.VERSION.SDK_INT < 34) return;
+        int src = on ? android.view.InputDevice.SOURCE_JOYSTICK | android.view.InputDevice.SOURCE_GAMEPAD : 0;
+        t.main.post(() -> {
+            try {
+                android.accessibilityservice.AccessibilityServiceInfo info = t.getServiceInfo();
+                info.setMotionEventSources(src);
+                t.setServiceInfo(info);
+                L.i("Juegos: ejes del mando " + (on ? "por la accesibilidad (sin pantalla del mando en el móvil)" : "devueltos a las apps"));
+            } catch (RuntimeException e) {
+                L.w("Juegos: el sistema no deja pedir los ejes del mando: " + e.getClass().getSimpleName());
+            }
+        });
+    }
+
+    /** Hasta dónde llega: en Android 14+ con los ejes pedidos no hace falta la pantalla del mando en el móvil. */
+    static boolean axesWithoutActivity() {
+        return instance != null && android.os.Build.VERSION.SDK_INT >= 34;
+    }
+
+    @Override
+    public void onMotionEvent(android.view.MotionEvent e) {
+        if (NesInput.pad != null) NesInput.motion(e);
+    }
+
     @Override
     public void onInterrupt() {
     }

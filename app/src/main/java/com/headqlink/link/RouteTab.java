@@ -64,6 +64,8 @@ final class RouteTab implements CarScreen {
     /** Los botones de arriba a la derecha (buscar, Google Maps, quitar): su ancho real recorta el nombre del destino. */
     private LinearLayout actionsRow;
     private TextView goMaps;
+    /** Mapa con el trazado del plan (para compararlo con el de Google Maps). */
+    private TextView mapPill;
     private TextView clear;
     private TextView cta;
     private int shownChargersFor = -1;
@@ -124,6 +126,9 @@ final class RouteTab implements CarScreen {
         } else {
             actions.addView(search);
         }
+        mapPill = CarKit.pill(ctx, Str.get(R.string.hql_route_map), false);
+        mapPill.setOnClickListener(v -> openMap());
+        actions.addView(mapPill, spaced());
         actions.addView(goMaps, spaced());
         actions.addView(clear, spaced());
         routeCard.addView(actions, CarKit.at(Gravity.TOP | Gravity.END, 0, 0, 0, 0));
@@ -617,6 +622,7 @@ final class RouteTab implements CarScreen {
             originPill.setText(Str.get(R.string.hql_route_from, o == null ? Str.get(R.string.hql_route_gps) : o.name));
         }
         clear.setVisibility(manual ? View.VISIBLE : View.GONE);
+        mapPill.setVisibility(have ? View.VISIBLE : View.GONE);
         cta.setVisibility(have ? View.GONE : View.VISIBLE);
         search.setVisibility(have ? View.VISIBLE : View.GONE);
         routeCard.invalidate();
@@ -784,6 +790,15 @@ final class RouteTab implements CarScreen {
         updateFilterSummary();
         shownChargersFor = -1;
         tick();
+    }
+
+    /** El trazado del plan sobre el mapa, a pantalla completa (Cerrar vuelve). */
+    private void openMap() {
+        RoutePlanner.Plan pl = plan;
+        if (pl == null || pl.n < 2) return;
+        View[] ref = new View[1];
+        ref[0] = RouteMap.panel(ctx, planner, pl, chargePlan, () -> root.removeView(ref[0]));
+        root.addView(ref[0], new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
     /**

@@ -126,8 +126,17 @@ final class CarCloud {
 
         /** Con stale = lecturas seguidas sin dato nuevo del coche (a partir de 2, el coche está dormido: se espacia). */
         static long delayMs(int failures, boolean hubVisible, int stale) {
-            if (failures > 0) return BACKOFF_MS[Math.min(failures, BACKOFF_MS.length) - 1];
-            if (stale >= 2) return STALE_MS[Math.min(stale - 2, STALE_MS.length - 1)];
+            return delayMs(failures, hubVisible, stale, false);
+        }
+
+        /**
+         * driving: el móvil va en marcha. Entonces el coche no está dormido aunque la nube repita el mismo dato (a ratos se
+         * atasca unos minutos): no se espacia a 5 y 15 min, y tras un fallo (cobertura) se reintenta a los 2 min. Antes,
+         * en un viaje, se llegó a quedar 38 min sin leer la batería.
+         */
+        static long delayMs(int failures, boolean hubVisible, int stale, boolean driving) {
+            if (failures > 0) return driving ? BACKOFF_MS[0] : BACKOFF_MS[Math.min(failures, BACKOFF_MS.length) - 1];
+            if (stale >= 2 && !driving) return STALE_MS[Math.min(stale - 2, STALE_MS.length - 1)];
             return hubVisible ? HUB_MS : NORMAL_MS;
         }
     }
@@ -311,7 +320,7 @@ final class CarCloud {
                 failures = 0;
             }
             // Espera hasta que toque (se recalcula si la sección Coche aparece o desaparece).
-            long due = lastAttempt == 0 ? 0 : lastAttempt + Policy.delayMs(failures, hubVisible || chargeWatch, staleReads);
+            long due = lastAttempt == 0 ? 0 : lastAttempt + Policy.delayMs(failures, hubVisible || chargeWatch, staleReads, driving());
             long now = SystemClock.elapsedRealtime();
             if (now < due) {
                 sleep(due - now);
@@ -329,6 +338,11 @@ final class CarCloud {
             if (failures == 0 && current.state == State.OK && alive(gen)) pollHistory(st, gen);
         }
         L.i("nube Leapmotor: sondeo parado");
+    }
+
+    /** ¿En marcha? (más de 10 km/h en los últimos 3 min). */
+    private static boolean driving() {
+        return CarSensors.movingWithin(180_000);
     }
 
     /** Un sondeo: actualiza la foto y el log; devuelve los fallos seguidos. */
@@ -350,7 +364,7 @@ final class CarCloud {
             lastDataTime = dataTime;
             L.i("nube Leapmotor: " + s.logLine() + " · dato del coche de hace " + agoLog(snap.ageMs(wall)) + " · " + lat + " ms"
                     + (staleReads >= 2 ? " · sin dato nuevo " + staleReads + " veces: la siguiente en "
-                    + Policy.delayMs(0, hubVisible, staleReads) / 60_000 + " min" : "") + " · lecturas hoy " + readsToday);
+                    + Policy.delayMs(0, hubVisible, staleReads, driving()) / 60_000 + " min" : "") + " · lecturas hoy " + readsToday);
             return 0;
         } catch (LeapApi.SessionExpiredException e) {
             current = current.with(State.EXPIRED, 0);
@@ -370,7 +384,7 @@ final class CarCloud {
             return 0;
         } catch (Exception e) {
             int n = failures + 1;
-            long wait = Policy.delayMs(n, hubVisible);
+            long wait = Policy.delayMs(n, hubVisible, 0, driving());
             current = current.with(State.ERROR, System.currentTimeMillis() + wait);
             L.w("nube Leapmotor: sin datos (" + safeError(e) + ", " + (SystemClock.elapsedRealtime() - t0) + " ms); fallo "
                     + n + ", reintento en " + wait / 60_000 + " min");

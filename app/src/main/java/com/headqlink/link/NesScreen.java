@@ -395,7 +395,7 @@ final class NesScreen {
 
     void stopEngine() {
         CarUi.gameDrawing(false);
-        NesInput.pad = null;
+        NesInput.endGame();
         NesPadActivity.close();
         NesPadActivity.cancelNotification(host.context());
         GameCore e = engine;

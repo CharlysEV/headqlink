@@ -43,42 +43,114 @@ final class Http {
             "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     };
 
-    /** Consulta a Overpass, probando los espejos si uno falla. */
+    /**
+     * Pausa de Overpass: cuando los tres servidores fallan (saturados o sin red), no se vuelve a preguntar hasta pasado
+     * un rato (30 s, 60 s… hasta 5 min), en vez de que cada consulta espere y reintente minutos. Así nada que dependa de
+     * OpenStreetMap (radares, límites, cargadores) se queda colgado esperando.
+     */
+    static final class OverpassGate {
+        static final long FIRST_MS = 30_000;
+        static final long MAX_MS = 300_000;
+        private long until;
+        private int fails;
+
+        synchronized boolean open(long now) {
+            return now >= until;
+        }
+
+        synchronized long until() {
+            return until;
+        }
+
+        synchronized void failed(long now) {
+            fails++;
+            until = now + pause(fails);
+        }
+
+        synchronized void ok() {
+            fails = 0;
+            until = 0;
+        }
+
+        synchronized int fails() {
+            return fails;
+        }
+
+        /** Puro: la pausa tras n fallos seguidos (30 s, 60 s, 120 s, 240 s, 300 s…). */
+        static long pause(int n) {
+            long p = FIRST_MS << Math.min(Math.max(0, n - 1), 8);
+            return Math.min(MAX_MS, p);
+        }
+    }
+
+    static final OverpassGate OVERPASS_GATE = new OverpassGate();
+
+    /** En pausa (servidores saturados o sin red): se lanza en vez de consultar. */
+    static final class OverpassPausedException extends Exception {
+        OverpassPausedException(long ms) {
+            super("Overpass en pausa " + ms / 1000 + " s");
+        }
+    }
+
+    /** Consulta a Overpass (para lo de fondo: cargadores), con esperas largas. */
     static String overpass(String query) throws Exception {
+        return overpass(query, false);
+    }
+
+    /**
+     * Consulta a Overpass, probando los espejos si uno falla. quick: lo que va con la conducción (límite de la vía,
+     * radares): tiempos cortos y sin repetir en el mismo servidor. Si los tres fallan, Overpass queda en pausa un rato.
+     */
+    static String overpass(String query, boolean quick) throws Exception {
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (!OVERPASS_GATE.open(now)) throw new OverpassPausedException(OVERPASS_GATE.until() - now);
         Exception last = null;
         String data = "data=" + android.net.Uri.encode(query);
+        int connectMs = quick ? 8_000 : 15_000;
+        int readMs = quick ? 15_000 : 60_000; // Overpass puede tardar ~20 s en rutas largas
         for (int s = 0; s < OVERPASS.length; s++) {
-            // El principal, si está ocupado (429: cupo por conexión; 504: cola llena), se espera y se repite.
-            int tries = s == 0 ? 3 : 1;
+            // El principal, si está ocupado (429: cupo por conexión; 504: cola llena), se repite una vez (no en las rápidas).
+            int tries = s == 0 && !quick ? 2 : 1;
             for (int t = 0; t < tries; t++) {
                 try {
-                    return post(OVERPASS[s], data);
+                    String r = request(OVERPASS[s], data, connectMs, readMs);
+                    OVERPASS_GATE.ok();
+                    return r;
                 } catch (Exception e) {
                     last = e;
                     String m = String.valueOf(e.getMessage());
                     boolean busy = m.contains("HTTP 429") || m.contains("HTTP 504");
+                    if (e instanceof java.net.UnknownHostException) {
+                        // Sin red: los espejos tampoco van a responder.
+                        s = OVERPASS.length;
+                        break;
+                    }
                     if (busy && t < tries - 1) {
-                        L.w("Overpass: " + safeError(e) + "; espero y repito");
-                        android.os.SystemClock.sleep(4000L * (t + 1));
+                        android.os.SystemClock.sleep(3000);
                         continue;
                     }
-                    L.w("Overpass: " + safeError(e) + "; pruebo otro servidor");
                     break;
                 }
             }
         }
+        OVERPASS_GATE.failed(android.os.SystemClock.elapsedRealtime());
+        L.w("Overpass: sin respuesta (" + safeError(last) + "); en pausa " + OverpassGate.pause(OVERPASS_GATE.fails()) / 1000 + " s");
         throw last;
     }
 
     /** POST con cuerpo de formulario (Overpass: data=…). */
     static String post(String url, String formBody) throws Exception {
-        return request(url, formBody);
+        return request(url, formBody, 15_000, 60_000);
     }
 
     private static String request(String url, String body) throws Exception {
+        return request(url, body, 15_000, 60_000);
+    }
+
+    private static String request(String url, String body, int connectMs, int readMs) throws Exception {
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
-        con.setConnectTimeout(15_000);
-        con.setReadTimeout(60_000); // Overpass puede tardar ~20 s en rutas largas
+        con.setConnectTimeout(connectMs);
+        con.setReadTimeout(readMs);
         con.setRequestProperty("User-Agent", USER_AGENT);
         con.setRequestProperty("Accept-Language", "es");
         if (body != null) {

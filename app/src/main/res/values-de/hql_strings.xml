@@ -827,4 +827,11 @@
     <string name="hql_games_consoles">Konsolen</string>
     <string name="hql_games_quick">Für die Wartezeit</string>
     <string name="hql_games_play">Spielen</string>
+    <string name="hql_route_map">Karte</string>
+    <string name="hql_route_map_title">Geplante Route</string>
+    <string name="hql_route_map_note">Die Strecke des Plans (OpenStreetMap), zum Vergleich mit Google Maps. Fährt Google anders, plant der Plan neu, sobald er sieht, dass du auf einer anderen Straße bist.</string>
+    <string name="hql_maps_listener_label">HeadQLink: Google-Maps-Route</string>
+    <string name="hql_maps_read">Google-Maps-Route lesen</string>
+    <string name="hql_maps_read_on">Google-Maps-Route lesen ✓</string>
+    <string name="hql_maps_read_help">Aktiviere HeadQLink: Es liest die Navigationsbenachrichtigung von Google Maps (Routenlänge und Ankunftszeit), damit der Plan derselben Route folgt. Es liest nur die von Google Maps.</string>
 </resources>

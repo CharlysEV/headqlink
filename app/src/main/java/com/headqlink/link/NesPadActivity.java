@@ -86,6 +86,9 @@ public class NesPadActivity extends Activity {
                     .build());
             // En la pantalla del móvil (el contexto de la interfaz del coche apuntaría a su pantalla virtual: «Permission
             // Denial»). Con el servicio de accesibilidad activo, Android deja abrirla aunque HeadQLink no esté delante.
+            // Con Android 14+ los ejes del mando llegan por la accesibilidad (TouchService.gamepadAxes): no hace falta abrirla;
+            // queda la notificación por si acaso.
+            if (TouchService.axesWithoutActivity()) return;
             android.app.ActivityOptions o = android.app.ActivityOptions.makeBasic().setLaunchDisplayId(android.view.Display.DEFAULT_DISPLAY);
             ctx.startActivity(new android.content.Intent(ctx, NesPadActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
                     o.toBundle());

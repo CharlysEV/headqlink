@@ -25,6 +25,8 @@ final class ChargeWatch {
     static final int ALERT_ID = 22;
 
     private static volatile ChargeSession session;
+    /** La carga en curso es la de la demostración (vista previa): al salir de ella no debe seguir en el coche de verdad. */
+    private static volatile boolean sessionDemo;
 
     private ChargeWatch() {
     }
@@ -32,6 +34,12 @@ final class ChargeWatch {
     /** La carga en curso, o null. */
     static ChargeSession session() {
         ChargeSession s = session;
+        if (s != null && sessionDemo && !DemoMode.active()) {
+            // Se salió de la vista previa con su carga de demostración en marcha: fuera.
+            session = null;
+            sessionDemo = false;
+            return null;
+        }
         return s == null || s.ended ? null : s;
     }
 
@@ -40,7 +48,12 @@ final class ChargeWatch {
      * viaje o en carga rápida; en casa sin ruta solo se ve en el coche.
      */
     static void begin(Context ctx, ChargeSession s, boolean background) {
+        begin(ctx, s, background, false);
+    }
+
+    static void begin(Context ctx, ChargeSession s, boolean background, boolean demo) {
         session = s;
+        sessionDemo = demo;
         L.i(String.format(Locale.US, "carga en directo: empieza al %.1f %% (%s%s)%s", s.startSoc, s.dc ? "CC" : "CA",
                 s.charger == null ? "" : ", " + s.charger.name + " " + Math.round(s.charger.maxKw) + " kW"
                         + (s.charger.maxVolts > 0 ? " " + Math.round(s.charger.maxVolts) + " V" : ""),

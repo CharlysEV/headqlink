@@ -25,6 +25,14 @@ final class NesInput {
         pad = p;
         loggedKey = false;
         loggedAxis = false;
+        TouchService.gamepadAxes(true);
+    }
+
+    /** Fin del juego: el mando vuelve a ser de las apps. */
+    static void endGame() {
+        if (pad == null) return;
+        pad = null;
+        TouchService.gamepadAxes(false);
     }
 
     /** Puro: tecla de Android → botón de la consola en juego, o null si no es del mando. */

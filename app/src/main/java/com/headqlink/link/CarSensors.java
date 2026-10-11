@@ -107,6 +107,14 @@ final class CarSensors implements SensorEventListener, LocationListener {
     static final long TRAIL_MS = 4000;
 
     private static CarSensors instance;
+    /** Última vez (elapsedRealtime) que el GPS dio más de 10 km/h: para saber si se está conduciendo. */
+    private static volatile long lastMovingMs;
+
+    /** ¿Se ha ido a más de 10 km/h en los últimos ms? (la nube de Leapmotor no espacia sus lecturas mientras tanto). */
+    static boolean movingWithin(long ms) {
+        long t = lastMovingMs;
+        return t > 0 && android.os.SystemClock.elapsedRealtime() - t < ms;
+    }
 
     private final Context ctx;
     private final HandlerThread thread = new HandlerThread("car-sensors");
@@ -533,6 +541,7 @@ final class CarSensors implements SensorEventListener, LocationListener {
         s.speedKmh = v * 3.6;
         if (s.speedKmh > s.maxSpeedKmh) s.maxSpeedKmh = s.speedKmh;
         if (hasBearing && v > 1.5) s.headingDeg = bearing;
+        if (s.speedKmh > 10) lastMovingMs = android.os.SystemClock.elapsedRealtime();
 
         // Aceleración longitudinal: derivada de la velocidad, filtrada.
         if (lastSpeed >= 0) {

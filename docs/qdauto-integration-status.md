@@ -2474,3 +2474,63 @@ Prueba: `NesInputTest.flickeringSpritesBlendInsteadOfVanishingAt30Fps`.
 - **Probado en el coche virtual (S25 Ultra):**
   - Super Pang (mapper 141) y Mario con Nestopia: 60,2 fps emulados, 30 entregados, 0 cortes de audio.
   - Sonic 1 desde .zip con ClownMDEmu: 60 fps, 320x224 a ×4, 0 cortes; Start y cruceta llegan al juego.
+
+## 33. Viajes largos: plan que sigue a Google, radares, nube y mapa de la ruta (0.2.46)
+
+Registro del 11-10-2026 (varias horas de conducción). Se vieron tres fallos.
+- El planificador «colgado».
+- La batería sin saber.
+- Radares que no existían o que avisaban hasta 1 km tarde.
+
+### 33.1 Overpass saturado: pausa en vez de esperas largas
+- Ese día hubo más de 600 errores de Overpass (504, 500, 429 y sin red). Cada consulta esperaba y reintentaba en tres servidores, con lecturas de hasta 60 s, y llegaba a tardar varios minutos.
+- Ahora `Http.overpass(q, quick)` funciona así:
+  - Las consultas de la conducción son rápidas (8 s para conectar, 15 s de lectura) y no se repiten.
+  - Si fallan los tres servidores, `OverpassGate` deja Overpass en pausa 30 s, luego 60 s, 120 s… hasta 5 min. Mientras dura la pausa no se pregunta (`OverpassPausedException`).
+  - Sin red (`UnknownHostException`) no se prueban los espejos.
+
+### 33.2 Radares
+- Dos hilos:
+  - `road-net` hace las consultas.
+  - `road-info` comprueba cada segundo los radares con la posición de ese momento.
+  - Antes iban en el mismo hilo: si Overpass tardaba, el aviso salía con la posición de minutos antes, hasta 1 km después del radar.
+- **Solo los de nuestra vía:** `aheadOnRoad` exige que el radar esté delante y como mucho a 25 m más un 8 % de la distancia de la línea de la marcha. Antes valía ±25° del rumbo, que a 1 km son 400 m a cada lado e incluía otras carreteras y calles.
+- **Solo los de nuestro sentido:** la consulta trae también las vías del radar (`way(bn.c)`) y `cameraDirection` saca el sentido:
+  - de la etiqueta `direction` (grados, puntos cardinales o forward/backward respecto a la vía);
+  - si no la hay, de la vía si es de sentido único (autovías: cada calzada).
+  - Los de la otra calzada no se anuncian.
+
+### 33.3 Nube de Leapmotor y batería
+- En marcha (más de 10 km/h en los últimos 3 min, `CarSensors.movingWithin`) la nube no espacia sus lecturas aunque repita el mismo dato. Ese día se llegó a estar 38 min sin leer la batería. Tras un fallo de cobertura se reintenta a los 2 min.
+- Entre lecturas se usa el % real menos lo que el modelo ha gastado desde ese dato (`RoutePlanner.sinceReading` / `estimatedSoc`). Antes se usaba el dato viejo tal cual.
+
+### 33.4 Planificador sin cuelgues y siguiendo a Google
+- Los cargadores que faltan se piden en otro hilo (`chargersInBackground`): la ruta sale ya con los de la DGT y la caché.
+- Sin red, el cálculo de la ruta se reintenta a los 30 s; antes, a los 2 min.
+- **Fuera del trazado:** a más de 350 m del plan durante 15 s, se rehace desde la posición actual (como mucho una vez por minuto). Antes el avance se quedaba en el punto más cercano y parecía colgado.
+- **Datos de Google:** Android Auto (`NavTap`) solo manda «navegando sí/no»; ni el destino ni lo que falta (comprobado en el registro y en el coche virtual). En Android 16, la notificación de navegación de Google Maps es `ProgressStyle` y trae:
+  - `progressMax`: la ruta en metros;
+  - `progress`: lo recorrido;
+  - `subText`: «Llegada: 21:19».
+- `MapsNavListener` es un `NotificationListenerService` que la lee. El permiso se da en el menú ⚙ › Coche › «Leer la ruta de Google Maps». No se guarda ni se registra su contenido.
+- Con esos datos (`RoutePlanner.google`):
+  - OSRM se pide con `alternatives=3&steps=true`;
+  - se elige la ruta cuya distancia encaja con la de Google (`matchScore`, con un premio por las carreteras que Google anuncia, si llegan por AA);
+  - si el destino es ambiguo, se prueban hasta 3 resultados de Nominatim;
+  - los tiempos se escalan a la hora de llegada de Google (`timeFactor`, entre 0,6 y 2,5);
+  - si lo que falta según Google y según el plan difiere más de 3 km y del 12 % durante 30 s, se rehace.
+  - Si ninguna ruta se parece (más de un 25 %), Google va a otro sitio y no se insiste (`googleMismatch`).
+- Waze no publica nada de la ruta en su notificación («En marcha. Toca para abrir.»), ni en primer ni en segundo plano: no hay forma de seguirlo.
+
+### 33.5 Mapa de la ruta
+- Ruta › «Mapa» (`RouteMap`): el trazado del plan sobre OpenStreetMap oscuro (Leaflet, como el de los viajes), solo para compararlo con Google Maps.
+  - Lo ya hecho sale en gris.
+  - Las paradas de carga llevan el % de llegada y de salida y los minutos.
+  - Muestra el destino y «estás aquí», que se actualiza cada 3 s.
+
+### 33.6 Mando sin la pantalla del móvil
+- En Android 14+, al empezar un juego, `TouchService.gamepadAxes` pide los ejes del mando (`AccessibilityServiceInfo.setMotionEventSources`, joystick y gamepad) y llegan a `onMotionEvent`. Así la cruceta y el stick funcionan sin «Mando conectado al coche» delante; al acabar se devuelven.
+- La pantalla del mando ya no se abre sola en Android 14+; queda la notificación.
+
+### 33.7 Otros
+- Al salir de la vista previa, su carga de demostración se colaba en el coche virtual. Ahora `ChargeWatch` la marca como de la demostración y la quita al salir.

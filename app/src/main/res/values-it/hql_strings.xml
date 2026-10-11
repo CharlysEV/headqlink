@@ -828,4 +828,11 @@
     <string name="hql_games_consoles">Console</string>
     <string name="hql_games_quick">Per l\'attesa</string>
     <string name="hql_games_play">Gioca</string>
+    <string name="hql_route_map">Mappa</string>
+    <string name="hql_route_map_title">Percorso del piano</string>
+    <string name="hql_route_map_note">Il tracciato che usa il piano (OpenStreetMap), da confrontare con quello di Google Maps. Se Google passa da un\'altra parte, il piano si rifà da solo quando vede che sei su un\'altra strada.</string>
+    <string name="hql_maps_listener_label">HeadQLink: percorso di Google Maps</string>
+    <string name="hql_maps_read">Leggi il percorso di Google Maps</string>
+    <string name="hql_maps_read_on">Leggi il percorso di Google Maps ✓</string>
+    <string name="hql_maps_read_help">Attiva HeadQLink: legge la notifica di navigazione di Google Maps (km del percorso e ora di arrivo) perché il piano segua lo stesso percorso. Legge solo quella di Google Maps.</string>
 </resources>

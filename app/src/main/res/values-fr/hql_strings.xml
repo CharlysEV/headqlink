@@ -828,4 +828,11 @@
     <string name="hql_games_consoles">Consoles</string>
     <string name="hql_games_quick">Pour patienter</string>
     <string name="hql_games_play">Jouer</string>
+    <string name="hql_route_map">Carte</string>
+    <string name="hql_route_map_title">Itinéraire du plan</string>
+    <string name="hql_route_map_note">Le tracé utilisé par le plan (OpenStreetMap), à comparer avec celui de Google Maps. Si Google passe ailleurs, le plan se refait tout seul en voyant que vous êtes sur une autre route.</string>
+    <string name="hql_maps_listener_label">HeadQLink : itinéraire Google Maps</string>
+    <string name="hql_maps_read">Lire l’itinéraire Google Maps</string>
+    <string name="hql_maps_read_on">Lire l’itinéraire Google Maps ✓</string>
+    <string name="hql_maps_read_help">Activez HeadQLink : il lit la notification de navigation de Google Maps (km de l’itinéraire et heure d’arrivée) pour que le plan suive le même itinéraire. Il ne lit que celle de Google Maps.</string>
 </resources>

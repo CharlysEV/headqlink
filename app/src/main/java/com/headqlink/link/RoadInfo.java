@@ -16,7 +16,10 @@ import java.util.TimeZone;
  * Datos de la vía para la pestaña "Conducción", con OpenStreetMap (Overpass) y cálculos locales:
  * - Límite de velocidad de la vía por la que se circula (etiqueta maxspeed, o el genérico español
  *   según el tipo de vía, marcado como estimado).
- * - Radares fijos cercanos (highway=speed_camera) delante y en el sentido de la marcha.
+ * - Radares fijos cercanos (highway=speed_camera) delante, en la vía por la que se va y en el sentido de la marcha.
+ * Dos hilos: uno pregunta a OpenStreetMap (puede tardar o fallar) y otro, cada segundo, mira los radares con la
+ * posición de ese momento. Antes iban en el mismo y, si OpenStreetMap tardaba, el aviso salía con la posición de hacía
+ * un rato (hasta un kilómetro después del radar).
  * - Sol de cara: posición del sol (NOAA) frente al rumbo.
  */
 final class RoadInfo {
@@ -40,7 +43,7 @@ final class RoadInfo {
     private final CarSensors sensors;
     private volatile boolean running;
     private volatile State state = new State();
-    private final List<double[]> cameras = new ArrayList<>(); // lat, lon, límite
+    private final List<double[]> cameras = new ArrayList<>(); // lat, lon, límite, sentido (grados; NaN si ambos)
     private double camLat = Double.NaN;
     private double camLon = Double.NaN;
     private long camMs;
@@ -64,7 +67,10 @@ final class RoadInfo {
         if (instance == null) {
             instance = new RoadInfo(ctx);
             instance.running = true;
-            if (!instance.demo) new Thread(instance::loop, "road-info").start();
+            if (!instance.demo) {
+                new Thread(instance::loop, "road-info").start();
+                new Thread(instance::netLoop, "road-net").start();
+            }
         }
         return instance;
     }
@@ -84,6 +90,7 @@ final class RoadInfo {
         return demo ? DemoMode.road() : state;
     }
 
+    /** Cada segundo, con la posición de ese momento: radares, sol y lo último que se sepa de la vía. */
     private void loop() {
         while (running) {
             try {
@@ -91,11 +98,25 @@ final class RoadInfo {
             } catch (Exception e) {
                 L.w("vía: " + Http.safeError(e));
             }
-            SystemClock.sleep(3000);
+            SystemClock.sleep(1000);
         }
     }
 
-    private void step() throws Exception {
+    /** Las consultas a OpenStreetMap, en su hilo (si tarda o falla, los avisos siguen al día). */
+    private void netLoop() {
+        while (running) {
+            try {
+                netStep();
+            } catch (Http.OverpassPausedException ignored) {
+                // Servidores saturados o sin red: se vuelve a probar cuando acabe la pausa (ya está en el log).
+            } catch (Exception e) {
+                L.w("vía: " + Http.safeError(e));
+            }
+            SystemClock.sleep(2000);
+        }
+    }
+
+    private void netStep() throws Exception {
         CarSensors.Snapshot s = sensors.snapshot();
         if (Double.isNaN(s.lat)) return;
         long now = SystemClock.elapsedRealtime();
@@ -112,22 +133,26 @@ final class RoadInfo {
             camLon = s.lon;
             loadCameras(s.lat, s.lon);
         }
+    }
+
+    private void step() {
+        CarSensors.Snapshot s = sensors.snapshot();
+        if (Double.isNaN(s.lat)) return;
         State st = new State();
         st.limitKmh = limit;
         st.limitEstimated = limitEst;
         st.roadName = road;
-        // Radar más cercano delante (±25° del rumbo) a menos de 1,5 km.
+        // Radar más cercano delante, en la vía por la que se va (cerca de la línea de la marcha) y de nuestro sentido.
         double[] nearest = null;
         if (s.speedKmh > 5) {
-            for (double[] c : cameras) {
-                double d = dist(s.lat, s.lon, c[0], c[1]);
-                if (d > 1500) continue;
-                double brg = bearing(s.lat, s.lon, c[0], c[1]);
-                double diff = Math.abs(((brg - s.headingDeg) + 540) % 360 - 180);
-                if (diff < 25 && (st.cameraM < 0 || d < st.cameraM)) {
-                    st.cameraM = d;
-                    st.cameraLimit = (int) c[2];
-                    nearest = c;
+            synchronized (cameras) {
+                for (double[] c : cameras) {
+                    double ahead = aheadOnRoad(s.lat, s.lon, s.headingDeg, c[0], c[1], c[3]);
+                    if (ahead >= 0 && (st.cameraM < 0 || ahead < st.cameraM)) {
+                        st.cameraM = ahead;
+                        st.cameraLimit = (int) c[2];
+                        nearest = c;
+                    }
                 }
             }
         }
@@ -149,7 +174,7 @@ final class RoadInfo {
 
     private void updateLimit(CarSensors.Snapshot s) throws Exception {
         String q = String.format(Locale.US, "[out:json][timeout:10];way(around:25,%.6f,%.6f)[\"highway\"];out tags geom;", s.lat, s.lon);
-        JSONArray els = new JSONObject(Http.overpass(q))
+        JSONArray els = new JSONObject(Http.overpass(q, true))
                 .getJSONArray("elements");
         JSONObject best = null;
         double bestScore = Double.MAX_VALUE;
@@ -192,21 +217,106 @@ final class RoadInfo {
         }
     }
 
+    /**
+     * Radares en 15 km, con las vías en las que están: de la vía sale su sentido (en una autovía, cada calzada es de un
+     * sentido; el radar de la de enfrente no es para nosotros).
+     */
     private void loadCameras(double lat, double lon) throws Exception {
-        String q = String.format(Locale.US, "[out:json][timeout:20];node[\"highway\"=\"speed_camera\"](around:15000,%.5f,%.5f);out body;", lat, lon);
+        String q = String.format(Locale.US, "[out:json][timeout:25];node[\"highway\"=\"speed_camera\"](around:15000,%.5f,%.5f)->.c;"
+                + ".c out body;way(bn.c)[\"highway\"];out tags geom;", lat, lon);
         JSONArray els = new JSONObject(Http.overpass(q))
                 .getJSONArray("elements");
-        List<double[]> list = new ArrayList<>();
+        List<JSONObject> nodes = new ArrayList<>();
+        List<JSONObject> ways = new ArrayList<>();
         for (int i = 0; i < els.length(); i++) {
             JSONObject e = els.getJSONObject(i);
+            if ("node".equals(e.optString("type"))) nodes.add(e);
+            else if ("way".equals(e.optString("type"))) ways.add(e);
+        }
+        List<double[]> list = new ArrayList<>();
+        int withDir = 0;
+        for (JSONObject e : nodes) {
+            double la = e.getDouble("lat");
+            double lo = e.getDouble("lon");
             JSONObject t = e.optJSONObject("tags");
-            list.add(new double[]{e.getDouble("lat"), e.getDouble("lon"), t != null ? parseLimit(t.optString("maxspeed")) : -1});
+            String dirTag = t != null ? t.optString("direction") : "";
+            // La vía del radar (la que pasa por ese punto) y su rumbo allí.
+            double wayBrg = Double.NaN;
+            int oneway = 0;
+            for (JSONObject w : ways) {
+                JSONArray g = w.optJSONArray("geometry");
+                if (g == null) continue;
+                for (int k = 0; k < g.length(); k++) {
+                    JSONObject pt = g.getJSONObject(k);
+                    if (Math.abs(pt.getDouble("lat") - la) > 1e-7 || Math.abs(pt.getDouble("lon") - lo) > 1e-7) continue;
+                    JSONObject a = g.getJSONObject(k > 0 ? k - 1 : k);
+                    JSONObject b = g.getJSONObject(k < g.length() - 1 ? k + 1 : k);
+                    if (a != b) wayBrg = bearing(a.getDouble("lat"), a.getDouble("lon"), b.getDouble("lat"), b.getDouble("lon"));
+                    oneway = oneway(w.optJSONObject("tags"));
+                    break;
+                }
+                if (!Double.isNaN(wayBrg)) break;
+            }
+            double dir = cameraDirection(dirTag, wayBrg, oneway);
+            if (!Double.isNaN(dir)) withDir++;
+            list.add(new double[]{la, lo, t != null ? parseLimit(t.optString("maxspeed")) : -1, dir});
         }
         synchronized (cameras) {
             cameras.clear();
             cameras.addAll(list);
         }
-        L.i("vía: " + list.size() + " radares en 15 km");
+        L.i("vía: " + list.size() + " radares en 15 km (" + withDir + " con sentido conocido)");
+    }
+
+    /** Puro: 1 si la vía es de sentido único en el de su dibujo, -1 si al revés, 0 si de doble sentido. */
+    static int oneway(JSONObject tags) {
+        if (tags == null) return 0;
+        String ow = tags.optString("oneway");
+        if ("-1".equals(ow) || "reverse".equals(ow)) return -1;
+        if ("yes".equals(ow) || "true".equals(ow) || "1".equals(ow)) return 1;
+        if ("no".equals(ow)) return 0;
+        String hw = tags.optString("highway");
+        if ("motorway".equals(hw) || "roundabout".equals(tags.optString("junction"))) return 1;
+        return 0;
+    }
+
+    /**
+     * Puro: sentido (grados) para el que vale un radar, o NaN si se desconoce (vale para los dos). direction de OSM en
+     * grados o puntos cardinales manda; forward/backward es respecto al dibujo de su vía; sin eso, el de la vía si es de
+     * sentido único.
+     */
+    static double cameraDirection(String dirTag, double wayBearing, int oneway) {
+        if (dirTag != null && !dirTag.isEmpty()) {
+            String d = dirTag.trim().toUpperCase(Locale.ROOT);
+            if (d.matches("[0-9]+(\\.[0-9]+)?")) return Double.parseDouble(d) % 360;
+            String[] card = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
+            for (int i = 0; i < card.length; i++) if (card[i].equals(d)) return i * 22.5;
+            if (!Double.isNaN(wayBearing)) {
+                if ("FORWARD".equals(d)) return wayBearing;
+                if ("BACKWARD".equals(d)) return (wayBearing + 180) % 360;
+            }
+        }
+        if (!Double.isNaN(wayBearing) && oneway != 0) return oneway > 0 ? wayBearing : (wayBearing + 180) % 360;
+        return Double.NaN;
+    }
+
+    /** Hasta dónde se mira y cuánto puede apartarse un radar de la línea de la marcha (la vía hace curvas). */
+    static final double AHEAD_M = 1500;
+
+    /**
+     * Puro: metros hasta el radar si está delante, en nuestra vía y para nuestro sentido; -1 si no. «En nuestra vía»: a
+     * poca distancia de la línea de la marcha (25 m más un 8 % de lo que falta, por las curvas). Antes valía cualquier
+     * radar a ±25° del rumbo, que a 1 km son 400 m a cada lado: los de otras carreteras y calles cercanas.
+     */
+    static double aheadOnRoad(double lat, double lon, double heading, double camLat, double camLon, double camDir) {
+        double d = dist(lat, lon, camLat, camLon);
+        if (d > AHEAD_M) return -1;
+        double diff = Math.toRadians(((bearing(lat, lon, camLat, camLon) - heading) + 540) % 360 - 180);
+        double along = d * Math.cos(diff);
+        double cross = Math.abs(d * Math.sin(diff));
+        if (along <= 0 || cross > 25 + 0.08 * along) return -1;
+        if (!Double.isNaN(camDir) && Math.abs(((camDir - heading) + 540) % 360 - 180) > 60) return -1;
+        return along;
     }
 
     /** "50", "50 mph", "ES:urban", "ES:rural", "ES:motorway"… */

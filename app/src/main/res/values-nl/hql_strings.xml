@@ -827,4 +827,11 @@
     <string name="hql_games_consoles">Consoles</string>
     <string name="hql_games_quick">Voor het wachten</string>
     <string name="hql_games_play">Spelen</string>
+    <string name="hql_route_map">Kaart</string>
+    <string name="hql_route_map_title">Route van het plan</string>
+    <string name="hql_route_map_note">Het traject van het plan (OpenStreetMap), om te vergelijken met Google Maps. Rijdt Google anders, dan maakt het plan zichzelf opnieuw zodra het ziet dat je op een andere weg zit.</string>
+    <string name="hql_maps_listener_label">HeadQLink: Google Maps-route</string>
+    <string name="hql_maps_read">Google Maps-route lezen</string>
+    <string name="hql_maps_read_on">Google Maps-route lezen ✓</string>
+    <string name="hql_maps_read_help">Zet HeadQLink aan: het leest de navigatiemelding van Google Maps (lengte van de route en aankomsttijd) zodat het plan dezelfde route volgt. Het leest alleen die van Google Maps.</string>
 </resources>
