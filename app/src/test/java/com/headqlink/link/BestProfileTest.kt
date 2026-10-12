@@ -62,6 +62,10 @@ class BestProfileTest {
         assertTrue(fixed!!.size > bare.size)
         assertNull(H264SpsCrop.lowDelayIfNeeded(fixed, 1920, 882))
         assertEquals(0, H264SpsCrop.lastReorder)
+        // Un High que declara reordenación (B-frames): no se toca (forzar 0 los mostraría desordenados).
+        val reorders = hex("000000016764002aaccac078071f88806d044229c00000000168ce06f2")
+        assertNull(H264SpsCrop.lowDelayIfNeeded(reorders, 1920, 882))
+        assertEquals(1, H264SpsCrop.lastReorder)
         // El PPS sigue al final, intacto.
         val tail = fixed.copyOfRange(fixed.size - 8, fixed.size)
         assertTrue(tail.contentEquals(hex("0000000168ce06f2")))

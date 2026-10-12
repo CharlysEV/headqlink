@@ -1001,4 +1001,5 @@
     <string name="hql_settings_price_fast_help">Para lo que cuesta el plan de carga de la ruta (las paradas en cargadores rápidos).</string>
     <string name="hql_profile_best">Máximo (cable)</string>
     <string name="hql_profile_best_detail">Para el cable: 60 fps, resolución completa, 12-16 Mbit/s, H.264 High y codificador de baja latencia. Calienta más el móvil. Si el coche se queda en negro, vuelve a Coche.</string>
+    <string name="hql_speed_advice_stops_total">Consejo: a %1$d km/h, %2$d paradas en vez de %3$d (%4$s más en total).</string>
 </resources>

@@ -720,8 +720,8 @@ final class RoutePlanner {
             double from = pl.km[prog];
             ChargePlanner.Result r = ChargePlanner.plan(pl.km, ChargePlanner.scaled(pl.km, pl.kwhCum, from, f), from, soc, list, s, keep);
             r.trend = f;
-            // Lo que cuestan las paradas y si yendo más despacio sale mejor (SpeedAdvice).
-            r.costEur = ChargePlanner.cost(r, c.fastChargePrice());
+            // Si yendo más despacio sale mejor (SpeedAdvice). Lo que cuestan las paradas lo calcula RouteTab al enseñarlo,
+            // con el precio de ese momento.
             r.speed = SpeedAdvice.best(pl, r, list, s);
             logSpeed(r.speed);
             // Cargando (en una parada del plan o en otra), el plan cambia sin avisar: lo ha decidido el conductor.

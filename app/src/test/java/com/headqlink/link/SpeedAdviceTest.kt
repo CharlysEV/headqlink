@@ -73,6 +73,22 @@ class SpeedAdviceTest {
     }
 
     @Test
+    fun rescueWhenTheDestinationIsOutOfReachAtRouteSpeed() {
+        // Sin cargadores y un 3 % corto a 130: no se llega; a 110 sí (consejo de rescate, sin paradas).
+        val p = route(150, 130.0)
+        val s = settings()
+        val soc = p.kwhCum[150] / 67.0 * 100 + s.arriveMinPct - 3
+        val now = ChargePlanner.plan(p.km, p.kwhCum, 0.0, soc, emptyList(), s)
+        assertEquals(ChargePlanner.Outcome.NO_CHARGER, now.outcome)
+        assertTrue(now.stops.isEmpty())
+        val a = SpeedAdvice.best(p, now, emptyList(), s)
+        assertNotNull(a)
+        assertTrue(a!!.rescue)
+        assertEquals(110, a.capKmh)
+        assertEquals(0, a.stopsAfter)
+    }
+
+    @Test
     fun noAdviceWithoutStopsOrWhenAlreadySlow() {
         val s = settings()
         val list = listOf(charger(200.0, 150.0))

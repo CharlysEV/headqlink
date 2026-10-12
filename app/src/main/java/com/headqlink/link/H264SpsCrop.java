@@ -77,8 +77,9 @@ final class H264SpsCrop {
 
     /**
      * SPS+PPS del encoder (Annex-B, w x h visibles) con la VUI de baja latencia (max_num_reorder_frames=0 y el búfer
-     * mínimo) solo si hace falta: null si ya lo decía (el SPS del c2.qti en Baseline: reorder 0, búfer 1) o si no se
-     * puede reescribir (matrices de escalado…). lastInfo dice qué traía.
+     * mínimo) solo si hace falta: null si ya lo decía (el SPS del c2.qti en Baseline: reorder 0, búfer 1), si declara
+     * reordenación de verdad (B-frames: forzar 0 mostraría los fotogramas desordenados) o si no se puede reescribir
+     * (matrices de escalado…). lastInfo dice qué traía.
      */
     static byte[] lowDelayIfNeeded(byte[] csd, int w, int h) {
         lastReorder = -1;
@@ -86,6 +87,7 @@ final class H264SpsCrop {
         lastRefs = -1;
         byte[] out = rewrite(csd, 0, csd.length, w, h, true, true);
         if (out == null) return null;
+        if (lastReorder > 0) return null;
         if (lastReorder == 0 && lastBuffering >= 1 && lastBuffering <= Math.max(1, lastRefs)) return null;
         return out;
     }

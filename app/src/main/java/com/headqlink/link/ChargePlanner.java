@@ -75,8 +75,6 @@ final class ChargePlanner {
         double trend = 1;
         /** Voltaje de la batería del coche con el que se calculó (V). */
         double carVolts = 400;
-        /** Lo que cuestan las paradas (€, con el precio de la carga rápida); NaN si no se ha calculado. */
-        double costEur = Double.NaN;
         /** Si yendo más despacio sale mejor (SpeedAdvice), o null. */
         SpeedAdvice speed;
 

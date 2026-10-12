@@ -996,4 +996,5 @@
     <string name="hql_settings_price_fast_help">Para o custo do plano de carregamento da rota (as paragens em carregadores rápidos).</string>
     <string name="hql_profile_best">Máximo (cabo)</string>
     <string name="hql_profile_best_detail">Para o cabo: 60 fps, resolução total, 12-16 Mbit/s, H.264 High e codificador de baixa latência. Aquece mais o telemóvel. Se o ecrã do carro ficar preto, volte a Carro.</string>
+    <string name="hql_speed_advice_stops_total">Conselho: a %1$d km/h, %2$d paragens em vez de %3$d (%4$s a mais no total).</string>
 </resources>

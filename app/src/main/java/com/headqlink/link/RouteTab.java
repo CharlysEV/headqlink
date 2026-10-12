@@ -1297,7 +1297,14 @@ final class RouteTab implements CarScreen {
         String charge = DriveTab.duration(Math.round(Math.max(0, a.chargeSavedMin) * 60));
         if (a.rescue) return Str.get(R.string.hql_speed_advice_rescue, a.capKmh, drive);
         if (a.stopsAfter == 0) return Str.get(R.string.hql_speed_advice_nostop, a.capKmh, drive, charge);
-        if (a.stopsAfter < a.stopsBefore) return Str.get(R.string.hql_speed_advice_stops, a.capKmh, a.stopsAfter, a.stopsBefore, drive, charge);
+        if (a.stopsAfter < a.stopsBefore) {
+            // Menos paradas pero cargando más rato (la que queda llega a la parte lenta de la curva): lo que se tarda de más.
+            if (a.chargeSavedMin < 0) {
+                return Str.get(R.string.hql_speed_advice_stops_total, a.capKmh, a.stopsAfter, a.stopsBefore,
+                        DriveTab.duration(Math.round(-a.gainMin() * 60)));
+            }
+            return Str.get(R.string.hql_speed_advice_stops, a.capKmh, a.stopsAfter, a.stopsBefore, drive, charge);
+        }
         return Str.get(R.string.hql_speed_advice, a.capKmh, DriveTab.duration(Math.round(a.gainMin() * 60)), drive, charge);
     }
 
@@ -1316,6 +1323,8 @@ final class RouteTab implements CarScreen {
             TextView t = hint(Str.get(R.string.hql_plan_impossible));
             t.setTextColor(CarKit.AMBER);
             chargers.addView(t);
+            // Si yendo más despacio sí se llega, se dice aquí (es para lo que está el consejo de rescate).
+            addSpeedAdvice(cp.speed);
             return;
         }
         TextView title = CarStyle.text(ctx, Str.get(R.string.hql_plan_title).toUpperCase(Locale.getDefault()), 19, CarKit.ACCENT);
@@ -1329,7 +1338,9 @@ final class RouteTab implements CarScreen {
                 ? Str.get(R.string.hql_plan_summary_stuck, cp.stops.size(), dur, cp.stops.get(cp.stops.size() - 1).km)
                 : cp.stops.size() == 1 ? Str.get(R.string.hql_plan_summary_one, dur, cp.arrivalPct)
                 : Str.get(R.string.hql_plan_summary_many, cp.stops.size(), dur, cp.arrivalPct);
-        if (cp.costEur >= 0.5) sum += Str.get(R.string.hql_plan_cost, cp.costEur);
+        // Con el precio de ahora (si se cambia en Ajustes, el plan no se rehace por eso).
+        double cost = ChargePlanner.cost(cp, new Config(ctx).fastChargePrice());
+        if (cost >= 0.5) sum += Str.get(R.string.hql_plan_cost, cost);
         TextView s = CarStyle.text(ctx, sum, 22, cp.outcome == ChargePlanner.Outcome.PLANNED ? CarKit.TEXT : CarKit.AMBER);
         chargers.addView(s);
         addReplanNote(cp);

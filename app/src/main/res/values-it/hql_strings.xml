@@ -996,4 +996,5 @@
     <string name="hql_settings_price_fast_help">Per il costo del piano di ricarica del percorso (le soste ai caricatori rapidi).</string>
     <string name="hql_profile_best">Massimo (cavo)</string>
     <string name="hql_profile_best_detail">Per il cavo: 60 fps, risoluzione piena, 12-16 Mbit/s, H.264 High e codificatore a bassa latenza. Scalda di più il telefono. Se lo schermo dell\'auto resta nero, torna a Veicolo.</string>
+    <string name="hql_speed_advice_stops_total">Consiglio: a %1$d km/h, %2$d soste invece di %3$d (%4$s in più in totale).</string>
 </resources>
