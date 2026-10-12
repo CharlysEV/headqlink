@@ -72,8 +72,15 @@
     }, true));
     const play = HTMLMediaElement.prototype.play;
     const stop = HTMLMediaElement.prototype.pause;
+    // headqlink: reproducir no se rechaza nunca (en el coche los toques no siempre llegan como gesto de la página, y un
+    // rechazo dejaba los vídeos parados para siempre). Pedir play vale como «quiero oír esto»: quita el bloqueo.
     HTMLMediaElement.prototype.play = function () {
-        if (gone || blocked || interrupted) return Promise.reject(new DOMException('Audio focus lost', 'AbortError'));
+        if (!gone && (blocked || interrupted)) {
+            blocked = false;
+            interrupted = false;
+            pausedMedia.clear();
+            pausedContexts.clear();
+        }
         return play.apply(this, arguments);
     };
     HTMLMediaElement.prototype.pause = function () {
@@ -94,7 +101,10 @@
         const start = Original.prototype.resume;
         const suspend = Original.prototype.suspend;
         Original.prototype.resume = function () {
-            if (gone || blocked || interrupted) return Promise.reject(new DOMException('Audio focus lost', 'AbortError'));
+            if (!gone && (blocked || interrupted)) {
+                blocked = false;
+                interrupted = false;
+            }
             return start.apply(this, arguments);
         };
         Original.prototype.suspend = function () {

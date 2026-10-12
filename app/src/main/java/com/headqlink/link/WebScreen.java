@@ -89,8 +89,29 @@ final class WebScreen implements CarScreen {
     private boolean loading;
     /** «PC»: la web como en un ordenador (Netflix, Disney+… no dejan verlas en un móvil). Se recuerda. */
     private boolean desktop;
-    private TextView pc;
     private String mobileUa;
+
+    /** Una pestaña: su WebView (creada al verla por primera vez), su sonido y lo último que cargó. */
+    private static final class Tab {
+        WebView web;
+        WebAudio audio;
+        String url = "";
+        String title = "";
+    }
+
+    static final int MAX_TABS = 6;
+    private final List<Tab> tabs = new ArrayList<>();
+    /** La pestaña de delante (la de web/webAudio), o -1. */
+    private int cur = -1;
+    private TextView tabsPill;
+    /** Panel «⋯» o vista de pestañas abiertos (encima de la página), o null. */
+    private View overlay;
+    private LinearLayout suggestRow;
+    private HorizontalScrollView suggestScroll;
+    private int suggestSeq;
+    /** Bloqueo de anuncios y rastreadores (se recuerda) y lo bloqueado en la página de delante. */
+    private volatile boolean adblock;
+    private volatile int blockedHere;
 
     @Override
     public View create(Host h) {
@@ -112,9 +133,9 @@ final class WebScreen implements CarScreen {
         address.setPadding(22, 12, 22, 12);
         address.setBackground(CarStyle.round(CarStyle.ITEM_BG, 28));
         TextView mic = CarStyle.pill(c, "🎤");
-        pc = CarStyle.pill(c, "PC");
-        desktop = prefs(c).getBoolean("desktop", false);
-        paintPc();
+        tabsPill = CarStyle.pill(c, "⧉ 1");
+        TextView more = CarStyle.pill(c, "⋯");
+        adblock = prefs(c).getBoolean("adblock", true);
         TextView kb = CarStyle.pill(c, Str.get(R.string.hql_keyboard));
         bar.addView(back);
         bar.addView(fwd);
@@ -124,7 +145,8 @@ final class WebScreen implements CarScreen {
         alp.rightMargin = 10;
         bar.addView(address, alp);
         bar.addView(mic);
-        bar.addView(pc);
+        bar.addView(tabsPill);
+        bar.addView(more);
         bar.addView(kb);
         col.addView(bar);
         progress = new ProgressBar(c, null, android.R.attr.progressBarStyleHorizontal);
@@ -136,6 +158,14 @@ final class WebScreen implements CarScreen {
 
         body = new FrameLayout(c);
         col.addView(body, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        // Sugerencias mientras se escribe la dirección (Google y el historial), encima del teclado.
+        suggestRow = new LinearLayout(c);
+        suggestRow.setPadding(10, 8, 10, 4);
+        suggestScroll = new HorizontalScrollView(c);
+        suggestScroll.setHorizontalScrollBarEnabled(false);
+        suggestScroll.addView(suggestRow);
+        suggestScroll.setVisibility(View.GONE);
+        col.addView(suggestScroll);
         keyboard = new CarKeyboard(c, new CarKeyboard.Listener() {
             @Override
             public void onText(String s) {
@@ -192,39 +222,26 @@ final class WebScreen implements CarScreen {
         start.setOnClickListener(v -> showHome());
         address.setOnClickListener(v -> typeAddress());
         mic.setOnClickListener(v -> listen());
-        pc.setOnClickListener(v -> {
-            desktop = !desktop;
-            prefs(host.context()).edit().putBoolean("desktop", desktop).apply();
-            paintPc();
-            if (web != null) {
-                applyUa(web.getSettings());
-                if (web.getParent() != null) web.reload();
-            }
-        });
+        tabsPill.setOnClickListener(v -> toggleTabs());
+        more.setOnClickListener(v -> toggleMenu());
         kb.setOnClickListener(v -> {
             autoKeyboard = false;
             showKeyboard(keyboard.getVisibility() != View.VISIBLE, false);
         });
 
         home = buildHome(c);
-        // Al volver al navegador, sigue donde se dejó (si fue hace poco).
-        SharedPreferences sp = prefs(c);
-        String last = sp.getString("last_url", "");
-        if (!last.isEmpty() && System.currentTimeMillis() - sp.getLong("last_at", 0) < RESUME_MS) go(last);
-        else showHome();
+        // Al volver al navegador, siguen las pestañas que había (si fue hace poco).
+        if (!restoreTabs(c)) showHome();
         return root;
     }
 
     @Override
     public void destroy() {
         stopListening();
-        if (webAudio != null) webAudio.close();
-        if (web != null) {
-            web.stopLoading();
-            web.loadUrl("about:blank");
-            web.destroy();
-            web = null;
-        }
+        for (Tab t : tabs) destroyTab(t);
+        tabs.clear();
+        web = null;
+        webAudio = null;
     }
 
     // ------------------------------------------------------------------ inicio
@@ -331,7 +348,7 @@ final class WebScreen implements CarScreen {
         address.setText(Str.get(R.string.hql_web_address));
         address.setTextColor(CarStyle.TEXT_DIM);
         progress.setVisibility(View.INVISIBLE);
-        prefs(host.context()).edit().remove("last_url").apply();
+        closeOverlay();
     }
 
     // ------------------------------------------------------------------ navegar
@@ -339,7 +356,10 @@ final class WebScreen implements CarScreen {
     private void go(String input) {
         String url = toUrl(input);
         if (url == null) return;
-        ensureWeb().loadUrl(url);
+        closeOverlay();
+        WebView w = ensureWeb();
+        applySiteSettings(w, url, false);
+        w.loadUrl(url);
         if (web.getParent() == null) {
             body.removeAllViews();
             body.addView(web, CarStyle.match());
@@ -366,11 +386,26 @@ final class WebScreen implements CarScreen {
         }
     }
 
-    @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
+    /** La WebView de la pestaña de delante (crea la pestaña y la WebView si no hay). */
     private WebView ensureWeb() {
         if (web != null) return web;
-        web = new WebView(host.context());
-        webAudio = new WebAudio(web);
+        if (cur < 0 || cur >= tabs.size()) {
+            tabs.add(new Tab());
+            cur = tabs.size() - 1;
+        }
+        Tab t = tabs.get(cur);
+        if (t.web == null) makeWeb(t);
+        web = t.web;
+        webAudio = t.audio;
+        updateTabsPill();
+        return web;
+    }
+
+    @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
+    private void makeWeb(Tab t) {
+        WebView web = new WebView(host.context());
+        t.web = web;
+        t.audio = new WebAudio(web);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -390,7 +425,10 @@ final class WebScreen implements CarScreen {
         web.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView v, String url, Bitmap favicon) {
-                webAudio.navigation();
+                t.audio.navigation();
+                applySiteSettings(v, url, true);
+                if (v != WebScreen.this.web) return;
+                blockedHere = 0;
                 loading = true;
                 reload.setText("✕");
                 progress.setVisibility(View.VISIBLE);
@@ -399,24 +437,39 @@ final class WebScreen implements CarScreen {
 
             @Override
             public void onPageFinished(WebView v, String url) {
+                v.evaluateJavascript(FOCUS_JS, null);
+                t.audio.pageFinished();
+                if (url != null && url.startsWith("http")) {
+                    t.url = url;
+                    t.title = v.getTitle() == null ? "" : v.getTitle();
+                }
+                remember(url, v.getTitle());
+                saveTabs();
+                if (v != WebScreen.this.web) return;
                 loading = false;
                 reload.setText("⟳");
                 progress.setVisibility(View.INVISIBLE);
-                v.evaluateJavascript(FOCUS_JS, null);
                 showPage();
-                remember(url, v.getTitle());
-                webAudio.pageFinished();
+            }
+
+            /** Anuncios y rastreadores (AdBlock.isAd): respuesta vacía, sin llegar a pedirlos. */
+            @Override
+            public android.webkit.WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest req) {
+                if (!adblock || req.getUrl() == null || !AdBlock.isAd(req.getUrl().getHost())) return null;
+                blockedHere++;
+                return new android.webkit.WebResourceResponse("text/plain", "utf-8", new java.io.ByteArrayInputStream(new byte[0]));
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView v, int p) {
-                progress.setProgress(p);
+                if (v == WebScreen.this.web) progress.setProgress(p);
             }
 
             @Override
             public void onReceivedTitle(WebView v, String title) {
-                showPage();
+                if (title != null) t.title = title;
+                if (v == WebScreen.this.web) showPage();
             }
 
             @Override
@@ -427,19 +480,27 @@ final class WebScreen implements CarScreen {
             @Override
             public boolean onCreateWindow(WebView v, boolean dialog, boolean userGesture, Message result) {
                 if (!userGesture) return false;
-                // Una WebView de paso que solo recoge la dirección y la abre en la principal.
+                // Una WebView de paso que solo recoge la dirección y la abre en una pestaña nueva (o en esta si ya hay
+                // tantas como caben).
                 WebView temp = new WebView(host.context());
+                boolean[] done = {false};
                 temp.setWebViewClient(new WebViewClient() {
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView tv, WebResourceRequest req) {
-                        web.loadUrl(req.getUrl().toString());
+                        if (!done[0]) {
+                            done[0] = true;
+                            openInNewTab(req.getUrl().toString());
+                        }
                         tv.destroy();
                         return true;
                     }
 
                     @Override
                     public void onPageStarted(WebView tv, String url, Bitmap favicon) {
-                        if (url != null && !url.equals("about:blank")) web.loadUrl(url);
+                        if (!done[0] && url != null && !url.equals("about:blank")) {
+                            done[0] = true;
+                            openInNewTab(url);
+                        }
                         tv.stopLoading();
                         tv.destroy();
                     }
@@ -477,12 +538,6 @@ final class WebScreen implements CarScreen {
                 host.setFullscreen(false);
             }
         });
-        return web;
-    }
-
-    private void paintPc() {
-        pc.setBackground(CarStyle.round(desktop ? CarStyle.ACCENT_BG : CarStyle.PILL_BG, 28));
-        pc.setTextColor(desktop ? CarStyle.ACCENT : CarStyle.TEXT);
     }
 
     private void applyUa(WebSettings s) {
@@ -501,6 +556,395 @@ final class WebScreen implements CarScreen {
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("Chrome/[0-9.]+").matcher(mobile == null ? "" : mobile);
         if (m.find()) chrome = m.group() + " ";
         return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) " + chrome + "Safari/537.36";
+    }
+
+    // ------------------------------------------------------------------ pestañas
+
+    private static void destroyTab(Tab t) {
+        if (t.audio != null) t.audio.close();
+        if (t.web != null) {
+            t.web.stopLoading();
+            t.web.loadUrl("about:blank");
+            t.web.destroy();
+        }
+        t.web = null;
+        t.audio = null;
+    }
+
+    private void updateTabsPill() {
+        tabsPill.setText("⧉ " + Math.max(1, tabs.size()));
+    }
+
+    /** Guarda las pestañas (sus direcciones y la de delante) para seguir al volver. Solo en el móvil. */
+    private void saveTabs() {
+        JSONArray a = new JSONArray();
+        int at = 0;
+        for (int i = 0; i < tabs.size(); i++) {
+            String u = tabs.get(i).url;
+            if (u.isEmpty()) continue;
+            if (i == cur) at = a.length();
+            a.put(u);
+        }
+        prefs(host.context()).edit().putString("tabs", a.toString()).putInt("tab_cur", at)
+                .putLong("last_at", System.currentTimeMillis()).apply();
+    }
+
+    /** Vuelve a abrir las pestañas de la última vez (si fue hace menos de RESUME_MS). false si no hay ninguna. */
+    private boolean restoreTabs(Context c) {
+        SharedPreferences sp = prefs(c);
+        if (System.currentTimeMillis() - sp.getLong("last_at", 0) >= RESUME_MS) return false;
+        List<String> urls = new ArrayList<>();
+        try {
+            JSONArray a = new JSONArray(sp.getString("tabs", "[]"));
+            for (int i = 0; i < a.length() && urls.size() < MAX_TABS; i++) urls.add(a.getString(i));
+        } catch (Exception ignored) {
+        }
+        // Versiones anteriores: solo la última página.
+        if (urls.isEmpty() && !sp.getString("last_url", "").isEmpty()) urls.add(sp.getString("last_url", ""));
+        if (urls.isEmpty()) return false;
+        for (String u : urls) {
+            Tab t = new Tab();
+            t.url = u;
+            tabs.add(t);
+        }
+        switchTab(Math.max(0, Math.min(urls.size() - 1, sp.getInt("tab_cur", 0))));
+        return true;
+    }
+
+    /** Pone delante la pestaña i (la carga si aún no tenía WebView). */
+    private void switchTab(int i) {
+        closeOverlay();
+        if (i < 0 || i >= tabs.size()) return;
+        if (web != null && web.getParent() != null) body.removeView(web);
+        cur = i;
+        web = null;
+        webAudio = null;
+        Tab t = tabs.get(i);
+        boolean fresh = t.web == null;
+        ensureWeb();
+        body.removeAllViews();
+        if (fresh && t.url.isEmpty()) {
+            showHome();
+            return;
+        }
+        body.addView(web, CarStyle.match());
+        if (fresh) {
+            applySiteSettings(web, t.url, false);
+            web.loadUrl(t.url);
+        } else {
+            loading = false;
+            reload.setText("⟳");
+            progress.setVisibility(View.INVISIBLE);
+            showPage();
+        }
+        updateTabsPill();
+        saveTabs();
+    }
+
+    /** Pestaña nueva con el inicio delante (o con una dirección). Con todas ocupadas, se usa la de delante. */
+    private void newTab(String url) {
+        closeOverlay();
+        if (tabs.size() >= MAX_TABS) {
+            if (url != null) go(url);
+            else showHome();
+            return;
+        }
+        if (web != null && web.getParent() != null) body.removeView(web);
+        tabs.add(new Tab());
+        cur = tabs.size() - 1;
+        web = null;
+        webAudio = null;
+        updateTabsPill();
+        if (url != null) go(url);
+        else showHome();
+    }
+
+    private void openInNewTab(String url) {
+        host.post(() -> newTab(url));
+    }
+
+    private void closeTab(int i) {
+        if (i < 0 || i >= tabs.size()) return;
+        Tab t = tabs.remove(i);
+        boolean front = i == cur;
+        if (front && t.web != null && t.web.getParent() != null) body.removeView(t.web);
+        destroyTab(t);
+        if (tabs.isEmpty()) {
+            cur = -1;
+            web = null;
+            webAudio = null;
+            updateTabsPill();
+            saveTabs();
+            showHome();
+            return;
+        }
+        if (i < cur) cur--;
+        if (front) {
+            web = null;
+            webAudio = null;
+            switchTab(Math.min(i, tabs.size() - 1));
+        } else {
+            updateTabsPill();
+            saveTabs();
+        }
+    }
+
+    private void closeOverlay() {
+        if (overlay != null) root.removeView(overlay);
+        overlay = null;
+    }
+
+    /** Fondo que cierra el panel al tocar fuera, con el panel colocado encima. */
+    private void showOverlay(View panel, int gravity, int w) {
+        closeOverlay();
+        Context c = host.context();
+        FrameLayout shade = new FrameLayout(c);
+        shade.setBackgroundColor(0x66000000);
+        shade.setOnClickListener(v -> closeOverlay());
+        panel.setClickable(true);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, ViewGroup.LayoutParams.WRAP_CONTENT, gravity);
+        lp.setMargins(20, 100, 20, 20);
+        shade.addView(panel, lp);
+        overlay = shade;
+        root.addView(shade, CarStyle.match());
+    }
+
+    /** Vista de pestañas: una tarjeta por pestaña (título, web y ✕) y «Nueva pestaña». */
+    private void toggleTabs() {
+        if (overlay != null) {
+            closeOverlay();
+            return;
+        }
+        Context c = host.context();
+        LinearLayout panel = CarStyle.card(c);
+        panel.setPadding(24, 22, 24, 22);
+        TextView title = CarStyle.text(c, Str.get(R.string.hql_web_tabs), 28, CarStyle.TEXT);
+        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        title.setPadding(8, 0, 0, 14);
+        panel.addView(title);
+        GridLayout g = new GridLayout(c);
+        g.setColumnCount(3);
+        int w = (host.width() - 160) / 3;
+        for (int i = 0; i < tabs.size(); i++) {
+            int idx = i;
+            Tab t = tabs.get(i);
+            LinearLayout card = new LinearLayout(c);
+            card.setOrientation(LinearLayout.HORIZONTAL);
+            card.setGravity(Gravity.CENTER_VERTICAL);
+            card.setPadding(18, 16, 10, 16);
+            card.setBackground(CarStyle.round(i == cur ? CarStyle.ACCENT_BG : CarStyle.ITEM_BG, 20));
+            LinearLayout texts = new LinearLayout(c);
+            texts.setOrientation(LinearLayout.VERTICAL);
+            String h = host(t.url);
+            TextView name = CarStyle.text(c, t.title.isEmpty() ? (h.isEmpty() ? Str.get(R.string.hql_web_new_tab) : h) : t.title, 24,
+                    i == cur ? CarStyle.ACCENT : CarStyle.TEXT);
+            name.setSingleLine(true);
+            name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            texts.addView(name);
+            TextView sub = CarStyle.text(c, h, 19, CarStyle.TEXT_DIM);
+            sub.setSingleLine(true);
+            texts.addView(sub);
+            card.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            TextView x = CarStyle.pill(c, "✕");
+            x.setOnClickListener(v -> {
+                closeTab(idx);
+                if (overlay != null) {
+                    closeOverlay();
+                    toggleTabs();
+                }
+            });
+            card.addView(x);
+            card.setOnClickListener(v -> switchTab(idx));
+            GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+            lp.width = w - 16;
+            lp.setMargins(8, 8, 8, 8);
+            g.addView(card, lp);
+        }
+        panel.addView(g);
+        TextView add = CarStyle.pill(c, "+  " + Str.get(R.string.hql_web_new_tab));
+        add.setPadding(30, 18, 30, 18);
+        add.setAlpha(tabs.size() < MAX_TABS ? 1f : 0.4f);
+        add.setOnClickListener(v -> newTab(null));
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        alp.topMargin = 14;
+        panel.addView(add, alp);
+        showOverlay(panel, Gravity.TOP | Gravity.CENTER_HORIZONTAL, host.width() - 100);
+    }
+
+    /** Menú «⋯»: guardar en Inicio, tamaño del texto y versión de ordenador (por web), bloqueo y pestaña nueva. */
+    private void toggleMenu() {
+        if (overlay != null) {
+            closeOverlay();
+            return;
+        }
+        Context c = host.context();
+        LinearLayout panel = CarStyle.card(c);
+        panel.setPadding(14, 14, 14, 14);
+        String url = web != null && web.getParent() != null ? web.getUrl() : null;
+        String h = url == null ? "" : host(url);
+        boolean page = !h.isEmpty();
+        Config cfg = new Config(c);
+        boolean saved = page && isShortcut(cfg, url);
+        panel.addView(menuRow(c, saved ? "★  " + Str.get(R.string.hql_web_remove_home) : "☆  " + Str.get(R.string.hql_web_save_home), page, () -> {
+            toggleShortcut(cfg, url, web.getTitle());
+            closeOverlay();
+        }));
+        int zoom = prefs(c).getInt("zoom:" + h, 100);
+        panel.addView(menuRow(c, "Aa  " + Str.get(R.string.hql_web_text_size, zoom), page, () -> {
+            int next = nextZoom(zoom);
+            prefs(c).edit().putInt("zoom:" + h, next).apply();
+            web.getSettings().setTextZoom(next);
+            closeOverlay();
+            toggleMenu();
+        }));
+        boolean pc = prefs(c).getBoolean("pc:" + h, false);
+        panel.addView(menuRow(c, (pc ? "✓  " : "🖥  ") + Str.get(R.string.hql_web_desktop), page, () -> {
+            prefs(c).edit().putBoolean("pc:" + h, !pc).apply();
+            closeOverlay();
+            applySiteSettings(web, url, false);
+            web.reload();
+        }));
+        panel.addView(menuRow(c, (adblock ? "🛡  " : "○  ") + Str.get(R.string.hql_web_adblock)
+                + (adblock && page ? " · " + Str.get(R.string.hql_web_adblock_count, blockedHere) : ""), true, () -> {
+            adblock = !adblock;
+            prefs(c).edit().putBoolean("adblock", adblock).apply();
+            closeOverlay();
+            if (web != null && web.getParent() != null) web.reload();
+        }));
+        panel.addView(menuRow(c, "⧉  " + Str.get(R.string.hql_web_new_tab), tabs.size() < MAX_TABS, () -> newTab(null)));
+        showOverlay(panel, Gravity.TOP | Gravity.RIGHT, 640);
+    }
+
+    private static View menuRow(Context c, String text, boolean enabled, Runnable action) {
+        TextView t = CarStyle.text(c, text, 25, enabled ? CarStyle.TEXT : CarStyle.TEXT_DIM);
+        t.setPadding(24, 22, 24, 22);
+        t.setBackground(CarStyle.round(0x00000000, 16));
+        if (enabled) t.setOnClickListener(v -> action.run());
+        return t;
+    }
+
+    /** Puro: el siguiente tamaño de texto (85 → 100 → 115 → 130 → 150 → 85 %). */
+    static int nextZoom(int z) {
+        int[] steps = {85, 100, 115, 130, 150};
+        for (int s : steps) if (s > z) return s;
+        return steps[0];
+    }
+
+    private static boolean isShortcut(Config cfg, String url) {
+        String h = host(url);
+        for (String[] l : cfg.webShortcuts()) if (host(l[1]).equals(h)) return true;
+        return false;
+    }
+
+    private static void toggleShortcut(Config cfg, String url, String title) {
+        String h = host(url);
+        List<String[]> l = new ArrayList<>(java.util.Arrays.asList(cfg.webShortcuts()));
+        boolean removed = l.removeIf(e -> host(e[1]).equals(h));
+        if (!removed) l.add(new String[]{title == null || title.isEmpty() ? h : title, url});
+        cfg.setWebShortcuts(l.toArray(new String[0][]));
+    }
+
+    /**
+     * Lo de cada web: versión de ordenador o de móvil y tamaño del texto (Ajustes «⋯», recordados por dominio). Si al
+     * empezar a cargar no coincide la versión, se vuelve a cargar con la buena.
+     */
+    private void applySiteSettings(WebView w, String url, boolean reloadIfChanged) {
+        if (w == null || url == null || !url.startsWith("http")) return;
+        String h = host(url);
+        SharedPreferences sp = prefs(host.context());
+        WebSettings s = w.getSettings();
+        if (mobileUa == null) mobileUa = s.getUserAgentString();
+        boolean pc = sp.getBoolean("pc:" + h, false);
+        String want = pc ? desktopUa(mobileUa) : mobileUa;
+        if (!want.equals(s.getUserAgentString())) {
+            s.setUserAgentString(want);
+            if (reloadIfChanged) w.post(w::reload);
+        }
+        if (w == web) desktop = pc;
+        s.setTextZoom(sp.getInt("zoom:" + h, 100));
+    }
+
+    // ------------------------------------------------------------------ sugerencias
+
+    /** Sugerencias para lo que se escribe: del historial (al momento) y de Google (en un hilo, la última que llega). */
+    private void suggest(String q) {
+        int seq = ++suggestSeq;
+        String text = q.trim();
+        List<String[]> local = new ArrayList<>();
+        if (!text.isEmpty()) {
+            String low = text.toLowerCase(Locale.ROOT);
+            for (String[] r : recent(host.context())) {
+                if (local.size() >= 3) break;
+                if (r[0].toLowerCase(Locale.ROOT).contains(low) || r[1].toLowerCase(Locale.ROOT).contains(low)) local.add(r);
+            }
+        }
+        showSuggestions(local, new ArrayList<>());
+        if (text.length() < 2) return;
+        new Thread(() -> {
+            List<String> remote = fetchSuggestions(text);
+            host.post(() -> {
+                if (seq == suggestSeq && typingAddress) showSuggestions(local, remote);
+            });
+        }, "web-suggest").start();
+    }
+
+    private void showSuggestions(List<String[]> local, List<String> remote) {
+        Context c = host.context();
+        suggestRow.removeAllViews();
+        for (String[] r : local) {
+            String label = "🕘  " + (r[1].isEmpty() ? host(r[0]) : r[1]);
+            suggestRow.addView(suggestChip(c, label, () -> go(r[0])));
+        }
+        for (String s : remote) suggestRow.addView(suggestChip(c, "🔍  " + s, () -> go(s)));
+        suggestScroll.setVisibility(suggestRow.getChildCount() > 0 && typingAddress ? View.VISIBLE : View.GONE);
+    }
+
+    private View suggestChip(Context c, String label, Runnable go) {
+        TextView t = CarStyle.pill(c, label);
+        t.setMaxWidth(560);
+        t.setSingleLine(true);
+        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        t.setOnClickListener(v -> {
+            go.run();
+            showKeyboard(false, true);
+        });
+        return t;
+    }
+
+    /** Google (las mismas sugerencias que su buscador). Sin registrar lo escrito. */
+    private static List<String> fetchSuggestions(String q) {
+        try {
+            java.net.HttpURLConnection con = (java.net.HttpURLConnection) new java.net.URL(
+                    "https://suggestqueries.google.com/complete/search?client=firefox&hl=" + Locale.getDefault().getLanguage()
+                            + "&q=" + Uri.encode(q)).openConnection();
+            con.setConnectTimeout(3000);
+            con.setReadTimeout(3000);
+            try (java.io.InputStream in = con.getInputStream()) {
+                java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = in.read(buf)) > 0 && out.size() < 64_000) out.write(buf, 0, n);
+                return parseSuggestions(out.toString("UTF-8"), 6);
+            } finally {
+                con.disconnect();
+            }
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+    /** Puro: ["lo escrito", ["sugerencia 1", …]] (formato «firefox» de Google) → hasta max sugerencias. */
+    static List<String> parseSuggestions(String json, int max) {
+        List<String> out = new ArrayList<>();
+        try {
+            JSONArray a = new JSONArray(json).getJSONArray(1);
+            for (int i = 0; i < a.length() && out.size() < max; i++) {
+                String s = a.optString(i, "").trim();
+                if (!s.isEmpty()) out.add(s);
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
     }
 
     /** De noche, las webs sin modo oscuro propio se oscurecen (como en Chrome). */
@@ -547,11 +991,17 @@ final class WebScreen implements CarScreen {
         address.setText(addressBuf.length() == 0 ? Str.get(R.string.hql_web_address) : addressBuf);
         address.setTextColor(addressBuf.length() == 0 ? CarStyle.TEXT_DIM : CarStyle.TEXT);
         keyboard.showText(addressBuf, Str.get(R.string.hql_web_address));
+        suggest(addressBuf.toString());
     }
 
     private void showKeyboard(boolean show, boolean forAddress) {
         typingAddress = forAddress;
         keyboard.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (!(show && forAddress)) {
+            suggestSeq++;
+            suggestScroll.setVisibility(View.GONE);
+        }
+        if (show) closeOverlay();
         if (show && !forAddress && web != null) web.requestFocus();
     }
 

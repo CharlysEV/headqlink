@@ -943,4 +943,12 @@
     <string name="hql_move_up">Mover para cima</string>
     <string name="hql_move_down">Mover para baixo</string>
     <string name="hql_snes_sub">bsnes · os seus jogos, comando ou toque</string>
+    <string name="hql_web_tabs">Separadores</string>
+    <string name="hql_web_new_tab">Novo separador</string>
+    <string name="hql_web_save_home">Guardar no início</string>
+    <string name="hql_web_remove_home">Remover do início</string>
+    <string name="hql_web_text_size">Texto: %1$d %%</string>
+    <string name="hql_web_desktop">Versão para computador (este site)</string>
+    <string name="hql_web_adblock">Bloquear anúncios</string>
+    <string name="hql_web_adblock_count">%1$d bloqueados aqui</string>
 </resources>

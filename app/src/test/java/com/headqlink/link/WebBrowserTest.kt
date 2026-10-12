@@ -69,6 +69,35 @@ class WebBrowserTest {
     }
 
     @Test
+    fun textSizeSteps() {
+        assertEquals(115, WebScreen.nextZoom(100))
+        assertEquals(150, WebScreen.nextZoom(130))
+        assertEquals(85, WebScreen.nextZoom(150))
+        assertEquals(85, WebScreen.nextZoom(70))
+    }
+
+    @Test
+    fun googleSuggestions() {
+        val json = """["mario",["mario kart","mario bros","","super mario"],[],{}]"""
+        assertEquals(listOf("mario kart", "mario bros", "super mario"), WebScreen.parseSuggestions(json, 6))
+        assertEquals(listOf("mario kart"), WebScreen.parseSuggestions(json, 1))
+        assertTrue(WebScreen.parseSuggestions("roto", 6).isEmpty())
+    }
+
+    @Test
+    fun adBlockKeepsVideosAndSites() {
+        assertTrue(AdBlock.isAd("securepubads.g.doubleclick.net"))
+        assertTrue(AdBlock.isAd("www.googletagmanager.com"))
+        assertTrue(AdBlock.isAd("cdn.taboola.com"))
+        // Los vídeos y las webs, no.
+        assertTrue(!AdBlock.isAd("rr3---sn-h5q7kn7z.googlevideo.com"))
+        assertTrue(!AdBlock.isAd("www.youtube.com"))
+        assertTrue(!AdBlock.isAd("www.disneyplus.com"))
+        assertTrue(!AdBlock.isAd("notdoubleclick.net"))
+        assertTrue(!AdBlock.isAd(null))
+    }
+
+    @Test
     fun letterColourIsStable() {
         assertEquals(WebScreen.colorFor("ejemplo.org"), WebScreen.colorFor("ejemplo.org"))
         assertEquals(0xFF shl 24, WebScreen.colorFor("") and (0xFF shl 24))

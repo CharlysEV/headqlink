@@ -943,4 +943,12 @@
     <string name="hql_move_up">Monter</string>
     <string name="hql_move_down">Descendre</string>
     <string name="hql_snes_sub">bsnes · vos jeux, manette ou tactile</string>
+    <string name="hql_web_tabs">Onglets</string>
+    <string name="hql_web_new_tab">Nouvel onglet</string>
+    <string name="hql_web_save_home">Enregistrer sur l\'accueil</string>
+    <string name="hql_web_remove_home">Retirer de l\'accueil</string>
+    <string name="hql_web_text_size">Texte : %1$d %%</string>
+    <string name="hql_web_desktop">Version ordinateur (ce site)</string>
+    <string name="hql_web_adblock">Bloquer les pubs</string>
+    <string name="hql_web_adblock_count">%1$d bloqués ici</string>
 </resources>

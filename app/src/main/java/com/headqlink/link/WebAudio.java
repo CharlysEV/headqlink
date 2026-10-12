@@ -56,8 +56,8 @@ final class WebAudio {
                                 L.i("web: sonido de la página en espera (foco interrumpido)");
                                 reply.postMessage("suspend");
                             } else if (!focus.acquire()) {
-                                L.w("web: sin foco de audio: se pausa la página");
-                                pause();
+                                // Antes se pausaba la página y los vídeos no arrancaban nunca: ahora sigue sonando.
+                                L.w("web: Android no da el foco de audio; la página sigue sonando");
                             }
                         } else if (text.startsWith("idle:")) {
                             playing.remove(id);

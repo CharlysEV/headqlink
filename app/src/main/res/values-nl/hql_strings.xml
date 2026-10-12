@@ -942,4 +942,12 @@
     <string name="hql_move_up">Omhoog</string>
     <string name="hql_move_down">Omlaag</string>
     <string name="hql_snes_sub">bsnes · je games, controller of aanraken</string>
+    <string name="hql_web_tabs">Tabbladen</string>
+    <string name="hql_web_new_tab">Nieuw tabblad</string>
+    <string name="hql_web_save_home">Opslaan op start</string>
+    <string name="hql_web_remove_home">Verwijderen van start</string>
+    <string name="hql_web_text_size">Tekst: %1$d %%</string>
+    <string name="hql_web_desktop">Desktopversie (deze site)</string>
+    <string name="hql_web_adblock">Advertenties blokkeren</string>
+    <string name="hql_web_adblock_count">%1$d hier geblokkeerd</string>
 </resources>

@@ -40,11 +40,10 @@ async function run() {
         d.send('pause');
         assert.equal(d.media.paused, true);
         assert.match(d.messages.at(-1), /^idle:/);
-        await assert.rejects(d.media.play(), /Audio focus lost/);
-        d.events.get('pointerdown')({ isTrusted: false });
-        await assert.rejects(d.media.play(), /Audio focus lost/);
-        d.events.get('pointerdown')({ isTrusted: true });
+        // headqlink: tras perder el foco, pedir play vuelve a reproducir (antes se rechazaba hasta tocar la página y,
+        // en el coche, los vídeos se quedaban parados para siempre).
         await d.media.play();
+        assert.equal(d.media.paused, false);
         assert.match(d.messages.at(-1), /^play:/);
     }
     {
@@ -73,7 +72,8 @@ async function run() {
         d.send('pause');
         d.send('resume');
         assert.equal(d.media.paused, true, 'permanent loss while suspended must cancel resume');
-        await assert.rejects(d.media.play(), /Audio focus lost/);
+        await d.media.play();
+        assert.equal(d.media.paused, false, 'an explicit play after the loss plays again');
     }
     {
         const d = document();
@@ -103,9 +103,8 @@ async function run() {
         const ctx = new d.window.AudioContext();
         await ctx.resume();
         d.send('pause');
-        await assert.rejects(ctx.resume(), /Audio focus lost/);
-        d.events.get('keydown')({ isTrusted: true });
         await ctx.resume();
+        assert.equal(ctx.state, 'running', 'an explicit resume after the loss plays again');
         d.send('suspend');
         d.events.get('pagehide')();
         assert.match(d.messages.at(-1), /^idle:/);

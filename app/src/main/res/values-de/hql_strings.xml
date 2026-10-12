@@ -942,4 +942,12 @@
     <string name="hql_move_up">Nach oben</string>
     <string name="hql_move_down">Nach unten</string>
     <string name="hql_snes_sub">bsnes · deine Spiele, Controller oder Touch</string>
+    <string name="hql_web_tabs">Tabs</string>
+    <string name="hql_web_new_tab">Neuer Tab</string>
+    <string name="hql_web_save_home">Auf Startseite speichern</string>
+    <string name="hql_web_remove_home">Von Startseite entfernen</string>
+    <string name="hql_web_text_size">Text: %1$d %%</string>
+    <string name="hql_web_desktop">Desktop-Version (diese Seite)</string>
+    <string name="hql_web_adblock">Werbung blockieren</string>
+    <string name="hql_web_adblock_count">%1$d hier blockiert</string>
 </resources>
