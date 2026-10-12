@@ -984,4 +984,7 @@
     <string name="hql_aa_size_note">Em telas pequenas (de 10\" como a do T03) já fica menor sozinho. Vale ao reconectar.</string>
     <string name="hql_list_add">Adicionar lista</string>
     <string name="hql_lists_help">Toque numa lista para usá-la no carro (lá também dá para trocar de lista).</string>
+    <string name="hql_tv_formats">Listas M3U ou a lista JSON do TDTChannels (…/lists/tv.json), que também traz os canais do YouTube e da web.</string>
+    <string name="hql_tv_backup">fonte reserva</string>
+    <string name="hql_tv_other_source">Outra fonte</string>
 </resources>

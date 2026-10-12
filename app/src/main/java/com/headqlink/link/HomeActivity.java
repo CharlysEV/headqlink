@@ -940,7 +940,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         int pad = Math.round(24 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad / 2, pad, 0);
         TextView info = new TextView(this);
-        info.setText(Str.get(R.string.hql_lists_help) + (radio ? " " + Str.get(R.string.hql_list_radio_default) : ""));
+        info.setText(Str.get(R.string.hql_lists_help) + " "
+                + (radio ? Str.get(R.string.hql_list_radio_default) : Str.get(R.string.hql_tv_formats)));
         box.addView(info);
         LinearLayout rows = new LinearLayout(this);
         rows.setOrientation(LinearLayout.VERTICAL);

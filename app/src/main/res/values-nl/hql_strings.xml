@@ -983,4 +983,7 @@
     <string name="hql_aa_size_note">Op kleine schermen (10\" zoals die van de T03) is het al vanzelf kleiner. Geldt bij opnieuw verbinden.</string>
     <string name="hql_list_add">Lijst toevoegen</string>
     <string name="hql_lists_help">Tik op een lijst om die in de auto te gebruiken (daar kun je ook van lijst wisselen).</string>
+    <string name="hql_tv_formats">M3U-lijsten of de JSON-lijst van TDTChannels (…/lists/tv.json), met ook de YouTube- en webzenders.</string>
+    <string name="hql_tv_backup">reservebron</string>
+    <string name="hql_tv_other_source">Andere bron</string>
 </resources>
