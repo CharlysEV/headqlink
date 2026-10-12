@@ -12,6 +12,8 @@ import java.util.Map;
 
 /** Cada documento (incluidos los iframes) comunica solamente si tiene audio y recibe la orden de pausa. */
 final class WebAudio {
+    /** Ver el constructor: el foco del navegador lo lleva la propia WebView. */
+    static final boolean ENABLED = false;
     private final WebView web;
     private final MediaFocus focus;
     private final Map<String, JavaScriptReplyProxy> playing = new HashMap<>();
@@ -32,6 +34,11 @@ final class WebAudio {
         } catch (Exception e) {
             throw new IllegalStateException("web audio script", e);
         }
+        // headqlink: apagado. Chromium (la WebView) ya pide y gestiona el foco de audio él solo (AudioFocusDelegate):
+        // pausa si otra app se queda el sonido y reanuda tras una interrupción breve. Pedirlo además aquí hacía que
+        // Android se lo quitara a este lado en cuanto la página empezaba a sonar (pérdida -1) y se pausaba el vídeo:
+        // en el coche, YouTube y Disney+ no llegaban a reproducir.
+        if (!ENABLED) return;
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             messaging = true;
             // El navegador abre sitios y iframes de cualquier origen, de ahí "*". El puente
