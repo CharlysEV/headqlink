@@ -138,6 +138,18 @@ final class Http {
         throw last;
     }
 
+    /**
+     * Todo lo que queda en el flujo. InputStream.readAllBytes es de Android 13: en Android 11 y 12 la app se cerraba al
+     * comprobar las versiones nada más abrirse (Mi9T Pro con Android 11, 2026-10-12).
+     */
+    static byte[] readAll(java.io.InputStream in) throws java.io.IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        byte[] buf = new byte[16 * 1024];
+        int n;
+        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+        return out.toByteArray();
+    }
+
     /** POST con cuerpo de formulario (Overpass: data=…). */
     static String post(String url, String formBody) throws Exception {
         return request(url, formBody, 15_000, 60_000);
@@ -164,7 +176,7 @@ final class Http {
         int code = con.getResponseCode();
         if (code >= 400) throw new IllegalStateException("HTTP " + code + " en " + new URL(url).getHost());
         try (InputStream in = con.getInputStream()) {
-            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            return new String(readAll(in), StandardCharsets.UTF_8);
         }
     }
 }

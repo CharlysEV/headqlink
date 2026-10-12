@@ -64,6 +64,14 @@ final class VideoPipeline {
     private final Context ctx;
     private final Config cfg;
     private final Handler h;
+    /**
+     * Juego (emulador) en pantalla: el vídeo puede ir a los fps de la sesión (60 por cable). Sin juego, como mucho
+     * CONTENT_FPS: Android Auto y nuestras pantallas no necesitan más, y a 60 el móvil se calienta para nada.
+     */
+    private static volatile boolean gameMode;
+    /** La pipeline en marcha (para avisarle del juego). */
+    private static volatile VideoPipeline current;
+    static final int CONTENT_FPS = 30;
 
     private VideoSource source;
     private VideoEncoder encoder;
@@ -357,6 +365,9 @@ final class VideoPipeline {
         pCtl = pc;
         L.i("VIDEO " + pc.describe());
         source.start(in, plan.videoW, plan.videoH, vp.fps, vp.toString());
+        current = this;
+        // Sin juego, 30 fps aunque el coche pida 60 (el tope se quita al abrir un emulador).
+        if (gated) applyFpsCap();
         if (gated) L.i("VIDEO puerta «último frame»: cola del kernel < " + gateOutq / 1024 + " KB · modo de tasa " + encoder.bitrateMode());
         LinkRateController lk = link;
         if (lk != null) L.i("VIDEO " + lk.describe());
@@ -520,8 +531,25 @@ final class VideoPipeline {
     }
 
     /** fps máximos: el menor del tope térmico y del enlace, al relay GL (con él) o los de la sesión (patrón, app). */
+    /** Emulador abierto o cerrado (CarUi.gameDrawing): 60 fps con juego, 30 sin él. */
+    static void setGameMode(boolean on) {
+        if (gameMode == on) return;
+        gameMode = on;
+        VideoPipeline p = current;
+        if (p != null && !p.stopped) p.h.post(() -> {
+            p.applyFpsCap();
+            L.i("vídeo: " + (on ? "juego en pantalla: hasta " + p.plan.fps + " fps" : "sin juego: " + p.fpsCap + " fps"));
+        });
+    }
+
+    /** Puro: tope por el contenido: sin juego, 30 (salvo «Fluidez» a 60); con juego, los de la sesión. */
+    static int contentCap(boolean game, int fluidity, int sessionFps) {
+        if (game || fluidity >= VideoProfile.FLUID_60) return sessionFps;
+        return Math.min(sessionFps, CONTENT_FPS);
+    }
+
     private void applyFpsCap() {
-        int fps = Math.min(thermalFpsCap, linkFpsCap);
+        int fps = Math.min(Math.min(thermalFpsCap, linkFpsCap), contentCap(gameMode, cfg.fluidity(), plan.fps));
         if (!gated) {
             fpsCap = vp != null ? vp.fps : plan.fps;
             return;

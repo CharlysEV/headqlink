@@ -131,7 +131,7 @@
     <string name="hql_fly_posts">%1$d postes</string>
     <string name="hql_fly_start">Toque para descolar</string>
     <string name="hql_fluidity">Fluidez</string>
-    <string name="hql_fluidity_30">30 fps · menos calor (recomendado)</string>
+    <string name="hql_fluidity_30">30 fps · menos calor (60 nos emuladores)</string>
     <string name="hql_fluidity_60">60 fps · fluidez máxima</string>
     <string name="hql_fluidity_help">Só com os perfis «Carro» e «Automático». A 60 fps o carro recebe 8-12 Mbit/s como com o HeadQLink original e o telemóvel aquece mais: se chegar ao estado térmico moderado, desce sozinho para 30 fps.</string>
     <string name="hql_follows_recommended">Segue o recomendado: %1$s</string>
@@ -976,4 +976,10 @@
     <string name="hql_charge_heat_action">Definições de bateria</string>
     <string name="hql_res_going_up">Telemóvel fresco: a subir para 1080p…</string>
     <string name="hql_res_going_down">Muito calor: a descer para 720p…</string>
+    <string name="hql_aa_size">Tamanho do Android Auto</string>
+    <string name="hql_aa_size_bigger">Maior</string>
+    <string name="hql_aa_size_normal">Normal</string>
+    <string name="hql_aa_size_smaller">Mais pequeno</string>
+    <string name="hql_aa_size_smallest">Muito mais pequeno</string>
+    <string name="hql_aa_size_note">Em ecrãs pequenos (de 10\" como o do T03) já fica mais pequeno sozinho. Aplica-se ao voltar a ligar.</string>
 </resources>

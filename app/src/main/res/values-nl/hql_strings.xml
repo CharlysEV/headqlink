@@ -131,7 +131,7 @@
     <string name="hql_fly_posts">%1$d palen</string>
     <string name="hql_fly_start">Tik om op te stijgen</string>
     <string name="hql_fluidity">Vloeiendheid</string>
-    <string name="hql_fluidity_30">30 fps · minder warmte (aanbevolen)</string>
+    <string name="hql_fluidity_30">30 fps · minder warmte (60 in de emulators)</string>
     <string name="hql_fluidity_60">60 fps · maximaal vloeiend</string>
     <string name="hql_fluidity_help">Alleen met de profielen ‘Volgens de auto’ en ‘Automatisch’. Op 60 fps krijgt de auto 8–12 Mbit/s, zoals met de originele HeadQLink, en wordt de telefoon warmer: bereikt die de warmtestatus ‘matig’, dan zakt hij vanzelf naar 30 fps.</string>
     <string name="hql_follows_recommended">Volgt het aanbevolen profiel: %1$s</string>
@@ -975,4 +975,10 @@
     <string name="hql_charge_heat_action">Accu-instellingen</string>
     <string name="hql_res_going_up">Telefoon koel: naar 1080p…</string>
     <string name="hql_res_going_down">Te warm: terug naar 720p…</string>
+    <string name="hql_aa_size">Grootte van Android Auto</string>
+    <string name="hql_aa_size_bigger">Groter</string>
+    <string name="hql_aa_size_normal">Normaal</string>
+    <string name="hql_aa_size_smaller">Kleiner</string>
+    <string name="hql_aa_size_smallest">Veel kleiner</string>
+    <string name="hql_aa_size_note">Op kleine schermen (10\" zoals die van de T03) is het al vanzelf kleiner. Geldt bij opnieuw verbinden.</string>
 </resources>

@@ -328,6 +328,8 @@ final class CarUi {
 
     /** Juego NES en marcha (o no): la interfaz la dibuja HeadQLink con cada fotograma (PhoneOffRenderer forzado). */
     static void gameDrawing(boolean on) {
+        // Con un emulador, el vídeo al coche sube a 60 fps; sin él, 30 (VideoPipeline.contentCap).
+        VideoPipeline.setGameMode(on);
         CarUi ui = current;
         if (ui != null) ui.main.post(() -> {
             if (ui.phoneOff != null) ui.phoneOff.setForced(on);
@@ -1155,17 +1157,6 @@ final class CarUi {
         LinearLayout.LayoutParams elp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 72);
         p.addView(ex, elp);
         expand = ex;
-        // Cartel de la imagen (resolución, fps y temperatura del móvil): un rato al conectar y al cambiar por el calor.
-        TextView vi = CarStyle.text(c, "", 20, CarStyle.ON_ACCENT);
-        vi.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        vi.setGravity(Gravity.CENTER);
-        vi.setPadding(10, 8, 10, 8);
-        vi.setBackground(CarStyle.accent(20));
-        vi.setVisibility(View.GONE);
-        LinearLayout.LayoutParams vlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        vlp.bottomMargin = 8;
-        p.addView(vi, vlp);
-        videoInfo = vi;
         battery = CarStyle.text(c, "", 22, CarTheme.navTextDim());
         battery.setPadding(8, 0, 0, 6);
         p.addView(battery);
@@ -1175,19 +1166,22 @@ final class CarUi {
 
     // ------------------------------------------------------------------ cartel de la imagen
 
+    /** Cartel de la imagen (resolución, fps y temperatura del móvil), arriba en el centro, encima de Android Auto. */
     private TextView videoInfo;
     /** Cuánto se ve el cartel de la imagen. */
     static final long VIDEO_INFO_MS = 8000;
-    /** El cartel en la barra de iconos (en el sitio de la hora, la temperatura y la batería): hasta cuándo. */
-    private boolean railShowingInfo;
     private final Runnable hideVideoInfo = () -> {
         if (videoInfo != null) videoInfo.setVisibility(View.GONE);
-        if (railShowingInfo) {
-            railShowingInfo = false;
-            railTime.setTextColor(CarTheme.navText());
-            renderRailInfo();
-        }
+        // La tarjeta flotante (si la hay) vuelve a su hueco encima de AA.
+        dropFloatRect();
+        refreshFloat();
     };
+
+    /** Sin trozo de nuestra capa encima de AA (el cartel se ha ido; refreshFloat pone el de la tarjeta, si la hay). */
+    private void dropFloatRect() {
+        floatRect = null;
+        listener.onFloatRect(null);
+    }
 
     /** Puro: «720p · 30 fps · 38 °C» (la resolución por el ancho del vídeo: más de 1280, 1080p). */
     static String videoInfoLine(int videoW, int fps, double tempC) {
@@ -1206,25 +1200,43 @@ final class CarUi {
     static void videoInfoText(String text) {
         CarUi u = current;
         if (u == null || text == null) return;
+        L.i("CarUi: cartel de la imagen: " + text);
         u.main.post(() -> u.showVideoInfoNow(text));
     }
 
     private void showVideoInfoNow(String text) {
+        if (root == null) return;
+        if (videoInfo == null) {
+            TextView t = CarStyle.text(ctx, "", 26, CarStyle.ON_ACCENT);
+            t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            t.setGravity(Gravity.CENTER);
+            t.setPadding(26, 12, 26, 12);
+            t.setBackground(CarStyle.accent(24));
+            root.addView(t, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                    Gravity.TOP | Gravity.LEFT));
+            videoInfo = t;
+        }
         main.removeCallbacks(hideVideoInfo);
-        if (rail() && railInfo != null && railInfo.getVisibility() == View.VISIBLE) {
-            // En la barra de iconos no cabe en una línea: una cosa por línea, donde la hora.
-            String[] parts = text.split(" · ");
-            main.removeCallbacks(railTick);
-            railShowingInfo = true;
-            railTime.setTextColor(CarStyle.ACCENT);
-            railTime.setText(parts[0]);
-            railTemp.setText(parts.length > 1 ? parts[1] : "");
-            railTemp.setVisibility(parts.length > 1 ? View.VISIBLE : View.GONE);
-            railSoc.setText(parts.length > 2 ? parts[2] : "");
-            railSoc.setVisibility(parts.length > 2 ? View.VISIBLE : View.GONE);
-        } else if (videoInfo != null) {
-            videoInfo.setText(text);
-            videoInfo.setVisibility(View.VISIBLE);
+        videoInfo.setText(text);
+        videoInfo.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int w = videoInfo.getMeasuredWidth();
+        int h = videoInfo.getMeasuredHeight();
+        // Arriba en el centro de la zona de AA (con AA oculto, de la pantalla).
+        int areaX = aaShown ? aaRegX : 0;
+        int areaW = aaShown ? aaRegW : width;
+        int x = Math.max(0, areaX + (areaW - w) / 2);
+        int y = 16;
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) videoInfo.getLayoutParams();
+        lp.leftMargin = x;
+        lp.topMargin = y;
+        videoInfo.setLayoutParams(lp);
+        videoInfo.setVisibility(View.VISIBLE);
+        videoInfo.bringToFront();
+        // Encima de AA: el relay pinta ese trozo de nuestra capa (el de la tarjeta flotante, que vuelve al quitarlo).
+        if (aaShown) {
+            floatRect = new int[]{x, y, w, h};
+            listener.onFloatRect(floatRect);
         }
         main.postDelayed(hideVideoInfo, VIDEO_INFO_MS);
     }
@@ -1285,8 +1297,6 @@ final class CarUi {
     private boolean renderRailInfo() {
         main.removeCallbacks(railTick);
         if (railInfo == null || railInfo.getVisibility() != View.VISIBLE) return false;
-        // Con el cartel de la imagen a la vista, lo de siempre vuelve al quitarlo (hideVideoInfo).
-        if (railShowingInfo) return false;
         int oldTempVisibility = railTemp.getVisibility();
         int oldSocVisibility = railSoc.getVisibility();
         railTime.setText(new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(new java.util.Date()));

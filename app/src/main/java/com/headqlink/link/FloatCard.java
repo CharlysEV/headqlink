@@ -75,7 +75,10 @@ final class FloatCard extends LinearLayout {
     /** Lee el plan de carga. false si no hay nada que enseñar (sin ruta o sin plan). */
     boolean update() {
         RoutePlanner r = RoutePlanner.get();
-        ChargePlanner.Result cp = r == null ? null : r.lastChargePlan();
+        // Solo con ruta en el planificador (al quitar el destino se va) y con Google Maps guiando (al terminar o quitar la
+        // navegación, también): antes bastaba el último plan de carga, que se quedaba puesto.
+        if (r == null || r.plan() == null || !navigating()) return false;
+        ChargePlanner.Result cp = r.lastChargePlan();
         if (cp == null) return false;
         ChargePlanner.Stop st = cp.next();
         if (st != null) {
@@ -94,6 +97,13 @@ final class FloatCard extends LinearLayout {
                     : Str.get(R.string.hql_float_no_stop));
         }
         return true;
+    }
+
+    /** ¿Guía Google Maps? Lo dice Android Auto (su estado de navegación) o la notificación de Maps en el móvil. */
+    static boolean navigating() {
+        if (DemoMode.active()) return true;
+        NavTap.Info nav = NavTap.getInfo();
+        return (nav != null && nav.active) || MapsNavListener.current() != null;
     }
 
     private void paintBackground() {

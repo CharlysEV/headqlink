@@ -268,7 +268,7 @@ final class HomeAssistant {
         if (code == 401) throw new SecurityException("token no válido");
         if (code >= 400) throw new IllegalStateException("HTTP " + code);
         try (InputStream in = con.getInputStream()) {
-            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            return new String(Http.readAll(in), StandardCharsets.UTF_8);
         }
     }
 

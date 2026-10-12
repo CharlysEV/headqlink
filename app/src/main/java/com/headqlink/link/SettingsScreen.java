@@ -44,6 +44,9 @@ final class SettingsScreen implements CarScreen {
     private TextView detail;
     private final java.util.List<TextView> profilePills = new java.util.ArrayList<>();
     private final java.util.List<TextView> fluidPills = new java.util.ArrayList<>();
+    /** «Tamaño de Android Auto» pendiente de aplicar (AaSize.CHOICES). */
+    private int pendingAaSize;
+    private final java.util.List<TextView> sizePills = new java.util.ArrayList<>();
     private LinearLayout nav;
     private ScrollView pane;
 
@@ -54,6 +57,7 @@ final class SettingsScreen implements CarScreen {
         cfg = new Config(c);
         pending = cfg.videoProfileChoice();
         pendingFluid = cfg.fluidity();
+        pendingAaSize = cfg.aaSizePercent();
 
         LinearLayout root = new LinearLayout(c);
         root.setOrientation(LinearLayout.HORIZONTAL);
@@ -257,6 +261,34 @@ final class SettingsScreen implements CarScreen {
         }
         fluid.addView(seg);
         col.addView(fluid, cardLp());
+
+        // Tamaño de Android Auto: la densidad que se le anuncia (AaSize); en pantallas pequeñas ya va más pequeño solo.
+        LinearLayout size = card(c, Str.get(R.string.hql_aa_size));
+        LinearLayout sseg = new LinearLayout(c);
+        sseg.setOrientation(LinearLayout.HORIZONTAL);
+        sseg.setPadding(0, 14, 0, 4);
+        int[] labels = {R.string.hql_aa_size_bigger, R.string.hql_aa_size_normal, R.string.hql_aa_size_smaller,
+                R.string.hql_aa_size_smallest};
+        for (int i = 0; i < AaSize.CHOICES.length; i++) {
+            int pct = AaSize.CHOICES[i];
+            TextView p = CarStyle.pill(c, Str.get(labels[i]));
+            p.setTag(pct);
+            p.setPadding(16, 22, 16, 22);
+            p.setSingleLine(true);
+            p.setOnClickListener(v -> {
+                pendingAaSize = pct;
+                refresh();
+            });
+            LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            plp.rightMargin = 14;
+            sizePills.add(p);
+            sseg.addView(p, plp);
+        }
+        size.addView(sseg);
+        TextView sizeNote = CarStyle.text(c, Str.get(R.string.hql_aa_size_note), 20, CarStyle.TEXT_DIM);
+        sizeNote.setPadding(4, 4, 0, 0);
+        size.addView(sizeNote);
+        col.addView(size, cardLp());
 
         apply = CarStyle.pill(c, Str.get(R.string.hql_apply_reconnect));
         apply.setBackground(CarStyle.accent(32));
@@ -687,7 +719,13 @@ final class SettingsScreen implements CarScreen {
             p.setTextColor(sel ? CarStyle.ACCENT : CarStyle.TEXT);
             p.setAlpha(fluidCounts ? 1f : 0.5f);
         }
-        boolean changed = !pending.equals(cfg.videoProfileChoice()) || pendingFluid != cfg.fluidity();
+        for (TextView p : sizePills) {
+            boolean sel = pendingAaSize == (int) p.getTag();
+            p.setBackground(sel ? CarKit.outlined(CarStyle.ACCENT_BG, CarStyle.ACCENT, 28) : CarStyle.round(CarStyle.PILL_BG, 28));
+            p.setTextColor(sel ? CarStyle.ACCENT : CarStyle.TEXT);
+        }
+        boolean changed = !pending.equals(cfg.videoProfileChoice()) || pendingFluid != cfg.fluidity()
+                || pendingAaSize != cfg.aaSizePercent();
         apply.setVisibility(changed ? View.VISIBLE : View.GONE);
     }
 
@@ -699,9 +737,14 @@ final class SettingsScreen implements CarScreen {
             cfg.setFluidity(pendingFluid);
             L.i("fluidez: " + pendingFluid + " fps (desde el coche; reconecta ahora)");
         }
+        boolean sizeChanged = pendingAaSize != cfg.aaSizePercent();
+        if (sizeChanged) {
+            cfg.setAaSizePercent(pendingAaSize);
+            L.i("tamaño de Android Auto: " + pendingAaSize + " % (desde el coche; reconecta ahora)");
+        }
         VideoProfile after = cfg.videoProfile();
-        // Otro perfil, u otros fps (fluidez con Coche): AA vuelve a negociar resolución y fps.
-        boolean renegotiate = !before.id.equals(after.id) || before.fps != after.fps;
+        // Otro perfil, u otros fps (fluidez con Coche), u otro tamaño: AA vuelve a negociar resolución, fps y densidad.
+        boolean renegotiate = !before.id.equals(after.id) || before.fps != after.fps || sizeChanged;
         L.i("ajustes desde el coche: perfil " + (pending.isEmpty() ? "automático" : pending) + " · fluidez " + pendingFluid
                 + (renegotiate ? " (reconecta AA)" : ""));
         if (DemoMode.active()) {

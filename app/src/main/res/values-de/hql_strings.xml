@@ -131,7 +131,7 @@
     <string name="hql_fly_posts">%1$d Pfosten</string>
     <string name="hql_fly_start">Tippen zum Abheben</string>
     <string name="hql_fluidity">Bildrate</string>
-    <string name="hql_fluidity_30">30 fps · weniger Hitze (empfohlen)</string>
+    <string name="hql_fluidity_30">30 fps · weniger Hitze (60 in den Emulatoren)</string>
     <string name="hql_fluidity_60">60 fps · maximal flüssig</string>
     <string name="hql_fluidity_help">Nur mit den Profilen „Fahrzeug“ und „Automatisch“. Bei 60 fps bekommt das Fahrzeug 8–12 Mbit/s wie beim originalen HeadQLink, und das Handy wird wärmer: Erreicht es den Wärmestatus „mäßig“, geht es von selbst auf 30 fps zurück.</string>
     <string name="hql_follows_recommended">Folgt der Empfehlung: %1$s</string>
@@ -975,4 +975,10 @@
     <string name="hql_charge_heat_action">Akku-Einstellungen</string>
     <string name="hql_res_going_up">Handy kühl: hoch auf 1080p…</string>
     <string name="hql_res_going_down">Zu heiß: runter auf 720p…</string>
+    <string name="hql_aa_size">Größe von Android Auto</string>
+    <string name="hql_aa_size_bigger">Größer</string>
+    <string name="hql_aa_size_normal">Normal</string>
+    <string name="hql_aa_size_smaller">Kleiner</string>
+    <string name="hql_aa_size_smallest">Viel kleiner</string>
+    <string name="hql_aa_size_note">Auf kleinen Bildschirmen (10\" wie beim T03) ist es schon von selbst kleiner. Gilt beim Neuverbinden.</string>
 </resources>

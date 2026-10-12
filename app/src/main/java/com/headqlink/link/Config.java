@@ -190,11 +190,17 @@ final class Config {
     static final String FLUIDITY = "fluidez";
 
     int fluidity() {
+        // 0.2.55: 30 fps siempre y 60 solo con los emuladores (VideoPipeline.contentCap). Quien tenía 60 vuelve a 30 una vez.
+        if (!sp.getBoolean("fluidez_30_v2", false)) {
+            sp.edit().putInt(FLUIDITY, VideoProfile.FLUID_30).putBoolean("fluidez_30_v2", true).apply();
+            return VideoProfile.FLUID_30;
+        }
         return sp.getInt(FLUIDITY, 0) >= VideoProfile.FLUID_60 ? VideoProfile.FLUID_60 : VideoProfile.FLUID_30;
     }
 
     void setFluidity(int fps) {
-        sp.edit().putInt(FLUIDITY, fps >= VideoProfile.FLUID_60 ? VideoProfile.FLUID_60 : VideoProfile.FLUID_30).apply();
+        sp.edit().putInt(FLUIDITY, fps >= VideoProfile.FLUID_60 ? VideoProfile.FLUID_60 : VideoProfile.FLUID_30)
+                .putBoolean("fluidez_30_v2", true).apply();
     }
 
     /** Elige un perfil ("" = recomendado) y quita los ajustes manuales que lo contradirían. */
@@ -990,6 +996,23 @@ final class Config {
     int aaDpi() {
         int v = sp.getInt("aa_dpi", 0);
         return v > 0 ? v : 200;
+    }
+
+    /** La densidad puesta a mano con el extra aa_dpi, o 0 (entonces la decide AaSize por la pantalla del coche). */
+    int aaDpiManual() {
+        return sp.getInt("aa_dpi", 0);
+    }
+
+    /** «Tamaño de Android Auto» (AaSize.CHOICES, porcentaje sobre el automático; 100 = normal). */
+    static final String AA_SIZE = "aa_size";
+
+    int aaSizePercent() {
+        int v = sp.getInt(AA_SIZE, 100);
+        return v > 0 ? v : 100;
+    }
+
+    void setAaSizePercent(int pct) {
+        sp.edit().putInt(AA_SIZE, pct).apply();
     }
 
     String deviceName() {

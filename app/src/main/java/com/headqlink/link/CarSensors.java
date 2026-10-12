@@ -791,7 +791,7 @@ final class CarSensors implements SensorEventListener, LocationListener {
                 if (code >= 400) throw new IllegalStateException("HTTP " + code + " en " + con.getURL().getHost());
                 String body;
                 try (InputStream in = con.getInputStream()) {
-                    body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                    body = new String(Http.readAll(in), StandardCharsets.UTF_8);
                 }
                 JSONObject cur = new JSONObject(body).getJSONObject("current");
                 synchronized (this) {

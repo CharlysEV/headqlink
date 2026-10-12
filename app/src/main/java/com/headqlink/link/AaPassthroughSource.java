@@ -220,6 +220,11 @@ final class AaPassthroughSource implements VideoSource {
      * "Último frame": tope de fps del relay GL en marcha (adaptación térmica). Por debajo de los de la sesión (AA sigue
      * a los suyos), en rejilla para que salgan a intervalos iguales; con los de la sesión, como al empezar.
      */
+    /** fps a los que dibuja Android Auto: 30, o 60 con «Fluidez» a 60 y la sesión a 60. */
+    private int aaFps() {
+        return targetFps > 30 && new Config(ctx).fluidity() >= VideoProfile.FLUID_60 ? 60 : 30;
+    }
+
     @Override
     public void setMaxFps(int fps) {
         GlFrameRelay r = relay;
@@ -422,7 +427,9 @@ final class AaPassthroughSource implements VideoSource {
         settings.setVideoFitMode(Settings.VideoFitMode.CONTAIN);
         // AA a 30 o 60 fps según el perfil: en reenvío directo, a 60 fps y bitrate alto el coche
         // acumula frames en los movimientos rápidos.
-        settings.setFpsLimit(targetFps <= 30 ? 30 : 60);
+        // Android Auto a 30 salvo con «Fluidez» a 60: aunque el coche pida 60 por cable, AA no lo necesita y dibujar a
+        // 60 calienta el móvil (los juegos, que sí van a 60, son nuestros: VideoPipeline.contentCap).
+        settings.setFpsLimit(aaFps() <= 30 ? 30 : 60);
         // Decodificador en modo baja latencia (KEY_LOW_LATENCY y extensiones): siempre, no cuesta calor (LowLatency).
         settings.setDebugVideoLowLatency(true);
         // Resolución de AA según el perfil: 720p o 1080p (el lienzo es el tamaño del vídeo, así AA
@@ -434,11 +441,14 @@ final class AaPassthroughSource implements VideoSource {
             if (!comm().isConnected()) HeadUnitScreenConfig.INSTANCE.unlockResolution();
         }
         HeadUnitScreenConfig.setExternalCanvas(new Size(videoW, videoH));
-        // Los dpi van con la escala, para que la interfaz de AA tenga el mismo tamaño aparente a 720p.
-        int effDpi = Math.max(80, Math.round(dpi * scale()));
+        // Los dpi van con la escala, para que la interfaz de AA tenga el mismo tamaño aparente a 720p. La base, según la
+        // pantalla del coche (más baja en las pequeñas, como la del T03) y el «Tamaño de Android Auto» elegido.
+        Config acfg = new Config(ctx);
+        int baseDpi = AaSize.dpi(acfg.aaDpiManual(), carW, acfg.aaSizePercent());
+        int effDpi = Math.max(80, Math.round(baseDpi * scale()));
         HeadUnitScreenConfig.setExternalDpi(effDpi);
         L.i("AA: pantalla del coche " + carW + "x" + carH + " · vídeo " + videoW + "x" + videoH + " (" + (hd720 ? "720p" : "1080p")
-                + ") dpi=" + effDpi + " (modo CONTAIN + recorte SPS), " + (targetFps <= 30 ? 30 : 60) + " fps");
+                + ") dpi=" + effDpi + " (modo CONTAIN + recorte SPS), Android Auto a " + aaFps() + " fps (vídeo hasta " + targetFps + ")");
     }
 
     /**
