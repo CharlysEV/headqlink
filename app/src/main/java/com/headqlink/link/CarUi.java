@@ -1155,11 +1155,78 @@ final class CarUi {
         LinearLayout.LayoutParams elp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 72);
         p.addView(ex, elp);
         expand = ex;
+        // Cartel de la imagen (resolución, fps y temperatura del móvil): un rato al conectar y al cambiar por el calor.
+        TextView vi = CarStyle.text(c, "", 20, CarStyle.ON_ACCENT);
+        vi.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        vi.setGravity(Gravity.CENTER);
+        vi.setPadding(10, 8, 10, 8);
+        vi.setBackground(CarStyle.accent(20));
+        vi.setVisibility(View.GONE);
+        LinearLayout.LayoutParams vlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        vlp.bottomMargin = 8;
+        p.addView(vi, vlp);
+        videoInfo = vi;
         battery = CarStyle.text(c, "", 22, CarTheme.navTextDim());
         battery.setPadding(8, 0, 0, 6);
         p.addView(battery);
         p.addView(buildRailInfo(c));
         return p;
+    }
+
+    // ------------------------------------------------------------------ cartel de la imagen
+
+    private TextView videoInfo;
+    /** Cuánto se ve el cartel de la imagen. */
+    static final long VIDEO_INFO_MS = 8000;
+    /** El cartel en la barra de iconos (en el sitio de la hora, la temperatura y la batería): hasta cuándo. */
+    private boolean railShowingInfo;
+    private final Runnable hideVideoInfo = () -> {
+        if (videoInfo != null) videoInfo.setVisibility(View.GONE);
+        if (railShowingInfo) {
+            railShowingInfo = false;
+            railTime.setTextColor(CarTheme.navText());
+            renderRailInfo();
+        }
+    };
+
+    /** Puro: «720p · 30 fps · 38 °C» (la resolución por el ancho del vídeo: más de 1280, 1080p). */
+    static String videoInfoLine(int videoW, int fps, double tempC) {
+        String res = videoW > 1280 ? "1080p" : "720p";
+        String line = res + " · " + fps + " fps";
+        if (!Double.isNaN(tempC)) line += " · " + Math.round(tempC) + " °C";
+        return line;
+    }
+
+    /** El cartel con la imagen de ahora (cualquier hilo). */
+    static void showVideoInfo(int videoW, int fps, double tempC) {
+        videoInfoText(videoInfoLine(videoW, fps, tempC));
+    }
+
+    /** El cartel con ese texto (cualquier hilo); sin interfaz propia en marcha, nada. */
+    static void videoInfoText(String text) {
+        CarUi u = current;
+        if (u == null || text == null) return;
+        u.main.post(() -> u.showVideoInfoNow(text));
+    }
+
+    private void showVideoInfoNow(String text) {
+        main.removeCallbacks(hideVideoInfo);
+        if (rail() && railInfo != null && railInfo.getVisibility() == View.VISIBLE) {
+            // En la barra de iconos no cabe en una línea: una cosa por línea, donde la hora.
+            String[] parts = text.split(" · ");
+            main.removeCallbacks(railTick);
+            railShowingInfo = true;
+            railTime.setTextColor(CarStyle.ACCENT);
+            railTime.setText(parts[0]);
+            railTemp.setText(parts.length > 1 ? parts[1] : "");
+            railTemp.setVisibility(parts.length > 1 ? View.VISIBLE : View.GONE);
+            railSoc.setText(parts.length > 2 ? parts[2] : "");
+            railSoc.setVisibility(parts.length > 2 ? View.VISIBLE : View.GONE);
+        } else if (videoInfo != null) {
+            videoInfo.setText(text);
+            videoInfo.setVisibility(View.VISIBLE);
+        }
+        main.postDelayed(hideVideoInfo, VIDEO_INFO_MS);
     }
 
     /** Texto de un botón del panel por su id (Config.PANEL_BUTTONS_ALL). */
@@ -1218,6 +1285,8 @@ final class CarUi {
     private boolean renderRailInfo() {
         main.removeCallbacks(railTick);
         if (railInfo == null || railInfo.getVisibility() != View.VISIBLE) return false;
+        // Con el cartel de la imagen a la vista, lo de siempre vuelve al quitarlo (hideVideoInfo).
+        if (railShowingInfo) return false;
         int oldTempVisibility = railTemp.getVisibility();
         int oldSocVisibility = railSoc.getVisibility();
         railTime.setText(new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(new java.util.Date()));

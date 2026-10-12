@@ -96,6 +96,12 @@ final class VideoProfile {
         return new VideoProfile(id, reencode, fps, hd720, fixedRate, boost, bps, bps, bps, true, f);
     }
 
+    /** El mismo perfil a 720p (true) o a la resolución de la pantalla (false): ThermalResolution con «Coche». */
+    VideoProfile withHd720(boolean on) {
+        if (on == hd720) return this;
+        return new VideoProfile(id, reencode, fps, on, fixedRate, boost, bitrate, minBitrate, maxBitrate, followsCar, fluidity);
+    }
+
     boolean adaptiveBitrate() {
         return maxBitrate > minBitrate;
     }

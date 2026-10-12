@@ -119,7 +119,7 @@ final class ThermalGuard {
         }
         h.post(batteryLog);
         chargeTip = new ChargeHeatTip(ctx);
-        if (Build.VERSION.SDK_INT >= 30) h.postDelayed(forecastCheck, FORECAST_MS);
+        h.postDelayed(forecastCheck, FORECAST_MS);
     }
 
     @android.annotation.TargetApi(29)
@@ -157,7 +157,13 @@ final class ThermalGuard {
     /** Hilo hql-thermal: el margen previsto; si cambia la etapa, el vídeo lo aplica con el nivel que haya. */
     private void checkForecast() {
         float v = headroomValue(FORECAST_S);
-        if (!forecast.update(v, SystemClock.elapsedRealtime())) return;
+        long now = SystemClock.elapsedRealtime();
+        boolean changed = forecast.update(v, now);
+        // La resolución (720p / 1080p) según el calor, con el mismo dato.
+        if (currentStatus >= 0 && !ThermalPolicy.mode(new Config(ctx).thermalMode()).equals(ThermalPolicy.MODE_OFF)) {
+            ThermalResolution.tick(ctx, currentStatus, v, forecast.stage(), now);
+        }
+        if (!changed) return;
         currentStage = forecast.stage();
         PerfTrace.event("thermal_stage", currentStage);
         String mode = new Config(ctx).thermalMode();
@@ -254,6 +260,17 @@ final class ThermalGuard {
             return ctx.getSystemService(PowerManager.class).getThermalHeadroom(seconds);
         } catch (RuntimeException e) {
             return Float.NaN;
+        }
+    }
+
+    /** Temperatura de la batería ahora (°C), o NaN (el cartel del coche). */
+    static double batteryTempC(Context ctx) {
+        try {
+            Intent b = ctx.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            int tenths = b == null ? Integer.MIN_VALUE : b.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Integer.MIN_VALUE);
+            return tenths == Integer.MIN_VALUE ? Double.NaN : tenths / 10.0;
+        } catch (RuntimeException e) {
+            return Double.NaN;
         }
     }
 

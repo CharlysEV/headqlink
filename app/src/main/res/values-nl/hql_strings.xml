@@ -237,7 +237,7 @@
     <string name="hql_thermal_off">Uit · wordt alleen gelogd</string>
     <string name="hql_thermal_help">Als Android warmte meldt: Normaal zakt bij ‘matig’ naar 30 fps (als de sessie op 60 draait), bij ‘ernstig’ naar 24 fps en bij ‘kritiek’ naar 20 fps, met minder bitrate; Mild houdt de fps en verlaagt alleen de bitrate (hooguit 30 fps bij ‘ernstig’). Na 30 s koeler weer normaal. Wordt direct toegepast.</string>
     <string name="hql_profile_car">Volgens de auto</string>
-    <string name="hql_profile_car_detail">Wat de auto vraagt (bij de C10 volledige resolutie op 30 fps en ongeveer 5 Mbit/s), zonder de telefoon te belasten: de minste warmte en het laagste batterijverbruik</string>
+    <string name="hql_profile_car_detail">Wat de auto vraagt (30 fps en ongeveer 5 Mbit/s): begint op 720p en gaat naar volledige resolutie als de telefoon koel blijft, zonder hem te belasten: de minste warmte en het laagste batterijverbruik</string>
     <string name="hql_profile_high">Hoog</string>
     <string name="hql_profile_high_detail">Volledige resolutie op 60 fps zonder de telefoon te belasten: minder batterijverbruik en warmte, iets meer vertraging</string>
     <string name="hql_profile_low">Zeer laag</string>
@@ -973,4 +973,6 @@
     <string name="hql_charge_heat_title">De telefoon wordt warm tijdens het laden</string>
     <string name="hql_charge_heat_text">Hij laadt op %1$d %% met de accu op %2$s °C. Zet „Accu beschermen” aan (laadt tot 80 %%) zodat hij in de auto minder warm wordt.</string>
     <string name="hql_charge_heat_action">Accu-instellingen</string>
+    <string name="hql_res_going_up">Telefoon koel: naar 1080p…</string>
+    <string name="hql_res_going_down">Te warm: terug naar 720p…</string>
 </resources>

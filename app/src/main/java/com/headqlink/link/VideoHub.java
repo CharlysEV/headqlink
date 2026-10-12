@@ -257,6 +257,11 @@ final class VideoHub {
         }
         lastVerdict = verdict;
         p.attach(port);
+        // El cartel del coche con la imagen de esta sesión, cuando ya se ve (unos segundos después).
+        VideoPipeline shown = p;
+        h.postDelayed(() -> {
+            if (pipeline == shown) CarUi.showVideoInfo(plan.videoW, shown.fpsCap(), ThermalGuard.batteryTempC(ctx));
+        }, 4000);
         String msg = "vídeo " + verdict + " para S" + port.getId() + ": " + plan
                 + ("REUTILIZADO".equals(verdict) && sinceDetachMs >= 0 ? " · " + sinceDetachMs + " ms sin sesión" : "");
         L.i(msg);

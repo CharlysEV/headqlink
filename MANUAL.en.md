@@ -585,7 +585,7 @@ Everything is in the ⚙ menu on the main screen, a panel that slides up from th
 | Profile | What it does |
 |---|---|
 | "Automatic (…)" | Follows the recommended one for this phone. **The best choice if you're not sure.** |
-| "Car" (recommended) | What the car asks for (on the C10, full resolution at 30 fps and about 5 Mbit/s), without pushing the phone. The least heat and battery. |
+| "Car" (recommended) | What the car asks for (30 fps and about 5 Mbit/s), without pushing the phone. It starts at 720p and, if the phone has stayed cool for 10 minutes, goes up to full resolution (it reconnects: 2-4 s of black); when it gets really hot it goes back to 720p. A small sign in the panel shows the resolution, fps and phone temperature. The least heat and battery. |
 | "Very high" | Full resolution at 60 fps with the lowest latency. Uses more power. The C10 doesn't show more than 30 fps. |
 | "High" | Full resolution at 60 fps without pushing the phone: less battery and heat, a little more delay. |
 | "Medium" | 720p at a steady 45 fps, re-encoded on the phone. |

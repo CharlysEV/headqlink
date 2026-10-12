@@ -608,7 +608,7 @@ potentes é «Carro».
 | Perfil | O que faz |
 |---|---|
 | «Automático (…)» | Segue o recomendado para este telemóvel. **É a melhor opção se não sabe qual escolher.** |
-| «Carro» (recomendado) | O que o carro pede (no C10, resolução completa a 30 fps e cerca de 5 Mbit/s), sem forçar o telemóvel. É o que menos aquece e menos bateria gasta. |
+| «Carro» (recomendado) | O que o carro pede (30 fps e cerca de 5 Mbit/s), sem forçar o telemóvel. Começa em 720p e, se o telemóvel estiver fresco 10 minutos, sobe para a resolução completa (volta a ligar: 2-4 s a negro); com muito calor volta a 720p. No painel aparece um aviso pequeno com a resolução, os fps e a temperatura do telemóvel. É o que menos aquece e menos bateria gasta. |
 | «Muito alto» | Resolução completa a 60 fps com a latência mínima. Gasta mais. O C10 não mostra mais de 30 fps. |
 | «Alto» | Resolução completa a 60 fps sem forçar o telemóvel: menos bateria e calor, um pouco mais de atraso. |
 | «Médio» | 720p a 45 fps constantes, recodificado no telemóvel. |

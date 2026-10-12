@@ -605,7 +605,7 @@ Per connetterti senza aprire l'app:
 | Profilo | Cosa fa |
 |---|---|
 | «Automatico (…)» | Segue quello consigliato per questo telefono. **La scelta migliore se non sei sicuro.** |
-| «Veicolo» (consigliato) | Quello che chiede l'auto (sulla C10, risoluzione piena a 30 fps e circa 5 Mbit/s), senza sforzare il telefono. Il minimo di calore e di batteria. |
+| «Veicolo» (consigliato) | Quello che chiede l'auto (30 fps e circa 5 Mbit/s), senza sforzare il telefono. Parte a 720p e, se il telefono resta fresco per 10 minuti, sale alla risoluzione piena (si riconnette: 2-4 s di nero); con molto caldo torna a 720p. Nel pannello un piccolo avviso mostra risoluzione, fps e temperatura del telefono. Il minimo di calore e di batteria. |
 | «Molto alto» | Risoluzione piena a 60 fps con la latenza più bassa. Consuma di più. La C10 non mostra più di 30 fps. |
 | «Alto» | Risoluzione piena a 60 fps senza sforzare il telefono: meno batteria e calore, un po' più di ritardo. |
 | «Medio» | 720p a 45 fps costanti, ricodificato sul telefono. |

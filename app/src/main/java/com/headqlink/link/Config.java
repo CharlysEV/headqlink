@@ -173,7 +173,13 @@ final class Config {
         if (id.isEmpty()) id = VideoProfile.recommended(app);
         VideoProfile p = VideoProfile.of(id);
         if (MODE_AA_EXT.equals(mode()) && !p.reencode) p = VideoProfile.of(VideoProfile.MEDIUM);
-        return p.withFluidity(fluidity());
+        p = p.withFluidity(fluidity());
+        // «Coche» (y «Automático» con él): 720p al empezar y 1080p con el móvil fresco (ThermalResolution).
+        // Con la «Protección térmica» apagada, la de siempre.
+        if (ThermalResolution.applies(p) && !ThermalPolicy.MODE_OFF.equals(ThermalPolicy.mode(thermalMode()))) {
+            p = p.withHd720(!ThermalResolution.high());
+        }
+        return p;
     }
 
     /**

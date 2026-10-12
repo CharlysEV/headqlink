@@ -603,6 +603,8 @@ final class VideoPipeline {
         // Sin relay GL (patrón, app) la fuente dibuja a su ritmo: solo baja el bitrate.
         applyFpsCap();
         PerfTrace.event("thermal_fps", fpsCap);
+        // El cartel del coche: resolución, fps y temperatura del móvil ahora.
+        CarUi.showVideoInfo(plan.videoW, fpsCap, ThermalGuard.batteryTempC(ctx));
         PerfTrace.event("thermal_kbps", bps / 1000);
         L.i(String.format(Locale.US, "%s: %d fps (sesión %d%s) · %.1f Mbit/s (sesión %.1f%s)%s", head, fpsCap, vp.fps,
                 lk != null && linkFpsCap < vp.fps ? ", enlace " + linkFpsCap : "", bps / 1e6, base / 1e6,

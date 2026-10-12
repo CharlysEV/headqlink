@@ -237,7 +237,7 @@
     <string name="hql_thermal_off">Desligada · só se regista</string>
     <string name="hql_thermal_help">Quando o Android avisa de calor: Normal desce para 30 fps em «moderado» (se a sessão vai a 60), para 24 fps em «grave» e para 20 fps em «crítico», com menos taxa de bits; Suave mantém os fps e só baixa a taxa de bits (30 fps no máximo em «grave»). Volta ao normal após 30 s mais fresco. Aplica-se de imediato.</string>
     <string name="hql_profile_car">Carro</string>
-    <string name="hql_profile_car_detail">O que o carro pede (no C10, resolução completa a 30 fps e cerca de 5 Mbit/s), sem forçar o telemóvel: o mínimo de calor e bateria</string>
+    <string name="hql_profile_car_detail">O que o carro pede (30 fps e cerca de 5 Mbit/s): começa em 720p e sobe para a resolução completa com o telemóvel fresco, sem o forçar: o mínimo de calor e bateria</string>
     <string name="hql_profile_high">Alto</string>
     <string name="hql_profile_high_detail">Resolução completa a 60 fps sem forçar o telemóvel: menos bateria e calor, um pouco mais de atraso</string>
     <string name="hql_profile_low">Muito baixo</string>
@@ -974,4 +974,6 @@
     <string name="hql_charge_heat_title">O telemóvel está a aquecer a carregar</string>
     <string name="hql_charge_heat_text">Está a carregar a %1$d %% com a bateria a %2$s °C. Ative «Proteger bateria» (carrega até 80 %%) para aquecer menos no carro.</string>
     <string name="hql_charge_heat_action">Definições de bateria</string>
+    <string name="hql_res_going_up">Telemóvel fresco: a subir para 1080p…</string>
+    <string name="hql_res_going_down">Muito calor: a descer para 720p…</string>
 </resources>

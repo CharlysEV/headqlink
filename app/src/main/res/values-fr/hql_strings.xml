@@ -237,7 +237,7 @@
     <string name="hql_thermal_off">Désactivée · simple journalisation</string>
     <string name="hql_thermal_help">Quand Android signale de la chaleur : Normale passe à 30 fps au niveau « modéré » (si la session tourne à 60), à 24 fps au niveau « sévère » et à 20 fps au niveau « critique », avec moins de débit ; Douce garde les fps et baisse seulement le débit (30 fps au maximum au niveau « sévère »). Retour à la normale après 30 s plus frais. S\'applique immédiatement.</string>
     <string name="hql_profile_car">Voiture</string>
-    <string name="hql_profile_car_detail">Ce que demande la voiture (sur la C10, pleine résolution à 30 fps et environ 5 Mbit/s), sans trop solliciter le téléphone : le minimum de chauffe et de batterie</string>
+    <string name="hql_profile_car_detail">Ce que demande la voiture (30 fps et environ 5 Mbit/s) : démarre en 720p et passe en pleine résolution quand le téléphone reste frais, sans trop le solliciter : le minimum de chauffe et de batterie</string>
     <string name="hql_profile_high">Élevé</string>
     <string name="hql_profile_high_detail">Pleine résolution à 60 fps sans trop solliciter le téléphone : moins de batterie et de chauffe, un peu plus de délai</string>
     <string name="hql_profile_low">Très bas</string>
@@ -974,4 +974,6 @@
     <string name="hql_charge_heat_title">Le téléphone chauffe en charge</string>
     <string name="hql_charge_heat_text">Il charge à %1$d %% avec la batterie à %2$s °C. Activez « Protéger la batterie » (charge jusqu\'à 80 %%) pour qu\'il chauffe moins en voiture.</string>
     <string name="hql_charge_heat_action">Paramètres de batterie</string>
+    <string name="hql_res_going_up">Téléphone frais : passage en 1080p…</string>
+    <string name="hql_res_going_down">Trop chaud : passage en 720p…</string>
 </resources>

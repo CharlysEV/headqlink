@@ -593,7 +593,7 @@ Todo está en el menú ⚙ de la pantalla principal, un panel que sube desde aba
 | Perfil | Qué hace |
 |---|---|
 | «Automático (…)» | Sigue al recomendado para este móvil. **Es la mejor opción si no sabes cuál elegir.** |
-| «Coche» (recomendado) | Lo que pide el coche (en el C10, resolución completa a 30 fps y unos 5 Mbit/s), sin forzar el móvil. Es el que menos calienta y menos batería gasta. |
+| «Coche» (recomendado) | Lo que pide el coche (30 fps y unos 5 Mbit/s), sin forzar el móvil. Empieza en 720p y, si el móvil lleva 10 minutos fresco, sube a la resolución completa (reconecta: 2-4 s en negro); con calor de verdad vuelve a 720p. En el panel sale un cartel con la resolución, los fps y la temperatura del móvil. Es el que menos calienta y menos batería gasta. |
 | «Muy alto» | Resolución completa a 60 fps con la mínima latencia. Gasta más. El C10 no muestra más de 30 fps. |
 | «Alto» | Resolución completa a 60 fps sin forzar el móvil: menos batería y calor, algo más de retraso. |
 | «Medio» | 720p a 45 fps constantes, recodificado en el móvil. |
