@@ -10,7 +10,7 @@ static retro_input_state_t input_state;
 static retro_log_printf_t libretro_print;
 
 #define SAMPLERATE 44100  // headqlink: 44,1 kHz, el ritmo de NativeCore (en el original, 48000)
-#define AUDIOBUFSIZE (SAMPLERATE/50) * 2
+#define AUDIOBUFSIZE 128  // headqlink: entrega en trozos de 64 pares (en el original, (SAMPLERATE/50) * 2): llega regular en cada fotograma
 static int16_t audio_buffer[AUDIOBUFSIZE];
 static uint16_t audio_buffer_index = 0;
 static uint16_t audio_buffer_max = AUDIOBUFSIZE;
@@ -690,6 +690,7 @@ RETRO_API bool retro_load_game(const retro_game_info *game)
 		return false;*/
 
 	emulator->configure("Audio/Frequency", SAMPLERATE);
+	Emulator::audio.setFrequency(SAMPLERATE);  // headqlink: la línea de arriba no llega al mezclador (seguía a 48000)
 
 	flush_variables();
 
@@ -740,6 +741,7 @@ RETRO_API bool retro_load_game_special(unsigned game_type,
 		const struct retro_game_info *info, size_t num_info)
 {
 	emulator->configure("Audio/Frequency", SAMPLERATE);
+	Emulator::audio.setFrequency(SAMPLERATE);  // headqlink: la línea de arriba no llega al mezclador (seguía a 48000)
 
 	flush_variables();
 

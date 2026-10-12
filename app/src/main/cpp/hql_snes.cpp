@@ -27,7 +27,9 @@ namespace {
 
 constexpr int MAX_W = 512;
 constexpr int MAX_H = 480;
-constexpr int AUDIO_CAP = 4096;  // muestras (pares L/R): de sobra para un fotograma a 50 o 60 fps
+// Cola del sonido (muestras sueltas, L y R por separado). bsnes lo entrega en bloques de 882 pares, no fotograma a
+// fotograma: un fotograma puede traer 0, 1 o 2 bloques. Lo que no cabe en lo que pide Java se queda para el siguiente.
+constexpr int AUDIO_CAP = 16384;
 
 bool initDone = false;
 bool loaded = false;
@@ -191,6 +193,7 @@ Java_com_headqlink_link_SnesEngine_nLoad(JNIEnv *env, jclass, jstring jpath, jst
     frameW = av.geometry.base_width > 0 ? (int)av.geometry.base_width : 256;
     frameH = av.geometry.base_height > 0 ? (int)av.geometry.base_height : 224;
     memset(frame, 0, sizeof(frame));
+    audioN = 0;
     loaded = true;
     __android_log_print(ANDROID_LOG_INFO, TAG, "ROM abierta: %dx%d a %.2f fps, %.0f Hz", frameW, frameH, fps, av.timing.sample_rate);
     return nullptr;
@@ -201,14 +204,20 @@ JNIEXPORT jint JNICALL
 Java_com_headqlink_link_SnesEngine_nFrame(JNIEnv *env, jclass, jintArray argb, jshortArray jaudio, jint pad) {
     if (!loaded) return -1;
     buttons = pad;
-    audioN = 0;
     retro_run();
     jsize cap = env->GetArrayLength(argb);
     jsize px = frameW * frameH;
     if (px <= cap) env->SetIntArrayRegion(argb, 0, px, reinterpret_cast<const jint *>(frame));
     jsize acap = env->GetArrayLength(jaudio);
-    jsize n = audioN < acap ? audioN : acap;
+    // Lo que toca a un fotograma (44100 / fps pares), sin pasarse de lo que cabe; el resto sigue en la cola.
+    int want = 2 * (int)(44100.0 / (fps > 1 ? fps : 60.0) + 0.5);
+    if (audioN > 4 * want) want = audioN - 2 * want;  // muy atrasada (tras una pausa): se pone al día
+    jsize n = audioN < want ? audioN : want;
+    if (n > acap) n = acap;
+    n &= ~1;
     env->SetShortArrayRegion(jaudio, 0, n, audio);
+    if (n > 0 && n < audioN) memmove(audio, audio + n, (size_t)(audioN - n) * sizeof(int16_t));
+    audioN -= n;
     return n;
 }
 

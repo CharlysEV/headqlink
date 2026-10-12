@@ -68,9 +68,9 @@ final class GamesScreen implements CarScreen {
         col.addView(section(c, Str.get(R.string.hql_games_consoles)));
         LinearLayout consoles = new LinearLayout(c);
         consoles.setOrientation(LinearLayout.HORIZONTAL);
-        consoles.addView(consoleCard(c, 5, "NES", Str.get(R.string.hql_nes_sub), 0xFFB71C1C, 0xFF3A3F47, "8-BIT"), weighted(250));
-        consoles.addView(consoleCard(c, 6, "MEGA DRIVE", Str.get(R.string.hql_md_sub), 0xFF0D47A1, 0xFF111317, "16-BIT"), weighted(250));
-        consoles.addView(consoleCard(c, 7, "SNES", Str.get(R.string.hql_snes_sub), 0xFF5E35B1, 0xFF1F1A2E, "16-BIT"), weighted(250));
+        consoles.addView(consoleCard(c, 5, "NES", Str.get(R.string.hql_nes_sub), 0xFFB71C1C, 0xFF3A3F47, "8-BIT"), weighted(320));
+        consoles.addView(consoleCard(c, 6, "MEGA DRIVE", Str.get(R.string.hql_md_sub), 0xFF0D47A1, 0xFF111317, "16-BIT"), weighted(320));
+        consoles.addView(consoleCard(c, 7, "SNES", Str.get(R.string.hql_snes_sub), 0xFF5E35B1, 0xFF1F1A2E, "16-BIT"), weighted(320));
         col.addView(consoles);
         TextView quickLabel = section(c, Str.get(R.string.hql_games_quick));
         quickLabel.setPadding(10, 34, 0, 12);
@@ -114,44 +114,51 @@ final class GamesScreen implements CarScreen {
      * Tarjeta de consola: degradado en su color, el nombre grande, una etiqueta («8-BIT», «16-BIT»), el núcleo y «Jugar ›».
      * Sin logotipos de marca: solo texto.
      */
+    /**
+     * Tarjeta de consola, en vertical (caben tres a lo ancho): arriba el icono y la etiqueta de bits; el nombre grande, su
+     * núcleo y «Jugar» debajo.
+     */
     private View consoleCard(Context c, int game, String name, String sub, int color, int dark, String bits) {
         LinearLayout card = new LinearLayout(c);
-        card.setOrientation(LinearLayout.HORIZONTAL);
-        card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setPadding(34, 26, 30, 26);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(30, 26, 30, 26);
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{color, dark});
         bg.setCornerRadius(32);
         card.setBackground(bg);
+        LinearLayout top = new LinearLayout(c);
+        top.setGravity(Gravity.CENTER_VERTICAL);
         ImageView icon = new ImageView(c);
         icon.setImageResource(R.drawable.hql_ic_games);
         icon.setImageTintList(ColorStateList.valueOf(0xFFFFFFFF));
-        icon.setBackground(CarStyle.round(0x33FFFFFF, 40));
-        icon.setPadding(30, 30, 30, 30);
-        card.addView(icon, new LinearLayout.LayoutParams(140, 140));
-        LinearLayout text = new LinearLayout(c);
-        text.setOrientation(LinearLayout.VERTICAL);
-        text.setPadding(30, 0, 12, 0);
+        icon.setBackground(CarStyle.round(0x33FFFFFF, 28));
+        icon.setPadding(20, 20, 20, 20);
+        top.addView(icon, new LinearLayout.LayoutParams(92, 92));
         TextView tag = CarStyle.text(c, bits, 18, 0xCCFFFFFF);
         tag.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         tag.setLetterSpacing(0.2f);
         tag.setPadding(12, 4, 12, 4);
         tag.setBackground(CarStyle.round(0x33000000, 12));
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        text.addView(tag, tlp);
-        TextView title = CarStyle.text(c, name, 46, 0xFFFFFFFF);
+        tlp.leftMargin = 20;
+        top.addView(tag, tlp);
+        card.addView(top);
+        TextView title = CarStyle.text(c, name, 44, 0xFFFFFFFF);
         title.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
         title.setSingleLine(true);
-        title.setPadding(0, 8, 0, 2);
-        text.addView(title);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        title.setPadding(0, 18, 0, 2);
+        card.addView(title);
         TextView s2 = CarStyle.text(c, sub, 22, 0xDDFFFFFF);
         s2.setMaxLines(2);
-        text.addView(s2);
-        card.addView(text, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        s2.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        card.addView(s2);
         TextView play = CarStyle.text(c, Str.get(R.string.hql_games_play) + "  ›", 24, 0xFF101114);
         play.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        play.setPadding(28, 14, 28, 14);
+        play.setPadding(28, 12, 28, 12);
         play.setBackground(CarStyle.round(0xFFFFFFFF, 30));
-        card.addView(play);
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        plp.topMargin = 16;
+        card.addView(play, plp);
         card.setOnClickListener(v -> open(game));
         play.setOnClickListener(v -> open(game));
         return card;
@@ -1016,6 +1023,7 @@ final class GamesScreen implements CarScreen {
     public void destroy() {
         if (nes != null) nes.stopEngine();
         if (md != null) md.stopEngine();
+        if (snes != null) snes.stopEngine();
         running = false;
     }
 }
