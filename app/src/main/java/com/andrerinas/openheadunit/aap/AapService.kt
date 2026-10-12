@@ -3239,7 +3239,7 @@ class AapService : Service() {
             .setSmallIcon(R.drawable.ic_stat_aa)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
-            .setContentTitle("Open Headunit")
+            .setContentTitle("QonectaLeap")  // headqlink: el nombre de la app
             .setContentText(contentText)
             .setContentIntent(PendingIntent.getActivity(
                 this, requestCode, notificationIntent,

@@ -145,7 +145,7 @@ public class AaGuardService extends Service {
         Notification n = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.hql_ic_notif)
                 .setColor(getColor(R.color.hql_accent))
-                .setContentTitle("HeadQLink")
+                .setContentTitle("QonectaLeap")
                 .setContentText(Str.get(R.string.hql_guard_parked))
                 .setOngoing(true)
                 .build();

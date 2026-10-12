@@ -46,7 +46,7 @@
                 android:id="@+id/hql_w_brand_text"
                 style="@style/HQL.Widget.Label"
                 android:layout_marginStart="6dp"
-                android:text="HeadQLink"
+                android:text="QonectaLeap"
                 android:textColor="@color/hql_text_dim"
                 android:textSize="12sp" />
         </LinearLayout>

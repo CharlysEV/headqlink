@@ -351,7 +351,7 @@
     <string name="connection_interrupted">Conexión perdida</string>
     <string name="connection_interrupted_detail">Reintentando…</string>
     <string name="wifi_disconnect_toast">Android Auto desconectado: Si usas AA inalámbrico, desactiva \"Cambiar entre redes\" o \"Aceleración de red\" en ajustes WiFi del teléfono</string>
-    <string name="notification_service_running">Open Headunit está en ejecución</string>
+    <string name="notification_service_running">QonectaLeap está en ejecución</string>
     <string name="notification_projection_active">Android Auto está proyectado</string>
     <string name="shortcut_connect_title">Conectar</string>
     <string name="shortcut_connect_desc">Conectar al último dispositivo conocido</string>

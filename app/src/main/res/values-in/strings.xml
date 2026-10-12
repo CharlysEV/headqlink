@@ -776,7 +776,7 @@
     <string name="wifi_disconnect_toast">Android Auto terputus: Jika menggunakan AA nirkabel, nonaktifkan \"Beralih antar jaringan\" atau \"Akselerasi jaringan\" di pengaturan Wi-Fi ponsel</string>
     <string name="reset_usb_option">Atur Ulang Koneksi USB</string>
     <string name="reset_usb_timeout">Perangkat USB tidak ditemukan. Silakan periksa koneksi.</string>
-    <string name="notification_service_running">Open Headunit sedang berjalan</string>
+    <string name="notification_service_running">QonectaLeap sedang berjalan</string>
     <string name="boot_loop_paused_title">Memulai nirkabel dijeda</string>
     <string name="boot_loop_paused_generic">Perangkat ini dimulai ulang tiga kali berturut-turut sesaat setelah Open Headunit memulai nirkabel, jadi nirkabel dinonaktifkan kali ini. USB tetap berfungsi. Buka aplikasi untuk mengaktifkannya kembali.</string>
     <string name="boot_loop_paused_native_wifi_direct">Perangkat ini dimulai ulang tiga kali berturut-turut sesaat setelah Open Headunit memulai nirkabel, jadi nirkabel dinonaktifkan kali ini. Pada beberapa head unit, chipset Wi-Fi membuat seluruh sistem crash saat ponsel bergabung ke jaringan Wi-Fi Direct. Coba alihkan mode Android Auto ke hotspot head unit. USB tetap berfungsi.</string>

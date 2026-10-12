@@ -422,7 +422,7 @@ final class CarSensors implements SensorEventListener, LocationListener {
                 L.i("GPS: ubicación todo el tiempo " + (bgLoc ? "sí" : "no") + " · con el móvil bloqueado "
                         + (arrives ? "llega" : "no llega (" + GpsWatch.LockProbe.DECIDE_MS / 1000 + " s bloqueado sin posiciones)")
                         + " · acceso a la ubicación ahora: " + LocationAccess.allowedNowText(ctx)
-                        + (arrives || bgLoc ? "" : ". Arreglo: Ajustes › Aplicaciones › HeadQLink › Permisos › Ubicación ›"
+                        + (arrives || bgLoc ? "" : ". Arreglo: Ajustes › Aplicaciones › QonectaLeap › Permisos › Ubicación ›"
                         + " «Permitir todo el tiempo» (o Comprobación › «Ubicación todo el tiempo»)"));
             }
         }

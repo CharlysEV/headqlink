@@ -1045,7 +1045,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, Str.get(R.string.hql_channel_link), NotificationManager.IMPORTANCE_LOW));
         boolean connected = isLinkConnected();
-        String title = connected ? Str.get(R.string.hql_notif_connected) : "HeadQLink";
+        String title = connected ? Str.get(R.string.hql_notif_connected) : "QonectaLeap";
         // Con la zona Wi-Fi apagada, tocar la notificación abre sus ajustes; si no, la app.
         boolean hotspotOff = hotspot != null && hotspotState == HotspotWatcher.State.OFF && !connected;
         Intent open = hotspotOff ? new Intent("android.settings.TETHER_SETTINGS")

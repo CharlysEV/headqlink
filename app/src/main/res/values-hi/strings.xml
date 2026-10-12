@@ -776,7 +776,7 @@
     <string name="wifi_disconnect_toast">Android Auto डिस्कनेक्ट हो गया: यदि वायरलेस AA का उपयोग कर रहे हैं, तो फ़ोन वाई-फ़ाई सेटिंग्स में \"नेटवर्क के बीच स्विच करें\" को अक्षम करें</string>
     <string name="reset_usb_option">USB कनेक्शन रीसेट करें</string>
     <string name="reset_usb_timeout">USB डिवाइस नहीं मिला। कृपया कनेक्शन जांचें।</string>
-    <string name="notification_service_running">Open Headunit चल रहा है</string>
+    <string name="notification_service_running">QonectaLeap चल रहा है</string>
     <string name="boot_loop_paused_title">वायरलेस स्टार्टअप रुका</string>
     <string name="boot_loop_paused_generic">Open Headunit द्वारा वायरलेस शुरू करने के तुरंत बाद यह डिवाइस लगातार तीन बार पुनरारंभ हुआ, इसलिए इस बार वायरलेस बंद रखा गया। USB अभी भी काम करता है। इसे वापस चालू करने के लिए ऐप खोलें।</string>
     <string name="boot_loop_paused_native_wifi_direct">Open Headunit द्वारा वायरलेस शुरू करने के तुरंत बाद यह डिवाइस लगातार तीन बार पुनरारंभ हुआ। कुछ हेडयूनिट्स पर वाई-फ़ाई चिपसेट पूरे सिस्टम को क्रैश कर देता है जब कोई फ़ोन वाई-फ़ाई डायरेक्ट नेटवर्क से जुड़ता है। हेडयूनिट हॉटस्पॉट का प्रयास करें।</string>

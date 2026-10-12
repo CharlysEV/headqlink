@@ -776,7 +776,7 @@
     <string name="wifi_disconnect_toast">Android Auto ตัดการเชื่อมต่อ: หากใช้ AA ไร้สาย ให้ปิดใช้งาน \"สลับระหว่างเครือข่าย\" ในการตั้งค่า Wi-Fi ของโทรศัพท์</string>
     <string name="reset_usb_option">รีเซ็ตการเชื่อมต่อ USB</string>
     <string name="reset_usb_timeout">ไม่พบอุปกรณ์ USB โปรดตรวจสอบการเชื่อมต่อ</string>
-    <string name="notification_service_running">Open Headunit กำลังทำงาน</string>
+    <string name="notification_service_running">QonectaLeap กำลังทำงาน</string>
     <string name="boot_loop_paused_title">หยุดการเริ่มต้นไร้สายชั่วคราว</string>
     <string name="boot_loop_paused_generic">อุปกรณ์นี้รีสตาร์ทสามครั้งติดต่อกันหลังจาก Open Headunit เริ่มการทำงานแบบไร้สาย ดังนั้นจึงปิดระบบไร้สายไว้ในครั้งนี้ USB ยังคงใช้งานได้ เปิดแอปเพื่อเปิดใช้งานอีกครั้ง</string>
     <string name="boot_loop_paused_native_wifi_direct">อุปกรณ์นี้รีสตาร์ทสามครั้งติดต่อกันหลังจาก Open Headunit เริ่มระบบไร้สาย บนเฮดยูนิตบางรุ่น ชิปเซ็ต Wi-Fi จะทำให้ระบบล่มเมื่อโทรศัพท์เข้าร่วมเครือข่าย Wi-Fi Direct ลองเปลี่ยนโหมดเป็นฮอตสปอตเฮดยูนิต USB ยังคงใช้งานได้</string>

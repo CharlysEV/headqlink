@@ -66,7 +66,7 @@
     <string name="hql_cloud_expired_title">A sessão da Leapmotor expirou</string>
     <string name="hql_cloud_expired_body">Entre de novo no celular: ⚙ › Dados do carro (conta Leapmotor).</string>
     <string name="hql_cloud_server_key_title">O servidor da Leapmotor mudou de certificado</string>
-    <string name="hql_cloud_server_key_body_car">Por segurança, o HeadQLink não se conecta até você revisar no celular: ⚙ › Dados do carro.</string>
+    <string name="hql_cloud_server_key_body_car">Por segurança, o QonectaLeap não se conecta até você revisar no celular: ⚙ › Dados do carro.</string>
     <string name="hql_cloud_error_title">Ainda sem dados do carro</string>
     <string name="hql_cloud_error_body">Não foi possível ler a nuvem (sem conexão ou ela não responde). Nova tentativa em %1$d min.</string>
     <string name="hql_cloud_trip_real">Viagem · real</string>
@@ -80,7 +80,7 @@
     <!-- Celular: ⚙ › Dados do carro (conta Leapmotor) -->
     <string name="hql_cloud_menu">Dados do carro (conta Leapmotor)</string>
     <string name="hql_cloud_label">Conta Leapmotor · opcional</string>
-    <string name="hql_cloud_intro">O HeadQLink pode ler o estado do seu carro na nuvem da Leapmotor com a sua conta (bateria, autonomia, carga, pressões dos pneus, portas e hodômetro) e mostrar no modo estendido: a aba Estado e a % real em Rota, Eficiência e Viagens.\n\n• Somente leitura: nunca envia comandos ao carro.\n• API não oficial: pode parar de funcionar a qualquer momento.\n• Seus dados vão só para os servidores da Leapmotor. O certificado e a sessão ficam criptografados neste celular; a senha não é guardada.\n• Precisa do mesmo certificado de cliente que o app LMB10.</string>
+    <string name="hql_cloud_intro">O QonectaLeap pode ler o estado do seu carro na nuvem da Leapmotor com a sua conta (bateria, autonomia, carga, pressões dos pneus, portas e hodômetro) e mostrar no modo estendido: a aba Estado e a % real em Rota, Eficiência e Viagens.\n\n• Somente leitura: nunca envia comandos ao carro.\n• API não oficial: pode parar de funcionar a qualquer momento.\n• Seus dados vão só para os servidores da Leapmotor. O certificado e a sessão ficam criptografados neste celular; a senha não é guardada.\n• Precisa do mesmo certificado de cliente que o app LMB10.</string>
     <string name="hql_cloud_enabled">Usar os dados reais do carro</string>
     <string name="hql_cloud_step_cert">1 · Certificado de cliente</string>
     <string name="hql_cloud_cert_none">Sem certificado. Escolha app.crt e app.key (juntos ou um depois do outro), um .pem com os dois blocos ou um .p12/.pfx.</string>
@@ -97,7 +97,7 @@
     <string name="hql_cloud_cert_err_no_cert">Falta o certificado: escolha também o .crt (ou um .pem com os dois).</string>
     <string name="hql_cloud_cert_err_mismatch">Essa chave não é a desse certificado.</string>
     <string name="hql_cloud_cert_err_encrypted">Esta chave criptografada não pode ser lida: use-a sem senha (openssl pkcs8 -topk8 -nocrypt) ou como .p12.</string>
-    <string name="hql_cloud_cert_err_unreadable">Esses arquivos não são um certificado que o HeadQLink saiba ler (PEM, DER ou PKCS#12).</string>
+    <string name="hql_cloud_cert_err_unreadable">Esses arquivos não são um certificado que o QonectaLeap saiba ler (PEM, DER ou PKCS#12).</string>
     <string name="hql_cloud_cert_err_too_big">Esse arquivo é grande demais para ser um certificado.</string>
     <string name="hql_cloud_cert_have_cert">Certificado lido (%1$s). Agora escolha a chave (app.key).</string>
     <string name="hql_cloud_cert_have_key">Chave lida (%1$s). Agora escolha o certificado (app.crt).</string>
@@ -158,7 +158,7 @@
     <string name="hql_cloud_trips_car_total_fuel">Segundo o carro: %1$d viagens · %3$.1f kWh/100 · %4$.1f L/100</string>
     <string name="hql_cloud_3d_hint">Gire com o dedo</string>
     <string name="hql_cloud_step_sentry">5 · Modo sentinela</string>
-    <string name="hql_cloud_sentry_note">Opcional. É o único comando que o HeadQLink envia ao carro, e só se você salvar aqui o PIN do carro (criptografado no celular). Sem PIN, tudo continua só de leitura.</string>
+    <string name="hql_cloud_sentry_note">Opcional. É o único comando que o QonectaLeap envia ao carro, e só se você salvar aqui o PIN do carro (criptografado no celular). Sem PIN, tudo continua só de leitura.</string>
     <string name="hql_cloud_pin_hint">PIN do carro (o do app da Leapmotor)</string>
     <string name="hql_cloud_pin_save">Salvar PIN</string>
     <string name="hql_cloud_pin_forget">Esquecer PIN</string>

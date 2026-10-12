@@ -122,7 +122,7 @@ final class TestPattern extends Thread {
 
         paint.setColor(Color.WHITE);
         paint.setTextSize(64);
-        c.drawText("HeadQLink proto", 60, 110, paint);
+        c.drawText("QonectaLeap proto", 60, 110, paint);
         paint.setTextSize(36);
         c.drawText(info, 60, 170, paint);
         c.drawText(String.format(Locale.US, "frame %d   render %.1f fps", frame, measuredFps), 60, 225, paint);

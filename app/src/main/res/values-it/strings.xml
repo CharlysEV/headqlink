@@ -375,7 +375,7 @@
     <string name="wifi_disconnect_toast">Android Auto scollegato: Se usi AA wireless, disabilita \"Passa tra reti\" o \"Accelerazione di rete\" nelle impostazioni WiFi del telefono</string>
     <string name="reset_usb_option">Ripristina connessione USB</string>
     <string name="reset_usb_timeout">Dispositivo USB non trovato. Controllare la connessione.</string>
-    <string name="notification_service_running">Open Headunit è in esecuzione</string>
+    <string name="notification_service_running">QonectaLeap è in esecuzione</string>
     <string name="notification_projection_active">Android Auto è proiettato</string>
     <string name="shortcut_connect_title">Connetti</string>
     <string name="shortcut_connect_desc">Connetti automaticamente all\'ultimo telefono</string>

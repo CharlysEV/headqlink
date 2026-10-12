@@ -7,9 +7,9 @@
     <string name="hql_aa_server_failed">The Android Auto server could not be started</string>
     <string name="hql_acceleration">Acceleration</string>
     <string name="hql_accessibility_first">Accessibility first</string>
-    <string name="hql_accessibility_first_msg">HeadQLink needs its accessibility service to check Android Auto developer mode.</string>
+    <string name="hql_accessibility_first_msg">QonectaLeap needs its accessibility service to check Android Auto developer mode.</string>
     <string name="hql_accessibility_missing">Accessibility is off</string>
-    <string name="hql_accessibility_missing_msg">HeadQLink needs its accessibility service to start Android Auto without you seeing it and to receive the car\'s touches. Android sometimes turns it off when the app is updated.</string>
+    <string name="hql_accessibility_missing_msg">QonectaLeap needs its accessibility service to start Android Auto without you seeing it and to receive the car\'s touches. Android sometimes turns it off when the app is updated.</string>
     <string name="hql_active">On</string>
     <string name="hql_advanced">Advanced</string>
     <string name="hql_advanced_closed">Advanced ▾</string>
@@ -35,9 +35,9 @@
     <string name="hql_nes_touch">Touch buttons</string>
     <string name="hql_nes_error">Could not open the game: %1$s</string>
     <string name="hql_update_install">Download and install</string>
-    <string name="hql_update_allow_unknown">To install the update from the app, allow HeadQLink to install unknown apps. Then tap "Download and install" again.</string>
+    <string name="hql_update_allow_unknown">To install the update from the app, allow QonectaLeap to install unknown apps. Then tap "Download and install" again.</string>
     <string name="hql_update_open_setting">Open setting</string>
-    <string name="hql_update_downloading">Downloading HeadQLink %1$s…</string>
+    <string name="hql_update_downloading">Downloading QonectaLeap %1$s…</string>
     <string name="hql_update_download_failed">The download failed (%1$s). You can get it from GitHub.</string>
     <string name="hql_update_check">Check for new version</string>
     <string name="hql_update_checking">Checking…</string>
@@ -66,7 +66,7 @@
     <string name="hql_panel_alpha_help">The more transparency, the more the panel blends into the black of the screen.</string>
     <string name="hql_update_available">New version available: %1$s · tap to see what\'s new</string>
     <string name="hql_whats_new_title">What\'s new in %1$s</string>
-    <string name="hql_update_title">HeadQLink %1$s is out</string>
+    <string name="hql_update_title">QonectaLeap %1$s is out</string>
     <string name="hql_update_no_notes">No notes for this version. See the releases page.</string>
     <string name="hql_update_download">Download</string>
     <string name="hql_update_on_github">See on GitHub</string>
@@ -77,16 +77,16 @@
     <string name="hql_back">Back</string>
     <string name="hql_back_short">Back</string>
     <string name="hql_battery_oem">%1$s power manager</string>
-    <string name="hql_battery_oem_why">Allow automatic start / background activity for HeadQLink (it cannot be checked from here)</string>
-    <string name="hql_battery_ok">HeadQLink can run in the background</string>
+    <string name="hql_battery_oem_why">Allow automatic start / background activity for QonectaLeap (it cannot be checked from here)</string>
+    <string name="hql_battery_ok">QonectaLeap can run in the background</string>
     <string name="hql_battery_row">No battery restrictions</string>
     <string name="hql_battery_why">So that Android does not close it with the screen off or block the automatic connection</string>
     <string name="hql_before_start">Before you start</string>
     <string name="hql_brake">Throttle the video to the car\'s pace (recommended)</string>
     <string name="hql_brake_help">The throttle is only used in the Basic profile (no re-encoding).</string>
     <string name="hql_brake_window">frames in flight with the throttle (2)</string>
-    <string name="hql_bt_auto_battery">So that Android lets it start in the background, allow HeadQLink to run without battery restrictions.</string>
-    <string name="hql_bt_auto_info">When the phone connects over Bluetooth to a device whose name contains this text, HeadQLink starts waiting for the car (open the mirroring app on its screen). If Bluetooth goes away without connecting, it stops.</string>
+    <string name="hql_bt_auto_battery">So that Android lets it start in the background, allow QonectaLeap to run without battery restrictions.</string>
+    <string name="hql_bt_auto_info">When the phone connects over Bluetooth to a device whose name contains this text, QonectaLeap starts waiting for the car (open the mirroring app on its screen). If Bluetooth goes away without connecting, it stops.</string>
     <string name="hql_bt_auto_switch">Connect when the car\'s Bluetooth is detected</string>
     <string name="hql_bt_auto_title">Automatic connection</string>
     <string name="hql_calculating">Calculating…</string>
@@ -138,8 +138,8 @@
     <string name="hql_found_connecting">Found, connecting…</string>
     <string name="hql_gallery_no_photos">There are no photos on the phone.</string>
     <string name="hql_gallery_no_videos">There are no videos on the phone.</string>
-    <string name="hql_gallery_perm_photos">Give HeadQLink the photos permission on the phone.</string>
-    <string name="hql_gallery_perm_videos">Give HeadQLink the videos permission on the phone.</string>
+    <string name="hql_gallery_perm_photos">Give QonectaLeap the photos permission on the phone.</string>
+    <string name="hql_gallery_perm_videos">Give QonectaLeap the videos permission on the phone.</string>
     <string name="hql_game_2048">2048</string>
     <string name="hql_game_2048_sub">Swipe to merge numbers</string>
     <string name="hql_game_fly">Flying C10</string>
@@ -164,7 +164,7 @@
     <string name="hql_headwind">headwind</string>
     <string name="hql_height">height</string>
     <string name="hql_hide">Hide</string>
-    <string name="hql_hint_connected">You can lock the phone: the picture keeps reaching the car. If the car disconnects, HeadQLink stops by itself.</string>
+    <string name="hql_hint_connected">You can lock the phone: the picture keeps reaching the car. If the car disconnects, QonectaLeap stops by itself.</string>
     <string name="hql_hint_idle">With the car on and the mirroring app on its screen, tap Connect.</string>
     <string name="hql_hint_searching">Open the mirroring app on the car\'s screen. You can lock the phone at any time.</string>
     <string name="hql_home">Home</string>
@@ -186,10 +186,10 @@
     <string name="hql_measure_latency">Measure latency</string>
     <string name="hql_memory_done">Done in %1$d moves! Tap for another</string>
     <string name="hql_missing_aa">Android Auto is not installed.</string>
-    <string name="hql_missing_accessibility">HeadQLink accessibility must be turned on.</string>
+    <string name="hql_missing_accessibility">QonectaLeap accessibility must be turned on.</string>
     <string name="hql_missing_app">An app must be chosen.</string>
     <string name="hql_missing_devmode">Android Auto developer mode must be turned on.</string>
-    <string name="hql_missing_overlay">HeadQLink must be allowed to display over other apps.</string>
+    <string name="hql_missing_overlay">QonectaLeap must be allowed to display over other apps.</string>
     <string name="hql_missing_perms">The permissions to find the car are missing.</string>
     <string name="hql_mode_aa">Auto</string>
     <string name="hql_mode_aa_detail">Maps, music and messages in full screen.</string>
@@ -267,7 +267,7 @@
     <string name="hql_range_over">%1$s · %2$.0f km · tap for another</string>
     <string name="hql_range_status">%1$.0f km · battery %2$.0f %%</string>
     <string name="hql_range_wltp">420 km! More than the C10\'s WLTP range</string>
-    <string name="hql_reason_accessibility">turn on the \'HeadQLink touch\' accessibility service</string>
+    <string name="hql_reason_accessibility">turn on the \'QonectaLeap touch\' accessibility service</string>
     <string name="hql_reason_unlock">unlock the phone</string>
     <string name="hql_recommended">Recommended</string>
     <string name="hql_record">record %1$d</string>
@@ -297,8 +297,8 @@
     <string name="hql_session_ended">Session ended; waiting for the car</string>
     <string name="hql_settings">Settings</string>
     <string name="hql_settings_info">Now: %1$s · ★ recommended for this phone (%2$s)</string>
-    <string name="hql_setup_aa_body">Android Auto only accepts a car screen inside the phone itself through its developer mode. It is enabled once; after that HeadQLink handles it by itself.</string>
-    <string name="hql_setup_accessibility">HeadQLink accessibility</string>
+    <string name="hql_setup_aa_body">Android Auto only accepts a car screen inside the phone itself through its developer mode. It is enabled once; after that QonectaLeap handles it by itself.</string>
+    <string name="hql_setup_accessibility">QonectaLeap accessibility</string>
     <string name="hql_setup_accessibility_aa">To receive the car\'s touches and start Android Auto</string>
     <string name="hql_setup_accessibility_app">So the car\'s touches reach the app</string>
     <string name="hql_setup_app_body">The app opens on a virtual screen that is sent to the car, so it is not shown on the phone. The car\'s touches arrive through the accessibility service.</string>
@@ -306,7 +306,7 @@
     <string name="hql_setup_devmode">Android Auto developer mode</string>
     <string name="hql_setup_diag">Diagnostic mode</string>
     <string name="hql_setup_diag_body">Shows a test image in the car with smoothness and touches in real time. Useful to check the connection before using Android Auto.</string>
-    <string name="hql_setup_guide">1.  Tap \"Open AA\" (if it is not shown, tap \"Check\" first).\n2.  Scroll to the bottom of the Android Auto settings.\n3.  Tap \"Version\" 10 times and accept the warning.\n4.  Come back to HeadQLink: it checks by itself.</string>
+    <string name="hql_setup_guide">1.  Tap \"Open AA\" (if it is not shown, tap \"Check\" first).\n2.  Scroll to the bottom of the Android Auto settings.\n3.  Tap \"Version\" 10 times and accept the warning.\n4.  Come back to QonectaLeap: it checks by itself.</string>
     <string name="hql_setup_guide_title">How to enable developer mode</string>
     <string name="hql_setup_media">Photos, videos and location</string>
     <string name="hql_setup_media_why">For the gallery and the driving panels in the car</string>
@@ -332,13 +332,13 @@
     <string name="hql_tab_route">Route</string>
     <string name="hql_tab_trips">Trips</string>
     <string name="hql_tailwind">tailwind</string>
-    <string name="hql_tap_to_connect">Tap to connect HeadQLink</string>
+    <string name="hql_tap_to_connect">Tap to connect QonectaLeap</string>
     <string name="hql_theme">Theme</string>
     <string name="hql_theme_dark">Dark</string>
     <string name="hql_theme_light">Light</string>
     <string name="hql_theme_system">System default</string>
     <string name="hql_this_phone">This phone: %1$s</string>
-    <string name="hql_touch_label">HeadQLink touch</string>
+    <string name="hql_touch_label">QonectaLeap touch</string>
     <string name="hql_touch_service_desc">Forwards the touches on the car\'s screen to the projected app and starts the Android Auto server when needed.</string>
     <string name="hql_trips_none">They are saved by themselves at the end of each drive over 300 m in Auto extended, with the route, the estimated consumption and the climbing.</string>
     <string name="hql_trips_note">Energy estimated with the C10 model (no car data). Prices: %1$.2f €/kWh; petrol %2$.1f l/100 km at %3$.2f €/l.</string>
@@ -359,7 +359,7 @@
     <string name="hql_waiting_gps">Waiting for the phone\'s GPS position…</string>
     <string name="hql_waiting_phone_gps">Waiting for the phone\'s GPS…</string>
     <string name="hql_web_address">Search or type an address</string>
-    <string name="hql_welcome_body">HeadQLink uses the car\'s built-in mirroring connection to bring Auto to its screen: maps, music and messages, with more features in Auto extended. The phone can stay locked with the screen off.</string>
+    <string name="hql_welcome_body">QonectaLeap uses the car\'s built-in mirroring connection to bring Auto to its screen: maps, music and messages, with more features in Auto extended. The phone can stay locked with the screen off.</string>
     <string name="hql_welcome_never">And never handle the phone while driving.</string>
     <string name="hql_welcome_parked">Do the setup with the car parked</string>
     <string name="hql_welcome_mirror">Mirroring app visible on the car\'s screen</string>
@@ -387,7 +387,7 @@
     <string name="hql_hotspot_off">Hotspot off: turn it on</string>
     <string name="hql_hotspot_unknown">Hotspot state unknown</string>
     <string name="hql_hotspot_open">Open hotspot settings</string>
-    <string name="hql_hotspot_guide">1. Turn on the phone\'s hotspot (5 GHz and no auto-off is best).\n2. First time only: on the car, Settings › Wi-Fi › pick your phone\'s hotspot.\n3. Open the mirroring app on the car\'s screen. HeadQLink connects on its own, even with the phone locked.\nThe car may use your mobile data.</string>
+    <string name="hql_hotspot_guide">1. Turn on the phone\'s hotspot (5 GHz and no auto-off is best).\n2. First time only: on the car, Settings › Wi-Fi › pick your phone\'s hotspot.\n3. Open the mirroring app on the car\'s screen. QonectaLeap connects on its own, even with the phone locked.\nThe car may use your mobile data.</string>
     <string name="hql_hotspot_guide_title">How to connect the car to the hotspot</string>
     <string name="hql_hotspot_tips">Tips: the 5 GHz band works better (on 2.4 GHz the radio is shared with the car\'s Bluetooth) and it is best to turn off “Turn off hotspot when no devices are connected” (Samsung).</string>
     <string name="hql_hotspot_row">Phone hotspot</string>
@@ -418,7 +418,7 @@
     <string name="hql_export_done">Saved to %1$s</string>
     <string name="hql_export_downloads">Downloads/%1$s</string>
     <string name="hql_export_failed">Could not export: %1$s</string>
-    <string name="hql_export_share">Share HeadQLink log</string>
+    <string name="hql_export_share">Share QonectaLeap log</string>
     <string name="hql_pattern_test">Test without Android Auto (pattern)</string>
     <string name="hql_log_paths">Logs in %1$s\nlogs/ full log · car/ car journal · perf/ performance · logcat/ · crash/</string>
     <string name="hql_log_info">%1$s engine · %2$s</string>
@@ -440,7 +440,7 @@
         <item quantity="other">%d things missing</item>
     </plurals>
     <string name="hql_req_sub_ok">Everything this mode needs is on.</string>
-    <string name="hql_req_sub_required">Without the required items HeadQLink won\'t connect. Each button takes you to its setting.</string>
+    <string name="hql_req_sub_required">Without the required items QonectaLeap won\'t connect. Each button takes you to its setting.</string>
     <string name="hql_req_sub_recommended">The required items are done; the rest makes it more reliable.</string>
     <string name="hql_req_required">Required</string>
     <string name="hql_req_optional">Optional</string>
@@ -452,16 +452,16 @@
     <string name="hql_req_acc_stuck">On but not running (Android stopped it): turn it off and on again.</string>
     <string name="hql_req_aa_disabled">Disabled: turn it on in its App info</string>
     <string name="hql_req_dev_off">Off: in Android Auto, tap Version 10 times (see below)</string>
-    <string name="hql_req_dev_unchecked">Not checked yet: HeadQLink opens Android Auto for a moment</string>
+    <string name="hql_req_dev_unchecked">Not checked yet: QonectaLeap opens Android Auto for a moment</string>
     <string name="hql_req_notif">Notifications</string>
     <string name="hql_req_notif_why">To see the connection status and warnings</string>
     <string name="hql_req_bgloc">Location all the time</string>
     <string name="hql_req_bgloc_why">So the car data keeps going with the phone locked</string>
     <string name="hql_req_bgloc_needs_fine">So the car data keeps going with the phone locked. First the location while using the app, then “Allow all the time”</string>
-    <string name="hql_req_bgloc_blocked">Settings › Apps › HeadQLink › Permissions › Location › Allow all the time</string>
+    <string name="hql_req_bgloc_blocked">Settings › Apps › QonectaLeap › Permissions › Location › Allow all the time</string>
     <string name="hql_req_bgloc_ok">Allowed all the time</string>
     <string name="hql_bgloc_title">Location all the time</string>
-    <string name="hql_bgloc_msg">With the phone locked, Android can cut the GPS of apps that only have the location “while using the app”: speed, trip, route and consumption on the car screen freeze until you unlock it.\n\nOn the page that opens, choose “Allow all the time”. HeadQLink only uses the GPS while it is connected to the car (or with the Car screens open).</string>
+    <string name="hql_bgloc_msg">With the phone locked, Android can cut the GPS of apps that only have the location “while using the app”: speed, trip, route and consumption on the car screen freeze until you unlock it.\n\nOn the page that opens, choose “Allow all the time”. QonectaLeap only uses the GPS while it is connected to the car (or with the Car screens open).</string>
     <string name="hql_gps_paused_locked">GPS paused · phone locked (allow location “all the time”)</string>
     <string name="hql_gps_lost">no GPS</string>
     <string name="hql_req_notif_blocked">Turned off: turn them on in Settings</string>
@@ -474,21 +474,21 @@
     <string name="hql_req_band">5 GHz band</string>
     <string name="hql_req_band_why">Can\'t be read from here: in the hotspot settings choose 5 GHz and turn off auto-off</string>
     <string name="hql_req_port_title">Port 18463</string>
-    <string name="hql_req_port_busy">Busy: QDLink (or another app) is open and the car can\'t find HeadQLink. Force stop it.</string>
-    <string name="hql_req_qdlink_why">Installed: close it before connecting (it takes port 18463). App info › Force stop. If you plug in the car cable, Android may hand it to QDLink: pick HeadQLink and «Always».</string>
+    <string name="hql_req_port_busy">Busy: QDLink (or another app) is open and the car can\'t find QonectaLeap. Force stop it.</string>
+    <string name="hql_req_qdlink_why">Installed: close it before connecting (it takes port 18463). App info › Force stop. If you plug in the car cable, Android may hand it to QDLink: pick QonectaLeap and «Always».</string>
     <string name="hql_req_force_stop">Force stop</string>
     <string name="hql_req_bt">Bluetooth (nearby devices)</string>
     <string name="hql_req_bt_why">To recognise the car\'s Bluetooth and connect by itself</string>
     <string name="hql_req_battery_bt">Needed so the automatic connection can start in the background</string>
     <string name="hql_req_samsung">Samsung: never sleeping apps</string>
-    <string name="hql_req_samsung_why">Can\'t be read from here: Settings › Battery › Background usage limits › Never sleeping apps › add HeadQLink. The button opens its battery page: choose Unrestricted.</string>
+    <string name="hql_req_samsung_why">Can\'t be read from here: Settings › Battery › Background usage limits › Never sleeping apps › add QonectaLeap. The button opens its battery page: choose Unrestricted.</string>
     <!-- Pantalla principal: título de la tarjeta de estado y del panel en directo (fps y Mbps). -->
     <string name="hql_status_title">Status</string>
     <string name="hql_live">Live</string>
     <!-- Textos que estaban fijos en el código (avisos, botones, pantallas del coche). -->
     <string name="hql_log_copied">Log copied</string>
     <string name="hql_reconnecting_short">Reconnecting…</string>
-    <string name="hql_latency_hint">With HeadQLink in Diagnostics mode, record this screen and the car\'s at the same time. The difference between the two clocks is the total latency.</string>
+    <string name="hql_latency_hint">With QonectaLeap in Diagnostics mode, record this screen and the car\'s at the same time. The difference between the two clocks is the total latency.</string>
     <string name="hql_charge_point">Charging point</string>
     <string name="hql_app_opened_in_car">Opened on the car</string>
     <string name="hql_app_open_blocked">Android doesn\'t allow opening it on the car</string>
@@ -498,13 +498,13 @@
     <string name="hql_waiting_car_paused">Waiting for the car · Android Auto paused</string>
     <string name="hql_unlock_channel">Android Auto start</string>
     <string name="hql_unlock_start_title">Unlock the phone to start Android Auto</string>
-    <string name="hql_unlock_start_text">The car is ready. When you unlock, HeadQLink starts Android Auto by itself; no need to open the app.</string>
+    <string name="hql_unlock_start_text">The car is ready. When you unlock, QonectaLeap starts Android Auto by itself; no need to open the app.</string>
     <string name="hql_server_on_title">The Android Auto server is still on</string>
     <string name="hql_server_on_text">Tap to turn it off</string>
     <string name="hql_car_wait_title">Wait for the car</string>
     <string name="hql_car_wait_option">%1$d min</string>
     <string name="hql_car_wait_option_default">%1$d min (recommended)</string>
-    <string name="hql_car_wait_help">If the car turns off or the connection drops, HeadQLink keeps listening and leaves Android Auto paused for this long: if the car comes back, the picture returns instantly, without unlocking. After that it closes everything and turns off the Android Auto server. With the manual server start it closes everything the same way but cannot turn off the server: it stays on and the next trip uses it again without a restart.</string>
+    <string name="hql_car_wait_help">If the car turns off or the connection drops, QonectaLeap keeps listening and leaves Android Auto paused for this long: if the car comes back, the picture returns instantly, without unlocking. After that it closes everything and turns off the Android Auto server. With the manual server start it closes everything the same way but cannot turn off the server: it stays on and the next trip uses it again without a restart.</string>
 
     <!-- headqlink: cable USB del coche (experimental) -->
     <string name="hql_link_usb">USB cable</string>
@@ -512,12 +512,12 @@
     <string name="hql_experimental">Experimental</string>
     <string name="hql_req_usb">USB data cable</string>
     <string name="hql_req_usb_why">Connect the phone to the car\'s USB data port with a data cable (not a charge-only one). The car has to switch the phone to accessory mode: if nothing happens, export the log and send it to us (HQL/USB lines).</string>
-    <string name="hql_req_usb_chooser">With QDLink installed, Android may ask which app opens «QDriveLink» when you plug in the cable: choose HeadQLink and «Always», or uninstall QDLink.</string>
+    <string name="hql_req_usb_chooser">With QDLink installed, Android may ask which app opens «QDriveLink» when you plug in the cable: choose QonectaLeap and «Always», or uninstall QDLink.</string>
     <string name="hql_usb_guide_title">USB cable connection</string>
-    <string name="hql_usb_guide">1. Connect the phone to the car\'s USB data port with a data cable.\n2. Open the mirroring app on the car\'s screen.\n3. If Android asks which app opens «QDriveLink», choose HeadQLink and «Always».\nHeadQLink starts on its own when the car switches the phone to accessory mode, whatever connection is chosen; when you unplug the cable it goes back to Wi-Fi. If nothing happens, export the log (Diagnostics) and send it to us.</string>
+    <string name="hql_usb_guide">1. Connect the phone to the car\'s USB data port with a data cable.\n2. Open the mirroring app on the car\'s screen.\n3. If Android asks which app opens «QDriveLink», choose QonectaLeap and «Always».\nQonectaLeap starts on its own when the car switches the phone to accessory mode, whatever connection is chosen; when you unplug the cable it goes back to Wi-Fi. If nothing happens, export the log (Diagnostics) and send it to us.</string>
     <string name="hql_usb_net_waiting">USB cable: waiting for the car (data cable in the car\'s USB data port)</string>
     <string name="hql_usb_net_connected">USB cable: %1$s</string>
-    <string name="hql_usb_net_permission">USB cable: allow HeadQLink to open %1$s</string>
+    <string name="hql_usb_net_permission">USB cable: allow QonectaLeap to open %1$s</string>
     <string name="hql_usb_net_denied">USB cable: permission denied (unplug the cable and plug it in again)</string>
     <string name="hql_usb_net_open_failed">USB cable: cannot open %1$s (is another app using it, such as QDLink?)</string>
     <string name="hql_usb_net_other">USB cable: the accessory is not the car\'s (%1$s)</string>
@@ -527,18 +527,18 @@
     <string name="hql_aa_server_start_title">Android Auto server start</string>
     <string name="hql_aa_server_start_auto">Automatic (accessibility) · Recommended</string>
     <string name="hql_aa_server_start_manual">Manual (no accessibility)</string>
-    <string name="hql_aa_server_start_help">Automatic: HeadQLink starts and stops the Android Auto server by itself, with its accessibility service. Manual: no accessibility; you start it yourself (Android Auto › ⋮ › Start head unit server) after every phone restart or Android Auto update, and HeadQLink never stops it: it stays on between trips and the next one uses it again without a restart, even with the phone locked. If it ever does not answer (off, or blocked by a connection that was cut halfway), HeadQLink tells you and retries by itself: stop it and start it again (⋮ › Stop head unit server and ⋮ › Start head unit server). On a public Wi-Fi, any device on that network could try to connect: stop it when you are not using it. Applies immediately.</string>
+    <string name="hql_aa_server_start_help">Automatic: QonectaLeap starts and stops the Android Auto server by itself, with its accessibility service. Manual: no accessibility; you start it yourself (Android Auto › ⋮ › Start head unit server) after every phone restart or Android Auto update, and QonectaLeap never stops it: it stays on between trips and the next one uses it again without a restart, even with the phone locked. If it ever does not answer (off, or blocked by a connection that was cut halfway), QonectaLeap tells you and retries by itself: stop it and start it again (⋮ › Stop head unit server and ⋮ › Start head unit server). On a public Wi-Fi, any device on that network could try to connect: stop it when you are not using it. Applies immediately.</string>
     <string name="hql_aa_server_wait">Waiting for the Android Auto server</string>
-    <string name="hql_aa_server_wait_hint">Android Auto does not answer: start (or restart) its server: Android Auto › ⋮ › Stop head unit server (if shown) and ⋮ › Start head unit server. Tap here or the \"Auto\" row to open Android Auto; HeadQLink retries every 5 s and carries on by itself as soon as it answers.</string>
+    <string name="hql_aa_server_wait_hint">Android Auto does not answer: start (or restart) its server: Android Auto › ⋮ › Stop head unit server (if shown) and ⋮ › Start head unit server. Tap here or the \"Auto\" row to open Android Auto; QonectaLeap retries every 5 s and carries on by itself as soon as it answers.</string>
     <string name="hql_aa_server_ask_title">Start (or restart) the Android Auto server</string>
-    <string name="hql_aa_server_ask_text">Android Auto › ⋮ › Stop head unit server (if shown) and ⋮ › Start head unit server. Tap to open Android Auto; HeadQLink retries every 5 s and carries on by itself as soon as it answers.</string>
+    <string name="hql_aa_server_ask_text">Android Auto › ⋮ › Stop head unit server (if shown) and ⋮ › Start head unit server. Tap to open Android Auto; QonectaLeap retries every 5 s and carries on by itself as soon as it answers.</string>
     <string name="hql_aa_server_ask_channel">Android Auto manual start</string>
     <string name="hql_reason_manual">manual start: stop and start its server again in Android Auto › ⋮</string>
     <string name="hql_req_info">Info</string>
     <string name="hql_req_aa_server">Android Auto server</string>
-    <string name="hql_req_aa_server_in_use">In use by HeadQLink (Android Auto connected). When Android Auto closes normally, the server stays on and answers again: no restart needed.</string>
-    <string name="hql_req_aa_server_waiting">Not answering: start (or restart) it in Android Auto › ⋮ › Stop head unit server (if shown) and ⋮ › Start head unit server. HeadQLink retries by itself.</string>
-    <string name="hql_req_aa_server_tip">HeadQLink does not check it before connecting: a test connection (one that opens and closes without talking) would block it. Start it before connecting (⋮ › Start head unit server); while it stays on, it works for the following trips. If HeadQLink says it does not answer, stop it and start it again.</string>
+    <string name="hql_req_aa_server_in_use">In use by QonectaLeap (Android Auto connected). When Android Auto closes normally, the server stays on and answers again: no restart needed.</string>
+    <string name="hql_req_aa_server_waiting">Not answering: start (or restart) it in Android Auto › ⋮ › Stop head unit server (if shown) and ⋮ › Start head unit server. QonectaLeap retries by itself.</string>
+    <string name="hql_req_aa_server_tip">QonectaLeap does not check it before connecting: a test connection (one that opens and closes without talking) would block it. Start it before connecting (⋮ › Start head unit server); while it stays on, it works for the following trips. If QonectaLeap says it does not answer, stop it and start it again.</string>
     <string name="hql_req_auto_use">Automatic mode</string>
     <string name="hql_req_manual_title">No accessibility?</string>
     <string name="hql_req_manual_why">You can start the Android Auto server yourself (manual start) and leave accessibility off. Automatic is still the recommended mode.</string>
@@ -546,9 +546,9 @@
     <string name="hql_req_acc_manual">Only for the automatic mode</string>
     <string name="hql_req_dev_manual">Can\'t be checked without accessibility: if Android Auto › ⋮ doesn\'t show \"Start head unit server\", turn it on (guide below).</string>
     <string name="hql_manual_confirm_title">Manual start of the Android Auto server</string>
-    <string name="hql_manual_confirm_msg">Without accessibility, HeadQLink neither starts nor stops the Android Auto server:\n\n•  Start it yourself (Android Auto › ⋮ › Start head unit server) after every phone restart or Android Auto update.\n•  HeadQLink always closes Android Auto in an orderly way, so the server keeps answering: it works for the following trips without a restart, even with the phone locked. If it ever does not answer (off, or blocked by a connection that was cut halfway), HeadQLink tells you and retries by itself: stop it and start it again.\n•  It stays on until you stop it. On a public Wi-Fi, any device on that network could try to connect: stop it when you are not in the car (⋮ › Stop head unit server).\n\nAutomatic start is still the recommended mode. You can go back to it in Picture settings › Advanced.</string>
+    <string name="hql_manual_confirm_msg">Without accessibility, QonectaLeap neither starts nor stops the Android Auto server:\n\n•  Start it yourself (Android Auto › ⋮ › Start head unit server) after every phone restart or Android Auto update.\n•  QonectaLeap always closes Android Auto in an orderly way, so the server keeps answering: it works for the following trips without a restart, even with the phone locked. If it ever does not answer (off, or blocked by a connection that was cut halfway), QonectaLeap tells you and retries by itself: stop it and start it again.\n•  It stays on until you stop it. On a public Wi-Fi, any device on that network could try to connect: stop it when you are not in the car (⋮ › Stop head unit server).\n\nAutomatic start is still the recommended mode. You can go back to it in Picture settings › Advanced.</string>
     <string name="hql_setup_guide_manual_title">How to start the Android Auto server</string>
-    <string name="hql_setup_guide_manual">1.  Tap \"Open AA\".\n2.  Tap ⋮ (top right) › \"Start head unit server\".\n3.  If that option is missing: scroll to the bottom, tap \"Version\" 10 times, accept the warning and repeat step 2.\n4.  Come back to HeadQLink and connect. HeadQLink does not check it beforehand (a test connection would block it): if Android Auto does not answer with the car, it tells you and retries every 5 s.\nDo it after every phone restart or Android Auto update: between trips it stays on and works without a restart. If HeadQLink says it does not answer: ⋮ › \"Stop head unit server\" and ⋮ › \"Start head unit server\".</string>
+    <string name="hql_setup_guide_manual">1.  Tap \"Open AA\".\n2.  Tap ⋮ (top right) › \"Start head unit server\".\n3.  If that option is missing: scroll to the bottom, tap \"Version\" 10 times, accept the warning and repeat step 2.\n4.  Come back to QonectaLeap and connect. QonectaLeap does not check it beforehand (a test connection would block it): if Android Auto does not answer with the car, it tells you and retries every 5 s.\nDo it after every phone restart or Android Auto update: between trips it stays on and works without a restart. If QonectaLeap says it does not answer: ⋮ › \"Stop head unit server\" and ⋮ › \"Start head unit server\".</string>
     <!-- Vista previa del modo extendido (PreviewActivity, modo demostración) -->
     <string name="hql_preview_title">Extended mode preview</string>
     <string name="hql_preview_busy">The preview uses demo data and is not available while connected to the car. Disconnect first.</string>
@@ -677,23 +677,23 @@
     <string name="hql_w_link_usb">USB cable</string>
     <string name="hql_w_cd_link">Connection: %1$s. Tap to change it</string>
     <string name="hql_w_cd_selected">%1$s, selected</string>
-    <string name="hql_w_cd_open">Open HeadQLink</string>
+    <string name="hql_w_cd_open">Open QonectaLeap</string>
     <string name="hql_w_add_widget">Add widget to the home screen</string>
     <string name="hql_w_add_tile">Add button to Quick Settings</string>
     <string name="hql_w_pin_manual_title">Add the widget</string>
-    <string name="hql_w_pin_manual">Your home screen doesn\'t allow adding it from here. Touch and hold an empty spot on the home screen › Widgets › HeadQLink.</string>
+    <string name="hql_w_pin_manual">Your home screen doesn\'t allow adding it from here. Touch and hold an empty spot on the home screen › Widgets › QonectaLeap.</string>
     <string name="hql_w_tile_added">Button added to Quick Settings</string>
     <string name="hql_w_tile_already">The button is already in Quick Settings</string>
-    <string name="hql_w_tile_manual">Open Quick Settings, tap the pencil (edit) and drag “HeadQLink” into your buttons.</string>
+    <string name="hql_w_tile_manual">Open Quick Settings, tap the pencil (edit) and drag “QonectaLeap” into your buttons.</string>
     <!-- Versiones de Android Auto: botón del servidor no encontrado, cortes a los pocos segundos y fila de la Comprobación -->
     <string name="hql_aa_compat_channel">Android Auto compatibility</string>
-    <string name="hql_aa_ui_changed_title">HeadQLink can\'t find the server button</string>
-    <string name="hql_aa_ui_changed_text">HeadQLink can\'t find the server button in this Android Auto version (%1$s): start it by hand (⋮ › Start head unit server) or use Manual mode.</string>
+    <string name="hql_aa_ui_changed_title">QonectaLeap can\'t find the server button</string>
+    <string name="hql_aa_ui_changed_text">QonectaLeap can\'t find the server button in this Android Auto version (%1$s): start it by hand (⋮ › Start head unit server) or use Manual mode.</string>
     <string name="hql_aa_flap_title">Android Auto connects and drops after a few seconds</string>
-    <string name="hql_aa_flap_text">This happens with some new Android Auto versions (here, %1$s). Try: clear Android Auto\'s cache (Settings › Apps › Android Auto › Storage › Clear cache), stop and start its server (⋮), or go back to a tested version (%2$s). HeadQLink retries at most every 10 s.</string>
+    <string name="hql_aa_flap_text">This happens with some new Android Auto versions (here, %1$s). Try: clear Android Auto\'s cache (Settings › Apps › Android Auto › Storage › Clear cache), stop and start its server (⋮), or go back to a tested version (%2$s). QonectaLeap retries at most every 10 s.</string>
     <string name="hql_req_aa_version">Android Auto %1$s</string>
-    <string name="hql_req_aa_version_ok">Tested with HeadQLink (%1$s). So it doesn\'t change without warning, turn off Android Auto auto-update.</string>
-    <string name="hql_req_aa_version_untested">Not tested with HeadQLink yet (tested: %1$s). If it fails, turn off Android Auto auto-update (Play Store › Android Auto › ⋮) and see “Android Auto versions” in the manual.</string>
+    <string name="hql_req_aa_version_ok">Tested with QonectaLeap (%1$s). So it doesn\'t change without warning, turn off Android Auto auto-update.</string>
+    <string name="hql_req_aa_version_untested">Not tested with QonectaLeap yet (tested: %1$s). If it fails, turn off Android Auto auto-update (Play Store › Android Auto › ⋮) and see “Android Auto versions” in the manual.</string>
     <string name="hql_req_aa_version_store">Play Store</string>
     <string name="hql_route_arrival_compare">On arrival: expected %1$.1f kWh · real %2$.1f kWh (car data)</string>
     <string name="hql_route_arrival_generator">On arrival: expected %1$.1f kWh · the generator charged on the way (not measured)</string>
@@ -708,7 +708,7 @@
     <string name="hql_search_voice">Speak</string>
     <string name="hql_search_voice_none">Voice search isn\'t available on this phone.</string>
     <string name="hql_search_voice_nothing">Didn\'t catch that: try again or type it.</string>
-    <string name="hql_search_voice_permission">To search by voice, allow the microphone for HeadQLink on the phone (Settings › Apps › HeadQLink › Permissions).</string>
+    <string name="hql_search_voice_permission">To search by voice, allow the microphone for QonectaLeap on the phone (Settings › Apps › QonectaLeap › Permissions).</string>
     <string name="hql_trip_avg">Average</string>
     <string name="hql_trip_climb">Climb</string>
     <string name="hql_trip_consumption">Consumption</string>
@@ -830,10 +830,10 @@
     <string name="hql_route_map">Map</string>
     <string name="hql_route_map_title">Planned route</string>
     <string name="hql_route_map_note">The route the plan uses (OpenStreetMap), to compare with Google Maps. If Google takes another way, the plan redoes itself when it sees you on another road.</string>
-    <string name="hql_maps_listener_label">HeadQLink: Google Maps route</string>
+    <string name="hql_maps_listener_label">QonectaLeap: Google Maps route</string>
     <string name="hql_maps_read">Read the Google Maps route</string>
     <string name="hql_maps_read_on">Read the Google Maps route ✓</string>
-    <string name="hql_maps_read_help">Turn on HeadQLink: it reads the Google Maps navigation notification (route length and arrival time) so the plan follows the same route. It only reads Google Maps.</string>
+    <string name="hql_maps_read_help">Turn on QonectaLeap: it reads the Google Maps navigation notification (route length and arrival time) so the plan follows the same route. It only reads Google Maps.</string>
     <string name="hql_tab_connection">Connection</string>
     <string name="hql_ins_car">Your car now</string>
     <string name="hql_ins_range">Range</string>
@@ -849,7 +849,7 @@
     <string name="hql_ins_trips">trips</string>
     <string name="hql_ins_daily_legend">Bars: km each day · line: consumption</string>
     <string name="hql_ins_from_car">from the car</string>
-    <string name="hql_ins_from_app">trips with HeadQLink</string>
+    <string name="hql_ins_from_app">trips with QonectaLeap</string>
     <string name="hql_ins_how">How you use energy</string>
     <string name="hql_ins_per_trip">Consumption of the latest trips (kWh/100 km)</string>
     <string name="hql_ins_by_length">By trip length</string>
@@ -857,13 +857,13 @@
     <string name="hql_ins_cold_tip">Short trips use %1$s %% more: warming the battery and the cabin weighs more on a short trip.</string>
     <string name="hql_ins_best">Your best trip: %1$s kWh/100 km over %2$s km (%3$s)</string>
     <string name="hql_ins_charges">Charges</string>
-    <string name="hql_ins_no_charges">No charges saved yet: they are saved when you charge with HeadQLink running (in the car or on a trip).</string>
+    <string name="hql_ins_no_charges">No charges saved yet: they are saved when you charge with QonectaLeap running (in the car or on a trip).</string>
     <string name="hql_ins_charge_line">%1$s → %2$s %% · %3$s kWh · %4$s min · peak %5$s kW</string>
     <string name="hql_ins_dc">DC charger</string>
     <string name="hql_ins_ac">AC charging</string>
     <string name="hql_ins_curve_help">Power (kW) as the battery fills (%). The C10 slows down as it fills: that is normal.</string>
     <string name="hql_ins_drives">Drives</string>
-    <string name="hql_ins_no_drives">No drives yet: trips made with HeadQLink are saved here.</string>
+    <string name="hql_ins_no_drives">No drives yet: trips made with QonectaLeap are saved here.</string>
     <string name="hql_ins_drive_line">%1$s km · %2$s · %3$s</string>
     <string name="hql_ins_max">max</string>
     <string name="hql_ins_stops">%1$d stops</string>
@@ -909,7 +909,7 @@
     <string name="hql_ha_edit">Choose</string>
     <string name="hql_web_recent">Recently visited</string>
     <string name="hql_web_listening">Listening… say what to search for</string>
-    <string name="hql_use_responsibility">I have read and accept the Terms of Use. I acknowledge that I use HeadQLink at my own risk and accept the absence of warranties and the limitation of liability to the extent permitted by applicable law.</string>
+    <string name="hql_use_responsibility">I have read and accept the Terms of Use. I acknowledge that I use QonectaLeap at my own risk and accept the absence of warranties and the limitation of liability to the extent permitted by applicable law.</string>
     <string name="hql_panel_day">Day</string>
     <string name="hql_panel_night">Night</string>
     <string name="hql_req_microphone">Microphone</string>
@@ -917,14 +917,14 @@
     <string name="hql_req_phone">Phone calls</string>
     <string name="hql_req_phone_why">Allow access to phone call status while connected to the car.</string>
     <string name="hql_responsibility_title">Safety and liability</string>
-    <string name="hql_responsibility_summary">HeadQLink is an independent, experimental project provided “as is” without warranties. The user is responsible for safe use, compliance with traffic regulations and refraining from entertainment functions while driving.</string>
+    <string name="hql_responsibility_summary">QonectaLeap is an independent, experimental project provided “as is” without warranties. The user is responsible for safe use, compliance with traffic regulations and refraining from entertainment functions while driving.</string>
     <string name="hql_terms_title">Terms of Use</string>
     <string name="hql_terms_read">Read the Terms of Use</string>
-    <string name="hql_terms_detail">&lt;p&gt;&lt;b&gt;1. Independent and experimental software&lt;/b&gt;&lt;br&gt;HeadQLink is a personal, experimental open-source project. It relies on undocumented protocols and interfaces and on third-party services. It may fail, stop working or behave unexpectedly at any time, including after updates to the phone, vehicle or those services.&lt;/p&gt;
+    <string name="hql_terms_detail">&lt;p&gt;&lt;b&gt;1. Independent and experimental software&lt;/b&gt;&lt;br&gt;QonectaLeap is a personal, experimental open-source project. It relies on undocumented protocols and interfaces and on third-party services. It may fail, stop working or behave unexpectedly at any time, including after updates to the phone, vehicle or those services.&lt;/p&gt;
 &lt;p&gt;&lt;b&gt;2. Safe use and user responsibility&lt;/b&gt;&lt;br&gt;The driver is responsible for keeping attention on the road, driving safely and complying with applicable traffic regulations. Installation, configuration and interaction with the app must take place with the vehicle stationary in a safe location. Do not watch videos, games, web pages or other entertainment content while driving. The app does not replace vehicle safety systems or guarantee the accuracy of navigation or vehicle data.&lt;/p&gt;
 &lt;p&gt;&lt;b&gt;3. No warranties&lt;/b&gt;&lt;br&gt;The software is provided “as is”, without express or implied warranties to the extent permitted by applicable law. Its operation, availability, compatibility, safety, suitability for a particular purpose and non-infringement of third-party rights are not guaranteed. The user assumes the risks associated with installation and use.&lt;/p&gt;
 &lt;p&gt;&lt;b&gt;4. Limitation of liability&lt;/b&gt;&lt;br&gt;To the extent permitted by applicable law, and unless required by law or expressly agreed in writing, authors, contributors and distributors assume no liability for direct or indirect damages arising from use, misuse or inability to use the software. These include accidents, injuries, damage to the vehicle, phone or third parties, loss or inaccuracy of data, financial losses, fines or penalties, loss of vehicle or device warranties and violations of third-party service terms. This limitation also applies to use contrary to applicable law.&lt;/p&gt;
-&lt;p&gt;&lt;b&gt;5. No affiliation and third-party services&lt;/b&gt;&lt;br&gt;HeadQLink is independent and is not affiliated with, endorsed by or sponsored by Leapmotor, Google, Neusoft, Open Headunit or its authors. Mentioned trademarks belong to their respective owners and describe compatibility. Third-party services are subject to their own terms and may change or become unavailable.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;5. No affiliation and third-party services&lt;/b&gt;&lt;br&gt;QonectaLeap is independent and is not affiliated with, endorsed by or sponsored by Leapmotor, Google, Neusoft, Open Headunit or its authors. Mentioned trademarks belong to their respective owners and describe compatibility. Third-party services are subject to their own terms and may change or become unavailable.&lt;/p&gt;
 &lt;p&gt;&lt;b&gt;6. License and acceptance&lt;/b&gt;&lt;br&gt;The software is distributed under GNU AGPL-3.0. Sections 15 and 16 concerning warranty disclaimers and limitation of liability apply. These terms do not change the rights granted by that license or exclude liabilities or rights that applicable law does not allow to be excluded. By checking the box, the user declares that these terms have been read and accepted. Acceptance is stored locally upon completion of setup.&lt;/p&gt;</string>
     <string name="hql_tv_fill">Fill screen</string>
     <string name="hql_tv_fit">Fit picture</string>
@@ -936,7 +936,7 @@
     <string name="hql_settings_reconnect_note">Changing the profile or the smoothness reconnects the car and Android Auto (a few seconds).</string>
     <string name="hql_usb_busy_channel">Car cable</string>
     <string name="hql_usb_busy_title">The car cable is taken by another app</string>
-    <string name="hql_usb_busy_qdlink">The original QDLink app probably has it. Tap, then «Force stop», and HeadQLink will take the cable.</string>
+    <string name="hql_usb_busy_qdlink">The original QDLink app probably has it. Tap, then «Force stop», and QonectaLeap will take the cable.</string>
     <string name="hql_usb_busy_other">Close the app that is using it, or unplug and plug the cable back in.</string>
     <string name="hql_float_card">Next stop card over Android Auto</string>
     <string name="hql_float_card_help">Tap it to open the route; press and hold to move it.</string>

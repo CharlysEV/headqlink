@@ -646,7 +646,7 @@
     <string name="wifi_disconnect_toast">Android Auto déconnecté : Si tu utilises AA sans fil, désactive \"Basculer entre les réseaux\" ou \"Accélération réseau\" dans les paramètres WiFi du téléphone</string>
     <string name="reset_usb_option">Réinitialiser la connexion USB</string>
     <string name="reset_usb_timeout">Périphérique USB introuvable. Vérifie la connexion.</string>
-    <string name="notification_service_running">Open Headunit est en cours d\'exécution</string>
+    <string name="notification_service_running">QonectaLeap est en cours d\'exécution</string>
     <string name="boot_loop_paused_title">Démarrage sans fil mis en pause</string>
     <string name="boot_loop_paused_generic">Cet appareil a redémarré trois fois de suite peu après le lancement du sans fil par Open Headunit, le sans fil a donc été laissé désactivé cette fois. L\'USB fonctionne toujours. Ouvre l\'application pour le réactiver.</string>
     <string name="boot_loop_paused_native_wifi_direct">Cet appareil a redémarré trois fois de suite peu après le lancement du sans fil par Open Headunit, le sans fil a donc été laissé désactivé cette fois. Sur certains autoradios, la puce WiFi fait planter tout le système lorsqu\'un téléphone rejoint un réseau WiFi Direct. Essaie de passer Android Auto en mode point d\'accès de l\'autoradio. L\'USB fonctionne toujours.</string>

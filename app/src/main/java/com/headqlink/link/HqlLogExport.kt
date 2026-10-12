@@ -85,7 +85,7 @@ internal object HqlLogExport {
         QdTrace.flush(3_000)
         val base = ctx.getExternalFilesDir(null) ?: throw IOException("sin almacenamiento de la app")
         val sel = select(base)
-        val name = "HeadQLink-log-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date()) + ".zip"
+        val name = "QonectaLeap-log-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date()) + ".zip"
         val summary = summary(ctx, base, sel)
         val result = if (Build.VERSION.SDK_INT >= 29) exportMediaStore(ctx, name, sel, summary) else exportPrivate(ctx, name, sel, summary)
         L.i("log exportado a ${result.where}: ${sel.included.size} ficheros, ${sel.totalBytes} B sin comprimir")
@@ -97,7 +97,7 @@ internal object HqlLogExport {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "application/zip"
             putExtra(Intent.EXTRA_STREAM, e.uri)
-            putExtra(Intent.EXTRA_SUBJECT, "HeadQLink: ${e.displayName}")
+            putExtra(Intent.EXTRA_SUBJECT, "QonectaLeap: ${e.displayName}")
             clipData = ClipData.newRawUri(e.displayName, e.uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -163,7 +163,7 @@ internal object HqlLogExport {
 
     private fun summary(ctx: Context, base: File, sel: Selection): String = buildString {
         val cfg = Config(ctx)
-        append("HeadQLink · exportación del log · ").append(Date()).append('\n')
+        append("QonectaLeap · exportación del log · ").append(Date()).append('\n')
         append("versión ").append(com.andrerinas.openheadunit.BuildConfig.VERSION_NAME).append(" (")
             .append(com.andrerinas.openheadunit.BuildConfig.GIT_SHA).append(") · ").append(Build.MANUFACTURER).append(' ')
             .append(Build.MODEL).append(" · Android ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")\n\n")

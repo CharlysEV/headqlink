@@ -66,7 +66,7 @@
     <string name="hql_cloud_expired_title">De Leapmotor-sessie is verlopen</string>
     <string name="hql_cloud_expired_body">Log opnieuw in op de telefoon: ⚙ › Autogegevens (Leapmotor-account).</string>
     <string name="hql_cloud_server_key_title">De Leapmotor-server heeft een ander certificaat</string>
-    <string name="hql_cloud_server_key_body_car">Voor de veiligheid maakt HeadQLink geen verbinding tot je het hebt gecontroleerd op de telefoon: ⚙ › Autogegevens.</string>
+    <string name="hql_cloud_server_key_body_car">Voor de veiligheid maakt QonectaLeap geen verbinding tot je het hebt gecontroleerd op de telefoon: ⚙ › Autogegevens.</string>
     <string name="hql_cloud_error_title">Nog geen autogegevens</string>
     <string name="hql_cloud_error_body">De cloud kon niet worden uitgelezen (geen verbinding of geen antwoord). Nieuwe poging over %1$d min.</string>
     <string name="hql_cloud_trip_real">Rit · echt</string>
@@ -80,7 +80,7 @@
     <!-- Phone: ⚙ › Car data (Leapmotor account) -->
     <string name="hql_cloud_menu">Autogegevens (Leapmotor-account)</string>
     <string name="hql_cloud_label">Leapmotor-account · optioneel</string>
-    <string name="hql_cloud_intro">HeadQLink kan met je account de status van je auto uit de Leapmotor-cloud lezen (accu, actieradius, laden, bandenspanning, deuren en kilometerstand) en die tonen in de uitgebreide modus: het tabblad Status, en het werkelijke accupercentage in Route, Efficiëntie en Ritten.\n\n• Alleen-lezen: er worden nooit opdrachten naar de auto gestuurd.\n• Onofficiële API: kan op elk moment stoppen met werken.\n• Je gegevens gaan alleen naar de servers van Leapmotor. Het certificaat en de sessie worden versleuteld op deze telefoon opgeslagen; het wachtwoord wordt niet opgeslagen.\n• Er is hetzelfde clientcertificaat nodig als voor de app LMB10.</string>
+    <string name="hql_cloud_intro">QonectaLeap kan met je account de status van je auto uit de Leapmotor-cloud lezen (accu, actieradius, laden, bandenspanning, deuren en kilometerstand) en die tonen in de uitgebreide modus: het tabblad Status, en het werkelijke accupercentage in Route, Efficiëntie en Ritten.\n\n• Alleen-lezen: er worden nooit opdrachten naar de auto gestuurd.\n• Onofficiële API: kan op elk moment stoppen met werken.\n• Je gegevens gaan alleen naar de servers van Leapmotor. Het certificaat en de sessie worden versleuteld op deze telefoon opgeslagen; het wachtwoord wordt niet opgeslagen.\n• Er is hetzelfde clientcertificaat nodig als voor de app LMB10.</string>
     <string name="hql_cloud_enabled">Werkelijke autogegevens gebruiken</string>
     <string name="hql_cloud_step_cert">1 · Clientcertificaat</string>
     <string name="hql_cloud_cert_none">Geen certificaat. Kies app.crt en app.key (samen of na elkaar), een .pem met beide blokken of een .p12/.pfx.</string>
@@ -97,7 +97,7 @@
     <string name="hql_cloud_cert_err_no_cert">Het certificaat ontbreekt: kies ook de .crt (of een .pem met beide).</string>
     <string name="hql_cloud_cert_err_mismatch">Die sleutel hoort niet bij dat certificaat.</string>
     <string name="hql_cloud_cert_err_encrypted">Deze versleutelde sleutel wordt niet ondersteund: gebruik hem zonder wachtwoord (openssl pkcs8 -topk8 -nocrypt) of als .p12.</string>
-    <string name="hql_cloud_cert_err_unreadable">Die bestanden zijn geen certificaat dat HeadQLink kan lezen (PEM, DER of PKCS#12).</string>
+    <string name="hql_cloud_cert_err_unreadable">Die bestanden zijn geen certificaat dat QonectaLeap kan lezen (PEM, DER of PKCS#12).</string>
     <string name="hql_cloud_cert_err_too_big">Dat bestand is te groot voor een certificaat.</string>
     <string name="hql_cloud_cert_have_cert">Certificaat gelezen (%1$s). Kies nu de sleutel (app.key).</string>
     <string name="hql_cloud_cert_have_key">Sleutel gelezen (%1$s). Kies nu het certificaat (app.crt).</string>
@@ -158,7 +158,7 @@
     <string name="hql_cloud_trips_car_total_fuel">Volgens de auto: %1$d ritten · %3$.1f kWh/100 · %4$.1f L/100</string>
     <string name="hql_cloud_3d_hint">Sleep om te draaien</string>
     <string name="hql_cloud_step_sentry">5 · Schildwachtmodus</string>
-    <string name="hql_cloud_sentry_note">Optioneel. Dit is de enige opdracht die HeadQLink naar de auto stuurt, en alleen als je hier de pincode van de auto opslaat (versleuteld op de telefoon). Zonder pincode blijft alles alleen-lezen.</string>
+    <string name="hql_cloud_sentry_note">Optioneel. Dit is de enige opdracht die QonectaLeap naar de auto stuurt, en alleen als je hier de pincode van de auto opslaat (versleuteld op de telefoon). Zonder pincode blijft alles alleen-lezen.</string>
     <string name="hql_cloud_pin_hint">Pincode van de auto (die van de Leapmotor-app)</string>
     <string name="hql_cloud_pin_save">Opslaan</string>
     <string name="hql_cloud_pin_forget">Pincode vergeten</string>

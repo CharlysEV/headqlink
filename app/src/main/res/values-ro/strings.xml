@@ -371,7 +371,7 @@
     <string name="wifi_disconnect_toast">Android Auto deconectat: Dacă folosiți AA wireless, dezactivați \"Comutare între rețele\" sau \"Accelerare rețea\" în setările WiFi ale telefonului</string>
     <string name="reset_usb_option">Resetează conexiunea USB</string>
     <string name="reset_usb_timeout">Dispozitivul USB nu a fost găsit. Verifică conexiunea.</string>
-    <string name="notification_service_running">Open Headunit rulează</string>
+    <string name="notification_service_running">QonectaLeap rulează</string>
     <string name="notification_projection_active">Android Auto este proiectat</string>
     <string name="shortcut_connect_title">Conectare</string>
     <string name="shortcut_connect_desc">Conectează ultimul dispozitiv știut</string>

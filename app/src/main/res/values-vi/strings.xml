@@ -381,7 +381,7 @@
     <string name="wifi_disconnect_toast">Android Auto đã ngắt: Nếu dùng AA không dây, tắt \"Chuyển mạng tự động\" hoặc \"Tăng tốc mạng\" trong cài đặt WiFi của điện thoại</string>
     <string name="reset_usb_option">Đặt lại kết nối USB</string>
     <string name="reset_usb_timeout">Không tìm thấy thiết bị USB. Vui lòng kiểm tra kết nối.</string>
-    <string name="notification_service_running">Open Headunit đang chạy</string>
+    <string name="notification_service_running">QonectaLeap đang chạy</string>
     <string name="notification_projection_active">Android Auto đang chiếu</string>
     <string name="shortcut_connect_title">Kết nối</string>
     <string name="shortcut_connect_desc">Tự kết nối điện thoại lần trước</string>

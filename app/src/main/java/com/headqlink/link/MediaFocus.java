@@ -50,7 +50,10 @@ final class MediaFocus implements AudioManager.OnAudioFocusChangeListener {
         } else {
             result = audio.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
         }
-        if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return false;
+        if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            L.w("foco de audio: Android no lo da (" + result + ")");
+            return false;
+        }
         held = true;
         select();
         return true;
@@ -88,6 +91,7 @@ final class MediaFocus implements AudioManager.OnAudioFocusChangeListener {
 
     @Override
     public void onAudioFocusChange(int change) {
+        L.i("foco de audio: cambio " + change + (held ? "" : " (sin foco)") + (closed ? " (cerrado)" : "") + (interrupted ? " (interrumpido)" : ""));
         if (!held || closed) return;
         switch (change) {
             case AudioManager.AUDIOFOCUS_LOSS:

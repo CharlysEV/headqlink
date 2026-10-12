@@ -52,8 +52,13 @@ final class WebAudio {
                                 return;
                             }
                             playing.put(id, reply);
-                            if (focus.isInterrupted()) reply.postMessage("suspend");
-                            else if (!focus.acquire()) pause();
+                            if (focus.isInterrupted()) {
+                                L.i("web: sonido de la página en espera (foco interrumpido)");
+                                reply.postMessage("suspend");
+                            } else if (!focus.acquire()) {
+                                L.w("web: sin foco de audio: se pausa la página");
+                                pause();
+                            }
                         } else if (text.startsWith("idle:")) {
                             playing.remove(id);
                             if (playing.isEmpty()) focus.release();
