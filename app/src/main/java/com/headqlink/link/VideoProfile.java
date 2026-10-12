@@ -25,6 +25,11 @@ import java.util.Locale;
  * - Medio: "último frame" a 45 fps fijos (AA a 60, un frame por tic) y 720p, 5 Mbps.
  * - Básico: reenvío directo del vídeo de AA con freno, a 30 fps y 720p (no recodifica).
  * - Muy bajo: "último frame" a 20 fps fijos, 720p y 2,5 Mbps (lo mínimo para el enlace y la batería).
+ * - Máximo (cable): lo mejor que da el enlace, pensado para el cable USB. Los fps que pide el coche (60 por cable, 30
+ *   por Wi-Fi) también para Android Auto, siempre a resolución completa (sin empezar a 720p), 12 Mbit/s de partida por
+ *   cable (8 por Wi-Fi) y adaptable 5-16, H.264 High sin B-frames (más calidad por bit; Baseline si se elige en
+ *   Avanzado), SPS que pide al coche mostrar cada fotograma al descodificarlo, y el codificador con baja latencia y
+ *   relojes al máximo. Calienta más: la protección térmica sigue bajando fps y bitrate si hace falta.
  * El recomendado se elige según lo que declara el codificador por hardware del móvil y su RAM (recommend).
  */
 final class VideoProfile {
@@ -34,7 +39,13 @@ final class VideoProfile {
     static final String MEDIUM = "medio";
     static final String BASIC = "basico";
     static final String LOW = "muy_bajo";
-    static final String[] ALL = {CAR, MAX, HIGH, MEDIUM, BASIC, LOW};
+    static final String BEST = "maximo";
+    static final String[] ALL = {CAR, BEST, MAX, HIGH, MEDIUM, BASIC, LOW};
+    /** Máximo: bitrate de partida por cable (el coche pide 50 fps o más) y por Wi-Fi, y el margen adaptable. */
+    static final int BEST_CABLE_BPS = 12_000_000;
+    static final int BEST_WIFI_BPS = 8_000_000;
+    static final int BEST_MIN_BPS = 5_000_000;
+    static final int BEST_MAX_BPS = 16_000_000;
     /** Coche: fps y bitrate si el coche no manda VIDEO_ARGS (como el C10). */
     static final int CAR_DEFAULT_FPS = 30;
     static final int CAR_DEFAULT_BPS = 5_000_000;
@@ -63,6 +74,24 @@ final class VideoProfile {
     final boolean followsCar;
     /** Coche: «Fluidez» elegida (FLUID_30 o FLUID_60); en los demás perfiles, FLUID_30 sin efecto. */
     final int fluidity;
+
+    /** Máximo (cable): fps del coche sin tope de 30, H.264 High, SPS de baja latencia (BEST). */
+    boolean best() {
+        return BEST.equals(id);
+    }
+
+    /** Perfil H.264 que pide el modo (null: el de Avanzado, Baseline de serie). */
+    String h264() {
+        return best() ? "high" : null;
+    }
+
+    /**
+     * Android Auto y el vídeo sin pasar de 30 fps aunque el coche pida 60 (por cable): solo el perfil Coche con «Fluidez»
+     * a 30 (VideoPipeline.contentCap). Los demás van a sus fps.
+     */
+    boolean capsContentTo30() {
+        return followsCar && fluidity < FLUID_60;
+    }
 
     private VideoProfile(String id, boolean reencode, int fps, boolean hd720, boolean fixedRate, boolean boost,
                          int bitrate, int minBitrate, int maxBitrate) {
@@ -111,6 +140,8 @@ final class VideoProfile {
      * Fluidez 60, 60 pida lo que pida el coche (la cabecera de vídeo sigue repitiendo su FrameRate).
      */
     int fpsFor(int carFps) {
+        // Máximo: los del coche (60 por cable, 30 por Wi-Fi); sin VIDEO_ARGS, 60.
+        if (best()) return carFps > 0 ? Math.max(10, Math.min(60, carFps)) : fps;
         if (!followsCar) return fps;
         if (fluidity >= FLUID_60) return FLUID_60;
         if (carFps <= 0) return fps;
@@ -133,6 +164,7 @@ final class VideoProfile {
      * El adaptable al enlace (LinkRateController) y la protección térmica siguen bajándolo si hace falta.
      */
     int startBitrate(int carBitrate, int carFps, int videoW) {
+        if (best()) return carFps >= 50 || carFps <= 0 ? BEST_CABLE_BPS : Math.max(carBitrate, BEST_WIFI_BPS);
         if (followsCar) {
             int car = carBitrate > 0 ? carBitrate : CAR_DEFAULT_BPS;
             if (fluidity >= FLUID_60 || carFps >= 50) return Math.min(FLUID_60_MAX_BPS, Math.max(car, FLUID_60_MIN_BPS));
@@ -145,6 +177,8 @@ final class VideoProfile {
     /** Perfil por su id; uno desconocido (de una versión vieja o mal escrito) es Coche. */
     static VideoProfile of(String id) {
         switch (id == null ? "" : id) {
+            case BEST:
+                return new VideoProfile(BEST, true, 60, false, false, true, BEST_CABLE_BPS, BEST_MIN_BPS, BEST_MAX_BPS);
             case MAX:
                 return new VideoProfile(MAX, true, 60, false, false, true, 10_000_000, 5_000_000, 16_000_000);
             case HIGH:
@@ -171,6 +205,8 @@ final class VideoProfile {
 
     static String title(String id) {
         switch (id) {
+            case BEST:
+                return Str.get(R.string.hql_profile_best);
             case MAX:
                 return Str.get(R.string.hql_profile_max);
             case HIGH:
@@ -188,6 +224,8 @@ final class VideoProfile {
 
     static String detail(String id) {
         switch (id) {
+            case BEST:
+                return Str.get(R.string.hql_profile_best_detail);
             case MAX:
                 return Str.get(R.string.hql_profile_max_detail);
             case HIGH:

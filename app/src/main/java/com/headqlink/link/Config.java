@@ -871,8 +871,28 @@ final class Config {
         return new int[]{w & ~1, h & ~1};
     }
 
+    /**
+     * Perfil H.264 del encoder: el de Avanzado (Baseline de serie) o, con el perfil de imagen Máximo, el suyo (High) salvo
+     * que en Avanzado se elija otro estando en Máximo (H264_BEST).
+     */
     String profile() {
+        VideoProfile p = videoProfile();
+        if (p.h264() != null) return sp.getString(H264_BEST, p.h264());
         return sp.getString(PROFILE, "baseline");
+    }
+
+    /** Perfil H.264 elegido en Avanzado estando en Máximo (vacío: el del perfil). */
+    static final String H264_BEST = "h264_best";
+
+    /** Guarda el perfil H.264 de Avanzado: para Máximo aparte, para no cambiar el de los demás perfiles. */
+    void setProfileFor(VideoProfile p, String h264) {
+        if (p.h264() != null) sp.edit().putString(H264_BEST, h264).apply();
+        else setProfile(h264);
+    }
+
+    /** SPS de baja latencia (H264SpsCrop.lowDelayIfNeeded): con Máximo, o a mano (adb, sps_low_delay). */
+    boolean spsLowDelay() {
+        return videoProfile().best() || getBool("sps_low_delay");
     }
 
     void setProfile(String p) {

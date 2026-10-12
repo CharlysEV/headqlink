@@ -222,7 +222,8 @@ final class AaPassthroughSource implements VideoSource {
      */
     /** fps a los que dibuja Android Auto: 30, o 60 con «Fluidez» a 60 y la sesión a 60. */
     private int aaFps() {
-        return targetFps > 30 && new Config(ctx).fluidity() >= VideoProfile.FLUID_60 ? 60 : 30;
+        // Coche a 30 (lo de serie): AA a 30 aunque el coche pida 60. Máximo, Muy alto, Alto… y Fluidez 60: los de la sesión.
+        return targetFps > 30 && !new Config(ctx).videoProfile().capsContentTo30() ? 60 : 30;
     }
 
     @Override
@@ -564,6 +565,7 @@ final class AaPassthroughSource implements VideoSource {
         relay = new GlFrameRelay(surface, width, height, nw, nh, fps, aaVideoX(), aaVideoW(), true);
         relay.setGate(gate);
         relay.setFixedRate(fixedRate);
+        relay.setBurstTolerance(new Config(ctx).videoProfile().best());
         relay.setSplashOnly(!extended);
         // La capa se diseña a la resolución de la pantalla del coche; el relay la escala al vídeo.
         relay.setOverlaySize(extended ? uiW : carW, extended ? uiH : carH);
@@ -684,6 +686,8 @@ final class AaPassthroughSource implements VideoSource {
      */
     @Override
     public void touchMulti(int globalAction, Proto.Finger[] fingers) {
+        // Máximo: 60 fps mientras se toca (VideoPipeline.onTouch); sin toques, 30.
+        VideoPipeline.onTouch();
         Proto.Finger first = null;
         int count = 0;
         for (Proto.Finger f : fingers) {

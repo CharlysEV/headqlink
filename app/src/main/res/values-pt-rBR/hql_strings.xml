@@ -994,4 +994,6 @@
     <string name="hql_speed_advice_rescue">Com o plano você não chega: a %1$d km/h chega (%2$s a mais dirigindo).</string>
     <string name="hql_settings_price_fast">Preço na recarga rápida</string>
     <string name="hql_settings_price_fast_help">Para o custo do plano de recarga da rota (as paradas em carregadores rápidos).</string>
+    <string name="hql_profile_best">Máximo (cabo)</string>
+    <string name="hql_profile_best_detail">Para o cabo: 60 fps, resolução total, 12-16 Mbit/s, H.264 High e codificador de baixa latência. Esquenta mais o celular. Se a tela do carro ficar preta, volte para Carro.</string>
 </resources>

@@ -274,6 +274,9 @@ final class VideoPipeline {
 
     // ---------------------------------------------------------------- encoder (último frame, patrón, app)
 
+    /** El SPS del encoder se reescribe para baja latencia (Config.spsLowDelay). */
+    private boolean lowDelaySps;
+
     private void startEncoder() throws IOException {
         int carFps = plan.car.argsFps;
         int carBitrate = plan.car.argsBitrate;
@@ -283,6 +286,8 @@ final class VideoPipeline {
         vp.fps = plan.fps;
         vp.bitrate = cfg.bitrate(carBitrate);
         vp.profile = cfg.profile();
+        lowDelaySps = cfg.spsLowDelay() && !cfg.prependSpsPps();
+        boostOnTouch = cfg.videoProfile().best();
         vp.prependSpsPps = cfg.prependSpsPps();
         vp.lowLatency = LowLatency.enabled;
         vp.noRepeat = cfg.getBool("enc_no_repeat");
@@ -344,6 +349,14 @@ final class VideoPipeline {
             @Override
             public void onCodecConfig(byte[] c) {
                 L.i("SPS/PPS " + c.length + " bytes: " + L.hex(c, 0, Math.min(48, c.length)) + " · " + H264Info.describe(c));
+                if (lowDelaySps) {
+                    // Que el coche muestre cada fotograma al descodificarlo (sin reordenar ni retener): solo si el SPS
+                    // del encoder no lo dice ya; si no se puede reescribir, el original.
+                    byte[] ld = H264SpsCrop.lowDelayIfNeeded(c, vp.width, vp.height);
+                    L.i("SPS baja latencia: " + (ld != null ? "reescrito (" + H264SpsCrop.lastInfo + ")"
+                            : "sin cambios (" + H264SpsCrop.lastInfo + ")"));
+                    if (ld != null) c = ld;
+                }
                 synchronized (csdLock) {
                     csd = c;
                     SessionPort p = active;
@@ -548,8 +561,58 @@ final class VideoPipeline {
         return Math.min(sessionFps, CONTENT_FPS);
     }
 
+    /**
+     * Máximo: los fps de la sesión (60 por cable) solo mientras se toca la pantalla y TOUCH_BOOST_MS después del último
+     * toque; sin toques, CONTENT_FPS estables (en rejilla), que para un mapa que se mueve despacio sobran. Así el móvil
+     * solo se exige cuando hace falta.
+     */
+    static final long TOUCH_BOOST_MS = 2500;
+    private static volatile long lastTouchMs;
+    private volatile boolean touchBoost;
+
+    /** Un toque del coche (AaPassthroughSource.touchMulti): con Máximo sube a los fps de la sesión ya. */
+    static void onTouch() {
+        lastTouchMs = SystemClock.elapsedRealtime();
+        VideoPipeline p = current;
+        if (p == null || p.stopped || p.touchBoost || !p.boostOnTouch) return;
+        p.touchBoost = true;
+        p.h.post(() -> {
+            p.applyFpsCap();
+            PerfTrace.event("touch_boost", p.fpsCap);
+            p.h.postDelayed(p.boostEnd, TOUCH_BOOST_MS);
+        });
+    }
+
+    /** Fin del empujón: si siguen los toques, se vuelve a mirar más tarde; si no, a CONTENT_FPS. */
+    private final Runnable boostEnd = new Runnable() {
+        @Override
+        public void run() {
+            long idle = SystemClock.elapsedRealtime() - lastTouchMs;
+            if (idle < TOUCH_BOOST_MS) {
+                h.postDelayed(this, TOUCH_BOOST_MS - idle);
+                return;
+            }
+            touchBoost = false;
+            applyFpsCap();
+            PerfTrace.event("touch_boost", fpsCap);
+        }
+    };
+
+    /** Con Máximo: los fps suben con los toques (onTouch). */
+    private volatile boolean boostOnTouch;
+
+    /** Puro: tope de Máximo: con juego o tocando, el que ya hay; si no, como mucho CONTENT_FPS. */
+    static int interactiveCap(boolean best, boolean game, boolean touching, int cap) {
+        if (!best || game || touching) return cap;
+        return Math.min(cap, CONTENT_FPS);
+    }
+
     private void applyFpsCap() {
-        int fps = Math.min(Math.min(thermalFpsCap, linkFpsCap), contentCap(gameMode, cfg.fluidity(), plan.fps));
+        // Solo Coche a 30 se queda en 30 aunque el coche pida 60; los demás perfiles (Máximo, Muy alto…), a sus fps.
+        VideoProfile prof = cfg.videoProfile();
+        boolean full = gameMode || !prof.capsContentTo30();
+        int content = interactiveCap(prof.best(), gameMode, touchBoost, contentCap(full, cfg.fluidity(), plan.fps));
+        int fps = Math.min(Math.min(thermalFpsCap, linkFpsCap), content);
         if (!gated) {
             fpsCap = vp != null ? vp.fps : plan.fps;
             return;

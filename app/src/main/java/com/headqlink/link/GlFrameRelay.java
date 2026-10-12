@@ -226,15 +226,29 @@ final class GlFrameRelay {
         pacer.setFps(pacer.fps(), on);
     }
 
+    /**
+     * Un periodo de tolerancia en el ritmo (FramePacer.setBurst) cuando va a 50 fps o más: con el perfil Máximo, para no
+     * perder frames de AA a 60. A menos (30 sin toques), el ritmo de siempre, el más estable. Llamar antes de start.
+     */
+    void setBurstTolerance(boolean on) {
+        burstAllowed = on;
+        pacer.setBurst(on && pacer.fps() >= 50);
+        if (on) L.i("GL relay: a 60 fps, ritmo con un periodo de tolerancia (Máximo)");
+    }
+
+    private volatile boolean burstAllowed;
+
     /** fps máximos en marcha (adaptación térmica) y si van en rejilla; se aplica en el hilo GL sin parar nada. */
     void setMaxFps(int fps, boolean fixed) {
         Handler hh = h;
         if (hh == null) {
             pacer.setFps(fps, fixed);
+            pacer.setBurst(burstAllowed && fps >= 50);
             return;
         }
         hh.post(() -> {
             pacer.setFps(fps, fixed);
+            pacer.setBurst(burstAllowed && fps >= 50);
             L.i("GL relay: ritmo " + fps + " fps" + (pacer.fixed() ? " en rejilla" : ""));
         });
     }

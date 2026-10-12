@@ -994,4 +994,6 @@
     <string name="hql_speed_advice_rescue">Avec ce plan vous n\'arrivez pas : à %1$d km/h, si (%2$s de conduite en plus).</string>
     <string name="hql_settings_price_fast">Prix de la recharge rapide</string>
     <string name="hql_settings_price_fast_help">Pour le coût du plan de recharge de l\'itinéraire (les arrêts aux bornes rapides).</string>
+    <string name="hql_profile_best">Maximum (câble)</string>
+    <string name="hql_profile_best_detail">Pour le câble : 60 i/s, pleine résolution, 12-16 Mbit/s, H.264 High et encodeur à faible latence. Le téléphone chauffe davantage. Si l\'écran de la voiture reste noir, revenez à Voiture.</string>
 </resources>

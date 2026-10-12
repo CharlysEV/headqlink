@@ -87,4 +87,22 @@ class FramePacerTest {
         assertEquals(1_000_000_000L / 24, GlFrameRelay.keepAlivePeriodNs(24))
         assertEquals(1_000_000_000L / 30, GlFrameRelay.keepAlivePeriodNs(0))
     }
+
+    @Test
+    fun burstToleranceKeepsJittery60At60() {
+        // AA a 60 a rachas (como en casa con Máximo): tres frames en 6 ms y un hueco de 44 ms. Con medio periodo se pierde
+        // uno de cada tres; con uno entero, ninguno.
+        val arrivals = every(50.0, 0.0, 10).flatMap { listOf(it, it + 3, it + 6) }
+        val half = simulate(FramePacer(60), grid = false, seconds = 10, arrivalsMs = arrivals)
+        val full = simulate(FramePacer(60).apply { setBurst(true) }, grid = false, seconds = 10, arrivalsMs = arrivals)
+        assertTrue("medio $half, entero $full de ${arrivals.size}", full > half)
+        assertTrue("entero $full de ${arrivals.size}", full >= arrivals.size * 97 / 100)
+    }
+
+    @Test
+    fun burstToleranceNeverExceedsTheRate() {
+        // AA a 90: con un periodo de tolerancia, como mucho 60 de media (más uno).
+        val drawn = simulate(FramePacer(60).apply { setBurst(true) }, grid = false, seconds = 10, arrivalsMs = every(1000.0 / 90, 0.0, 10))
+        assertTrue("dibujados $drawn", drawn in 590..601)
+    }
 }

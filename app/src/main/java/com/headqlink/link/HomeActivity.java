@@ -1156,6 +1156,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         fill(kbps, Config.KBPS);
         fill(w, Config.WIDTH);
         fill(h, Config.HEIGHT);
+        String h264Before = cfg.profile();
         profile.check("main".equals(cfg.profile()) ? R.id.hql_v_main
                 : "high".equals(cfg.profile()) ? R.id.hql_v_high : R.id.hql_v_baseline);
         RadioGroup engine = v.findViewById(R.id.hql_v_engine);
@@ -1220,7 +1221,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                         ThermalGuard.onModeChanged();
                     }
                     int id = profile.getCheckedRadioButtonId();
-                    cfg.setProfile(id == R.id.hql_v_main ? "main" : id == R.id.hql_v_high ? "high" : "baseline");
+                    String h264 = id == R.id.hql_v_main ? "main" : id == R.id.hql_v_high ? "high" : "baseline";
+                    // Solo si se ha tocado: con Máximo (High de serie) se guarda aparte, para no cambiar el de los demás.
+                    if (!h264.equals(h264Before)) cfg.setProfileFor(cfg.videoProfile(), h264);
                     View waitSel = carWait.findViewById(carWait.getCheckedRadioButtonId());
                     if (waitSel != null && (int) waitSel.getTag() != waitBefore) {
                         // Se lee al perder al coche: vale ya para la próxima espera, sin reconectar.

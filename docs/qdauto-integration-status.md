@@ -2695,3 +2695,22 @@ Tras un inventario de todas las pantallas del móvil: los diálogos ya eran Mate
   - **pantallas heredadas de Open Headunit:** ya no se llega a ellas desde la notificación;
   - **pantalla del coche:** se dibuja a propósito como Android Auto.
 - **`PhoneScreensRenderTest`** dibuja en el PC las pantallas del móvil (`-Ppreview`, `app/build/preview/movil_*.png`), como `CarPanelRenderTest` con las del coche.
+
+## 38. Perfil «Máximo (cable)»: más calidad y menos retraso por cable (0.2.58, sin probar en el coche)
+
+- **Qué hace** (`VideoProfile.BEST`, «Máximo (cable)» en Ajustes de imagen, en el móvil y en el coche):
+  - fps de la sesión los que pide el coche: 60 por cable, 30 por Wi-Fi (`fpsFor`);
+  - siempre a resolución completa: `ThermalResolution` no lo baja a 720p (solo actúa con Coche);
+  - 12 Mbit/s de partida por cable (8 por Wi-Fi), adaptable entre 5 y 16;
+  - H.264 High sin B-frames (CABAC y transformada 8x8: más calidad por bit). En Avanzado se puede volver a Baseline solo para Máximo (`h264_best`), sin tocar el de los demás perfiles;
+  - encoder con la extensión de baja latencia y relojes al máximo (`boost`).
+- **60 fps solo cuando hace falta** (petición del usuario: «exigir al móvil solo cuando sea necesario»):
+  - sin toques, 30 fps en rejilla, estables (`VideoPipeline.interactiveCap`);
+  - un toque del coche (`AaPassthroughSource.touchMulti` → `VideoPipeline.onTouch`) sube en el acto a los fps de la sesión, y se vuelve a 30 a los 2,5 s del último toque (`TOUCH_BOOST_MS`);
+  - con un emulador abierto, 60 como siempre.
+- **Ritmo del relay a 60:** con medio periodo de tolerancia se perdían los frames de AA que llegan a rachas (16-56 de cada ~290 en 5 s, esperas de hasta 35 ms). Con Máximo y a 50 fps o más, un periodo entero (`FramePacer.setBurst`): en casa, 2 de 300 y 59,6 fps enviados. La media sigue sin pasar de los fps pedidos.
+- **SPS de baja latencia** (`H264SpsCrop.lowDelayIfNeeded`): si el SPS del encoder no dice `max_num_reorder_frames=0` y el búfer mínimo, se reescribe para que el coche muestre cada fotograma nada más descodificarlo. El c2.qti del S25 ya lo trae (Baseline y High: POC tipo 2, reorder 0, búfer 1), así que ahí no se toca.
+- **Arreglo de la 0.2.55:** el tope de 30 fps sin juego también frenaba a Muy alto y Alto; ahora solo se aplica a Coche con Fluidez a 30 (`VideoProfile.capsContentTo30`), y AA va a 60 en esos perfiles.
+- **Probado en casa** (carsim por Wi-Fi pidiendo 1920x882 a 60 fps, modo ampliado, AA 17.7): SPS High 4.2 con CABAC, 1 SPS/PPS, mensaje máximo de 110 KB, sin cortes, y ffmpeg descodifica todo sin errores; 30 fps en reposo y 59,6 tocando.
+- **Sin hacer, a propósito:** frenar a Android Auto (retener sus acks) en reposo. Por cable AA no respeta la ventana anunciada (12 → 120 mensajes de atraso) y un IDR ocupa una docena de mensajes: arriesga atascar la imagen.
+- **Pendiente:** probarlo en el C10 por cable (que el coche acepte High; fluidez; calor del móvil).

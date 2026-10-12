@@ -993,4 +993,6 @@
     <string name="hql_speed_advice_rescue">Mit dem Plan kommst du nicht an: mit %1$d km/h schon (%2$s länger fahren).</string>
     <string name="hql_settings_price_fast">Preis beim Schnellladen</string>
     <string name="hql_settings_price_fast_help">Für die Kosten des Ladeplans der Route (die Stopps an Schnellladern).</string>
+    <string name="hql_profile_best">Maximum (Kabel)</string>
+    <string name="hql_profile_best_detail">Für das Kabel: 60 fps, volle Auflösung, 12-16 Mbit/s, H.264 High und Encoder mit niedriger Latenz. Das Handy wird wärmer. Bleibt der Autobildschirm schwarz, zurück zu Fahrzeug.</string>
 </resources>

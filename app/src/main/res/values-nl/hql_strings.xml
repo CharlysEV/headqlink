@@ -993,4 +993,6 @@
     <string name="hql_speed_advice_rescue">Met het plan haal je het niet: met %1$d km/u wel (%2$s langer rijden).</string>
     <string name="hql_settings_price_fast">Prijs bij snelladen</string>
     <string name="hql_settings_price_fast_help">Voor de kosten van het laadplan van de route (de stops bij snelladers).</string>
+    <string name="hql_profile_best">Maximaal (kabel)</string>
+    <string name="hql_profile_best_detail">Voor de kabel: 60 fps, volledige resolutie, 12-16 Mbit/s, H.264 High en encoder met lage latentie. De telefoon wordt warmer. Blijft het autoscherm zwart, ga dan terug naar Volgens de auto.</string>
 </resources>

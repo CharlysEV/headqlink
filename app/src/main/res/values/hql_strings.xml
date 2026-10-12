@@ -998,4 +998,6 @@
     <string name="hql_speed_advice_rescue">With this plan you don\'t make it: at %1$d km/h you do (%2$s more driving).</string>
     <string name="hql_settings_price_fast">Fast charging price</string>
     <string name="hql_settings_price_fast_help">For the cost of the route charging plan (the stops at fast chargers).</string>
+    <string name="hql_profile_best">Maximum (cable)</string>
+    <string name="hql_profile_best_detail">For the cable: 60 fps, full resolution, 12-16 Mbit/s, H.264 High and a low-latency encoder. The phone gets warmer. If the car screen stays black, go back to Car.</string>
 </resources>

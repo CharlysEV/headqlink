@@ -70,6 +70,26 @@ final class H264SpsCrop {
     /** Resumen del último SPS original visto (perfil, referencias, VUI), para el registro. */
     static volatile String lastInfo = "";
 
+    /** Restricción de la VUI del último SPS leído con lowDelay: reordenados y búfer (-1: no la traía). */
+    static volatile int lastReorder = -1;
+    static volatile int lastBuffering = -1;
+    static volatile int lastRefs = -1;
+
+    /**
+     * SPS+PPS del encoder (Annex-B, w x h visibles) con la VUI de baja latencia (max_num_reorder_frames=0 y el búfer
+     * mínimo) solo si hace falta: null si ya lo decía (el SPS del c2.qti en Baseline: reorder 0, búfer 1) o si no se
+     * puede reescribir (matrices de escalado…). lastInfo dice qué traía.
+     */
+    static byte[] lowDelayIfNeeded(byte[] csd, int w, int h) {
+        lastReorder = -1;
+        lastBuffering = -1;
+        lastRefs = -1;
+        byte[] out = rewrite(csd, 0, csd.length, w, h, true, true);
+        if (out == null) return null;
+        if (lastReorder == 0 && lastBuffering >= 1 && lastBuffering <= Math.max(1, lastRefs)) return null;
+        return out;
+    }
+
     static byte[] rewriteSps(byte[] b, int off, int len, int targetW, int targetH, boolean topAligned) {
         return rewriteSps(b, off, len, targetW, targetH, topAligned, false);
     }
@@ -113,6 +133,7 @@ final class H264SpsCrop {
                 for (int k = 0; k < n; k++) w.se(r.se());
             }
             int numRef = r.ue();
+            lastRefs = numRef;
             w.ue(numRef); // max_num_ref_frames
             w.u(r.u(1), 1); // gaps_in_frame_num_value_allowed_flag
             int wMbs = r.ue();
@@ -224,6 +245,8 @@ final class H264SpsCrop {
             int reorder = r.ue();
             int buffering = r.ue();
             info.append(" · VUI original reorder=").append(reorder).append(" buffering=").append(buffering);
+            lastReorder = reorder;
+            lastBuffering = buffering;
             writeRestriction(w, mv, bytesDenom, bitsDenom, mvH, mvV, decBuf);
         } else {
             info.append(" · VUI sin restricción → añadida reorder=0 buffering=").append(decBuf);

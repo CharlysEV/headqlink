@@ -13,6 +13,13 @@ final class FramePacer {
     private int fps;
     private long periodNs;
     private boolean fixed;
+    /**
+     * Tolerancia del ritmo medio: un periodo entero (Máximo) en vez de medio. Con AA a 60 y salida a 60, medio periodo
+     * dejaba esperar al frame que llegaba algo pronto y lo pisaba el siguiente (en casa, 16-56 de cada ~290 en 5 s, y
+     * esperas de hasta 35 ms). La media sigue sin pasar de fps; como mucho salen dos seguidos tras uno tardío.
+     */
+    private boolean burst;
+    private long tolNs;
     /** Ritmo medio: hora teórica del siguiente dibujo (válida con primed). */
     private long dueNs;
     /** Rejilla: hora del siguiente tic (válida con primed). */
@@ -28,7 +35,18 @@ final class FramePacer {
         this.fps = Math.max(0, fps);
         periodNs = this.fps > 0 ? 1_000_000_000L / this.fps : 0;
         this.fixed = fixed && periodNs > 0;
+        tolNs = burst ? periodNs : periodNs / 2;
         primed = false;
+    }
+
+    /** Un periodo de tolerancia en el ritmo medio (true) o medio (false, lo de siempre). */
+    void setBurst(boolean on) {
+        burst = on;
+        tolNs = burst ? periodNs : periodNs / 2;
+    }
+
+    boolean burst() {
+        return burst;
     }
 
     int fps() {
@@ -46,7 +64,7 @@ final class FramePacer {
     /** ns que faltan para poder dibujar (<= 0: ya). grid: en rejilla (cadencia fija o pantalla nuestra delante). */
     long waitNs(long nowNs, boolean grid) {
         if (periodNs <= 0 || !primed) return 0;
-        return grid ? nextTickNs - nowNs : dueNs - periodNs / 2 - nowNs;
+        return grid ? nextTickNs - nowNs : dueNs - tolNs - nowNs;
     }
 
     /** Se ha dibujado en nowNs. */
