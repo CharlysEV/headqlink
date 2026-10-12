@@ -155,7 +155,7 @@ class NesInputTest {
         assertEquals(GameConsole.MD, GameConsole.of("Sonic The Hedgehog (USA, Europe).GEN"))
         assertNull(GameConsole.of("juegos.zip"))
         assertEquals("Super Pang (Asia) (PAL) (Unl)", GameConsole.title("Super Pang (Asia) (PAL) (Unl).zip"))
-        val list = listOf(NesScreen.Entry("b", "zeta.nes", false), NesScreen.Entry("a", "Carpeta", true), NesScreen.Entry("c", "alfa.nes", false)).sorted()
+        val list = listOf(NesScreen.Entry("b", "zeta.nes", false, -1), NesScreen.Entry("a", "Carpeta", true, -1), NesScreen.Entry("c", "alfa.nes", false, -1)).sorted()
         assertEquals(listOf("Carpeta", "alfa.nes", "zeta.nes"), list.map { it.name })
     }
 }

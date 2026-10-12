@@ -37,6 +37,13 @@ interface GameCore {
      * van a halfNES, que las reproduce solas. Devuelve el núcleo ya cargado; si ninguno puede, lanza el error del último.
      */
     static GameCore open(Context c, GameConsole console, String path) throws Exception {
+        if (console == GameConsole.PSX) {
+            PsxEngine p = new PsxEngine(c);
+            String err = p.load(path);
+            if (err == null) return p;
+            p.stop();
+            throw new Exception(err);
+        }
         if (console == GameConsole.SNES) {
             SnesEngine s = new SnesEngine(c);
             String err = s.load(path);

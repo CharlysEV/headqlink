@@ -20,8 +20,8 @@ import java.io.InputStream;
  */
 abstract class NativeCore implements GameCore {
     static final int RATE = 44100;
-    /** Lo más grande que da una consola: 512 x 480 (Super Nintendo en alta resolución y entrelazada). */
-    private static final int MAX_PX = 512 * 480;
+    /** Lo más grande que da una consola: 1024 x 512 (lo que puede dar PCSX ReARMed; la PlayStation, hasta 640 x 480). */
+    private static final int MAX_PX = 1024 * 512;
 
     private final String name;
     private final int channels;

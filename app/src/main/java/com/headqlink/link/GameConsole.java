@@ -12,7 +12,12 @@ import java.util.Locale;
 enum GameConsole {
     NES("NES", "nes", new String[]{".nes", ".nsf"}),
     MD("Mega Drive", "md", new String[]{".md", ".gen", ".bin", ".smd"}),
-    SNES("Super Nintendo", "snes", new String[]{".sfc", ".smc"});
+    SNES("Super Nintendo", "snes", new String[]{".sfc", ".smc"}),
+    /** Discos: el .cue (con sus .bin al lado), .chd, .pbp, .iso o una lista .m3u de varios discos. Los .bin sueltos, no. */
+    PSX("PlayStation", "psx", new String[]{".cue", ".chd", ".pbp", ".iso", ".m3u"});
+
+    /** Puro: los .bin de más de esto no son de Mega Drive (las ROM más grandes son de 5 MB); serán pistas de un disco. */
+    static final long MD_MAX_BYTES = 16L * 1024 * 1024;
 
     final String title;
     /** Subcarpeta de files/ donde se copia la ROM; ahí queda también la partida guardada (.sav). */
@@ -44,14 +49,14 @@ enum GameConsole {
 
     /** Puro: el nombre sin la extensión del juego (ni .zip). */
     static String title(String name) {
-        return name.replaceAll("(?i)\\.(zip|nes|nsf|md|gen|bin|smd|sfc|smc)$", "");
+        return name.replaceAll("(?i)\\.(zip|nes|nsf|md|gen|bin|smd|sfc|smc|cue|chd|pbp|iso|m3u)$", "");
     }
 
     /**
      * Puro: tecla de un mando de Android → botón, o null si no es del mando. En la NES, A y Y del mando son A, y B y X son
      * B (como estaba). En la Mega Drive, los tres de abajo en fila: X → A, A → B, B → C; y LB, Y, RB → X, Y, Z. En la
      * Super Nintendo, por posición (el mando de la SNES tiene la B abajo y la A a la derecha): A → B, B → A, X → Y,
-     * Y → X, LB → L y RB → R.
+     * Y → X, LB → L y RB → R. En la PlayStation, igual (✕ abajo, ○ a la derecha) y LT y RT → L2 y R2.
      */
     RetroPad.Btn map(int keyCode) {
         switch (keyCode) {
@@ -71,6 +76,12 @@ enum GameConsole {
                 return RetroPad.Btn.SELECT;
             default:
                 break;
+        }
+        if (this == PSX) {
+            // Como la SNES (por posición: A → ✕, B → ○, X → □, Y → △, LB → L1, RB → R1) y los gatillos, L2 y R2.
+            if (keyCode == KeyEvent.KEYCODE_BUTTON_L2) return RetroPad.Btn.L2;
+            if (keyCode == KeyEvent.KEYCODE_BUTTON_R2) return RetroPad.Btn.R2;
+            return SNES.map(keyCode);
         }
         if (this == SNES) {
             switch (keyCode) {

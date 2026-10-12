@@ -701,7 +701,9 @@ le sottocartelle, ognuno con i suoi giochi (.nes; .md, .gen, .bin o .smd; .sfc o
 per giocare, con i pulsanti touch o con un gamepad Bluetooth collegato al telefono. Sul Mega Drive, X, A e B del
 gamepad sono A, B e C; LB, Y e RB sono X, Y e Z (giochi a sei tasti), e Select è Mode. Sul Super Nintendo seguono la posizione del suo controller: A, B, X e Y del gamepad sono B, A, Y e X, e LB e RB sono L e R. All'avvio, sul telefono compare
 «Gamepad collegato all'auto»: lasciala davanti perché tutto il gamepad arrivi al gioco. Solo a veicolo fermo. I giochi
-con salvataggio lo fanno da soli. I core sono quelli di RetroArch: Nestopia (NES), ClownMDEmu (Mega Drive) e bsnes (Super Nintendo, con i chip delle cartucce: Super FX, SA-1, DSP…).
+con salvataggio lo fanno da soli. I core sono quelli di RetroArch: Nestopia (NES), ClownMDEmu (Mega Drive), bsnes (Super Nintendo, con i chip delle cartucce: Super FX, SA-1, DSP…) e PCSX ReARMed (PlayStation).
+
+PlayStation (Giochi › PS1): i dischi in .chd (il migliore: un solo file compresso), .cue con i suoi .bin accanto, .pbp, .iso o una lista .m3u per i giochi su più dischi; anche dentro uno .zip. La prima volta il disco viene copiato sul telefono (mostra a che punto è); poi parte subito. Restano gli ultimi tre dischi giocati. Il BIOS Sony non serve: il core ha il suo. Se hai il tuo (scph1001.bin, scph5501.bin…), mettilo accanto al gioco e viene usato. I tasti vanno per posizione, come sul suo controller: A, B, X e Y del controller sono ✕, ○, □ e △; LB e RB sono L1 e R1, e i grilletti L2 e R2. I salvataggi vanno sulla memory card, come sulla console.
 
 ### «Diagnostica»
 

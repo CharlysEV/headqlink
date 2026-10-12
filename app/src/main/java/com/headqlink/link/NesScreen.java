@@ -28,8 +28,10 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -69,11 +71,14 @@ final class NesScreen {
         final String docId;
         final String name;
         final boolean dir;
+        /** Bytes, o -1 si el proveedor no lo dice. */
+        final long size;
 
-        Entry(String docId, String name, boolean dir) {
+        Entry(String docId, String name, boolean dir, long size) {
             this.docId = docId;
             this.name = name;
             this.dir = dir;
+            this.size = size;
         }
 
         @Override
@@ -153,24 +158,64 @@ final class NesScreen {
 
     /** Subcarpetas y juegos de esta consola de una carpeta del árbol elegido (null si el permiso se perdió). */
     private List<Entry> list(Uri tree, String docId) {
+        List<Entry> all = children(tree, docId);
+        if (all == null) return null;
+        List<Entry> out = new ArrayList<>();
+        for (Entry e : all) {
+            // Las pistas .bin de un disco de PlayStation no son ROM de Mega Drive.
+            boolean bigBin = e.size > GameConsole.MD_MAX_BYTES && e.name.toLowerCase(Locale.ROOT).endsWith(".bin");
+            boolean m3u = e.name.toLowerCase(Locale.ROOT).endsWith(".m3u");
+            if (e.dir || (console.accepts(e.name) && !(console == GameConsole.MD && bigBin) && (!m3u || discList(tree, e)))
+                    || (GameConsole.isZip(e.name) && zipConsole(tree, e.docId) == console)) {
+                out.add(e);
+            }
+        }
+        Collections.sort(out);
+        return out;
+    }
+
+    /** ¿Un .m3u de discos (y no una lista de canales)? Se lee una vez (es texto corto) y se recuerda por documento. */
+    private boolean discList(Uri tree, Entry e) {
+        String k = zipKind.get("m3u:" + e.docId);
+        if (k == null) {
+            k = "";
+            if (e.size >= 0 && e.size < 64 * 1024) {
+                try (InputStream in = host.context().getContentResolver().openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree, e.docId))) {
+                    if (in != null) {
+                        java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+                        byte[] buf = new byte[8192];
+                        int n;
+                        while ((n = in.read(buf)) > 0 && b.size() < 64 * 1024) b.write(buf, 0, n);
+                        if (PsxDisc.isDiscList(b.toString("UTF-8"))) k = "si";
+                    }
+                } catch (Exception ex) {
+                    L.w("Juegos: no se pudo leer un .m3u: " + ex);
+                }
+            }
+            zipKind.put("m3u:" + e.docId, k);
+        }
+        return !k.isEmpty();
+    }
+
+    /** Todo lo que hay en una carpeta del árbol elegido (null si el permiso se perdió). */
+    private List<Entry> children(Uri tree, String docId) {
         List<Entry> out = new ArrayList<>();
         Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId);
         try (Cursor cur = host.context().getContentResolver().query(children, new String[]{
                 DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                DocumentsContract.Document.COLUMN_MIME_TYPE}, null, null, null)) {
+                DocumentsContract.Document.COLUMN_MIME_TYPE, DocumentsContract.Document.COLUMN_SIZE}, null, null, null)) {
             if (cur == null) return null;
             while (cur.moveToNext()) {
-                String id = cur.getString(0);
                 String name = cur.getString(1);
-                boolean dir = DocumentsContract.Document.MIME_TYPE_DIR.equals(cur.getString(2));
                 if (name == null) continue;
-                if (dir || console.accepts(name) || (GameConsole.isZip(name) && zipConsole(tree, id) == console)) out.add(new Entry(id, name, dir));
+                boolean dir = DocumentsContract.Document.MIME_TYPE_DIR.equals(cur.getString(2));
+                long size = cur.isNull(3) ? -1 : cur.getLong(3);
+                out.add(new Entry(cur.getString(0), name, dir, size));
             }
         } catch (Exception e) {
             L.w("Juegos: no se pudo leer la carpeta: " + e);
             return null;
         }
-        Collections.sort(out);
         return out;
     }
 
@@ -188,10 +233,13 @@ final class NesScreen {
                 int seen = 0;
                 while ((ze = z.getNextEntry()) != null && seen++ < 8) {
                     GameConsole g = ze.isDirectory() ? null : GameConsole.of(ze.getName());
-                    if (g != null) {
+                    // Un disco de PlayStation comprimido trae sus .bin, que también parecen de Mega Drive: si hay un
+                    // .cue (o un .chd…), manda la PlayStation.
+                    if (g == GameConsole.PSX) {
                         k = g.name();
                         break;
                     }
+                    if (g != null && k.isEmpty()) k = g.name();
                 }
             } catch (Exception ex) {
                 L.w("Juegos: no se pudo mirar dentro de un .zip: " + ex);
@@ -227,15 +275,26 @@ final class NesScreen {
     }
 
     private static void copy(InputStream in, File to) throws Exception {
+        copy(in, to, null);
+    }
+
+    private static void copy(InputStream in, File to, Copied progress) throws Exception {
         try (FileOutputStream out = new FileOutputStream(to)) {
-            byte[] buf = new byte[64 * 1024];
+            byte[] buf = new byte[256 * 1024];
             int n;
-            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            while ((n = in.read(buf)) > 0) {
+                out.write(buf, 0, n);
+                if (progress != null) progress.bytes(n);
+            }
         }
     }
 
     private void play(Uri tree, Entry e) {
         Context c = host.context();
+        if (console == GameConsole.PSX) {
+            playDisc(tree, e);
+            return;
+        }
         File rom;
         try {
             rom = copyRom(tree, e);
@@ -244,6 +303,188 @@ final class NesScreen {
             host.setContent(CarStyle.message(c, Str.get(R.string.hql_nes_error, Http.safeError(ex))));
             return;
         }
+        start(rom, e);
+    }
+
+    /** La partida que se está preparando (copiando el disco); otra o volver atrás la anula. */
+    private final AtomicInteger playSeq = new AtomicInteger();
+
+    /**
+     * PlayStation: el disco (cientos de MB, a veces un .cue con varios .bin) se copia en otro hilo con su aviso; solo la
+     * primera vez, las siguientes ya está y arranca al momento.
+     */
+    private void playDisc(Uri tree, Entry e) {
+        Context c = host.context();
+        int seq = playSeq.incrementAndGet();
+        stopEngine();
+        LinearLayout col = new LinearLayout(c);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER);
+        TextView msg = CarStyle.text(c, Str.get(R.string.hql_psx_copying, 0), 28, CarStyle.TEXT);
+        msg.setGravity(Gravity.CENTER);
+        msg.setPadding(40, 40, 40, 30);
+        col.addView(msg);
+        TextView back = CarStyle.pill(c, "‹  " + console.title);
+        back.setOnClickListener(v -> {
+            playSeq.incrementAndGet();
+            host.setContent(browser());
+        });
+        col.addView(back);
+        host.setContent(col);
+        String parent = dirStack.get(dirStack.size() - 1);
+        long[] lastPost = {0};
+        new Thread(() -> {
+            File rom;
+            try {
+                rom = copyDisc(tree, parent, e, seq, n -> {
+                    long now = System.currentTimeMillis();
+                    if (now - lastPost[0] < 300) return;
+                    lastPost[0] = now;
+                    int mb = (int) (n / (1024 * 1024));
+                    host.post(() -> msg.setText(Str.get(R.string.hql_psx_copying, mb)));
+                });
+            } catch (Exception ex) {
+                if (seq != playSeq.get()) return;
+                L.w(console.title + ": no se pudo copiar el disco: " + ex);
+                host.post(() -> {
+                    if (seq == playSeq.get()) host.setContent(CarStyle.message(c, Str.get(R.string.hql_nes_error, Http.safeError(ex))));
+                });
+                return;
+            }
+            host.post(() -> {
+                if (seq == playSeq.get()) start(rom, e);
+            });
+        }, "hql-copia-disco").start();
+    }
+
+    /** Lo copiado hasta ahora (bytes). */
+    private interface Copied {
+        void bytes(long n);
+    }
+
+    /**
+     * Copia el disco a files/psx/«juego»/ con todo lo que necesita (las pistas de un .cue, los discos de un .m3u, o todo lo
+     * de un .zip) y devuelve el archivo que se abre. Lo ya copiado con el mismo tamaño no se vuelve a copiar. Si junto al
+     * disco hay una BIOS (scph1001.bin…), va a files/psx/bios. Se quedan las PsxDisc.KEEP copias más recientes.
+     */
+    private File copyDisc(Uri tree, String parentDoc, Entry e, int seq, Copied progress) throws Exception {
+        File base = new File(host.context().getExternalFilesDir(null), console.dir);
+        File dir = new File(base, PsxDisc.folder(GameConsole.title(e.name)));
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("no se pudo crear la carpeta del disco");
+        List<Entry> kids = children(tree, parentDoc);
+        if (kids == null) throw new java.io.FileNotFoundException(e.name);
+        Map<String, Entry> byName = new java.util.HashMap<>();
+        for (Entry k : kids) if (!k.dir) byName.put(k.name.toLowerCase(Locale.ROOT), k);
+        long[] done = {0};
+        Copied total = n -> {
+            if (seq != playSeq.get()) throw new java.util.concurrent.CancellationException();
+            done[0] += n;
+            progress.bytes(done[0]);
+        };
+        File bios = PsxEngine.biosDir(base);
+        for (Entry k : kids) {
+            if (k.dir || !PsxDisc.isBios(k.name) || k.size > 4 * 1024 * 1024) continue;
+            File to = new File(bios, k.name.toLowerCase(Locale.ROOT));
+            if (to.isFile()) continue;
+            bios.mkdirs();
+            copyCached(tree, k, to, total);
+            L.i("PlayStation: BIOS copiada (" + to.getName() + ")");
+        }
+        File main;
+        if (GameConsole.isZip(e.name)) {
+            main = unzipDisc(tree, e, dir, total);
+        } else {
+            main = copyCached(tree, e, new File(dir, e.name), total);
+            List<String> tracks = new ArrayList<>();
+            String low = e.name.toLowerCase(Locale.ROOT);
+            if (low.endsWith(".cue")) {
+                tracks.addAll(PsxDisc.cueFiles(readText(main)));
+            } else if (low.endsWith(".m3u")) {
+                for (String d : PsxDisc.m3uFiles(readText(main))) {
+                    File df = copyCached(tree, need(byName, d), new File(dir, d), total);
+                    if (d.toLowerCase(Locale.ROOT).endsWith(".cue")) tracks.addAll(PsxDisc.cueFiles(readText(df)));
+                }
+            }
+            for (String t : tracks) copyCached(tree, need(byName, t), new File(dir, t), total);
+        }
+        //noinspection ResultOfMethodCallIgnored
+        dir.setLastModified(System.currentTimeMillis());
+        evictDiscs(base);
+        return main;
+    }
+
+    private static Entry need(Map<String, Entry> byName, String name) throws java.io.FileNotFoundException {
+        Entry e = byName.get(name.toLowerCase(Locale.ROOT));
+        if (e == null) throw new java.io.FileNotFoundException(name);
+        return e;
+    }
+
+    /** Copia un documento a «to» si no está ya (mismo tamaño); por un .tmp, para no dejar copias a medias. */
+    private File copyCached(Uri tree, Entry e, File to, Copied progress) throws Exception {
+        if (to.isFile() && e.size > 0 && to.length() == e.size) return to;
+        File tmp = new File(to.getPath() + ".tmp");
+        try (InputStream in = host.context().getContentResolver().openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree, e.docId))) {
+            if (in == null) throw new java.io.FileNotFoundException(e.name);
+            copy(in, tmp, progress);
+        }
+        if (!tmp.renameTo(to)) throw new java.io.IOException("no se pudo guardar " + to.getName());
+        return to;
+    }
+
+    /** Saca todo el .zip a la carpeta del disco (una vez: se apunta su tamaño) y devuelve el archivo que se abre. */
+    private File unzipDisc(Uri tree, Entry e, File dir, Copied progress) throws Exception {
+        File mark = new File(dir, ".zip");
+        if (mark.isFile() && readText(mark).trim().equals(String.valueOf(e.size))) {
+            String[] names = dir.list();
+            String m = names == null ? null : PsxDisc.mainFile(java.util.Arrays.asList(names));
+            if (m != null) return new File(dir, m);
+        }
+        List<String> names = new ArrayList<>();
+        try (InputStream in = host.context().getContentResolver().openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree, e.docId));
+             ZipInputStream z = new ZipInputStream(in)) {
+            ZipEntry ze;
+            while ((ze = z.getNextEntry()) != null) {
+                if (ze.isDirectory()) continue;
+                String n = PsxDisc.baseName(ze.getName());
+                if (n.isEmpty() || n.startsWith(".")) continue;
+                File tmp = new File(dir, n + ".tmp");
+                copy(z, tmp, progress);
+                if (!tmp.renameTo(new File(dir, n))) throw new java.io.IOException("no se pudo guardar " + n);
+                names.add(n);
+            }
+        }
+        String m = PsxDisc.mainFile(names);
+        if (m == null) throw new java.io.FileNotFoundException(e.name + ": sin .cue, .chd, .pbp, .iso ni .m3u");
+        try (FileOutputStream out = new FileOutputStream(mark)) {
+            out.write(String.valueOf(e.size).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
+        return new File(dir, m);
+    }
+
+    /** Borra las copias de discos más viejas (quedan PsxDisc.KEEP). */
+    private static void evictDiscs(File base) {
+        File[] dirs = base.listFiles(File::isDirectory);
+        if (dirs == null) return;
+        List<String> names = new ArrayList<>();
+        List<Long> used = new ArrayList<>();
+        for (File d : dirs) {
+            names.add(d.getName());
+            used.add(d.lastModified());
+        }
+        for (String n : PsxDisc.evict(names, used, PsxDisc.KEEP)) {
+            L.i("PlayStation: se borra la copia de un disco antiguo para no llenar el móvil");
+            PsxDisc.deleteTree(new File(base, n));
+        }
+    }
+
+    /** Un .cue, .m3u o la marca del .zip (texto corto). */
+    private static String readText(File f) throws Exception {
+        if (f.length() > 256 * 1024) throw new java.io.IOException(f.getName() + ": demasiado grande");
+        return new String(java.nio.file.Files.readAllBytes(f.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private void start(File rom, Entry e) {
+        Context c = host.context();
         stopEngine();
         try {
             engine = GameCore.open(c, console, rom.getAbsolutePath());
@@ -269,6 +510,7 @@ final class NesScreen {
         FrameLayout stage = new FrameLayout(c);
         stage.setBackgroundColor(0xFF000000);
         view = new NesView(c);
+        view.tv43 = console == GameConsole.PSX;
         stage.addView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         View overlay = touchOverlay(c);
         stage.addView(overlay, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -335,7 +577,7 @@ final class NesScreen {
         FrameLayout f = new FrameLayout(c);
         // La Mega Drive ocupa 1280 de ancho a ×4: en el C10 quedan 272 a cada lado, así que sus botones son más pequeños.
         boolean md = console == GameConsole.MD;
-        boolean snes = console == GameConsole.SNES;
+        boolean snes = console == GameConsole.SNES || console == GameConsole.PSX;
         // La SNES cabe a ×4 como la NES, pero con cuatro botones y L y R: algo más pequeños para que L y R no toquen
         // Select y Start.
         int s = md ? 84 : snes ? 100 : 116;
@@ -346,7 +588,19 @@ final class NesScreen {
         f.addView(padButton(c, "▼", RetroPad.Btn.DOWN), place(bl, m + s, 0, 0, m, s, s));
         f.addView(padButton(c, "◀", RetroPad.Btn.LEFT), place(bl, m, 0, 0, m + s, s, s));
         f.addView(padButton(c, "▶", RetroPad.Btn.RIGHT), place(bl, m + 2 * s, 0, 0, m + s, s, s));
-        if (console == GameConsole.SNES) {
+        if (console == GameConsole.PSX) {
+            // Rombo como en el mando de la PlayStation (△ arriba, ○ a la derecha, ✕ abajo, □ a la izquierda); L1 y R1
+            // encima, con L2 y R2 por fuera en la misma fila (más arriba tocarían Select y Start).
+            int half = (3 * s - 10) / 2;
+            f.addView(padButton(c, "△", RetroPad.Btn.X), place(br, 0, 0, m + s, m + 2 * s, s, s));
+            f.addView(padButton(c, "○", RetroPad.Btn.A), place(br, 0, 0, m, m + s, s, s));
+            f.addView(padButton(c, "✕", RetroPad.Btn.B), place(br, 0, 0, m + s, m, s, s));
+            f.addView(padButton(c, "□", RetroPad.Btn.Y), place(br, 0, 0, m + 2 * s, m + s, s, s));
+            f.addView(padButton(c, "L2", RetroPad.Btn.L2), place(bl, m, 0, 0, m + 3 * s + 20, half, 60));
+            f.addView(padButton(c, "L1", RetroPad.Btn.L), place(bl, m + half + 10, 0, 0, m + 3 * s + 20, half, 60));
+            f.addView(padButton(c, "R1", RetroPad.Btn.R), place(br, 0, 0, m + half + 10, m + 3 * s + 20, half, 60));
+            f.addView(padButton(c, "R2", RetroPad.Btn.R2), place(br, 0, 0, m, m + 3 * s + 20, half, 60));
+        } else if (console == GameConsole.SNES) {
             // Rombo como en el mando de la SNES (X arriba, A a la derecha, B abajo, Y a la izquierda) y L y R encima.
             f.addView(padButton(c, "X", RetroPad.Btn.X), place(br, 0, 0, m + s, m + 2 * s, s, s));
             f.addView(padButton(c, "A", RetroPad.Btn.A), place(br, 0, 0, m, m + s, s, s));
@@ -482,6 +736,24 @@ final class NesScreen {
             }
         }
 
+        /**
+         * PlayStation: la imagen a todo el alto en 4:3, como en la tele, sea cual sea su ancho (256, 320, 368, 512 o 640
+         * columnas). Con aumento entero quedaba a ×3 (768x720 en el C10); así, 1176x882. Con suavizado, porque el aumento
+         * no es entero.
+         */
+        boolean tv43;
+
+        /** Puro: ancho y alto de la imagen 4:3 más grande que cabe en w x h. */
+        static int[] fit43(int w, int h) {
+            int dh = h;
+            int dw = Math.round(h * 4f / 3f);
+            if (dw > w) {
+                dw = w;
+                dh = Math.round(w * 3f / 4f);
+            }
+            return new int[]{dw, dh};
+        }
+
         @Override
         protected void onDraw(Canvas cv) {
             Bitmap b = frame;
@@ -490,6 +762,16 @@ final class NesScreen {
             int h = getHeight();
             int fw = b.getWidth();
             int fh = b.getHeight();
+            if (tv43) {
+                int[] d = fit43(w, h);
+                int left = (w - d[0]) / 2;
+                int top = (h - d[1]) / 2;
+                src.set(0, 0, fw, fh);
+                dst.set(left, top, left + d[0], top + d[1]);
+                p.setFilterBitmap(true);
+                cv.drawBitmap(b, src, dst, p);
+                return;
+            }
             // Tamaño lógico: 512 de ancho (alta resolución de la SNES) es 256; 448 o más líneas (entrelazado), la mitad.
             int lw = logicalW(fw);
             int lh = logicalH(fh);

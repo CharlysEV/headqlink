@@ -680,7 +680,7 @@ populares.
 Los accesos de la pantalla «Web» del coche (de serie, YouTube, Google, Wikipedia y Twitch). Añade los tuyos con
 nombre y dirección, quítalos o cámbialos de orden con las flechas; «Los de serie» los deja como venían.
 
-### «Carpeta de juegos»: NES, Mega Drive y Super Nintendo («Auto extendido»)
+### «Carpeta de juegos»: NES, Mega Drive, Super Nintendo y PlayStation («Auto extendido»)
 
 Menú ⚙ › Juegos. Elige la carpeta del móvil donde tienes tus juegos: una sola carpeta para todas las consolas, y valen
 tal cual los .zip (la app no lleva ninguno). En el coche, Juegos › NES, Mega Drive o SNES abren esa carpeta con sus
@@ -688,7 +688,9 @@ subcarpetas, cada uno con sus juegos (.nes; .md, .gen, .bin o .smd; .sfc o .smc;
 para jugar, con botones táctiles o con un mando Bluetooth conectado al móvil. En la Mega Drive, X, A y B del mando son
 A, B y C; LB, Y y RB son X, Y y Z (juegos de seis botones), y Select es Mode. En la Super Nintendo van por posición, como en su mando: A, B, X e Y del mando son B, A, Y y X, y LB y RB son L y R. Al empezar, en el móvil se abre «Mando
 conectado al coche»: déjala delante para que el mando entero llegue al juego. Solo con el coche parado. Los juegos con
-partida guardada la guardan solos. Los núcleos son los de RetroArch: Nestopia (NES), ClownMDEmu (Mega Drive) y bsnes (Super Nintendo, con los chips de los cartuchos: Super FX, SA-1, DSP…).
+partida guardada la guardan solos. Los núcleos son los de RetroArch: Nestopia (NES), ClownMDEmu (Mega Drive), bsnes (Super Nintendo, con los chips de los cartuchos: Super FX, SA-1, DSP…) y PCSX ReARMed (PlayStation).
+
+PlayStation (Juegos › PS1): los discos en .chd (lo mejor: un solo archivo y comprimido), .cue con sus .bin al lado, .pbp, .iso o una lista .m3u para los juegos de varios discos; también en un .zip. La primera vez el disco se copia al móvil (sale cuánto lleva); después arranca al momento. Se guardan los tres últimos discos jugados. No hace falta la BIOS de Sony: el núcleo trae la suya. Si tienes la tuya (scph1001.bin, scph5501.bin…), ponla junto al juego y se usa esa. Los botones van por posición, como en su mando: A, B, X e Y del mando son ✕, ○, □ y △; LB y RB son L1 y R1, y los gatillos, L2 y R2. La partida se guarda en la tarjeta de memoria, como en la consola.
 
 ### «Diagnóstico»
 

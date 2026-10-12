@@ -44,6 +44,17 @@ Super Nintendo emulator (Games > SNES, the user's own ROM files):
   HeadQLink ships no game ROMs. Nintendo, Super Nintendo and SNES are trademarks of Nintendo; HeadQLink is not
   affiliated with Nintendo.
 
+PlayStation emulator (Games > PS1, the user's own disc images):
+  The core is PCSX ReARMed by notaz and contributors (libretro port, https://github.com/libretro/pcsx_rearmed), based
+  on PCSX-Reloaded and PCSX, with the psx_gpu NEON renderer by Exophase and the dfsound SPU by Pete Bernert and
+  contributors, copied into app/src/main/cpp/pcsx_rearmed. It is licensed under the GNU General Public License version 2
+  or (at your option) any later version (COPYING there) and is used here under version 3, combined with HeadQLink under
+  section 13 of the AGPL v3. It includes libchdr (BSD 3-clause), the LZMA SDK (public domain), zstd (BSD) and
+  libretro-common (MIT). The code is unmodified; see pcsx_rearmed/UPSTREAM.md. app/src/main/cpp/hql_psx.cpp is
+  HeadQLink's own minimal libretro frontend. No Sony BIOS is shipped: the core uses its own high-level BIOS emulation
+  unless the user provides one. HeadQLink ships no games. PlayStation and PS1 are trademarks of Sony Interactive
+  Entertainment; HeadQLink is not affiliated with Sony.
+
 Mega Drive emulator (Games > Mega Drive, the user's own ROM files):
   The core is ClownMDEmu by Clownacy (https://github.com/Clownacy/clownmdemu-core, through clownmdemu-libretro and
   clownmdemu-frontend-common), copied unmodified into app/src/main/cpp/clownmdemu: the emulator core, clown68000,

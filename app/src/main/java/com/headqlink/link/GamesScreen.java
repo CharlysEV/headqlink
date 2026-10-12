@@ -50,6 +50,7 @@ final class GamesScreen implements CarScreen {
     private NesScreen nes;
     private NesScreen md;
     private NesScreen snes;
+    private NesScreen psx;
 
     private boolean running;
     /** Solo la vista previa: abrir este juego en modo demostración al crear la pantalla (-1: menú). */
@@ -68,9 +69,10 @@ final class GamesScreen implements CarScreen {
         col.addView(section(c, Str.get(R.string.hql_games_consoles)));
         LinearLayout consoles = new LinearLayout(c);
         consoles.setOrientation(LinearLayout.HORIZONTAL);
-        consoles.addView(consoleCard(c, 5, "NES", Str.get(R.string.hql_nes_sub), 0xFFB71C1C, 0xFF3A3F47, "8-BIT"), weighted(320));
-        consoles.addView(consoleCard(c, 6, "MEGA DRIVE", Str.get(R.string.hql_md_sub), 0xFF0D47A1, 0xFF111317, "16-BIT"), weighted(320));
-        consoles.addView(consoleCard(c, 7, "SNES", Str.get(R.string.hql_snes_sub), 0xFF5E35B1, 0xFF1F1A2E, "16-BIT"), weighted(320));
+        consoles.addView(consoleCard(c, 5, "NES", Str.get(R.string.hql_nes_sub), 0xFFB71C1C, 0xFF3A3F47, "8-BIT"), weighted(340));
+        consoles.addView(consoleCard(c, 6, "MEGA DRIVE", Str.get(R.string.hql_md_sub), 0xFF0D47A1, 0xFF111317, "16-BIT"), weighted(340));
+        consoles.addView(consoleCard(c, 7, "SNES", Str.get(R.string.hql_snes_sub), 0xFF5E35B1, 0xFF1F1A2E, "16-BIT"), weighted(340));
+        consoles.addView(consoleCard(c, 8, "PS1", Str.get(R.string.hql_psx_sub), 0xFF546E7A, 0xFF15191C, "32-BIT"), weighted(340));
         col.addView(consoles);
         TextView quickLabel = section(c, Str.get(R.string.hql_games_quick));
         quickLabel.setPadding(10, 34, 0, 12);
@@ -131,8 +133,8 @@ final class GamesScreen implements CarScreen {
         icon.setImageResource(R.drawable.hql_ic_games);
         icon.setImageTintList(ColorStateList.valueOf(0xFFFFFFFF));
         icon.setBackground(CarStyle.round(0x33FFFFFF, 28));
-        icon.setPadding(20, 20, 20, 20);
-        top.addView(icon, new LinearLayout.LayoutParams(92, 92));
+        icon.setPadding(16, 16, 16, 16);
+        top.addView(icon, new LinearLayout.LayoutParams(76, 76));
         TextView tag = CarStyle.text(c, bits, 18, 0xCCFFFFFF);
         tag.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         tag.setLetterSpacing(0.2f);
@@ -146,7 +148,7 @@ final class GamesScreen implements CarScreen {
         title.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
         title.setSingleLine(true);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        title.setPadding(0, 18, 0, 2);
+        title.setPadding(0, 10, 0, 2);
         card.addView(title);
         TextView s2 = CarStyle.text(c, sub, 22, 0xDDFFFFFF);
         s2.setMaxLines(2);
@@ -154,10 +156,10 @@ final class GamesScreen implements CarScreen {
         card.addView(s2);
         TextView play = CarStyle.text(c, Str.get(R.string.hql_games_play) + "  ›", 24, 0xFF101114);
         play.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        play.setPadding(28, 12, 28, 12);
+        play.setPadding(28, 10, 28, 10);
         play.setBackground(CarStyle.round(0xFFFFFFFF, 30));
         LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        plp.topMargin = 16;
+        plp.topMargin = 12;
         card.addView(play, plp);
         card.setOnClickListener(v -> open(game));
         play.setOnClickListener(v -> open(game));
@@ -205,6 +207,11 @@ final class GamesScreen implements CarScreen {
         if (game == 7) {
             if (snes == null) snes = new NesScreen(host, () -> host.setContent(menu), GameConsole.SNES);
             host.setContent(snes.browser());
+            return;
+        }
+        if (game == 8) {
+            if (psx == null) psx = new NesScreen(host, () -> host.setContent(menu), GameConsole.PSX);
+            host.setContent(psx.browser());
             return;
         }
         Board board = game == 0 ? new Game2048(c) : game == 1 ? new Memory(c) : game == 2 ? new TicTacToe(c)
@@ -1024,6 +1031,7 @@ final class GamesScreen implements CarScreen {
         if (nes != null) nes.stopEngine();
         if (md != null) md.stopEngine();
         if (snes != null) snes.stopEngine();
+        if (psx != null) psx.stopEngine();
         running = false;
     }
 }

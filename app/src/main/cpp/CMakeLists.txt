@@ -155,3 +155,76 @@ target_compile_options(hqlsnes PRIVATE -O2 -fomit-frame-pointer -ffast-math -w -
     $<$<COMPILE_LANGUAGE:CXX>:-std=c++17 -fexceptions -frtti>)
 target_compile_definitions(hqlsnes PRIVATE __LIBRETRO__ GB_INTERNAL DISABLE_DEBUGGER PLATFORM_ANDROID NDEBUG)
 target_link_libraries(hqlsnes PRIVATE log)
+
+# =========================================================================
+# headqlink: emulador de PlayStation con PCSX ReARMed (pcsx_rearmed/, GPL v2 o posterior; versión libretro, ver
+# pcsx_rearmed/UPSTREAM.md) y un frontend libretro mínimo (hql_psx.cpp). Fuentes y opciones como su jni/Android.mk: en
+# arm64, el recompilador (new_dynarec) y la GPU NEON; en el resto, el intérprete y la misma GPU con SSE o NEON en C.
+# =========================================================================
+set(HQL_PSX "${CMAKE_CURRENT_SOURCE_DIR}/pcsx_rearmed")
+set(HQL_PSX_LCHDR "${HQL_PSX}/deps/libchdr")
+set(HQL_PSX_LRC "${HQL_PSX}/deps/libretro-common")
+set(HQL_PSX_SRC
+    hql_psx.cpp
+    ${HQL_PSX}/libpcsxcore/cdriso.c ${HQL_PSX}/libpcsxcore/cdrom.c ${HQL_PSX}/libpcsxcore/cdrom-async.c
+    ${HQL_PSX}/libpcsxcore/cheat.c ${HQL_PSX}/libpcsxcore/database.c ${HQL_PSX}/libpcsxcore/decode_xa.c
+    ${HQL_PSX}/libpcsxcore/mdec.c ${HQL_PSX}/libpcsxcore/misc.c ${HQL_PSX}/libpcsxcore/pad.c
+    ${HQL_PSX}/libpcsxcore/plugins.c ${HQL_PSX}/libpcsxcore/ppf.c ${HQL_PSX}/libpcsxcore/psxbios.c
+    ${HQL_PSX}/libpcsxcore/psxcommon.c ${HQL_PSX}/libpcsxcore/psxcounters.c ${HQL_PSX}/libpcsxcore/psxdma.c
+    ${HQL_PSX}/libpcsxcore/psxevents.c ${HQL_PSX}/libpcsxcore/psxhw.c ${HQL_PSX}/libpcsxcore/psxinterpreter.c
+    ${HQL_PSX}/libpcsxcore/psxmem.c ${HQL_PSX}/libpcsxcore/r3000a.c ${HQL_PSX}/libpcsxcore/sio.c
+    ${HQL_PSX}/libpcsxcore/spu.c ${HQL_PSX}/libpcsxcore/gpu.c ${HQL_PSX}/libpcsxcore/gte.c
+    ${HQL_PSX}/libpcsxcore/gte_nf.c ${HQL_PSX}/libpcsxcore/gte_divider.c
+    ${HQL_PSX}/libpcsxcore/new_dynarec/emu_if.c
+    ${HQL_PSX}/plugins/dfsound/dma.c ${HQL_PSX}/plugins/dfsound/freeze.c ${HQL_PSX}/plugins/dfsound/registers.c
+    ${HQL_PSX}/plugins/dfsound/spu.c ${HQL_PSX}/plugins/dfsound/out.c ${HQL_PSX}/plugins/dfsound/nullsnd.c
+    ${HQL_PSX}/plugins/gpulib/gpu.c ${HQL_PSX}/plugins/gpulib/prim.c ${HQL_PSX}/plugins/gpulib/vout_pl.c
+    ${HQL_PSX}/plugins/gpulib/gpu_async.c
+    ${HQL_PSX}/plugins/cdrcimg/cdrcimg.c
+    ${HQL_PSX}/plugins/gpu_neon/psx_gpu_if.c ${HQL_PSX}/plugins/gpu_neon/psx_gpu/psx_gpu_simd.c
+    ${HQL_PSX}/frontend/main.c ${HQL_PSX}/frontend/plugin.c ${HQL_PSX}/frontend/cspace.c
+    ${HQL_PSX}/frontend/libretro.c ${HQL_PSX}/frontend/pcsxr-threads.c
+    ${HQL_PSX_LCHDR}/src/libchdr_bitstream.c ${HQL_PSX_LCHDR}/src/libchdr_cdrom.c ${HQL_PSX_LCHDR}/src/libchdr_chd.c
+    ${HQL_PSX_LCHDR}/src/libchdr_codec_cdfl.c ${HQL_PSX_LCHDR}/src/libchdr_codec_cdlz.c
+    ${HQL_PSX_LCHDR}/src/libchdr_codec_cdzl.c ${HQL_PSX_LCHDR}/src/libchdr_codec_cdzs.c
+    ${HQL_PSX_LCHDR}/src/libchdr_codec_flac.c ${HQL_PSX_LCHDR}/src/libchdr_codec_huff.c
+    ${HQL_PSX_LCHDR}/src/libchdr_codec_lzma.c ${HQL_PSX_LCHDR}/src/libchdr_codec_zlib.c
+    ${HQL_PSX_LCHDR}/src/libchdr_codec_zstd.c ${HQL_PSX_LCHDR}/src/libchdr_flac.c
+    ${HQL_PSX_LCHDR}/src/libchdr_huffman.c
+    ${HQL_PSX_LCHDR}/deps/lzma-26.02/src/LzmaDec.c ${HQL_PSX_LCHDR}/deps/zstd-1.5.7/zstddeclib.c
+    ${HQL_PSX_LRC}/compat/compat_posix_string.c ${HQL_PSX_LRC}/compat/fopen_utf8.c ${HQL_PSX_LRC}/compat/compat_strl.c
+    ${HQL_PSX_LRC}/encodings/encoding_utf.c ${HQL_PSX_LRC}/file/file_path.c ${HQL_PSX_LRC}/file/file_path_io.c
+    ${HQL_PSX_LRC}/file/retro_dirent.c ${HQL_PSX_LRC}/streams/file_stream.c
+    ${HQL_PSX_LRC}/streams/file_stream_transforms.c ${HQL_PSX_LRC}/string/stdstring.c ${HQL_PSX_LRC}/string/rstrtod.c
+    ${HQL_PSX_LRC}/time/rtime.c ${HQL_PSX_LRC}/vfs/vfs_implementation.c ${HQL_PSX_LRC}/features/features_cpu.c)
+set(HQL_PSX_DEFS HAVE_CHD CHDR_SYSTEM_ZLIB HAVE_LIBRETRO NO_FRONTEND ANDROID REARMED P_HAVE_MMAP=1 P_HAVE_PTHREAD=1
+    P_HAVE_POSIX_MEMALIGN=1 USE_LIBRETRO_VFS NEON_BUILD TEXTURE_CACHE_4BPP TEXTURE_CACHE_8BPP GPU_NEON SIMD_BUILD
+    USE_ASYNC_CDROM USE_ASYNC_GPU USE_ASYNC_SPU HAVE_RTHREADS NDEBUG)
+if(ANDROID_ABI STREQUAL "arm64-v8a")
+    enable_language(ASM)
+    list(APPEND HQL_PSX_SRC
+        ${HQL_PSX}/libpcsxcore/new_dynarec/new_dynarec.c ${HQL_PSX}/libpcsxcore/new_dynarec/pcsxmem.c
+        ${HQL_PSX}/libpcsxcore/gte_arm64.S ${HQL_PSX}/libpcsxcore/gte_nf_arm64.S
+        ${HQL_PSX}/libpcsxcore/new_dynarec/linkage_arm64.S
+        ${HQL_PSX_LCHDR}/deps/lzma-26.02/Asm/arm64/LzmaDecOpt.S)
+    list(APPEND HQL_PSX_DEFS NDRC_THREAD Z7_LZMA_DEC_OPT)
+elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
+    # Sin recompilador, pero con el ensamblador ARM que el núcleo espera en 32 bits (GTE y mezcla del sonido).
+    enable_language(ASM)
+    list(APPEND HQL_PSX_SRC
+        ${HQL_PSX}/libpcsxcore/gte_arm.S ${HQL_PSX}/libpcsxcore/gte_nf_arm.S ${HQL_PSX}/plugins/dfsound/arm_utils.S)
+    list(APPEND HQL_PSX_DEFS DRC_DISABLE)
+else()
+    list(APPEND HQL_PSX_DEFS DRC_DISABLE)
+endif()
+add_library(hqlpsx SHARED ${HQL_PSX_SRC})
+target_include_directories(hqlpsx PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${HQL_PSX}/include" "${HQL_PSX}/frontend"
+    "${HQL_PSX_LCHDR}/include" "${HQL_PSX_LCHDR}/deps/lzma-26.02/include" "${HQL_PSX_LCHDR}/deps/zstd-1.5.7"
+    "${HQL_PSX_LRC}/include")
+target_compile_options(hqlpsx PRIVATE -O2 -ffast-math -w $<$<COMPILE_LANGUAGE:CXX>:-std=c++17>)
+if(ANDROID_ABI STREQUAL "armeabi-v7a")
+    # Como LOCAL_ARM_MODE := arm de su Android.mk: el ensamblador en línea de gte.c es ARM, no Thumb.
+    target_compile_options(hqlpsx PRIVATE -marm)
+endif()
+target_compile_definitions(hqlpsx PRIVATE ${HQL_PSX_DEFS})
+target_link_libraries(hqlpsx PRIVATE log z m)

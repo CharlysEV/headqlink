@@ -7,9 +7,9 @@
     <string name="hql_aa_server_failed">No se pudo arrancar el servidor de Android Auto</string>
     <string name="hql_acceleration">Aceleración</string>
     <string name="hql_accessibility_first">Primero, la accesibilidad</string>
-    <string name="hql_accessibility_first_msg">QonectaLeap necesita su servicio de accesibilidad para comprobar el modo desarrollador de Android Auto.</string>
+    <string name="hql_accessibility_first_msg">Qonecta+ necesita su servicio de accesibilidad para comprobar el modo desarrollador de Android Auto.</string>
     <string name="hql_accessibility_missing">Falta la accesibilidad</string>
-    <string name="hql_accessibility_missing_msg">QonectaLeap necesita su servicio de accesibilidad para arrancar Android Auto sin que lo veas y para recibir los toques del coche. Android lo desactiva a veces al actualizar la app.</string>
+    <string name="hql_accessibility_missing_msg">Qonecta+ necesita su servicio de accesibilidad para arrancar Android Auto sin que lo veas y para recibir los toques del coche. Android lo desactiva a veces al actualizar la app.</string>
     <string name="hql_active">Activa</string>
     <string name="hql_advanced">Avanzado</string>
     <string name="hql_advanced_closed">Avanzado ▾</string>
@@ -35,9 +35,9 @@
     <string name="hql_nes_touch">Botones táctiles</string>
     <string name="hql_nes_error">No se pudo abrir el juego: %1$s</string>
     <string name="hql_update_install">Descargar e instalar</string>
-    <string name="hql_update_allow_unknown">Para instalar la versión nueva desde la app, permite a QonectaLeap instalar apps desconocidas. Después vuelve a pulsar «Descargar e instalar».</string>
+    <string name="hql_update_allow_unknown">Para instalar la versión nueva desde la app, permite a Qonecta+ instalar apps desconocidas. Después vuelve a pulsar «Descargar e instalar».</string>
     <string name="hql_update_open_setting">Abrir el ajuste</string>
-    <string name="hql_update_downloading">Descargando QonectaLeap %1$s…</string>
+    <string name="hql_update_downloading">Descargando Qonecta+ %1$s…</string>
     <string name="hql_update_download_failed">No se pudo descargar (%1$s). Puedes bajarla de GitHub.</string>
     <string name="hql_update_check">Buscar versión nueva</string>
     <string name="hql_update_checking">Comprobando…</string>
@@ -77,16 +77,16 @@
     <string name="hql_back">Volver</string>
     <string name="hql_back_short">Atrás</string>
     <string name="hql_battery_oem">Gestor de energía de %1$s</string>
-    <string name="hql_battery_oem_why">Permite el inicio automático / la actividad en segundo plano de QonectaLeap (no se puede comprobar desde aquí)</string>
-    <string name="hql_battery_ok">QonectaLeap puede funcionar en segundo plano</string>
+    <string name="hql_battery_oem_why">Permite el inicio automático / la actividad en segundo plano de Qonecta+ (no se puede comprobar desde aquí)</string>
+    <string name="hql_battery_ok">Qonecta+ puede funcionar en segundo plano</string>
     <string name="hql_battery_row">Batería sin restricciones</string>
     <string name="hql_battery_why">Para que Android no la cierre con la pantalla apagada ni bloquee la conexión automática</string>
     <string name="hql_before_start">Antes de empezar</string>
     <string name="hql_brake">Frenar el vídeo al ritmo del coche (recomendado)</string>
     <string name="hql_brake_help">El freno solo se usa en el perfil Básico (sin recodificar).</string>
     <string name="hql_brake_window">frames en camino con el freno (2)</string>
-    <string name="hql_bt_auto_battery">Para que Android le deje arrancar en segundo plano, permite que QonectaLeap funcione sin restricciones de batería.</string>
-    <string name="hql_bt_auto_info">Al conectarse el móvil por Bluetooth a un dispositivo cuyo nombre contenga este texto, QonectaLeap se pone a esperar al coche (abre la app de espejo en su pantalla). Si el Bluetooth se va sin llegar a conectar, se para.</string>
+    <string name="hql_bt_auto_battery">Para que Android le deje arrancar en segundo plano, permite que Qonecta+ funcione sin restricciones de batería.</string>
+    <string name="hql_bt_auto_info">Al conectarse el móvil por Bluetooth a un dispositivo cuyo nombre contenga este texto, Qonecta+ se pone a esperar al coche (abre la app de espejo en su pantalla). Si el Bluetooth se va sin llegar a conectar, se para.</string>
     <string name="hql_bt_auto_switch">Conectar al detectar el Bluetooth del coche</string>
     <string name="hql_bt_auto_title">Conexión automática</string>
     <string name="hql_calculating">Calculando…</string>
@@ -138,8 +138,8 @@
     <string name="hql_found_connecting">Encontrado, conectando…</string>
     <string name="hql_gallery_no_photos">No hay fotos en el móvil.</string>
     <string name="hql_gallery_no_videos">No hay vídeos en el móvil.</string>
-    <string name="hql_gallery_perm_photos">Concede a QonectaLeap el permiso de fotos en el móvil.</string>
-    <string name="hql_gallery_perm_videos">Concede a QonectaLeap el permiso de vídeos en el móvil.</string>
+    <string name="hql_gallery_perm_photos">Concede a Qonecta+ el permiso de fotos en el móvil.</string>
+    <string name="hql_gallery_perm_videos">Concede a Qonecta+ el permiso de vídeos en el móvil.</string>
     <string name="hql_game_2048">2048</string>
     <string name="hql_game_2048_sub">Desliza para unir números</string>
     <string name="hql_game_fly">C10 volador</string>
@@ -164,7 +164,7 @@
     <string name="hql_headwind">de cara</string>
     <string name="hql_height">alto</string>
     <string name="hql_hide">Ocultar</string>
-    <string name="hql_hint_connected">Puedes bloquear el móvil: la imagen sigue llegando al coche. Si el coche se desconecta, QonectaLeap se detiene solo.</string>
+    <string name="hql_hint_connected">Puedes bloquear el móvil: la imagen sigue llegando al coche. Si el coche se desconecta, Qonecta+ se detiene solo.</string>
     <string name="hql_hint_idle">Con el coche encendido y la app de espejo en su pantalla, pulsa Conectar.</string>
     <string name="hql_hint_searching">Abre la app de espejo en la pantalla del coche. El móvil se puede bloquear en cualquier momento.</string>
     <string name="hql_home">Inicio</string>
@@ -186,10 +186,10 @@
     <string name="hql_measure_latency">Medir latencia</string>
     <string name="hql_memory_done">¡Completado en %1$d movimientos! Toca para otra</string>
     <string name="hql_missing_aa">Android Auto no está instalado.</string>
-    <string name="hql_missing_accessibility">Falta activar la accesibilidad de QonectaLeap.</string>
+    <string name="hql_missing_accessibility">Falta activar la accesibilidad de Qonecta+.</string>
     <string name="hql_missing_app">Falta elegir la app.</string>
     <string name="hql_missing_devmode">Falta activar el modo desarrollador de Android Auto.</string>
-    <string name="hql_missing_overlay">Falta permitir que QonectaLeap se muestre sobre otras apps.</string>
+    <string name="hql_missing_overlay">Falta permitir que Qonecta+ se muestre sobre otras apps.</string>
     <string name="hql_missing_perms">Faltan los permisos para encontrar el coche.</string>
     <string name="hql_mode_aa">Auto</string>
     <string name="hql_mode_aa_detail">Mapas, música y mensajes a pantalla completa.</string>
@@ -267,7 +267,7 @@
     <string name="hql_range_over">%1$s · %2$.0f km · toca para otra</string>
     <string name="hql_range_status">%1$.0f km · batería %2$.0f %%</string>
     <string name="hql_range_wltp">¡420 km! Más que la autonomía WLTP del C10</string>
-    <string name="hql_reason_accessibility">activa el servicio de accesibilidad \'QonectaLeap táctil\'</string>
+    <string name="hql_reason_accessibility">activa el servicio de accesibilidad \'Qonecta+ táctil\'</string>
     <string name="hql_reason_unlock">desbloquea el móvil</string>
     <string name="hql_recommended">Recomendado</string>
     <string name="hql_record">récord %1$d</string>
@@ -297,8 +297,8 @@
     <string name="hql_session_ended">Sesión terminada; esperando al coche</string>
     <string name="hql_settings">Ajustes</string>
     <string name="hql_settings_info">Ahora: %1$s · ★ recomendado para este móvil (%2$s)</string>
-    <string name="hql_setup_aa_body">Android Auto solo acepta una pantalla de coche dentro del propio móvil a través de su modo para desarrolladores. Se activa una vez; después QonectaLeap lo gestiona solo.</string>
-    <string name="hql_setup_accessibility">Accesibilidad de QonectaLeap</string>
+    <string name="hql_setup_aa_body">Android Auto solo acepta una pantalla de coche dentro del propio móvil a través de su modo para desarrolladores. Se activa una vez; después Qonecta+ lo gestiona solo.</string>
+    <string name="hql_setup_accessibility">Accesibilidad de Qonecta+</string>
     <string name="hql_setup_accessibility_aa">Para recibir los toques del coche y arrancar Android Auto</string>
     <string name="hql_setup_accessibility_app">Para que los toques del coche lleguen a la app</string>
     <string name="hql_setup_app_body">La app se abre en una pantalla virtual que se envía al coche, así que en el móvil no se ve. Los toques del coche llegan a través del servicio de accesibilidad.</string>
@@ -306,7 +306,7 @@
     <string name="hql_setup_devmode">Modo desarrollador de Android Auto</string>
     <string name="hql_setup_diag">Modo diagnóstico</string>
     <string name="hql_setup_diag_body">Muestra en el coche una imagen de prueba con la fluidez y los toques en tiempo real. Útil para comprobar la conexión antes de usar Android Auto.</string>
-    <string name="hql_setup_guide">1.  Pulsa \"Abrir AA\" (si no aparece, primero \"Comprobar\").\n2.  Baja hasta el final de los ajustes de Android Auto.\n3.  Toca 10 veces \"Versión\" y acepta el aviso.\n4.  Vuelve a QonectaLeap: se comprueba solo.</string>
+    <string name="hql_setup_guide">1.  Pulsa \"Abrir AA\" (si no aparece, primero \"Comprobar\").\n2.  Baja hasta el final de los ajustes de Android Auto.\n3.  Toca 10 veces \"Versión\" y acepta el aviso.\n4.  Vuelve a Qonecta+: se comprueba solo.</string>
     <string name="hql_setup_guide_title">Cómo activar el modo desarrollador</string>
     <string name="hql_setup_media">Fotos, vídeos y ubicación</string>
     <string name="hql_setup_media_why">Para la galería y los paneles de conducción en el coche</string>
@@ -332,13 +332,13 @@
     <string name="hql_tab_route">Ruta</string>
     <string name="hql_tab_trips">Viajes</string>
     <string name="hql_tailwind">de cola</string>
-    <string name="hql_tap_to_connect">Toca para conectar QonectaLeap</string>
+    <string name="hql_tap_to_connect">Toca para conectar Qonecta+</string>
     <string name="hql_theme">Tema</string>
     <string name="hql_theme_dark">Oscuro</string>
     <string name="hql_theme_light">Claro</string>
     <string name="hql_theme_system">Según el sistema</string>
     <string name="hql_this_phone">Este móvil: %1$s</string>
-    <string name="hql_touch_label">QonectaLeap táctil</string>
+    <string name="hql_touch_label">Qonecta+ táctil</string>
     <string name="hql_touch_service_desc">Reenvía los toques de la pantalla del coche a la app proyectada y arranca el servidor de Android Auto cuando hace falta.</string>
     <string name="hql_trips_none">Se guardan solos al terminar cada trayecto de más de 300 m en Auto extendido, con el recorrido, el consumo estimado y el desnivel.</string>
     <string name="hql_trips_note">Energía estimada con el modelo del C10 (sin datos del coche). Precios: %1$.2f €/kWh; gasolina %2$.1f l/100 km a %3$.2f €/l.</string>
@@ -359,7 +359,7 @@
     <string name="hql_waiting_gps">Esperando la posición GPS del móvil…</string>
     <string name="hql_waiting_phone_gps">Esperando al GPS del móvil…</string>
     <string name="hql_web_address">Buscar o escribir dirección</string>
-    <string name="hql_welcome_body">QonectaLeap usa la conexión de espejo del coche para llevar a su pantalla Auto: mapas, música y mensajes, con más funciones en Auto extendido. El móvil puede ir bloqueado y con la pantalla apagada.</string>
+    <string name="hql_welcome_body">Qonecta+ usa la conexión de espejo del coche para llevar a su pantalla Auto: mapas, música y mensajes, con más funciones en Auto extendido. El móvil puede ir bloqueado y con la pantalla apagada.</string>
     <string name="hql_welcome_never">Y nunca manipules el móvil mientras conduces.</string>
     <string name="hql_welcome_parked">Haz la configuración con el coche aparcado</string>
     <string name="hql_welcome_mirror">App de espejo visible en la pantalla del coche</string>
@@ -387,7 +387,7 @@
     <string name="hql_hotspot_off">Zona Wi-Fi apagada: actívala</string>
     <string name="hql_hotspot_unknown">No se sabe si la zona Wi-Fi está activa</string>
     <string name="hql_hotspot_open">Abrir zona Wi-Fi</string>
-    <string name="hql_hotspot_guide">1. Activa la zona Wi-Fi del móvil (mejor en 5 GHz y sin apagado automático).\n2. Solo la primera vez: en el coche, Ajustes › Wi-Fi › elige la zona Wi-Fi de tu móvil.\n3. Abre la app de espejo en la pantalla del coche. QonectaLeap conecta solo, también con el móvil bloqueado.\nEl coche podría usar tus datos móviles.</string>
+    <string name="hql_hotspot_guide">1. Activa la zona Wi-Fi del móvil (mejor en 5 GHz y sin apagado automático).\n2. Solo la primera vez: en el coche, Ajustes › Wi-Fi › elige la zona Wi-Fi de tu móvil.\n3. Abre la app de espejo en la pantalla del coche. Qonecta+ conecta solo, también con el móvil bloqueado.\nEl coche podría usar tus datos móviles.</string>
     <string name="hql_hotspot_guide_title">Cómo conectar el coche a la zona Wi-Fi</string>
     <string name="hql_hotspot_tips">Consejos: la banda de 5 GHz va mejor (en 2,4 GHz la radio se comparte con el Bluetooth del coche) y conviene desactivar «Apagar la zona Wi-Fi si no hay dispositivos» (Samsung).</string>
     <string name="hql_hotspot_row">Zona Wi-Fi del móvil</string>
@@ -418,7 +418,7 @@
     <string name="hql_export_done">Guardado en %1$s</string>
     <string name="hql_export_downloads">Descargas/%1$s</string>
     <string name="hql_export_failed">No se pudo exportar: %1$s</string>
-    <string name="hql_export_share">Compartir log de QonectaLeap</string>
+    <string name="hql_export_share">Compartir log de Qonecta+</string>
     <string name="hql_pattern_test">Prueba sin Android Auto (patrón)</string>
     <string name="hql_log_paths">Registros en %1$s\nlogs/ registro completo · car/ diario · perf/ rendimiento · logcat/ · crash/</string>
     <string name="hql_log_info">Motor %1$s · %2$s</string>
@@ -441,7 +441,7 @@
         <item quantity="other">Faltan %d cosas</item>
     </plurals>
     <string name="hql_req_sub_ok">Está activado todo lo que necesita este modo.</string>
-    <string name="hql_req_sub_required">Sin lo obligatorio QonectaLeap no conectará. Cada botón te lleva a su ajuste.</string>
+    <string name="hql_req_sub_required">Sin lo obligatorio Qonecta+ no conectará. Cada botón te lleva a su ajuste.</string>
     <string name="hql_req_sub_recommended">Lo obligatorio está; lo demás lo hace más fiable.</string>
     <string name="hql_req_required">Obligatorio</string>
     <string name="hql_req_optional">Opcional</string>
@@ -453,16 +453,16 @@
     <string name="hql_req_acc_stuck">Activada pero sin funcionar (Android la paró): desactívala y vuelve a activarla.</string>
     <string name="hql_req_aa_disabled">Desactivado: actívalo en su Info. de la app</string>
     <string name="hql_req_dev_off">Sin activar: en Android Auto, toca 10 veces «Versión» (abajo se explica)</string>
-    <string name="hql_req_dev_unchecked">Sin comprobar: QonectaLeap abre Android Auto un momento</string>
+    <string name="hql_req_dev_unchecked">Sin comprobar: Qonecta+ abre Android Auto un momento</string>
     <string name="hql_req_notif">Notificaciones</string>
     <string name="hql_req_notif_why">Para ver el estado de la conexión y los avisos</string>
     <string name="hql_req_bgloc">Ubicación todo el tiempo</string>
     <string name="hql_req_bgloc_why">Para que los datos del coche sigan con el móvil bloqueado</string>
     <string name="hql_req_bgloc_needs_fine">Para que los datos del coche sigan con el móvil bloqueado. Primero la ubicación mientras se usa la app y después «Permitir todo el tiempo»</string>
-    <string name="hql_req_bgloc_blocked">Ajustes › Aplicaciones › QonectaLeap › Permisos › Ubicación › Permitir todo el tiempo</string>
+    <string name="hql_req_bgloc_blocked">Ajustes › Aplicaciones › Qonecta+ › Permisos › Ubicación › Permitir todo el tiempo</string>
     <string name="hql_req_bgloc_ok">Permitida todo el tiempo</string>
     <string name="hql_bgloc_title">Ubicación todo el tiempo</string>
-    <string name="hql_bgloc_msg">Con el móvil bloqueado, Android puede dejar sin GPS a las apps que solo tienen la ubicación «mientras se usa la app»: la velocidad, el viaje, la ruta y el consumo de la pantalla del coche se congelan hasta desbloquearlo.\n\nEn la página que se abre, elige «Permitir todo el tiempo». QonectaLeap solo usa el GPS mientras está conectado al coche (o con las pantallas Coche abiertas).</string>
+    <string name="hql_bgloc_msg">Con el móvil bloqueado, Android puede dejar sin GPS a las apps que solo tienen la ubicación «mientras se usa la app»: la velocidad, el viaje, la ruta y el consumo de la pantalla del coche se congelan hasta desbloquearlo.\n\nEn la página que se abre, elige «Permitir todo el tiempo». Qonecta+ solo usa el GPS mientras está conectado al coche (o con las pantallas Coche abiertas).</string>
     <string name="hql_gps_paused_locked">GPS en pausa · móvil bloqueado (activa la ubicación «todo el tiempo»)</string>
     <string name="hql_gps_lost">sin GPS</string>
     <string name="hql_req_notif_blocked">Desactivadas: actívalas en Ajustes</string>
@@ -475,21 +475,21 @@
     <string name="hql_req_band">Banda de 5 GHz</string>
     <string name="hql_req_band_why">No se puede leer desde aquí: en los ajustes de la zona Wi-Fi elige 5 GHz y quita el apagado automático</string>
     <string name="hql_req_port_title">Puerto 18463</string>
-    <string name="hql_req_port_busy">Ocupado: QDLink (u otra app) está abierta y el coche no encuentra a QonectaLeap. Fuerza su detención.</string>
-    <string name="hql_req_qdlink_why">Instalada: ciérrala antes de conectar (ocupa el puerto 18463). Info. de la app › Forzar detención. Si enchufas el cable del coche, Android puede dárselo a QDLink: elige QonectaLeap y «Siempre».</string>
+    <string name="hql_req_port_busy">Ocupado: QDLink (u otra app) está abierta y el coche no encuentra a Qonecta+. Fuerza su detención.</string>
+    <string name="hql_req_qdlink_why">Instalada: ciérrala antes de conectar (ocupa el puerto 18463). Info. de la app › Forzar detención. Si enchufas el cable del coche, Android puede dárselo a QDLink: elige Qonecta+ y «Siempre».</string>
     <string name="hql_req_force_stop">Forzar detención</string>
     <string name="hql_req_bt">Bluetooth (dispositivos cercanos)</string>
     <string name="hql_req_bt_why">Para reconocer el Bluetooth del coche y conectar sola</string>
     <string name="hql_req_battery_bt">Hace falta para que la conexión automática arranque en segundo plano</string>
     <string name="hql_req_samsung">Samsung: apps que nunca se suspenden</string>
-    <string name="hql_req_samsung_why">No se puede leer desde aquí: Ajustes › Batería › Límites de uso en segundo plano › Aplicaciones que nunca se suspenden › añade QonectaLeap. El botón abre su batería: elige «Sin restricciones».</string>
+    <string name="hql_req_samsung_why">No se puede leer desde aquí: Ajustes › Batería › Límites de uso en segundo plano › Aplicaciones que nunca se suspenden › añade Qonecta+. El botón abre su batería: elige «Sin restricciones».</string>
     <!-- Pantalla principal: título de la tarjeta de estado y del panel en directo (fps y Mbps). -->
     <string name="hql_status_title">Estado</string>
     <string name="hql_live">En directo</string>
     <!-- Textos que estaban fijos en el código (avisos, botones, pantallas del coche). -->
     <string name="hql_log_copied">Log copiado</string>
     <string name="hql_reconnecting_short">Reconectando…</string>
-    <string name="hql_latency_hint">Con QonectaLeap en modo Diagnóstico, graba a la vez esta pantalla y la del coche. La diferencia entre los dos relojes es la latencia total.</string>
+    <string name="hql_latency_hint">Con Qonecta+ en modo Diagnóstico, graba a la vez esta pantalla y la del coche. La diferencia entre los dos relojes es la latencia total.</string>
     <string name="hql_charge_point">Punto de carga</string>
     <string name="hql_app_opened_in_car">Abierta en el coche</string>
     <string name="hql_app_open_blocked">Android no permite abrirla en el coche</string>
@@ -499,13 +499,13 @@
     <string name="hql_waiting_car_paused">Esperando al coche · Android Auto en pausa</string>
     <string name="hql_unlock_channel">Arranque de Android Auto</string>
     <string name="hql_unlock_start_title">Desbloquea el móvil para iniciar Android Auto</string>
-    <string name="hql_unlock_start_text">El coche está listo. Al desbloquear, QonectaLeap arranca Android Auto solo; no hace falta abrir la app.</string>
+    <string name="hql_unlock_start_text">El coche está listo. Al desbloquear, Qonecta+ arranca Android Auto solo; no hace falta abrir la app.</string>
     <string name="hql_server_on_title">El servidor de Android Auto sigue encendido</string>
     <string name="hql_server_on_text">Tocar para apagarlo</string>
     <string name="hql_car_wait_title">Esperar al coche</string>
     <string name="hql_car_wait_option">%1$d min</string>
     <string name="hql_car_wait_option_default">%1$d min (recomendado)</string>
-    <string name="hql_car_wait_help">Si el coche se apaga o se corta la conexión, QonectaLeap sigue escuchando y deja Android Auto en pausa este tiempo: si el coche vuelve, la imagen sale al instante, sin desbloquear. Después lo cierra todo y apaga el servidor de Android Auto. Con el arranque manual del servidor lo cierra todo igual, pero el servidor no lo puede apagar: sigue encendido y el próximo viaje lo vuelve a usar sin reiniciarlo.</string>
+    <string name="hql_car_wait_help">Si el coche se apaga o se corta la conexión, Qonecta+ sigue escuchando y deja Android Auto en pausa este tiempo: si el coche vuelve, la imagen sale al instante, sin desbloquear. Después lo cierra todo y apaga el servidor de Android Auto. Con el arranque manual del servidor lo cierra todo igual, pero el servidor no lo puede apagar: sigue encendido y el próximo viaje lo vuelve a usar sin reiniciarlo.</string>
 
     <!-- headqlink: cable USB del coche (experimental) -->
     <string name="hql_link_usb">Cable USB</string>
@@ -513,12 +513,12 @@
     <string name="hql_experimental">Experimental</string>
     <string name="hql_req_usb">Cable USB de datos</string>
     <string name="hql_req_usb_why">Conecta el móvil al puerto USB de datos del coche con un cable de datos (no uno solo de carga). El coche tiene que poner el móvil en modo accesorio: si no pasa nada, exporta el log y envíanoslo (líneas HQL/USB).</string>
-    <string name="hql_req_usb_chooser">Con QDLink instalada, Android puede preguntar qué app abre «QDriveLink» al conectar el cable: elige QonectaLeap y «Siempre», o desinstala QDLink.</string>
+    <string name="hql_req_usb_chooser">Con QDLink instalada, Android puede preguntar qué app abre «QDriveLink» al conectar el cable: elige Qonecta+ y «Siempre», o desinstala QDLink.</string>
     <string name="hql_usb_guide_title">Conexión por cable USB</string>
-    <string name="hql_usb_guide">1. Conecta el móvil al puerto USB de datos del coche con un cable de datos.\n2. Abre la app de espejo en la pantalla del coche.\n3. Si Android pregunta qué app abre «QDriveLink», elige QonectaLeap y «Siempre».\nQonectaLeap arranca solo cuando el coche pone el móvil en modo accesorio, sea cual sea la conexión elegida; al quitar el cable vuelve al Wi-Fi. Si no pasa nada, exporta el log (Diagnóstico) y envíanoslo.</string>
+    <string name="hql_usb_guide">1. Conecta el móvil al puerto USB de datos del coche con un cable de datos.\n2. Abre la app de espejo en la pantalla del coche.\n3. Si Android pregunta qué app abre «QDriveLink», elige Qonecta+ y «Siempre».\nQonecta+ arranca solo cuando el coche pone el móvil en modo accesorio, sea cual sea la conexión elegida; al quitar el cable vuelve al Wi-Fi. Si no pasa nada, exporta el log (Diagnóstico) y envíanoslo.</string>
     <string name="hql_usb_net_waiting">Cable USB: esperando al coche (cable de datos en el puerto USB de datos del coche)</string>
-    <string name="hql_usb_net_connected">Cable USB: %1$s</string>
-    <string name="hql_usb_net_permission">Cable USB: permite a QonectaLeap abrir %1$s</string>
+    <string name="hql_usb_net_connected">Cable USB: conectado</string>
+    <string name="hql_usb_net_permission">Cable USB: permite a Qonecta+ abrir %1$s</string>
     <string name="hql_usb_net_denied">Cable USB: permiso denegado (desconecta el cable y vuelve a conectarlo)</string>
     <string name="hql_usb_net_open_failed">Cable USB: no se pudo abrir %1$s (¿lo usa otra app, como QDLink?)</string>
     <string name="hql_usb_net_other">Cable USB: el accesorio no es el del coche (%1$s)</string>
@@ -528,18 +528,18 @@
     <string name="hql_aa_server_start_title">Arranque del servidor de Android Auto</string>
     <string name="hql_aa_server_start_auto">Automático (accesibilidad) · Recomendado</string>
     <string name="hql_aa_server_start_manual">Manual (sin accesibilidad)</string>
-    <string name="hql_aa_server_start_help">Automático: QonectaLeap arranca y para solo el servidor de Android Auto, con su servicio de accesibilidad. Manual: sin accesibilidad; lo arrancas tú (Android Auto › ⋮ › Iniciar servidor de la unidad principal) tras cada reinicio del móvil o actualización de Android Auto, y QonectaLeap nunca lo para: sigue encendido entre viajes y el siguiente lo vuelve a usar sin reiniciarlo, también con el móvil bloqueado. Si alguna vez no contesta (apagado, o bloqueado por una conexión que se cortó a medias), QonectaLeap te avisa y lo reintenta solo: páralo y vuelve a iniciarlo (⋮ › Parar servidor y ⋮ › Iniciar servidor de la unidad principal). En una Wi-Fi pública, cualquier aparato de esa red podría intentar conectarse: páralo cuando no lo uses. Se aplica en el acto.</string>
+    <string name="hql_aa_server_start_help">Automático: Qonecta+ arranca y para solo el servidor de Android Auto, con su servicio de accesibilidad. Manual: sin accesibilidad; lo arrancas tú (Android Auto › ⋮ › Iniciar servidor de la unidad principal) tras cada reinicio del móvil o actualización de Android Auto, y Qonecta+ nunca lo para: sigue encendido entre viajes y el siguiente lo vuelve a usar sin reiniciarlo, también con el móvil bloqueado. Si alguna vez no contesta (apagado, o bloqueado por una conexión que se cortó a medias), Qonecta+ te avisa y lo reintenta solo: páralo y vuelve a iniciarlo (⋮ › Parar servidor y ⋮ › Iniciar servidor de la unidad principal). En una Wi-Fi pública, cualquier aparato de esa red podría intentar conectarse: páralo cuando no lo uses. Se aplica en el acto.</string>
     <string name="hql_aa_server_wait">Esperando al servidor de Android Auto</string>
-    <string name="hql_aa_server_wait_hint">Android Auto no atiende: arranca (o vuelve a arrancar) su servidor: Android Auto › ⋮ › Parar servidor (si aparece) y ⋮ › Iniciar servidor de la unidad principal. Toca aquí o la fila «Auto» para abrir Android Auto; QonectaLeap lo reintenta cada 5 s y sigue solo en cuanto atienda.</string>
+    <string name="hql_aa_server_wait_hint">Android Auto no atiende: arranca (o vuelve a arrancar) su servidor: Android Auto › ⋮ › Parar servidor (si aparece) y ⋮ › Iniciar servidor de la unidad principal. Toca aquí o la fila «Auto» para abrir Android Auto; Qonecta+ lo reintenta cada 5 s y sigue solo en cuanto atienda.</string>
     <string name="hql_aa_server_ask_title">Arranca (o vuelve a arrancar) el servidor de Android Auto</string>
-    <string name="hql_aa_server_ask_text">Android Auto › ⋮ › Parar servidor (si aparece) y ⋮ › Iniciar servidor de la unidad principal. Toca para abrir Android Auto; QonectaLeap lo reintenta cada 5 s y sigue solo en cuanto atienda.</string>
+    <string name="hql_aa_server_ask_text">Android Auto › ⋮ › Parar servidor (si aparece) y ⋮ › Iniciar servidor de la unidad principal. Toca para abrir Android Auto; Qonecta+ lo reintenta cada 5 s y sigue solo en cuanto atienda.</string>
     <string name="hql_aa_server_ask_channel">Arranque manual de Android Auto</string>
     <string name="hql_reason_manual">arranque manual: para y vuelve a iniciar su servidor en Android Auto › ⋮</string>
     <string name="hql_req_info">Información</string>
     <string name="hql_req_aa_server">Servidor de Android Auto</string>
-    <string name="hql_req_aa_server_in_use">En uso por QonectaLeap (Android Auto conectado). Al cerrar Android Auto con normalidad sigue encendido y vuelve a atender: no hace falta reiniciarlo.</string>
-    <string name="hql_req_aa_server_waiting">No atiende: arráncalo (o vuelve a arrancarlo) en Android Auto › ⋮ › Parar servidor (si aparece) y ⋮ › Iniciar servidor de la unidad principal. QonectaLeap lo reintenta solo.</string>
-    <string name="hql_req_aa_server_tip">QonectaLeap no lo comprueba antes de conectar: una conexión de prueba (que abre y cierra sin hablar) lo bloquearía. Arráncalo antes de conectar (⋮ › Iniciar servidor de la unidad principal); mientras siga encendido, vale para los viajes siguientes. Si QonectaLeap avisa de que no contesta, páralo y vuelve a iniciarlo.</string>
+    <string name="hql_req_aa_server_in_use">En uso por Qonecta+ (Android Auto conectado). Al cerrar Android Auto con normalidad sigue encendido y vuelve a atender: no hace falta reiniciarlo.</string>
+    <string name="hql_req_aa_server_waiting">No atiende: arráncalo (o vuelve a arrancarlo) en Android Auto › ⋮ › Parar servidor (si aparece) y ⋮ › Iniciar servidor de la unidad principal. Qonecta+ lo reintenta solo.</string>
+    <string name="hql_req_aa_server_tip">Qonecta+ no lo comprueba antes de conectar: una conexión de prueba (que abre y cierra sin hablar) lo bloquearía. Arráncalo antes de conectar (⋮ › Iniciar servidor de la unidad principal); mientras siga encendido, vale para los viajes siguientes. Si Qonecta+ avisa de que no contesta, páralo y vuelve a iniciarlo.</string>
     <string name="hql_req_auto_use">Modo automático</string>
     <string name="hql_req_manual_title">¿Sin accesibilidad?</string>
     <string name="hql_req_manual_why">Puedes arrancar tú el servidor de Android Auto (arranque manual) y no activar la accesibilidad. El automático sigue siendo el recomendado.</string>
@@ -547,9 +547,9 @@
     <string name="hql_req_acc_manual">Solo para el modo automático</string>
     <string name="hql_req_dev_manual">Sin la accesibilidad no se puede comprobar: si en Android Auto › ⋮ no ves «Iniciar servidor de la unidad principal», actívalo (guía abajo).</string>
     <string name="hql_manual_confirm_title">Arranque manual del servidor de Android Auto</string>
-    <string name="hql_manual_confirm_msg">Sin la accesibilidad, QonectaLeap no arranca ni para el servidor de Android Auto:\n\n•  Arráncalo tú (Android Auto › ⋮ › Iniciar servidor de la unidad principal) tras cada reinicio del móvil o actualización de Android Auto.\n•  QonectaLeap cierra siempre Android Auto con orden, así que el servidor sigue atendiendo: vale para los viajes siguientes sin reiniciarlo, también con el móvil bloqueado. Si alguna vez no contesta (apagado, o bloqueado por una conexión que se cortó a medias), QonectaLeap te avisa y lo reintenta solo: páralo y vuelve a iniciarlo.\n•  Se queda encendido hasta que lo pares tú. En una Wi-Fi pública, cualquier aparato de esa red podría intentar conectarse: páralo cuando no estés en el coche (⋮ › Parar servidor).\n\nEl arranque automático sigue siendo el recomendado. Puedes volver a él en Ajustes de imagen › Avanzado.</string>
+    <string name="hql_manual_confirm_msg">Sin la accesibilidad, Qonecta+ no arranca ni para el servidor de Android Auto:\n\n•  Arráncalo tú (Android Auto › ⋮ › Iniciar servidor de la unidad principal) tras cada reinicio del móvil o actualización de Android Auto.\n•  Qonecta+ cierra siempre Android Auto con orden, así que el servidor sigue atendiendo: vale para los viajes siguientes sin reiniciarlo, también con el móvil bloqueado. Si alguna vez no contesta (apagado, o bloqueado por una conexión que se cortó a medias), Qonecta+ te avisa y lo reintenta solo: páralo y vuelve a iniciarlo.\n•  Se queda encendido hasta que lo pares tú. En una Wi-Fi pública, cualquier aparato de esa red podría intentar conectarse: páralo cuando no estés en el coche (⋮ › Parar servidor).\n\nEl arranque automático sigue siendo el recomendado. Puedes volver a él en Ajustes de imagen › Avanzado.</string>
     <string name="hql_setup_guide_manual_title">Cómo arrancar el servidor de Android Auto</string>
-    <string name="hql_setup_guide_manual">1.  Pulsa «Abrir AA».\n2.  Toca ⋮ (arriba a la derecha) › «Iniciar servidor de la unidad principal».\n3.  Si no está esa opción: baja hasta el final, toca 10 veces «Versión», acepta el aviso y repite el paso 2.\n4.  Vuelve a QonectaLeap y conecta. QonectaLeap no lo comprueba antes (una conexión de prueba lo bloquearía): si con el coche Android Auto no contesta, te avisa y lo reintenta cada 5 s.\nHazlo tras cada reinicio del móvil o actualización de Android Auto: entre viajes sigue encendido y vale sin reiniciarlo. Si QonectaLeap avisa de que no contesta: ⋮ › «Parar servidor unidad principal» y ⋮ › «Iniciar servidor de la unidad principal».</string>
+    <string name="hql_setup_guide_manual">1.  Pulsa «Abrir AA».\n2.  Toca ⋮ (arriba a la derecha) › «Iniciar servidor de la unidad principal».\n3.  Si no está esa opción: baja hasta el final, toca 10 veces «Versión», acepta el aviso y repite el paso 2.\n4.  Vuelve a Qonecta+ y conecta. Qonecta+ no lo comprueba antes (una conexión de prueba lo bloquearía): si con el coche Android Auto no contesta, te avisa y lo reintenta cada 5 s.\nHazlo tras cada reinicio del móvil o actualización de Android Auto: entre viajes sigue encendido y vale sin reiniciarlo. Si Qonecta+ avisa de que no contesta: ⋮ › «Parar servidor unidad principal» y ⋮ › «Iniciar servidor de la unidad principal».</string>
     <!-- Vista previa del modo extendido (PreviewActivity, modo demostración) -->
     <string name="hql_preview_title">Vista previa del modo extendido</string>
     <string name="hql_preview_busy">La vista previa usa datos de demostración y no está disponible conectado al coche. Desconecta primero.</string>
@@ -678,23 +678,23 @@
     <string name="hql_w_link_usb">Cable USB</string>
     <string name="hql_w_cd_link">Conexión: %1$s. Toca para cambiarla</string>
     <string name="hql_w_cd_selected">%1$s, opción elegida</string>
-    <string name="hql_w_cd_open">Abrir QonectaLeap</string>
+    <string name="hql_w_cd_open">Abrir Qonecta+</string>
     <string name="hql_w_add_widget">Añadir widget a la pantalla de inicio</string>
     <string name="hql_w_add_tile">Añadir botón a los ajustes rápidos</string>
     <string name="hql_w_pin_manual_title">Añadir el widget</string>
-    <string name="hql_w_pin_manual">Tu pantalla de inicio no deja añadirlo desde aquí. Mantén pulsado un hueco libre de la pantalla de inicio › Widgets › QonectaLeap.</string>
+    <string name="hql_w_pin_manual">Tu pantalla de inicio no deja añadirlo desde aquí. Mantén pulsado un hueco libre de la pantalla de inicio › Widgets › Qonecta+.</string>
     <string name="hql_w_tile_added">Botón añadido a los ajustes rápidos</string>
     <string name="hql_w_tile_already">El botón ya está en los ajustes rápidos</string>
-    <string name="hql_w_tile_manual">Abre los ajustes rápidos, toca el lápiz (editar) y arrastra «QonectaLeap» a tus botones.</string>
+    <string name="hql_w_tile_manual">Abre los ajustes rápidos, toca el lápiz (editar) y arrastra «Qonecta+» a tus botones.</string>
     <!-- Versiones de Android Auto: botón del servidor no encontrado, cortes a los pocos segundos y fila de la Comprobación -->
     <string name="hql_aa_compat_channel">Compatibilidad con Android Auto</string>
-    <string name="hql_aa_ui_changed_title">QonectaLeap no encuentra el botón del servidor</string>
-    <string name="hql_aa_ui_changed_text">QonectaLeap no encuentra el botón del servidor en esta versión de Android Auto (%1$s): arráncalo a mano (⋮ › Iniciar servidor de la unidad principal) o usa el modo Manual.</string>
+    <string name="hql_aa_ui_changed_title">Qonecta+ no encuentra el botón del servidor</string>
+    <string name="hql_aa_ui_changed_text">Qonecta+ no encuentra el botón del servidor en esta versión de Android Auto (%1$s): arráncalo a mano (⋮ › Iniciar servidor de la unidad principal) o usa el modo Manual.</string>
     <string name="hql_aa_flap_title">Android Auto se conecta y se corta a los pocos segundos</string>
-    <string name="hql_aa_flap_text">Pasa con algunas versiones nuevas de Android Auto (aquí, %1$s). Prueba: borra la caché de Android Auto (Ajustes › Aplicaciones › Android Auto › Almacenamiento › Borrar caché), para e inicia su servidor (⋮) o vuelve a una versión probada (%2$s). QonectaLeap lo reintenta como mucho cada 10 s.</string>
+    <string name="hql_aa_flap_text">Pasa con algunas versiones nuevas de Android Auto (aquí, %1$s). Prueba: borra la caché de Android Auto (Ajustes › Aplicaciones › Android Auto › Almacenamiento › Borrar caché), para e inicia su servidor (⋮) o vuelve a una versión probada (%2$s). Qonecta+ lo reintenta como mucho cada 10 s.</string>
     <string name="hql_req_aa_version">Android Auto %1$s</string>
-    <string name="hql_req_aa_version_ok">Probada con QonectaLeap (%1$s). Para que no cambie sin avisar, desactiva la actualización automática de Android Auto.</string>
-    <string name="hql_req_aa_version_untested">Sin probar todavía con QonectaLeap (probadas: %1$s). Si falla, desactiva la actualización automática de Android Auto (Play Store › Android Auto › ⋮) y mira «Versiones de Android Auto» en el manual.</string>
+    <string name="hql_req_aa_version_ok">Probada con Qonecta+ (%1$s). Para que no cambie sin avisar, desactiva la actualización automática de Android Auto.</string>
+    <string name="hql_req_aa_version_untested">Sin probar todavía con Qonecta+ (probadas: %1$s). Si falla, desactiva la actualización automática de Android Auto (Play Store › Android Auto › ⋮) y mira «Versiones de Android Auto» en el manual.</string>
     <string name="hql_req_aa_version_store">Play Store</string>
     <string name="hql_route_arrival_compare">Al llegar: previsto %1$.1f kWh · real %2$.1f kWh (datos del coche)</string>
     <string name="hql_route_arrival_generator">Al llegar: previsto %1$.1f kWh · el generador cargó por el camino (sin medir)</string>
@@ -709,7 +709,7 @@
     <string name="hql_search_voice">Hablar</string>
     <string name="hql_search_voice_none">Este móvil no tiene búsqueda por voz.</string>
     <string name="hql_search_voice_nothing">No te he entendido: prueba otra vez o escríbelo.</string>
-    <string name="hql_search_voice_permission">Para buscar hablando, da permiso de micrófono a QonectaLeap en el móvil (Ajustes › Aplicaciones › QonectaLeap › Permisos).</string>
+    <string name="hql_search_voice_permission">Para buscar hablando, da permiso de micrófono a Qonecta+ en el móvil (Ajustes › Aplicaciones › Qonecta+ › Permisos).</string>
     <string name="hql_trip_avg">Media</string>
     <string name="hql_trip_climb">Subida</string>
     <string name="hql_trip_consumption">Consumo</string>
@@ -831,10 +831,10 @@
     <string name="hql_route_map">Mapa</string>
     <string name="hql_route_map_title">Ruta del plan</string>
     <string name="hql_route_map_note">El trazado que usa el plan (OpenStreetMap), para compararlo con el de Google Maps. Si Google va por otro sitio, el plan se rehace solo al ver que vas por otra carretera.</string>
-    <string name="hql_maps_listener_label">QonectaLeap: ruta de Google Maps</string>
+    <string name="hql_maps_listener_label">Qonecta+: ruta de Google Maps</string>
     <string name="hql_maps_read">Leer la ruta de Google Maps</string>
     <string name="hql_maps_read_on">Leer la ruta de Google Maps ✓</string>
-    <string name="hql_maps_read_help">Activa QonectaLeap: lee la notificación de navegación de Google Maps (km de la ruta y hora de llegada) para que el plan siga la misma ruta. Solo lee la de Google Maps.</string>
+    <string name="hql_maps_read_help">Activa Qonecta+: lee la notificación de navegación de Google Maps (km de la ruta y hora de llegada) para que el plan siga la misma ruta. Solo lee la de Google Maps.</string>
     <string name="hql_tab_connection">Conexión</string>
     <string name="hql_ins_car">Tu coche ahora</string>
     <string name="hql_ins_range">Autonomía</string>
@@ -850,7 +850,7 @@
     <string name="hql_ins_trips">viajes</string>
     <string name="hql_ins_daily_legend">Barras: km de cada día · línea: consumo</string>
     <string name="hql_ins_from_car">según el coche</string>
-    <string name="hql_ins_from_app">viajes con QonectaLeap</string>
+    <string name="hql_ins_from_app">viajes con Qonecta+</string>
     <string name="hql_ins_how">Cómo gastas</string>
     <string name="hql_ins_per_trip">Consumo de los últimos viajes (kWh/100 km)</string>
     <string name="hql_ins_by_length">Según lo largo del viaje</string>
@@ -858,13 +858,13 @@
     <string name="hql_ins_cold_tip">Los viajes cortos gastan un %1$s %% más: calentar la batería y el habitáculo pesa más cuando el trayecto es corto.</string>
     <string name="hql_ins_best">Tu mejor viaje: %1$s kWh/100 km en %2$s km (%3$s)</string>
     <string name="hql_ins_charges">Cargas</string>
-    <string name="hql_ins_no_charges">Aún no hay cargas guardadas: se guardan cuando cargas con QonectaLeap en marcha (en el coche o en un viaje).</string>
+    <string name="hql_ins_no_charges">Aún no hay cargas guardadas: se guardan cuando cargas con Qonecta+ en marcha (en el coche o en un viaje).</string>
     <string name="hql_ins_charge_line">%1$s → %2$s %% · %3$s kWh · %4$s min · pico %5$s kW</string>
     <string name="hql_ins_dc">Cargador rápido</string>
     <string name="hql_ins_ac">Carga en alterna</string>
     <string name="hql_ins_curve_help">Potencia (kW) según se llena la batería (%). El C10 frena la carga al llenarse: es normal.</string>
     <string name="hql_ins_drives">Recorridos</string>
-    <string name="hql_ins_no_drives">Aún no hay recorridos: aquí se guardan los viajes hechos con QonectaLeap.</string>
+    <string name="hql_ins_no_drives">Aún no hay recorridos: aquí se guardan los viajes hechos con Qonecta+.</string>
     <string name="hql_ins_drive_line">%1$s km · %2$s · %3$s</string>
     <string name="hql_ins_max">máx.</string>
     <string name="hql_ins_stops">%1$d paradas</string>
@@ -910,7 +910,7 @@
     <string name="hql_ha_edit">Elegir</string>
     <string name="hql_web_recent">Visitadas hace poco</string>
     <string name="hql_web_listening">Escuchando… di qué buscar</string>
-    <string name="hql_use_responsibility">He leído y acepto los Términos de uso. Reconozco que utilizo QonectaLeap bajo mi responsabilidad y acepto la ausencia de garantías y la limitación de responsabilidad en los términos permitidos por la legislación aplicable.</string>
+    <string name="hql_use_responsibility">He leído y acepto los Términos de uso. Reconozco que utilizo Qonecta+ bajo mi responsabilidad y acepto la ausencia de garantías y la limitación de responsabilidad en los términos permitidos por la legislación aplicable.</string>
     <string name="hql_panel_day">Día</string>
     <string name="hql_panel_night">Noche</string>
     <string name="hql_req_microphone">Micrófono</string>
@@ -918,14 +918,14 @@
     <string name="hql_req_phone">Llamadas</string>
     <string name="hql_req_phone_why">Permite acceder al estado de las llamadas durante la conexión con el coche.</string>
     <string name="hql_responsibility_title">Seguridad y responsabilidad</string>
-    <string name="hql_responsibility_summary">QonectaLeap es un proyecto independiente y experimental, suministrado «tal cual» y sin garantías. El usuario es responsable de utilizarlo de forma segura, respetar la normativa de tráfico y no utilizar funciones de ocio durante la conducción.</string>
+    <string name="hql_responsibility_summary">Qonecta+ es un proyecto independiente y experimental, suministrado «tal cual» y sin garantías. El usuario es responsable de utilizarlo de forma segura, respetar la normativa de tráfico y no utilizar funciones de ocio durante la conducción.</string>
     <string name="hql_terms_title">Términos de uso</string>
     <string name="hql_terms_read">Leer los Términos de uso</string>
-    <string name="hql_terms_detail">&lt;p&gt;&lt;b&gt;1. Carácter independiente y experimental&lt;/b&gt;&lt;br&gt;QonectaLeap es un proyecto personal y experimental de código abierto. Utiliza protocolos e interfaces no documentados y servicios de terceros. Puede fallar, dejar de funcionar o comportarse de forma inesperada en cualquier momento, incluso después de una actualización del móvil, del vehículo o de esos servicios.&lt;/p&gt;
+    <string name="hql_terms_detail">&lt;p&gt;&lt;b&gt;1. Carácter independiente y experimental&lt;/b&gt;&lt;br&gt;Qonecta+ es un proyecto personal y experimental de código abierto. Utiliza protocolos e interfaces no documentados y servicios de terceros. Puede fallar, dejar de funcionar o comportarse de forma inesperada en cualquier momento, incluso después de una actualización del móvil, del vehículo o de esos servicios.&lt;/p&gt;
 &lt;p&gt;&lt;b&gt;2. Uso seguro y responsabilidad del usuario&lt;/b&gt;&lt;br&gt;El conductor es responsable de mantener la atención en la carretera, conducir de forma segura y cumplir la normativa de tráfico aplicable. La instalación, configuración y manipulación de la aplicación deben realizarse con el vehículo detenido en un lugar seguro. No deben visualizarse vídeos, juegos, páginas web u otros contenidos de ocio durante la conducción. La aplicación no sustituye los sistemas de seguridad del vehículo ni garantiza la exactitud de los datos de navegación o del coche.&lt;/p&gt;
 &lt;p&gt;&lt;b&gt;3. Ausencia de garantías&lt;/b&gt;&lt;br&gt;El software se proporciona «tal cual», sin garantías expresas o implícitas en la medida permitida por la legislación aplicable. No se garantiza su funcionamiento, disponibilidad, compatibilidad, seguridad, adecuación a un fin determinado ni ausencia de infracción de derechos de terceros. El usuario asume los riesgos asociados a su instalación y utilización.&lt;/p&gt;
 &lt;p&gt;&lt;b&gt;4. Limitación de responsabilidad&lt;/b&gt;&lt;br&gt;En la medida permitida por la legislación aplicable y salvo obligación legal o compromiso expreso por escrito, los autores, colaboradores y distribuidores no asumirán responsabilidad por daños directos o indirectos derivados del uso, uso indebido o imposibilidad de utilizar el software. Esto incluye accidentes, lesiones, daños al vehículo, al móvil o a terceros, pérdida o inexactitud de datos, pérdidas económicas, multas o sanciones, pérdida de garantías del vehículo o del dispositivo e incumplimiento de condiciones de servicios de terceros. Esta limitación se aplica también al uso contrario a la legislación vigente.&lt;/p&gt;
-&lt;p&gt;&lt;b&gt;5. Ausencia de afiliación y servicios de terceros&lt;/b&gt;&lt;br&gt;QonectaLeap es independiente y no está afiliado, respaldado ni patrocinado por Leapmotor, Google, Neusoft, Open Headunit ni sus autores. Las marcas citadas pertenecen a sus respectivos titulares y se mencionan para describir la compatibilidad. Los servicios de terceros están sujetos a sus propias condiciones y pueden cambiar o dejar de estar disponibles.&lt;/p&gt;
+&lt;p&gt;&lt;b&gt;5. Ausencia de afiliación y servicios de terceros&lt;/b&gt;&lt;br&gt;Qonecta+ es independiente y no está afiliado, respaldado ni patrocinado por Leapmotor, Google, Neusoft, Open Headunit ni sus autores. Las marcas citadas pertenecen a sus respectivos titulares y se mencionan para describir la compatibilidad. Los servicios de terceros están sujetos a sus propias condiciones y pueden cambiar o dejar de estar disponibles.&lt;/p&gt;
 &lt;p&gt;&lt;b&gt;6. Licencia y aceptación&lt;/b&gt;&lt;br&gt;El software se distribuye bajo la licencia GNU AGPL-3.0. Son aplicables sus secciones 15 y 16, relativas a la ausencia de garantías y a la limitación de responsabilidad. Estas condiciones no modifican los derechos que concede esa licencia ni excluyen responsabilidades o derechos que la legislación aplicable no permita excluir. Al marcar la casilla, el usuario declara haber leído y aceptado estas condiciones. La aceptación se guarda localmente al finalizar la configuración.&lt;/p&gt;</string>
     <string name="hql_tv_fill">Rellenar</string>
     <string name="hql_tv_fit">Ajustar</string>
@@ -937,7 +937,7 @@
     <string name="hql_settings_reconnect_note">Cambiar el perfil o la fluidez reconecta el coche y Android Auto (unos segundos).</string>
     <string name="hql_usb_busy_channel">Cable del coche</string>
     <string name="hql_usb_busy_title">El cable del coche lo tiene otra app</string>
-    <string name="hql_usb_busy_qdlink">Seguramente la app QDLink original. Toca aquí y pulsa «Forzar detención»: QonectaLeap cogerá el cable.</string>
+    <string name="hql_usb_busy_qdlink">Seguramente la app QDLink original. Toca aquí y pulsa «Forzar detención»: Qonecta+ cogerá el cable.</string>
     <string name="hql_usb_busy_other">Cierra la app que lo está usando, o quita el cable y vuelve a ponerlo.</string>
     <string name="hql_float_card">Tarjeta de la próxima parada sobre Android Auto</string>
     <string name="hql_float_card_help">Tócala para abrir la ruta; mantenla pulsada para moverla.</string>
@@ -956,4 +956,6 @@
     <string name="hql_web_desktop">Versión de ordenador (esta web)</string>
     <string name="hql_web_adblock">Bloquear anuncios</string>
     <string name="hql_web_adblock_count">%1$d bloqueados aquí</string>
+    <string name="hql_psx_sub">PCSX ReARMed · .chd, .cue, .pbp</string>
+    <string name="hql_psx_copying">Copiando el disco al móvil… %1$d MB\nSolo la primera vez: después arranca al momento.</string>
 </resources>

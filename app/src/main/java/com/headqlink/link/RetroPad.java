@@ -8,8 +8,11 @@ import com.grapeshot.halfnes.ui.PuppetController;
  * una vez por fotograma. El orden de los bits es el de ClownMDEmu, así la Mega Drive los usa tal cual.
  */
 final class RetroPad {
-    /** L y R (Super Nintendo) van al final: los doce primeros conservan el orden de bits de ClownMDEmu. */
-    enum Btn {UP, DOWN, LEFT, RIGHT, A, B, C, X, Y, Z, START, SELECT, L, R}
+    /**
+     * L y R (Super Nintendo; L1 y R1 en la PlayStation) y L2 y R2 (PlayStation) van al final: los doce primeros conservan
+     * el orden de bits de ClownMDEmu.
+     */
+    enum Btn {UP, DOWN, LEFT, RIGHT, A, B, C, X, Y, Z, START, SELECT, L, R, L2, R2}
 
     private int bits;
     /** Lo pulsado desde la última lectura: un toque más corto que un fotograma también cuenta. */
