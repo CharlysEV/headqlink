@@ -49,6 +49,7 @@ final class GamesScreen implements CarScreen {
     /** Emuladores (ROMs del usuario): navegador y juego dentro de esta pantalla. */
     private NesScreen nes;
     private NesScreen md;
+    private NesScreen snes;
 
     private boolean running;
     /** Solo la vista previa: abrir este juego en modo demostración al crear la pantalla (-1: menú). */
@@ -69,6 +70,7 @@ final class GamesScreen implements CarScreen {
         consoles.setOrientation(LinearLayout.HORIZONTAL);
         consoles.addView(consoleCard(c, 5, "NES", Str.get(R.string.hql_nes_sub), 0xFFB71C1C, 0xFF3A3F47, "8-BIT"), weighted(250));
         consoles.addView(consoleCard(c, 6, "MEGA DRIVE", Str.get(R.string.hql_md_sub), 0xFF0D47A1, 0xFF111317, "16-BIT"), weighted(250));
+        consoles.addView(consoleCard(c, 7, "SNES", Str.get(R.string.hql_snes_sub), 0xFF5E35B1, 0xFF1F1A2E, "16-BIT"), weighted(250));
         col.addView(consoles);
         TextView quickLabel = section(c, Str.get(R.string.hql_games_quick));
         quickLabel.setPadding(10, 34, 0, 12);
@@ -191,6 +193,11 @@ final class GamesScreen implements CarScreen {
         if (game == 6) {
             if (md == null) md = new NesScreen(host, () -> host.setContent(menu), GameConsole.MD);
             host.setContent(md.browser());
+            return;
+        }
+        if (game == 7) {
+            if (snes == null) snes = new NesScreen(host, () -> host.setContent(menu), GameConsole.SNES);
+            host.setContent(snes.browser());
             return;
         }
         Board board = game == 0 ? new Game2048(c) : game == 1 ? new Memory(c) : game == 2 ? new TicTacToe(c)

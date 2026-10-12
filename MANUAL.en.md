@@ -669,15 +669,15 @@ Paste the URL of an M3U list or tap "Choose file". Without a radio list, the car
 The shortcuts on the car's "Web" screen (YouTube, Google, Wikipedia and Twitch by default). Add your own with a
 name and an address, remove them or reorder them with the arrows; "Defaults" puts back the original four.
 
-### "Games folder": NES and Mega Drive ("Auto extended")
+### "Games folder": NES, Mega Drive and Super Nintendo ("Auto extended")
 
 ⚙ menu › Games. Pick the phone folder with your games: one folder for every console, and .zip files work as they are
-(the app ships none). In the car, Games › NES or Games › Mega Drive open that folder and its subfolders, each with its
-own games (.nes; .md, .gen, .bin or .smd; and the .zip files that contain them). Tap a game to play, with touch buttons
+(the app ships none). In the car, Games › NES, Mega Drive or SNES open that folder and its subfolders, each with its
+own games (.nes; .md, .gen, .bin or .smd; .sfc or .smc; and the .zip files that contain them). Tap a game to play, with touch buttons
 or a Bluetooth gamepad connected to the phone. On the Mega Drive, the gamepad's X, A and B are A, B and C; LB, Y and RB
-are X, Y and Z (six-button games), and Select is Mode. When a game starts, the phone shows "Gamepad connected to the
+are X, Y and Z (six-button games), and Select is Mode. On the Super Nintendo they follow its pad's layout: the gamepad's A, B, X and Y are B, A, Y and X, and LB and RB are L and R. When a game starts, the phone shows "Gamepad connected to the
 car": keep it in front so the whole gamepad reaches the game. Only with the car stopped. Games with saved progress save
-it by themselves. The cores are RetroArch's: Nestopia (NES) and ClownMDEmu (Mega Drive).
+it by themselves. The cores are RetroArch's: Nestopia (NES), ClownMDEmu (Mega Drive) and bsnes (Super Nintendo, with the cartridge chips: Super FX, SA-1, DSP…).
 
 ### "Diagnostics"
 

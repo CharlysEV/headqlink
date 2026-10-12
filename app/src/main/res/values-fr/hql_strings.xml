@@ -942,4 +942,5 @@
     <string name="hql_float_no_charger">Aucune borne à portée</string>
     <string name="hql_move_up">Monter</string>
     <string name="hql_move_down">Descendre</string>
+    <string name="hql_snes_sub">bsnes · vos jeux, manette ou tactile</string>
 </resources>

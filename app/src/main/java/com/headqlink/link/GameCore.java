@@ -4,8 +4,8 @@ import android.content.Context;
 import android.graphics.Bitmap;
 
 /**
- * Un núcleo de emulador: NES (Nestopia, nativo, el de RetroArch; halfNES en Java de reserva) o Mega Drive (ClownMDEmu,
- * nativo). NesScreen solo ve esto.
+ * Un núcleo de emulador: NES (Nestopia, nativo, el de RetroArch; halfNES en Java de reserva), Mega Drive (ClownMDEmu,
+ * nativo) o Super Nintendo (bsnes, nativo, en su versión libretro). NesScreen solo ve esto.
  */
 interface GameCore {
     interface Listener {
@@ -37,6 +37,13 @@ interface GameCore {
      * van a halfNES, que las reproduce solas. Devuelve el núcleo ya cargado; si ninguno puede, lanza el error del último.
      */
     static GameCore open(Context c, GameConsole console, String path) throws Exception {
+        if (console == GameConsole.SNES) {
+            SnesEngine s = new SnesEngine(c);
+            String err = s.load(path);
+            if (err == null) return s;
+            s.stop();
+            throw new Exception(err);
+        }
         if (console == GameConsole.MD) {
             MdEngine m = new MdEngine(c);
             String err = m.load(path);

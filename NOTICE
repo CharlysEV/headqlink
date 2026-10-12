@@ -34,6 +34,16 @@ three.js (3D car in the Status tab):
   app/src/main/assets/three/three.min.js is three.js r149 (https://threejs.org), Copyright 2010-2023
   three.js authors, MIT License (app/src/main/assets/three/LICENSE).
 
+Super Nintendo emulator (Games > SNES, the user's own ROM files):
+  The core is bsnes by byuu and contributors (libretro port, https://github.com/libretro/bsnes, based on
+  https://github.com/bsnes-emu/bsnes), copied into app/src/main/cpp/bsnes: bsnes is licensed under the GNU General
+  Public License version 3 (LICENSE.txt, GPLv3.txt there), nall and libco under the ISC license, and the Game Boy core
+  used for the Super Game Boy (bsnes/gb, SameBoy by Lior Halphon) under the MIT license. It is combined with HeadQLink
+  under section 13 of the AGPL v3. The only change is the audio rate in target-libretro/libretro.cpp (44100 Hz instead
+  of 48000); see bsnes/UPSTREAM.md. app/src/main/cpp/hql_snes.cpp is HeadQLink's own minimal libretro frontend.
+  HeadQLink ships no game ROMs. Nintendo, Super Nintendo and SNES are trademarks of Nintendo; HeadQLink is not
+  affiliated with Nintendo.
+
 Mega Drive emulator (Games > Mega Drive, the user's own ROM files):
   The core is ClownMDEmu by Clownacy (https://github.com/Clownacy/clownmdemu-core, through clownmdemu-libretro and
   clownmdemu-frontend-common), copied unmodified into app/src/main/cpp/clownmdemu: the emulator core, clown68000,

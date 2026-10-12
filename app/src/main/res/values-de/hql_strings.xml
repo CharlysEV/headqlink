@@ -941,4 +941,5 @@
     <string name="hql_float_no_charger">Keine Ladesäule in Reichweite</string>
     <string name="hql_move_up">Nach oben</string>
     <string name="hql_move_down">Nach unten</string>
+    <string name="hql_snes_sub">bsnes · deine Spiele, Controller oder Touch</string>
 </resources>

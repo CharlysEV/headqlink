@@ -3,12 +3,13 @@ package com.headqlink.link;
 import com.grapeshot.halfnes.ui.PuppetController;
 
 /**
- * Mando del jugador 1 de cualquier consola: cruceta y los botones de la Mega Drive de seis botones (A, B, C, X, Y, Z,
- * Start y Mode, que en la NES es Select). Lo mueven NesInput (mando Bluetooth) y los botones táctiles; cada núcleo lo lee
+ * Mando del jugador 1 de cualquier consola: cruceta, los botones de la Mega Drive de seis botones (A, B, C, X, Y, Z,
+ * Start y Mode, que en la NES y la Super Nintendo es Select) y L y R de la Super Nintendo. Lo mueven NesInput (mando Bluetooth) y los botones táctiles; cada núcleo lo lee
  * una vez por fotograma. El orden de los bits es el de ClownMDEmu, así la Mega Drive los usa tal cual.
  */
 final class RetroPad {
-    enum Btn {UP, DOWN, LEFT, RIGHT, A, B, C, X, Y, Z, START, SELECT}
+    /** L y R (Super Nintendo) van al final: los doce primeros conservan el orden de bits de ClownMDEmu. */
+    enum Btn {UP, DOWN, LEFT, RIGHT, A, B, C, X, Y, Z, START, SELECT, L, R}
 
     private int bits;
     /** Lo pulsado desde la última lectura: un toque más corto que un fotograma también cuenta. */

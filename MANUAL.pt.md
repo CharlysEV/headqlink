@@ -694,15 +694,15 @@ Cole o URL de uma lista M3U ou toque em «Escolher ficheiro». Sem lista de rád
 Os atalhos do ecrã «Web» do carro (de origem, YouTube, Google, Wikipedia e Twitch). Adicione os seus com nome e
 endereço, retire-os ou mude a ordem com as setas; «Os de origem» repõe os quatro iniciais.
 
-### «Pasta de jogos»: NES e Mega Drive («Auto estendido»)
+### «Pasta de jogos»: NES, Mega Drive e Super Nintendo («Auto estendido»)
 
 Menu ⚙ › Jogos. Escolha a pasta do telemóvel com os seus jogos: uma só pasta para todas as consolas, e os .zip servem
-tal como estão (a aplicação não traz nenhum). No carro, Jogos › NES ou Jogos › Mega Drive abrem essa pasta com as
-subpastas, cada um com os seus jogos (.nes; .md, .gen, .bin ou .smd; e os .zip que os contêm). Toque num jogo para
+tal como estão (a aplicação não traz nenhum). No carro, Jogos › NES, Mega Drive ou SNES abrem essa pasta com as
+subpastas, cada um com os seus jogos (.nes; .md, .gen, .bin ou .smd; .sfc ou .smc; e os .zip que os contêm). Toque num jogo para
 jogar, com botões táteis ou com um comando Bluetooth ligado ao telemóvel. Na Mega Drive, X, A e B do comando são A, B e
-C; LB, Y e RB são X, Y e Z (jogos de seis botões), e Select é Mode. Ao começar, no telemóvel aparece «Comando ligado ao
+C; LB, Y e RB são X, Y e Z (jogos de seis botões), e Select é Mode. Na Super Nintendo seguem a posição do seu comando: A, B, X e Y do comando são B, A, Y e X, e LB e RB são L e R. Ao começar, no telemóvel aparece «Comando ligado ao
 carro»: deixe-a à frente para que todo o comando chegue ao jogo. Só com o carro parado. Os jogos com gravação gravam
-sozinhos. Os núcleos são os do RetroArch: Nestopia (NES) e ClownMDEmu (Mega Drive).
+sozinhos. Os núcleos são os do RetroArch: Nestopia (NES), ClownMDEmu (Mega Drive) e bsnes (Super Nintendo, com os chips dos cartuchos: Super FX, SA-1, DSP…).
 
 ### «Diagnóstico»
 

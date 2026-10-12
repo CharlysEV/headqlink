@@ -327,23 +327,34 @@ final class NesScreen {
     }
 
     /**
-     * Botones táctiles a los lados del juego (que ocupa el centro a todo el alto): cruceta abajo a la izquierda, B y A (NES)
-     * o A, B y C (Mega Drive) abajo a la derecha, Select a la izquierda y Start a la derecha, a media altura. Varios dedos
-     * a la vez.
+     * Botones táctiles a los lados del juego (que ocupa el centro a todo el alto): cruceta abajo a la izquierda, B y A (NES),
+     * A, B y C (Mega Drive) o el rombo X, A, B, Y con L y R encima (Super Nintendo) abajo a la derecha, Select a la
+     * izquierda y Start a la derecha, a media altura. Varios dedos a la vez.
      */
     private View touchOverlay(Context c) {
         FrameLayout f = new FrameLayout(c);
         // La Mega Drive ocupa 1280 de ancho a ×4: en el C10 quedan 272 a cada lado, así que sus botones son más pequeños.
         boolean md = console == GameConsole.MD;
-        int s = md ? 84 : 116;
-        int m = md ? 14 : 26;
+        boolean snes = console == GameConsole.SNES;
+        // La SNES cabe a ×4 como la NES, pero con cuatro botones y L y R: algo más pequeños para que L y R no toquen
+        // Select y Start.
+        int s = md ? 84 : snes ? 100 : 116;
+        int m = md ? 14 : snes ? 24 : 26;
         int bl = Gravity.BOTTOM | Gravity.LEFT;
         int br = Gravity.BOTTOM | Gravity.RIGHT;
         f.addView(padButton(c, "▲", RetroPad.Btn.UP), place(bl, m + s, 0, 0, m + 2 * s, s, s));
         f.addView(padButton(c, "▼", RetroPad.Btn.DOWN), place(bl, m + s, 0, 0, m, s, s));
         f.addView(padButton(c, "◀", RetroPad.Btn.LEFT), place(bl, m, 0, 0, m + s, s, s));
         f.addView(padButton(c, "▶", RetroPad.Btn.RIGHT), place(bl, m + 2 * s, 0, 0, m + s, s, s));
-        if (console == GameConsole.MD) {
+        if (console == GameConsole.SNES) {
+            // Rombo como en el mando de la SNES (X arriba, A a la derecha, B abajo, Y a la izquierda) y L y R encima.
+            f.addView(padButton(c, "X", RetroPad.Btn.X), place(br, 0, 0, m + s, m + 2 * s, s, s));
+            f.addView(padButton(c, "A", RetroPad.Btn.A), place(br, 0, 0, m, m + s, s, s));
+            f.addView(padButton(c, "B", RetroPad.Btn.B), place(br, 0, 0, m + s, m, s, s));
+            f.addView(padButton(c, "Y", RetroPad.Btn.Y), place(br, 0, 0, m + 2 * s, m + s, s, s));
+            f.addView(padButton(c, "L", RetroPad.Btn.L), place(bl, m, 0, 0, m + 3 * s + 20, 3 * s, 60));
+            f.addView(padButton(c, "R", RetroPad.Btn.R), place(br, 0, 0, m, m + 3 * s + 20, 3 * s, 60));
+        } else if (console == GameConsole.MD) {
             // A, B y C en diagonal ascendente, como en el mando de la Mega Drive.
             int g = s + 6;
             f.addView(padButton(c, "A", RetroPad.Btn.A), place(br, 0, 0, m + 2 * g, m + 10, s, s));
@@ -433,6 +444,16 @@ final class NesScreen {
             return Math.max(1, Math.min(w / fw, h / (fh - 2 * MAX_CROP)));
         }
 
+        /** Puro: ancho lógico de un fotograma (la alta resolución de la SNES, 512, cuenta como 256). */
+        static int logicalW(int fw) {
+            return fw >= 480 ? fw / 2 : fw;
+        }
+
+        /** Puro: alto lógico (el entrelazado, 448 o más líneas, cuenta como la mitad). */
+        static int logicalH(int fh) {
+            return fh >= 400 ? fh / 2 : fh;
+        }
+
         /** Puro: líneas que se recortan arriba (y abajo) con ese aumento: las justas para caber, como mucho MAX_CROP. */
         static int crop(int k, int h) {
             return crop(k, h, NesEngine.H);
@@ -469,11 +490,15 @@ final class NesScreen {
             int h = getHeight();
             int fw = b.getWidth();
             int fh = b.getHeight();
-            int k = scale(w, h, fw, fh);
-            int c = crop(k, h, fh);
-            src.set(0, c, fw, fh - c);
-            int dw = fw * k;
-            int dh = (fh - 2 * c) * k;
+            // Tamaño lógico: 512 de ancho (alta resolución de la SNES) es 256; 448 o más líneas (entrelazado), la mitad.
+            int lw = logicalW(fw);
+            int lh = logicalH(fh);
+            int k = scale(w, h, lw, lh);
+            int c = crop(k, h, lh);
+            int sc = c * fh / lh;
+            src.set(0, sc, fw, fh - sc);
+            int dw = lw * k;
+            int dh = (lh - 2 * c) * k;
             int left = (w - dw) / 2;
             int top = (h - dh) / 2;
             dst.set(left, top, left + dw, top + dh);

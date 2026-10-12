@@ -680,15 +680,15 @@ populares.
 Los accesos de la pantalla «Web» del coche (de serie, YouTube, Google, Wikipedia y Twitch). Añade los tuyos con
 nombre y dirección, quítalos o cámbialos de orden con las flechas; «Los de serie» los deja como venían.
 
-### «Carpeta de juegos»: NES y Mega Drive («Auto extendido»)
+### «Carpeta de juegos»: NES, Mega Drive y Super Nintendo («Auto extendido»)
 
 Menú ⚙ › Juegos. Elige la carpeta del móvil donde tienes tus juegos: una sola carpeta para todas las consolas, y valen
-tal cual los .zip (la app no lleva ninguno). En el coche, Juegos › NES o Juegos › Mega Drive abren esa carpeta con sus
-subcarpetas, cada uno con sus juegos (.nes; .md, .gen, .bin o .smd; y los .zip que los llevan dentro). Toca un juego
+tal cual los .zip (la app no lleva ninguno). En el coche, Juegos › NES, Mega Drive o SNES abren esa carpeta con sus
+subcarpetas, cada uno con sus juegos (.nes; .md, .gen, .bin o .smd; .sfc o .smc; y los .zip que los llevan dentro). Toca un juego
 para jugar, con botones táctiles o con un mando Bluetooth conectado al móvil. En la Mega Drive, X, A y B del mando son
-A, B y C; LB, Y y RB son X, Y y Z (juegos de seis botones), y Select es Mode. Al empezar, en el móvil se abre «Mando
+A, B y C; LB, Y y RB son X, Y y Z (juegos de seis botones), y Select es Mode. En la Super Nintendo van por posición, como en su mando: A, B, X e Y del mando son B, A, Y y X, y LB y RB son L y R. Al empezar, en el móvil se abre «Mando
 conectado al coche»: déjala delante para que el mando entero llegue al juego. Solo con el coche parado. Los juegos con
-partida guardada la guardan solos. Los núcleos son los de RetroArch: Nestopia (NES) y ClownMDEmu (Mega Drive).
+partida guardada la guardan solos. Los núcleos son los de RetroArch: Nestopia (NES), ClownMDEmu (Mega Drive) y bsnes (Super Nintendo, con los chips de los cartuchos: Super FX, SA-1, DSP…).
 
 ### «Diagnóstico»
 

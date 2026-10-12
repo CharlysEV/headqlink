@@ -693,15 +693,15 @@ Incolla l'URL di una lista M3U o tocca «Scegli file». Senza una lista radio, l
 Le scorciatoie della schermata «Web» dell'auto (di default YouTube, Google, Wikipedia e Twitch). Aggiungi i tuoi con
 nome e indirizzo, toglili o riordinali con le frecce; «Predefiniti» rimette i quattro originali.
 
-### «Cartella giochi»: NES e Mega Drive («Auto esteso»)
+### «Cartella giochi»: NES, Mega Drive e Super Nintendo («Auto esteso»)
 
 Menu ⚙ › Giochi. Scegli la cartella del telefono con i tuoi giochi: una sola cartella per tutte le console, e i .zip
-vanno bene così come sono (l'app non ne include). In auto, Giochi › NES o Giochi › Mega Drive aprono quella cartella con
-le sottocartelle, ognuno con i suoi giochi (.nes; .md, .gen, .bin o .smd; e i .zip che li contengono). Tocca un gioco
+vanno bene così come sono (l'app non ne include). In auto, Giochi › NES, Mega Drive o SNES aprono quella cartella con
+le sottocartelle, ognuno con i suoi giochi (.nes; .md, .gen, .bin o .smd; .sfc o .smc; e i .zip che li contengono). Tocca un gioco
 per giocare, con i pulsanti touch o con un gamepad Bluetooth collegato al telefono. Sul Mega Drive, X, A e B del
-gamepad sono A, B e C; LB, Y e RB sono X, Y e Z (giochi a sei tasti), e Select è Mode. All'avvio, sul telefono compare
+gamepad sono A, B e C; LB, Y e RB sono X, Y e Z (giochi a sei tasti), e Select è Mode. Sul Super Nintendo seguono la posizione del suo controller: A, B, X e Y del gamepad sono B, A, Y e X, e LB e RB sono L e R. All'avvio, sul telefono compare
 «Gamepad collegato all'auto»: lasciala davanti perché tutto il gamepad arrivi al gioco. Solo a veicolo fermo. I giochi
-con salvataggio lo fanno da soli. I core sono quelli di RetroArch: Nestopia (NES) e ClownMDEmu (Mega Drive).
+con salvataggio lo fanno da soli. I core sono quelli di RetroArch: Nestopia (NES), ClownMDEmu (Mega Drive) e bsnes (Super Nintendo, con i chip delle cartucce: Super FX, SA-1, DSP…).
 
 ### «Diagnostica»
 

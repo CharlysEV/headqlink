@@ -11,7 +11,8 @@ import java.util.Locale;
  */
 enum GameConsole {
     NES("NES", "nes", new String[]{".nes", ".nsf"}),
-    MD("Mega Drive", "md", new String[]{".md", ".gen", ".bin", ".smd"});
+    MD("Mega Drive", "md", new String[]{".md", ".gen", ".bin", ".smd"}),
+    SNES("Super Nintendo", "snes", new String[]{".sfc", ".smc"});
 
     final String title;
     /** Subcarpeta de files/ donde se copia la ROM; ahí queda también la partida guardada (.sav). */
@@ -43,12 +44,14 @@ enum GameConsole {
 
     /** Puro: el nombre sin la extensión del juego (ni .zip). */
     static String title(String name) {
-        return name.replaceAll("(?i)\\.(zip|nes|nsf|md|gen|bin|smd)$", "");
+        return name.replaceAll("(?i)\\.(zip|nes|nsf|md|gen|bin|smd|sfc|smc)$", "");
     }
 
     /**
      * Puro: tecla de un mando de Android → botón, o null si no es del mando. En la NES, A y Y del mando son A, y B y X son
-     * B (como estaba). En la Mega Drive, los tres de abajo en fila: X → A, A → B, B → C; y LB, Y, RB → X, Y, Z.
+     * B (como estaba). En la Mega Drive, los tres de abajo en fila: X → A, A → B, B → C; y LB, Y, RB → X, Y, Z. En la
+     * Super Nintendo, por posición (el mando de la SNES tiene la B abajo y la A a la derecha): A → B, B → A, X → Y,
+     * Y → X, LB → L y RB → R.
      */
     RetroPad.Btn map(int keyCode) {
         switch (keyCode) {
@@ -68,6 +71,25 @@ enum GameConsole {
                 return RetroPad.Btn.SELECT;
             default:
                 break;
+        }
+        if (this == SNES) {
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_BUTTON_A:
+                case KeyEvent.KEYCODE_DPAD_CENTER:
+                    return RetroPad.Btn.B;
+                case KeyEvent.KEYCODE_BUTTON_B:
+                    return RetroPad.Btn.A;
+                case KeyEvent.KEYCODE_BUTTON_X:
+                    return RetroPad.Btn.Y;
+                case KeyEvent.KEYCODE_BUTTON_Y:
+                    return RetroPad.Btn.X;
+                case KeyEvent.KEYCODE_BUTTON_L1:
+                    return RetroPad.Btn.L;
+                case KeyEvent.KEYCODE_BUTTON_R1:
+                    return RetroPad.Btn.R;
+                default:
+                    return null;
+            }
         }
         if (this == NES) {
             switch (keyCode) {

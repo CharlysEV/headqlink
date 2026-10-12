@@ -20,8 +20,8 @@ import java.io.InputStream;
  */
 abstract class NativeCore implements GameCore {
     static final int RATE = 44100;
-    /** Lo más grande que da una consola: 320 x 480 (Mega Drive entrelazada). */
-    private static final int MAX_PX = 320 * 480;
+    /** Lo más grande que da una consola: 512 x 480 (Super Nintendo en alta resolución y entrelazada). */
+    private static final int MAX_PX = 512 * 480;
 
     private final String name;
     private final int channels;
@@ -58,6 +58,16 @@ abstract class NativeCore implements GameCore {
     /** Carga la ROM en el núcleo (con la partida guardada, si la hay). null si arranca; si no, el error. */
     abstract String nativeLoad(byte[] rom, byte[] sav);
 
+    /** Para los núcleos que leen la ROM y guardan la partida ellos mismos (bsnes): true y la carga por ruta. */
+    boolean loadsByPath() {
+        return false;
+    }
+
+    /** Carga por ruta (solo con loadsByPath). */
+    String nativeLoadPath(String path) {
+        return "sin carga por ruta";
+    }
+
     /** Un fotograma: imagen en argb, sonido en samples; devuelve las muestras escritas, o < 0 si no hay juego. */
     abstract int nativeFrame(int[] argb, short[] samples, int padBits);
 
@@ -88,6 +98,11 @@ abstract class NativeCore implements GameCore {
     @Override
     public synchronized String load(String path) {
         try {
+            if (loadsByPath()) {
+                String err = nativeLoadPath(path);
+                loaded = err == null;
+                return err;
+            }
             byte[] rom = read(new File(path));
             savPath = path.replaceAll("\\.[^./]*$", "") + ".sav";
             File sav = new File(savPath);

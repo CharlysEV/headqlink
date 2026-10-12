@@ -105,3 +105,53 @@ target_include_directories(hqlmd PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_options(hqlmd PRIVATE -O2 -w)
 target_compile_definitions(hqlmd PRIVATE NDEBUG)
 target_link_libraries(hqlmd PRIVATE log m)
+
+# =========================================================================
+# headqlink: emulador de Super Nintendo con bsnes (bsnes/, GPL v3; versión libretro, ver bsnes/UPSTREAM.md) y un
+# frontend libretro mínimo (hql_snes.cpp). Fuentes y opciones como su jni/Android.mk.
+# =========================================================================
+set(HQL_BSNES "${CMAKE_CURRENT_SOURCE_DIR}/bsnes")
+add_library(hqlsnes SHARED
+    hql_snes.cpp
+    ${HQL_BSNES}/libco/libco.c
+    ${HQL_BSNES}/bsnes/target-libretro/libretro.cpp
+    ${HQL_BSNES}/bsnes/emulator/emulator.cpp
+    ${HQL_BSNES}/bsnes/filter/filter.cpp
+    ${HQL_BSNES}/bsnes/lzma/lzma.cpp
+    ${HQL_BSNES}/bsnes/sfc/interface/interface.cpp
+    ${HQL_BSNES}/bsnes/sfc/system/system.cpp
+    ${HQL_BSNES}/bsnes/sfc/controller/controller.cpp
+    ${HQL_BSNES}/bsnes/sfc/cartridge/cartridge.cpp
+    ${HQL_BSNES}/bsnes/sfc/memory/memory.cpp
+    ${HQL_BSNES}/bsnes/sfc/cpu/cpu.cpp
+    ${HQL_BSNES}/bsnes/sfc/smp/smp.cpp
+    ${HQL_BSNES}/bsnes/sfc/dsp/dsp.cpp
+    ${HQL_BSNES}/bsnes/sfc/ppu/ppu.cpp
+    ${HQL_BSNES}/bsnes/sfc/ppu-fast/ppu.cpp
+    ${HQL_BSNES}/bsnes/sfc/expansion/expansion.cpp
+    ${HQL_BSNES}/bsnes/sfc/coprocessor/coprocessor.cpp
+    ${HQL_BSNES}/bsnes/sfc/slot/slot.cpp
+    ${HQL_BSNES}/bsnes/gb/Core/apu.c
+    ${HQL_BSNES}/bsnes/gb/Core/camera.c
+    ${HQL_BSNES}/bsnes/gb/Core/display.c
+    ${HQL_BSNES}/bsnes/gb/Core/gb.c
+    ${HQL_BSNES}/bsnes/gb/Core/joypad.c
+    ${HQL_BSNES}/bsnes/gb/Core/mbc.c
+    ${HQL_BSNES}/bsnes/gb/Core/memory.c
+    ${HQL_BSNES}/bsnes/gb/Core/printer.c
+    ${HQL_BSNES}/bsnes/gb/Core/random.c
+    ${HQL_BSNES}/bsnes/gb/Core/rewind.c
+    ${HQL_BSNES}/bsnes/gb/Core/save_state.c
+    ${HQL_BSNES}/bsnes/gb/Core/sgb.c
+    ${HQL_BSNES}/bsnes/gb/Core/sm83_cpu.c
+    ${HQL_BSNES}/bsnes/gb/Core/symbol_hash.c
+    ${HQL_BSNES}/bsnes/gb/Core/timing.c
+    ${HQL_BSNES}/bsnes/processor/arm7tdmi/arm7tdmi.cpp
+    ${HQL_BSNES}/bsnes/processor/spc700/spc700.cpp
+    ${HQL_BSNES}/bsnes/processor/wdc65816/wdc65816.cpp)
+target_include_directories(hqlsnes PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${HQL_BSNES}" "${HQL_BSNES}/bsnes"
+    "${HQL_BSNES}/bsnes/gb" "${HQL_BSNES}/bsnes/sfc")
+target_compile_options(hqlsnes PRIVATE -O2 -fomit-frame-pointer -ffast-math -w -Wno-invalid-specialization
+    $<$<COMPILE_LANGUAGE:CXX>:-std=c++17 -fexceptions -frtti>)
+target_compile_definitions(hqlsnes PRIVATE __LIBRETRO__ GB_INTERNAL DISABLE_DEBUGGER PLATFORM_ANDROID NDEBUG)
+target_link_libraries(hqlsnes PRIVATE log)
