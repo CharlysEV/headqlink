@@ -962,4 +962,11 @@
     <string name="hql_nes_resume">Verdergaan waar je was?</string>
     <string name="hql_nes_resume_yes">Verdergaan</string>
     <string name="hql_nes_resume_no">Opnieuw beginnen</string>
+    <string name="hql_setup_car_question">Je auto</string>
+    <string name="hql_setup_car_help">Kies je Leapmotor en de versie: accu, laden en verbruik hangen ervan af. Later te wijzigen via ⚙ › Auto › Autogegevens.</string>
+    <string name="hql_setup_car_missing">Kies je auto om verder te gaan</string>
+    <string name="hql_setup_car_c10_detail">De gewone elektrische: 84 kW snelladen, 420 km WLTP.</string>
+    <string name="hql_setup_car_promax_detail">Grote accu van 81,9 kWh en 800 V: snelladen tot ~130 kW.</string>
+    <string name="hql_setup_car_reev_detail">Range extender: kleine accu en benzinegenerator.</string>
+    <string name="hql_setup_car_t03_detail">De stadsauto: 48 kW snelladen, 265 km WLTP en 10,1\"-scherm (het autoscherm past zich aan).</string>
 </resources>

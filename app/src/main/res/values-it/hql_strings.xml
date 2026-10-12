@@ -963,4 +963,11 @@
     <string name="hql_nes_resume">Riprendere da dove eri?</string>
     <string name="hql_nes_resume_yes">Riprendi</string>
     <string name="hql_nes_resume_no">Ricomincia</string>
+    <string name="hql_setup_car_question">La tua auto</string>
+    <string name="hql_setup_car_help">Scegli la tua Leapmotor e la versione: batteria, ricarica e consumi dipendono da questo. Puoi cambiarla dopo in ⚙ › Auto › Dati dell\'auto.</string>
+    <string name="hql_setup_car_missing">Scegli la tua auto per continuare</string>
+    <string name="hql_setup_car_c10_detail">L\'elettrica standard: ricarica rapida a 84 kW, 420 km WLTP.</string>
+    <string name="hql_setup_car_promax_detail">Batteria grande da 81,9 kWh e 800 V: ricarica rapida fino a ~130 kW.</string>
+    <string name="hql_setup_car_reev_detail">Autonomia estesa: batteria piccola e generatore a benzina.</string>
+    <string name="hql_setup_car_t03_detail">La citycar: ricarica rapida a 48 kW, 265 km WLTP e schermo da 10,1\" (quello dell\'auto si adatta).</string>
 </resources>

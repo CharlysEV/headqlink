@@ -4,6 +4,36 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
+    <!-- Solo en la primera instalación (SetupActivity): qué coche y qué versión. -->
+    <LinearLayout
+        android:id="@+id/hql_car_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="26dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            style="@style/HQL.Text.Title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/hql_setup_car_question" />
+
+        <TextView
+            style="@style/HQL.Text.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/hql_setup_car_help" />
+
+        <LinearLayout
+            android:id="@+id/hql_car_options"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:orientation="vertical" />
+    </LinearLayout>
+
     <TextView
         style="@style/HQL.Text.Title"
         android:layout_width="match_parent"

@@ -621,7 +621,8 @@ final class RoutePlanner {
             }
         }
         double[] b = battery(cs);
-        chargePlan(b[0], b[1], b[2] > 0, data && cs.status.reev(), charging);
+        // REEV: lo dice la nube (depósito) o el coche elegido, aunque no haya cuenta.
+        chargePlan(b[0], b[1], b[2] > 0, (data && cs.status.reev()) || CarSpec.current().reev, charging);
     }
 
     /**
@@ -761,8 +762,9 @@ final class RoutePlanner {
      * de pico, lo que da los 28 min del 19 al 81 % de ABRP en un cargador de 400 kW.
      */
     static double carPeakKw(double capKwh) {
-        // El T03 (37,3 kWh): 48 kW.
-        if (capKwh < 45) return CarSpec.T03.peakDcKw;
+        // El coche elegido manda (el T03, 48 kW; el REEV, ~65): por la capacidad se confundirían (37,3 y 28,4 kWh).
+        CarSpec car = CarSpec.current();
+        if (car.isT03() || car.reev) return car.peakDcKw;
         return capKwh >= 80 ? 130 : 84;
     }
 

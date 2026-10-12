@@ -1535,7 +1535,7 @@ final class RouteTab implements CarScreen {
 
     /** El coche es un REEV (lo dice la nube). */
     private boolean reev() {
-        return cloud != null && cloud.hasData() && cloud.status.reev();
+        return (cloud != null && cloud.hasData() && cloud.status.reev()) || CarSpec.current().reev;
     }
 
     /** Litros de gasolina que pondría el generador para llegar (REEV), o 0. */

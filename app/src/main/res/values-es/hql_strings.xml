@@ -968,4 +968,11 @@
     <string name="hql_nes_resume">¿Seguir donde lo dejaste?</string>
     <string name="hql_nes_resume_yes">Seguir</string>
     <string name="hql_nes_resume_no">Empezar de nuevo</string>
+    <string name="hql_setup_car_question">Tu coche</string>
+    <string name="hql_setup_car_help">Elige tu Leapmotor y su versión: la batería, la carga y el consumo dependen de ello. Lo puedes cambiar luego en ⚙ › Coche › Datos del coche.</string>
+    <string name="hql_setup_car_missing">Elige tu coche para continuar</string>
+    <string name="hql_setup_car_c10_detail">El eléctrico normal: carga rápida de 84 kW, 420 km WLTP.</string>
+    <string name="hql_setup_car_promax_detail">Batería grande de 81,9 kWh y 800 V: carga rápida de hasta ~130 kW.</string>
+    <string name="hql_setup_car_reev_detail">Autonomía extendida: batería pequeña y generador de gasolina.</string>
+    <string name="hql_setup_car_t03_detail">El urbano: carga rápida de 48 kW, 265 km WLTP y pantalla de 10,1\" (la del coche se adapta).</string>
 </resources>

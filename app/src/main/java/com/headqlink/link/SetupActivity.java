@@ -38,6 +38,8 @@ public class SetupActivity extends Activity {
     /** Ya se avisó de que la conexión nueva se aplica al volver a conectar. */
     private boolean warnedPending;
     private boolean responsibilityAccepted;
+    /** Primera instalación: el coche elegido (perfil de batería de CarCloudStore), o null si aún no. */
+    private String carProfile;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -45,6 +47,7 @@ public class SetupActivity extends Activity {
         L.init(this);
         cfg = new Config(this);
         responsibilityAccepted = b != null && b.getBoolean("responsibility_accepted", false);
+        carProfile = b != null ? b.getString("car_profile") : null;
         mode = cfg.mode();
         linkMode = cfg.linkMode();
         setContentView(R.layout.hql_activity_setup);
@@ -73,6 +76,7 @@ public class SetupActivity extends Activity {
         super.onSaveInstanceState(out);
         out.putInt(EXTRA_STEP, step);
         out.putBoolean("responsibility_accepted", responsibilityAccepted);
+        out.putString("car_profile", carProfile);
     }
 
     @Override
@@ -140,6 +144,14 @@ public class SetupActivity extends Activity {
         if (!cfg.setupDone() && !responsibilityAccepted) return;
         if (step < STEPS - 1) {
             if (step == 1) {
+                if (askCar() && carProfile == null) {
+                    android.widget.Toast.makeText(this, Str.get(R.string.hql_setup_car_missing), android.widget.Toast.LENGTH_LONG).show();
+                    return;
+                }
+                if (carProfile != null) {
+                    new CarCloudStore(this).setProfile(carProfile, 0);
+                    L.i("configuración inicial: coche " + carProfile);
+                }
                 cfg.setMode(mode);
                 cfg.setLinkMode(linkMode);
                 warnIfPending();
@@ -185,7 +197,40 @@ public class SetupActivity extends Activity {
 
     // ---------------------------------------------------------------- paso 2: modo
 
+    /** El coche se pregunta solo en la primera instalación (después se cambia en ⚙ › Coche › Datos del coche). */
+    private boolean askCar() {
+        return !cfg.setupDone() && new CarCloudStore(this).profile().isEmpty();
+    }
+
+    /** Primera instalación: qué coche y qué versión (la batería, la carga y el consumo dependen de ello; CarSpec). */
+    private void renderCars() {
+        View section = container.findViewById(R.id.hql_car_section);
+        if (section == null || !askCar()) return;
+        section.setVisibility(View.VISIBLE);
+        LinearLayout list = container.findViewById(R.id.hql_car_options);
+        list.removeAllViews();
+        String[] ids = {CarCloudStore.PROFILE_C10_LIFE, CarCloudStore.PROFILE_C10_PROMAX, CarCloudStore.PROFILE_C10_REEV,
+                CarCloudStore.PROFILE_T03};
+        int[] titles = {R.string.hql_cloud_profile_life, R.string.hql_cloud_profile_promax, R.string.hql_cloud_profile_reev,
+                R.string.hql_cloud_profile_t03};
+        int[] details = {R.string.hql_setup_car_c10_detail, R.string.hql_setup_car_promax_detail, R.string.hql_setup_car_reev_detail,
+                R.string.hql_setup_car_t03_detail};
+        for (int i = 0; i < ids.length; i++) {
+            String id = ids[i];
+            View opt = LayoutInflater.from(this).inflate(R.layout.hql_mode_option, list, false);
+            ((TextView) opt.findViewById(R.id.hql_opt_title)).setText(Str.get(titles[i]));
+            ((TextView) opt.findViewById(R.id.hql_opt_detail)).setText(Str.get(details[i]));
+            opt.setSelected(id.equals(carProfile));
+            opt.setOnClickListener(v -> {
+                carProfile = id;
+                for (int k = 0; k < list.getChildCount(); k++) list.getChildAt(k).setSelected(list.getChildAt(k) == v);
+            });
+            list.addView(opt);
+        }
+    }
+
     private void renderModes() {
+        renderCars();
         LinearLayout list = container.findViewById(R.id.hql_mode_options);
         // «Una app concreta» y «Diagnóstico» siguen disponibles por adb (extra mode), no en el menú.
         // Auto, el recomendado, primero; Auto extendido queda como opción.

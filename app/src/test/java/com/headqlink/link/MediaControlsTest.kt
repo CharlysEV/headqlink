@@ -81,7 +81,14 @@ class MediaControlsTest {
             check.isChecked = true
             next.performClick()
             assertTrue(descendants(root).filterIsInstance<CheckBox>().isEmpty())
+            // Primera instalación: sin elegir el coche no se sigue; con él, sí.
+            val cars = activity.findViewById<ViewGroup>(R.id.hql_car_options)
+            assertEquals(4, cars.childCount)
             next.performClick()
+            assertEquals(4, activity.findViewById<ViewGroup>(R.id.hql_car_options).childCount)
+            cars.getChildAt(3).performClick()
+            next.performClick()
+            assertEquals(CarCloudStore.PROFILE_T03, CarCloudStore(context).profile())
             assertTrue(descendants(root).filterIsInstance<CheckBox>().isEmpty())
             assertTrue(texts(root).contains(context.getString(R.string.hql_req_microphone)))
             assertTrue(texts(root).contains(context.getString(R.string.hql_req_phone)))
@@ -96,7 +103,12 @@ class MediaControlsTest {
                 action.performClick()
                 assertArrayEquals(arrayOf(permission), shadowOf(activity).lastRequestedPermission.requestedPermissions)
             }
-        } finally { controller.destroy() }
+        } finally {
+            controller.destroy()
+            // El coche elegido es global (CarSpec): que no afecte a otras pruebas.
+            CarCloudStore(context).setProfile("", 0.0)
+            CarSpec.use(CarSpec.C10)
+        }
     }
 
     @Test fun welcomeTermsAppearBeforePreparationAndReadingThemDoesNotAcceptThem() {

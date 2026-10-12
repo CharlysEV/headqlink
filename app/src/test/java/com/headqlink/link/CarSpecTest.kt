@@ -17,7 +17,7 @@ class CarSpecTest {
     fun profileChoosesTheCar() {
         assertTrue(CarSpec.forProfile(CarCloudStore.PROFILE_T03).isT03())
         assertEquals(CarSpec.C10, CarSpec.forProfile(""))
-        assertEquals(CarSpec.C10, CarSpec.forProfile(CarCloudStore.PROFILE_C10_REEV))
+        assertEquals(CarSpec.C10_REEV, CarSpec.forProfile(CarCloudStore.PROFILE_C10_REEV))
         assertEquals(37.3, CarCloudStore.capacityFor(CarCloudStore.PROFILE_T03, 0.0), 0.0)
         // La cuenta de Leapmotor dice el modelo.
         assertTrue(CarCloudStore.isT03("T03"))
@@ -28,8 +28,12 @@ class CarSpecTest {
 
     @Test
     fun t03ChargesSlowerWithItsOwnCurve() {
-        assertEquals(48.0, RoutePlanner.carPeakKw(37.3), 0.0)
+        // Manda el coche elegido, no la capacidad.
         assertEquals(84.0, RoutePlanner.carPeakKw(69.9), 0.0)
+        assertEquals(130.0, RoutePlanner.carPeakKw(81.9), 0.0)
+        CarSpec.use(CarSpec.T03)
+        assertEquals(48.0, RoutePlanner.carPeakKw(37.3), 0.0)
+        CarSpec.use(CarSpec.C10)
         assertEquals(400.0, RoutePlanner.carVolts(37.3), 0.0)
         // Su curva: el máximo solo hasta el 20 %, ~70 % al 50 % y ~50 % al 80 %.
         assertEquals(48.0, ChargePlanner.carPowerKw(15.0, 48.0), 0.01)
@@ -54,6 +58,18 @@ class CarSpecTest {
         val heatT03 = EnergyModel.hvac(0.0)
         CarSpec.use(CarSpec.C10)
         assertTrue(heatT03 > EnergyModel.hvac(0.0))
+    }
+
+    @Test
+    fun reevIsItsOwnCar() {
+        val reev = CarSpec.forProfile(CarCloudStore.PROFILE_C10_REEV)
+        assertTrue(reev.reev)
+        assertFalse(reev.isT03())
+        CarSpec.use(reev)
+        // 28,4 kWh no es un T03: su carga rápida (~65 kW) con la curva del C10.
+        assertEquals(65.0, RoutePlanner.carPeakKw(28.4), 0.0)
+        assertEquals(65.0, ChargePlanner.carPowerKw(40.0, 65.0), 0.01)
+        assertFalse(CarSpec.forProfile(CarCloudStore.PROFILE_C10_LIFE).reev)
     }
 
     @Test

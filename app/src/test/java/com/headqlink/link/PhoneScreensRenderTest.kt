@@ -59,6 +59,22 @@ class PhoneScreensRenderTest {
                 println("PhoneScreensRender: $name no se pudo dibujar: $e")
             }
         }
+        // Primera instalación, paso 2: «Tu coche» (C10, ProMax, REEV o T03) encima de qué ver en el coche.
+        try {
+            Config(app).setSetupDone(false)
+            val state = android.os.Bundle()
+            state.putInt(SetupActivity.EXTRA_STEP, 1)
+            state.putBoolean("responsibility_accepted", true)
+            val act = Robolectric.buildActivity(SetupActivity::class.java).create(state).start().postCreate(state).resume()
+                .visible().get()
+            idle(800)
+            save(act.window.decorView, File(dir, "movil_primera_coche.png"))
+            println("PhoneScreensRender: movil_primera_coche OK")
+        } catch (e: Throwable) {
+            println("PhoneScreensRender: movil_primera_coche no se pudo dibujar: $e")
+        } finally {
+            Config(app).setSetupDone(true)
+        }
     }
 
     private fun idle(ms: Long) {
