@@ -126,7 +126,7 @@ class LinkWidgetActionsTest {
         svc.onStartListening()
         val tile = svc.qsTile
         assertEquals(android.service.quicksettings.Tile.STATE_ACTIVE, tile.state)
-        assertEquals("QonectaLeap", tile.label)
+        assertEquals("Qonecta+", tile.label)
         assertEquals("30 fps · 4,8 Mbit/s", tile.subtitle)
         assertEquals("Coche conectado · 30 fps · 4,8 Mbit/s", tile.stateDescription)
         // En marcha: tocarlo desconecta (el servicio está en primer plano: startService vale).

@@ -349,7 +349,7 @@
     <string name="wifi_disconnect_toast">Android Auto losgekoppeld: Bij draadloze AA, schakel \"Wisselen tussen netwerken\" of \"Netwerkversnelling\" uit in WiFi-instellingen van telefoon</string>
     <string name="reset_usb_option">USB-verbinding resetten</string>
     <string name="reset_usb_timeout">USB-apparaat niet gevonden. Controleer de verbinding.</string>
-    <string name="notification_service_running">QonectaLeap is actief</string>
+    <string name="notification_service_running">Qonecta+ is actief</string>
     <string name="notification_projection_active">Android Auto wordt geprojecteerd</string>
     <string name="shortcut_connect_title">Verbinden</string>
     <string name="shortcut_connect_desc">Verbinden met laatst bekende apparaat</string>

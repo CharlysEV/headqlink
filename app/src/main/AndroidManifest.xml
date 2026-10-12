@@ -151,7 +151,7 @@
         android:hardwareAccelerated="true"
         android:icon="@mipmap/hql_launcher"
         android:roundIcon="@mipmap/hql_launcher_round"
-        android:label="QonectaLeap"
+        android:label="Qonecta+"
         android:localeConfig="@xml/hql_locales_config"
         android:largeHeap="true"
         android:usesCleartextTraffic="true"
@@ -507,7 +507,7 @@
         <activity
             android:name="com.headqlink.link.HomeActivity"
             android:exported="true"
-            android:label="QonectaLeap"
+            android:label="Qonecta+"
             android:launchMode="singleTask"
             android:theme="@style/Theme.HeadQLink">
             <intent-filter>
@@ -529,7 +529,7 @@
             android:name="com.headqlink.link.LinkWidget"
             android:enabled="@bool/hql_widget_enabled"
             android:exported="false"
-            android:label="QonectaLeap">
+            android:label="Qonecta+">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -557,7 +557,7 @@
             android:enabled="@bool/hql_widget_enabled"
             android:exported="true"
             android:icon="@drawable/hql_ic_notif"
-            android:label="QonectaLeap"
+            android:label="Qonecta+"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
@@ -570,7 +570,7 @@
         <activity
             android:name="com.headqlink.link.SetupActivity"
             android:exported="false"
-            android:label="QonectaLeap"
+            android:label="Qonecta+"
             android:theme="@style/Theme.HeadQLink" />
 
         <activity

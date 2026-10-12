@@ -100,14 +100,14 @@ public final class LinkTileService extends TileService implements LinkState.List
         if (t == null) return;
         LinkGlance g = WidgetUpdater.glance(this);
         String status = LinkWidgetViews.oneLine(this, g);
-        t.setLabel("QonectaLeap");
+        t.setLabel("Qonecta+");
         t.setIcon(Icon.createWithResource(this, R.drawable.hql_ic_notif));
         t.setState(g.active() ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
         if (Build.VERSION.SDK_INT >= 29) {
             t.setSubtitle(g.status == LinkGlance.Status.LIVE ? g.videoText() : LinkWidgetViews.title(this, g));
         }
         if (Build.VERSION.SDK_INT >= 30) t.setStateDescription(status);
-        t.setContentDescription("QonectaLeap. " + LinkWidgetViews.actionText(this, g) + ". " + status);
+        t.setContentDescription("Qonecta+. " + LinkWidgetViews.actionText(this, g) + ". " + status);
         t.updateTile();
     }
 
@@ -123,7 +123,7 @@ public final class LinkTileService extends TileService implements LinkState.List
             return;
         }
         try {
-            sbm.requestAddTileService(new ComponentName(a, LinkTileService.class), "QonectaLeap",
+            sbm.requestAddTileService(new ComponentName(a, LinkTileService.class), "Qonecta+",
                     Icon.createWithResource(a, R.drawable.hql_ic_notif), a.getMainExecutor(), result -> {
                         L.i("ajustes rápidos: añadir el botón → " + result);
                         if (result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED) {

@@ -350,7 +350,7 @@
     <string name="wifi_disconnect_toast">Android Auto desconectado: Se usar AA sem fio, desative \"Alternar entre redes\" ou \"Aceleração de rede\" nas configurações WiFi do telefone</string>
     <string name="reset_usb_option">Redefinir conexão USB</string>
     <string name="reset_usb_timeout">Dispositivo USB não encontrado. Verifique a conexão.</string>
-    <string name="notification_service_running">QonectaLeap está em execução</string>
+    <string name="notification_service_running">Qonecta+ está em execução</string>
     <string name="notification_projection_active">Android Auto está projetado</string>
     <string name="shortcut_connect_title">Conectar</string>
     <string name="shortcut_connect_desc">Conectar ao último dispositivo conhecido</string>

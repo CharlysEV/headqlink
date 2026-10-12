@@ -72,7 +72,7 @@ public class LogActivity extends Activity {
             startActivity(new android.content.Intent(this, PreviewActivity.class));
         });
         findViewById(R.id.hql_log_copy).setOnClickListener(v -> {
-            getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("QonectaLeap", String.join("\n", lines)));
+            getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("Qonecta+", String.join("\n", lines)));
             ToastUtils.showToast(this, Str.get(R.string.hql_log_copied), Toast.LENGTH_SHORT, true);
         });
     }

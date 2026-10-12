@@ -350,7 +350,7 @@
     <string name="wifi_disconnect_toast">Android Auto від\'єднано: При бездротовому AA вимкніть \"Перемикання між мережами\" або \"Прискорення мережі\" в налаштуваннях WiFi телефону</string>
     <string name="reset_usb_option">Скинути USB-підключення</string>
     <string name="reset_usb_timeout">USB-пристрій не знайдено. Перевірте підключення.</string>
-    <string name="notification_service_running">QonectaLeap запущено</string>
+    <string name="notification_service_running">Qonecta+ запущено</string>
     <string name="notification_projection_active">Трансляція Android Auto активна</string>
     <string name="shortcut_connect_title">Підключити</string>
     <string name="shortcut_connect_desc">Підключитися до останнього пристрою</string>

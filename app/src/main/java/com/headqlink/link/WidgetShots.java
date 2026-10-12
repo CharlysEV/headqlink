@@ -111,7 +111,7 @@ final class WidgetShots {
                 in.car = LinkState.Car.CONNECTED;
                 in.video = video;
                 in.networkLevel = LinkState.Level.OK;
-                in.network = c.getString(R.string.hql_usb_net_connected, "Neusoft QDriveLink");
+                in.network = c.getString(R.string.hql_usb_net_connected);
                 break;
             case "esperando":
                 running(in, Config.LINK_HOTSPOT);

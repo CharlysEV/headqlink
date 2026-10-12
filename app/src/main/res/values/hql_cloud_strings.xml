@@ -66,7 +66,7 @@
     <string name="hql_cloud_expired_title">The Leapmotor session has expired</string>
     <string name="hql_cloud_expired_body">Sign in again on the phone: ⚙ › Car data (Leapmotor account).</string>
     <string name="hql_cloud_server_key_title">The Leapmotor server changed its certificate</string>
-    <string name="hql_cloud_server_key_body_car">For safety QonectaLeap does not connect until you review it on the phone: ⚙ › Car data.</string>
+    <string name="hql_cloud_server_key_body_car">For safety Qonecta+ does not connect until you review it on the phone: ⚙ › Car data.</string>
     <string name="hql_cloud_error_title">No car data yet</string>
     <string name="hql_cloud_error_body">The cloud could not be read (no connection or it is not answering). Retrying in %1$d min.</string>
     <string name="hql_cloud_trip_real">Trip · real</string>
@@ -80,7 +80,7 @@
     <!-- Phone: ⚙ › Car data (Leapmotor account) -->
     <string name="hql_cloud_menu">Car data (Leapmotor account)</string>
     <string name="hql_cloud_label">Leapmotor account · optional</string>
-    <string name="hql_cloud_intro">QonectaLeap can read your car’s status from the Leapmotor cloud with your account (battery, range, charging, tyre pressures, doors and odometer) and show it in the extended mode: the Status tab, and the real % in Route, Efficiency and Trips.\n\n• Read-only: it never sends commands to the car.\n• Unofficial API: it may stop working at any time.\n• Your data only goes to Leapmotor’s servers. The certificate and the session are stored encrypted on this phone; the password is not stored.\n• It needs the same client certificate as the LMB10 app.</string>
+    <string name="hql_cloud_intro">Qonecta+ can read your car’s status from the Leapmotor cloud with your account (battery, range, charging, tyre pressures, doors and odometer) and show it in the extended mode: the Status tab, and the real % in Route, Efficiency and Trips.\n\n• Read-only: it never sends commands to the car.\n• Unofficial API: it may stop working at any time.\n• Your data only goes to Leapmotor’s servers. The certificate and the session are stored encrypted on this phone; the password is not stored.\n• It needs the same client certificate as the LMB10 app.</string>
     <string name="hql_cloud_enabled">Use the real car data</string>
     <string name="hql_cloud_step_cert">1 · Client certificate</string>
     <string name="hql_cloud_cert_none">No certificate. Pick app.crt and app.key (together or one after the other), a .pem with both blocks or a .p12/.pfx.</string>
@@ -97,7 +97,7 @@
     <string name="hql_cloud_cert_err_no_cert">The certificate is missing: pick the .crt too (or a .pem with both).</string>
     <string name="hql_cloud_cert_err_mismatch">That key does not belong to that certificate.</string>
     <string name="hql_cloud_cert_err_encrypted">This encrypted key is not supported: use it without a password (openssl pkcs8 -topk8 -nocrypt) or as a .p12.</string>
-    <string name="hql_cloud_cert_err_unreadable">Those files are not a certificate QonectaLeap can read (PEM, DER or PKCS#12).</string>
+    <string name="hql_cloud_cert_err_unreadable">Those files are not a certificate Qonecta+ can read (PEM, DER or PKCS#12).</string>
     <string name="hql_cloud_cert_err_too_big">That file is too big to be a certificate.</string>
     <string name="hql_cloud_cert_have_cert">Certificate read (%1$s). Now pick the key (app.key).</string>
     <string name="hql_cloud_cert_have_key">Key read (%1$s). Now pick the certificate (app.crt).</string>
@@ -158,7 +158,7 @@
     <string name="hql_cloud_trips_car_total_fuel">Car data: %1$d trips · %3$.1f kWh/100 · %4$.1f L/100</string>
     <string name="hql_cloud_3d_hint">Drag to rotate</string>
     <string name="hql_cloud_step_sentry">5 · Sentry mode</string>
-    <string name="hql_cloud_sentry_note">Optional. It is the only command QonectaLeap sends to the car, and only if you save your car PIN here (encrypted on the phone). Without a PIN everything stays read-only.</string>
+    <string name="hql_cloud_sentry_note">Optional. It is the only command Qonecta+ sends to the car, and only if you save your car PIN here (encrypted on the phone). Without a PIN everything stays read-only.</string>
     <string name="hql_cloud_pin_hint">Car PIN (the one in the Leapmotor app)</string>
     <string name="hql_cloud_pin_save">Save PIN</string>
     <string name="hql_cloud_pin_forget">Forget PIN</string>

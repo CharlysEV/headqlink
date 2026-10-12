@@ -97,7 +97,7 @@ public final class AaServerStarter {
     private static volatile boolean relaunchAfterUnlock;
 
     private static String coverText(boolean starting) {
-        return "QonectaLeap\n\n" + Str.get(starting ? R.string.hql_cover_starting : R.string.hql_cover_stopping);
+        return "Qonecta+\n\n" + Str.get(starting ? R.string.hql_cover_starting : R.string.hql_cover_stopping);
     }
 
     private static android.content.SharedPreferences prefs(Context ctx) {

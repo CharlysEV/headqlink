@@ -349,7 +349,7 @@
     <string name="wifi_disconnect_toast">Android Auto 已斷線：若使用無線 AA，請在手機 WiFi 設定中停用「切換網路」或「網路加速」</string>
     <string name="reset_usb_option">重設 USB 連線</string>
     <string name="reset_usb_timeout">找不到 USB 裝置，請檢查連線。</string>
-    <string name="notification_service_running">QonectaLeap 執行中</string>
+    <string name="notification_service_running">Qonecta+ 執行中</string>
     <string name="notification_projection_active">Android Auto 投射中</string>
     <string name="shortcut_connect_title">連接</string>
     <string name="shortcut_connect_desc">連接至上次使用的裝置</string>

@@ -115,7 +115,7 @@ class MediaControlsTest {
             assertTrue(dialog.isShowing)
             val detail = dialog.findViewById<TextView>(R.id.hql_terms_detail).text.toString()
             assertTrue(detail.contains("GNU AGPL-3.0"))
-            assertTrue(detail.contains("QonectaLeap"))
+            assertTrue(detail.contains("Qonecta+"))
             assertFalse(check.isChecked)
             assertFalse(next.isEnabled)
             dialog.findViewById<View>(android.R.id.button1).performClick()

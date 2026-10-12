@@ -776,7 +776,7 @@
     <string name="wifi_disconnect_toast">Android Auto desligado: Se estiver a utilizar AA sem fios, desative \"Mudar entre redes\" nas definições de Wi-Fi do telemóvel</string>
     <string name="reset_usb_option">Repor ligação USB</string>
     <string name="reset_usb_timeout">Dispositivo USB não encontrado. Verifique a ligação.</string>
-    <string name="notification_service_running">O QonectaLeap está em execução</string>
+    <string name="notification_service_running">O Qonecta+ está em execução</string>
     <string name="boot_loop_paused_title">Arranque sem fios pausado</string>
     <string name="boot_loop_paused_generic">Este dispositivo reiniciou três vezes consecutivas após o Open Headunit iniciar o modo sem fios, pelo que o modo sem fios foi desativado desta vez. O USB continua a funcionar.</string>
     <string name="boot_loop_paused_native_wifi_direct">Este dispositivo reiniciou três vezes consecutivas. Em algumas unidades, o chipset Wi-Fi bloqueia o sistema quando um telemóvel adere a uma rede Wi-Fi Direct. Experimente mudar para o hotspot da unidade.</string>

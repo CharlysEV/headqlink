@@ -350,7 +350,7 @@
     <string name="wifi_disconnect_toast">Android Auto rozłączono: Jeśli używasz bezprzewodowego AA, wyłącz \"Przełączanie między sieciami\" lub \"Przyspieszenie sieci\" w ustawieniach WiFi telefonu</string>
     <string name="reset_usb_option">Zresetuj połączenie USB</string>
     <string name="reset_usb_timeout">Nie znaleziono urządzenia USB. Sprawdź połączenie.</string>
-    <string name="notification_service_running">QonectaLeap działa</string>
+    <string name="notification_service_running">Qonecta+ działa</string>
     <string name="notification_projection_active">Android Auto jest wyświetlane</string>
     <string name="shortcut_connect_title">Połącz</string>
     <string name="shortcut_connect_desc">Połącz z ostatnim urządzeniem</string>

@@ -515,7 +515,8 @@ internal class UsbLink(
         }
         b.onStarted(start.gap)
         UsbProbe.step("sesión S${s.id} por cable en marcha (${s.transport.describe()})")
-        network(LinkState.Level.OK, Str.get(R.string.hql_usb_net_connected, name))
+        // Sin el nombre del accesorio en pantalla (es de una marca): está en el log.
+        network(LinkState.Level.OK, Str.get(R.string.hql_usb_net_connected))
         val detail = b.describeLink()
         book.confirm(s.id, Runnable { if (!stopping) callbacks.onCarConnected(detail) })
     }
