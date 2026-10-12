@@ -47,6 +47,8 @@ final class RoadInfo {
     private double camLat = Double.NaN;
     private double camLon = Double.NaN;
     private long camMs;
+    /** La última carga de radares falló (sin red, Overpass saturado): se reintenta pronto, no a los 8 km. */
+    private boolean camFailed;
     private double limitLat = Double.NaN;
     private double limitLon = Double.NaN;
     private long limitMs;
@@ -120,6 +122,23 @@ final class RoadInfo {
         CarSensors.Snapshot s = sensors.snapshot();
         if (Double.isNaN(s.lat)) return;
         long now = SystemClock.elapsedRealtime();
+        // Los radares primero y por su lado: si falla la consulta del límite, no se quedan sin cargar.
+        Exception camError = null;
+        if (shouldLoadCameras(camLat, camLon, s.lat, s.lon, now - camMs, camFailed)) {
+            camMs = now;
+            try {
+                loadCameras(s.lat, s.lon);
+                // Solo una carga buena cuenta como hecha aquí; si falla, se reintenta a los CAM_RETRY_MS.
+                camLat = s.lat;
+                camLon = s.lon;
+                camFailed = false;
+            } catch (Exception e) {
+                camFailed = true;
+                camError = e;
+                if (!(e instanceof Http.OverpassPausedException)) L.w("vía: radares sin cargar (" + Http.safeError(e) + "); reintento en "
+                        + CAM_RETRY_MS / 1000 + " s");
+            }
+        }
         // Overpass pide moderación: como mucho una consulta cada 8 s y cada 250 m.
         if ((Double.isNaN(limitLat) || dist(s.lat, s.lon, limitLat, limitLon) > 250) && now - limitMs > 8000) {
             limitMs = now;
@@ -127,12 +146,22 @@ final class RoadInfo {
             limitLon = s.lon;
             updateLimit(s);
         }
-        if ((Double.isNaN(camLat) || dist(s.lat, s.lon, camLat, camLon) > 8000) && now - camMs > 60_000) {
-            camMs = now;
-            camLat = s.lat;
-            camLon = s.lon;
-            loadCameras(s.lat, s.lon);
-        }
+        if (camError != null) throw camError;
+    }
+
+    /** Radares: se cargan 15 km a la redonda y se vuelven a cargar a los RELOAD_M (como mucho, cada RELOAD_MS). */
+    static final double CAM_RELOAD_M = 8000;
+    static final long CAM_RELOAD_MS = 60_000;
+    /** Tras una carga fallida, se reintenta a los 20 s (antes no se reintentaba hasta recorrer otros 8 km). */
+    static final long CAM_RETRY_MS = 20_000;
+
+    /**
+     * Puro: ¿toca cargar los radares? Sin carga buena aún (o lejos de la última, más de CAM_RELOAD_M) y pasado el tiempo
+     * de espera desde el último intento: CAM_RELOAD_MS, o CAM_RETRY_MS si el último falló.
+     */
+    static boolean shouldLoadCameras(double camLat, double camLon, double lat, double lon, long sinceLastMs, boolean failed) {
+        boolean far = Double.isNaN(camLat) || dist(lat, lon, camLat, camLon) > CAM_RELOAD_M;
+        return far && sinceLastMs > (failed ? CAM_RETRY_MS : CAM_RELOAD_MS);
     }
 
     private void step() {
