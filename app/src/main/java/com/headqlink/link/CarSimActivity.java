@@ -205,7 +205,12 @@ public class CarSimActivity extends Activity {
     }
 
     private void startSource() {
-        AaPassthroughSource s = new AaPassthroughSource(getApplicationContext(), new Config(this).aaDpi(), true, true);
+        // El modo elegido: con «Auto», solo Android Auto (sin nuestro panel), como en el coche. Siempre recodificando:
+        // aquí se pinta en el móvil, no va al coche.
+        Config cfg = new Config(this);
+        boolean ext = Config.MODE_AA_EXT.equals(cfg.mode());
+        L.i("coche virtual: modo " + (ext ? "extendido" : "Auto"));
+        AaPassthroughSource s = new AaPassthroughSource(getApplicationContext(), cfg.aaDpi(), true, ext);
         s.setCarSize(W, H);
         s.setVideoSize(W, H);
         s.setTargetFps(FPS);
