@@ -3,7 +3,8 @@
 // - imagen: RGB565 (lo que pide el núcleo), 0RGB1555 o XRGB8888, a ARGB de 32 bits; hasta 1024x512;
 // - sonido: estéreo de 16 bits a 44,1 kHz, el ritmo de NativeCore;
 // - mando 1: el de la PlayStation (cruceta, ✕ ○ □ △, L1 R1 L2 R2, Start y Select), del entero que manda Java;
-// - opciones: los valores por defecto de cada una (el primero de su lista), como RetroArch sin tocar nada;
+// - opciones: los valores por defecto de cada una (el primero de su lista), como RetroArch sin tocar nada, salvo las
+//   que diga files/psx/opciones.txt (para probar un juego que falla);
 // - BIOS: la de verdad si está en la carpeta del sistema (scph1001.bin…); si no, la HLE que trae el núcleo;
 // - tarjeta de memoria 1: la de libretro («nombre.srm»), que se lee al abrir el juego y se escribe al cerrarlo (y cada
 //   cierto tiempo si cambió, por si la app se cierra de golpe).
@@ -19,6 +20,9 @@
 #include <vector>
 
 #include "pcsx_rearmed/deps/libretro-common/include/libretro.h"
+
+// El código del disco que lee el núcleo al cargarlo («SCUS94194»), de libpcsxcore/misc.c.
+extern "C" char CdromId[10];
 
 #define TAG "HQL-PSX"
 
@@ -49,13 +53,28 @@ int audioN = 0;  // muestras sueltas (L y R cuentan por separado)
 int buttons = 0;
 double fps = 60.0;
 
+// Juegos que fallan con el recompilador y van con el intérprete (que en un móvil actual también da 60 fps). Gran
+// Turismo (USA, Europa, Japón) se queda en negro al empezar la carrera: salta a código que no es (una instrucción
+// reservada). Además de estos, los que se aprenden solos (files/psx/interprete.txt, ver nFrame).
+const char *const INTERPRETER_DB[] = {"SCUS94194", "SCES00984", "SCPS10045"};
+std::string learnPath;
+std::string discId;
+bool interpreter = false;
+bool varsChanged = false;
+bool resetAfterRun = false;
+volatile bool sawReserved = false;
+
 void logCb(enum retro_log_level level, const char *fmt, ...) {
     if (level == RETRO_LOG_DEBUG) return;
     int prio = level >= RETRO_LOG_ERROR ? ANDROID_LOG_ERROR : level == RETRO_LOG_WARN ? ANDROID_LOG_WARN : ANDROID_LOG_INFO;
+    char buf[512];
     va_list ap;
     va_start(ap, fmt);
-    __android_log_vprint(prio, TAG, fmt, ap);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
+    // El procesador fue a parar a una instrucción reservada: con el recompilador, señal de que este juego no va con él.
+    if (strstr(buf, "reserved instruction")) sawReserved = true;
+    __android_log_write(prio, TAG, buf);
 }
 
 bool environment(unsigned cmd, void *data) {
@@ -94,7 +113,8 @@ bool environment(unsigned cmd, void *data) {
             return true;
         }
         case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
-            *static_cast<bool *>(data) = false;
+            *static_cast<bool *>(data) = varsChanged;
+            varsChanged = false;
             return true;
         case RETRO_ENVIRONMENT_GET_CAN_DUPE:
         case RETRO_ENVIRONMENT_GET_INPUT_BITMASKS:
@@ -223,6 +243,58 @@ void unloadGame() {
     loaded = false;
 }
 
+/**
+ * Opciones del núcleo cambiadas a mano para probar un juego que falla: files/psx/opciones.txt, una por línea
+ * («pcsx_rearmed_drc=disabled»). Sin el archivo, todas con su valor por defecto.
+ */
+void applyOverrides(const std::string &path) {
+    FILE *f = fopen(path.c_str(), "r");
+    if (!f) return;
+    char line[256];
+    while (fgets(line, sizeof(line), f)) {
+        std::string l(line);
+        while (!l.empty() && (l.back() == '\n' || l.back() == '\r' || l.back() == ' ')) l.pop_back();
+        size_t eq = l.find('=');
+        if (l.empty() || l[0] == '#' || eq == std::string::npos) continue;
+        std::string key = l.substr(0, eq), value = l.substr(eq + 1);
+        if (vars.find(key) == vars.end()) {
+            __android_log_print(ANDROID_LOG_WARN, TAG, "opción desconocida: %s", key.c_str());
+            continue;
+        }
+        vars[key] = value;
+        __android_log_print(ANDROID_LOG_INFO, TAG, "opción: %s = %s", key.c_str(), value.c_str());
+    }
+    fclose(f);
+}
+
+/** ¿Este disco va con el intérprete (de la lista o aprendido)? */
+bool needsInterpreter(const std::string &id) {
+    if (id.empty()) return false;
+    for (const char *g : INTERPRETER_DB) {
+        if (id == g) return true;
+    }
+    FILE *f = fopen(learnPath.c_str(), "r");
+    if (!f) return false;
+    char line[64];
+    bool found = false;
+    while (!found && fgets(line, sizeof(line), f)) {
+        std::string l(line);
+        while (!l.empty() && (l.back() == '\n' || l.back() == '\r' || l.back() == ' ')) l.pop_back();
+        found = l == id;
+    }
+    fclose(f);
+    return found;
+}
+
+/** Pasa al intérprete: el núcleo lo aplica al empezar el siguiente fotograma (GET_VARIABLE_UPDATE). */
+void useInterpreter(const char *why) {
+    if (interpreter || vars.find("pcsx_rearmed_drc") == vars.end()) return;
+    vars["pcsx_rearmed_drc"] = "disabled";
+    varsChanged = true;
+    interpreter = true;
+    __android_log_print(ANDROID_LOG_INFO, TAG, "%s %s: con el intérprete en vez del recompilador", discId.c_str(), why);
+}
+
 std::string jstr(JNIEnv *env, jstring s) {
     if (!s) return "";
     const char *c = env->GetStringUTFChars(s, nullptr);
@@ -257,6 +329,7 @@ Java_com_headqlink_link_PsxEngine_nLoad(JNIEnv *env, jclass, jstring jpath, jstr
         retro_init();
         initDone = true;
     }
+    applyOverrides(systemDir + "/../opciones.txt");
     retro_game_info game{};
     game.path = romPath.c_str();
     if (!retro_load_game(&game)) return env->NewStringUTF("PCSX ReARMed no abre el disco");
@@ -269,6 +342,13 @@ Java_com_headqlink_link_PsxEngine_nLoad(JNIEnv *env, jclass, jstring jpath, jstr
     memset(frame, 0, sizeof(frame));
     audioN = 0;
     loaded = true;
+    learnPath = systemDir + "/../interprete.txt";
+    discId.assign(CdromId, strnlen(CdromId, sizeof(CdromId)));
+    interpreter = vars.count("pcsx_rearmed_drc") && vars["pcsx_rearmed_drc"] == "disabled";
+    varsChanged = false;
+    resetAfterRun = false;
+    sawReserved = false;
+    if (needsInterpreter(discId)) useInterpreter("está en la lista");
     loadSrm();
     srmCountdown = SRM_CHECK_FRAMES;
     __android_log_print(ANDROID_LOG_INFO, TAG, "disco abierto: %dx%d a %.2f fps, %.0f Hz", frameW, frameH, fps, av.timing.sample_rate);
@@ -281,6 +361,24 @@ Java_com_headqlink_link_PsxEngine_nFrame(JNIEnv *env, jclass, jintArray argb, js
     if (!loaded) return -1;
     buttons = pad;
     retro_run();
+    if (resetAfterRun) {
+        // Ya corre con el intérprete (se cambió al empezar este fotograma): el juego vuelve a empezar desde cero.
+        resetAfterRun = false;
+        retro_reset();
+    }
+    if (sawReserved) {
+        sawReserved = false;
+        if (!interpreter && !discId.empty()) {
+            // Se aprende para la próxima vez y se sigue ya con el intérprete, empezando de nuevo.
+            FILE *f = fopen(learnPath.c_str(), "a");
+            if (f) {
+                fprintf(f, "%s\n", discId.c_str());
+                fclose(f);
+            }
+            useInterpreter("falla con el recompilador");
+            resetAfterRun = true;
+        }
+    }
     if (--srmCountdown <= 0) {
         srmCountdown = SRM_CHECK_FRAMES;
         saveSrm();
