@@ -332,11 +332,12 @@ final class NesScreen {
         col.addView(back);
         host.setContent(col);
         String parent = dirStack.get(dirStack.size() - 1);
+        String root = dirStack.get(0);
         long[] lastPost = {0};
         new Thread(() -> {
             File rom;
             try {
-                rom = copyDisc(tree, parent, e, seq, n -> {
+                rom = copyDisc(tree, root, parent, e, seq, n -> {
                     long now = System.currentTimeMillis();
                     if (now - lastPost[0] < 300) return;
                     lastPost[0] = now;
@@ -367,7 +368,7 @@ final class NesScreen {
      * de un .zip) y devuelve el archivo que se abre. Lo ya copiado con el mismo tamaño no se vuelve a copiar. Si junto al
      * disco hay una BIOS (scph1001.bin…), va a files/psx/bios. Se quedan las PsxDisc.KEEP copias más recientes.
      */
-    private File copyDisc(Uri tree, String parentDoc, Entry e, int seq, Copied progress) throws Exception {
+    private File copyDisc(Uri tree, String rootDoc, String parentDoc, Entry e, int seq, Copied progress) throws Exception {
         File base = new File(host.context().getExternalFilesDir(null), console.dir);
         File dir = new File(base, PsxDisc.folder(GameConsole.title(e.name)));
         if (!dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("no se pudo crear la carpeta del disco");
@@ -382,7 +383,13 @@ final class NesScreen {
             progress.bytes(done[0]);
         };
         File bios = PsxEngine.biosDir(base);
-        for (Entry k : kids) {
+        // La BIOS puede estar junto al juego o en la carpeta principal de juegos.
+        List<Entry> biosPlaces = new ArrayList<>(kids);
+        if (!rootDoc.equals(parentDoc)) {
+            List<Entry> root = children(tree, rootDoc);
+            if (root != null) biosPlaces.addAll(root);
+        }
+        for (Entry k : biosPlaces) {
             if (k.dir || !PsxDisc.isBios(k.name) || k.size > 4 * 1024 * 1024) continue;
             File to = new File(bios, k.name.toLowerCase(Locale.ROOT));
             if (to.isFile()) continue;
