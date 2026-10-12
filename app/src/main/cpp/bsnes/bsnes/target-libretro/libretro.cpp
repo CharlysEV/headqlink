@@ -22,7 +22,7 @@ static void audio_queue(int16_t left, int16_t right)
 	audio_buffer[audio_buffer_index++] = left;
 	audio_buffer[audio_buffer_index++] = right;
 
-	if (audio_buffer_index == audio_buffer_max)
+	if (audio_buffer_index >= audio_buffer_max)
 	{
 		audio_batch_cb(audio_buffer, audio_buffer_max/2);
 		audio_buffer_index = 0;
@@ -590,7 +590,8 @@ RETRO_API void retro_get_system_av_info(struct retro_system_av_info *info)
 	
 	if (retro_get_region() == RETRO_REGION_NTSC) {
 		info->timing.fps = 21477272.0 / 357366.0;
-		audio_buffer_max = (SAMPLERATE/60) * 2;
+		// headqlink: el bloque se queda en AUDIOBUFSIZE. En el original pasaba a (SAMPLERATE/60) * 2, que cabía en su
+		// búfer de 1/50 s pero no en el de 128: el sonido se escribía fuera y pisaba punteros (la app se cerraba).
 	}
 	else
 	{

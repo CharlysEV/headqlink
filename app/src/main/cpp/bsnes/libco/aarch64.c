@@ -85,27 +85,6 @@ cothread_t co_derive(void* memory, unsigned int size, void (*entrypoint)(void)) 
   return handle;
 }
 
-#if defined(__ANDROID__)
-/* headqlink: en Android 11+ la memoria de malloc lleva una etiqueta en el byte alto del puntero (heap tagging). Con la
-   pila de un hilo cooperativo ahí, el núcleo acababa leyendo punteros sin su etiqueta y caía (SIGSEGV en
-   Emulator::Audio::process con Killer Instinct). La pila sale de mmap (sin etiqueta); el tamaño va delante para
-   co_delete. */
-#include <sys/mman.h>
-
-cothread_t co_create(unsigned int size, void (*entrypoint)(void)) {
-  size_t total = (size_t)size + 16;
-  unsigned char* base = (unsigned char*)mmap(0, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if(base == MAP_FAILED) return (cothread_t)0;
-  *(size_t*)base = total;
-  return co_derive(base + 16, size, entrypoint);
-}
-
-void co_delete(cothread_t handle) {
-  if(!handle) return;
-  unsigned char* base = (unsigned char*)handle - 16;
-  munmap(base, *(size_t*)base);
-}
-#else
 cothread_t co_create(unsigned int size, void (*entrypoint)(void)) {
   void* memory = malloc(size);
   if(!memory) return (cothread_t)0;
@@ -115,7 +94,6 @@ cothread_t co_create(unsigned int size, void (*entrypoint)(void)) {
 void co_delete(cothread_t handle) {
   free(handle);
 }
-#endif
 
 void co_switch(cothread_t handle) {
   cothread_t co_previous_handle = co_active_handle;
