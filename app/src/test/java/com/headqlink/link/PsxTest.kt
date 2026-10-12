@@ -92,9 +92,9 @@ class PsxTest {
 
     @Test
     fun keepsTheNewestCopies() {
-        val names = listOf("saves", "A", "B", "bios", "C", "D")
-        val used = listOf(0L, 40L, 10L, 0L, 30L, 20L)
-        // Quedan A, C y D (las tres más recientes); B se borra. saves y bios nunca.
+        val names = listOf("saves", "A", "B", "bios", "C", "D", "estados")
+        val used = listOf(0L, 40L, 10L, 0L, 30L, 20L, 0L)
+        // Quedan A, C y D (las tres más recientes); B se borra. saves, bios y estados nunca.
         assertEquals(listOf("B"), PsxDisc.evict(names, used, 3))
         assertEquals(emptyList<String>(), PsxDisc.evict(listOf("A", "saves"), listOf(1L, 2L), 3))
     }

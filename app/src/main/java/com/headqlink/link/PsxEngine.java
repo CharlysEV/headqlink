@@ -38,6 +38,10 @@ final class PsxEngine extends NativeCore {
 
     private static native void nUnload();
 
+    private static native byte[] nSaveState();
+
+    private static native boolean nLoadState(byte[] state);
+
     private final File base;
     private int fps = 60;
 
@@ -112,5 +116,15 @@ final class PsxEngine extends NativeCore {
     @Override
     public String romInfo() {
         return "PCSX ReARMed · " + (fps <= 50 ? "PAL" : "NTSC");
+    }
+
+    @Override
+    byte[] nativeSaveState() {
+        return LIB ? nSaveState() : null;
+    }
+
+    @Override
+    boolean nativeLoadState(byte[] state) {
+        return LIB && nLoadState(state);
     }
 }

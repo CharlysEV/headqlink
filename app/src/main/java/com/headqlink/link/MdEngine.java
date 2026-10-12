@@ -34,6 +34,10 @@ final class MdEngine extends NativeCore {
 
     private static native byte[] nUnload();
 
+    private static native byte[] nSaveState();
+
+    private static native boolean nLoadState(byte[] state);
+
     private boolean pal;
 
     MdEngine(Context ctx) {
@@ -82,5 +86,15 @@ final class MdEngine extends NativeCore {
     @Override
     public String romInfo() {
         return "ClownMDEmu · " + (pal ? "PAL" : "NTSC");
+    }
+
+    @Override
+    byte[] nativeSaveState() {
+        return nSaveState();
+    }
+
+    @Override
+    boolean nativeLoadState(byte[] state) {
+        return nLoadState(state);
     }
 }

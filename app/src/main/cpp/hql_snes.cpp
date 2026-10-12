@@ -18,6 +18,7 @@
 #include <cstring>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "bsnes/bsnes/target-libretro/libretro.h"
 
@@ -243,6 +244,31 @@ Java_com_headqlink_link_SnesEngine_nUnload(JNIEnv *, jclass) {
     if (!loaded) return;
     retro_unload_game();
     loaded = false;
+}
+
+/** Estado completo del juego (para «Guardar» y seguir donde se dejó), o null si no se puede. */
+JNIEXPORT jbyteArray JNICALL
+Java_com_headqlink_link_SnesEngine_nSaveState(JNIEnv *env, jclass) {
+    if (!loaded) return nullptr;
+    size_t n = retro_serialize_size();
+    if (n == 0) return nullptr;
+    std::vector<uint8_t> buf(n);
+    if (!retro_serialize(buf.data(), n)) return nullptr;
+    jbyteArray out = env->NewByteArray((jsize)n);
+    if (out) env->SetByteArrayRegion(out, 0, (jsize)n, reinterpret_cast<const jbyte *>(buf.data()));
+    return out;
+}
+
+/** Vuelve a un estado guardado con nSaveState. */
+JNIEXPORT jboolean JNICALL
+Java_com_headqlink_link_SnesEngine_nLoadState(JNIEnv *env, jclass, jbyteArray data) {
+    if (!loaded || !data) return JNI_FALSE;
+    jsize n = env->GetArrayLength(data);
+    std::vector<uint8_t> buf((size_t)n);
+    env->GetByteArrayRegion(data, 0, n, reinterpret_cast<jbyte *>(buf.data()));
+    bool ok = retro_unserialize(buf.data(), (size_t)n);
+    audioN = 0;
+    return ok ? JNI_TRUE : JNI_FALSE;
 }
 
 }  // extern "C"

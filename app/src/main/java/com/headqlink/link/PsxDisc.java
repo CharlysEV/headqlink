@@ -87,13 +87,13 @@ final class PsxDisc {
 
     /**
      * Puro: de las carpetas de discos copiados (con su última vez), las que sobran para quedarse con las {@code keep} más
-     * recientes. «saves» y «bios» no son discos y nunca se tocan.
+     * recientes. «saves», «bios» y «estados» no son discos y nunca se tocan.
      */
     static List<String> evict(List<String> names, List<Long> lastUsed, int keep) {
         List<Integer> idx = new ArrayList<>();
         for (int i = 0; i < names.size(); i++) {
             String n = names.get(i);
-            if (!n.equals("saves") && !n.equals("bios")) idx.add(i);
+            if (!n.equals("saves") && !n.equals("bios") && !n.equals("estados")) idx.add(i);
         }
         idx.sort((a, b) -> Long.compare(lastUsed.get(b), lastUsed.get(a)));
         List<String> out = new ArrayList<>();

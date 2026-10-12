@@ -952,4 +952,14 @@
     <string name="hql_web_adblock_count">%1$d hier geblokkeerd</string>
     <string name="hql_psx_sub">PCSX ReARMed · .chd, .cue, .pbp</string>
     <string name="hql_psx_copying">Disc wordt naar de telefoon gekopieerd… %1$d MB\nAlleen de eerste keer: daarna start het meteen.</string>
+    <string name="hql_nes_save">Opslaan</string>
+    <string name="hql_nes_load">Laden</string>
+    <string name="hql_nes_saved">Spel opgeslagen</string>
+    <string name="hql_nes_loaded">Spel geladen</string>
+    <string name="hql_nes_save_failed">Opslaan mislukt</string>
+    <string name="hql_nes_load_failed">Dat spel kon niet worden geladen</string>
+    <string name="hql_nes_no_save">Nog geen opgeslagen spel</string>
+    <string name="hql_nes_resume">Verdergaan waar je was?</string>
+    <string name="hql_nes_resume_yes">Verdergaan</string>
+    <string name="hql_nes_resume_no">Opnieuw beginnen</string>
 </resources>

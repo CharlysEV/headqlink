@@ -13,6 +13,7 @@
 
 #include "nestopia/source/core/api/NstApiEmulator.hpp"
 #include "nestopia/source/core/api/NstApiMachine.hpp"
+#include <sstream>
 #include "nestopia/source/core/api/NstApiCartridge.hpp"
 #include "nestopia/source/core/api/NstApiVideo.hpp"
 #include "nestopia/source/core/api/NstApiSound.hpp"
@@ -221,6 +222,29 @@ Java_com_headqlink_link_NestopiaEngine_nInfo(JNIEnv* env, jclass) {
     }
     s += Api::Machine(*emulator).GetMode() == Api::Machine::PAL ? " · PAL" : " · NTSC";
     return env->NewStringUTF(s.c_str());
+}
+
+/** Estado completo del juego (para «Guardar» y seguir donde se dejó), o null si no se puede. */
+JNIEXPORT jbyteArray JNICALL
+Java_com_headqlink_link_NestopiaEngine_nSaveState(JNIEnv* env, jclass) {
+    if (!loaded) return nullptr;
+    std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
+    if (NES_FAILED(Api::Machine(*emulator).SaveState(ss, Api::Machine::NO_COMPRESSION))) return nullptr;
+    std::string data = ss.str();
+    jbyteArray out = env->NewByteArray(static_cast<jsize>(data.size()));
+    if (out) env->SetByteArrayRegion(out, 0, static_cast<jsize>(data.size()), reinterpret_cast<const jbyte*>(data.data()));
+    return out;
+}
+
+/** Vuelve a un estado guardado con nSaveState. */
+JNIEXPORT jboolean JNICALL
+Java_com_headqlink_link_NestopiaEngine_nLoadState(JNIEnv* env, jclass, jbyteArray data) {
+    if (!loaded || !data) return JNI_FALSE;
+    jsize n = env->GetArrayLength(data);
+    std::string buf(static_cast<size_t>(n), '\0');
+    env->GetByteArrayRegion(data, 0, n, reinterpret_cast<jbyte*>(&buf[0]));
+    std::stringstream ss(buf, std::ios::in | std::ios::binary);
+    return NES_SUCCEEDED(Api::Machine(*emulator).LoadState(ss)) ? JNI_TRUE : JNI_FALSE;
 }
 
 }  // extern "C"

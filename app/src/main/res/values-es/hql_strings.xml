@@ -958,4 +958,14 @@
     <string name="hql_web_adblock_count">%1$d bloqueados aquí</string>
     <string name="hql_psx_sub">PCSX ReARMed · .chd, .cue, .pbp</string>
     <string name="hql_psx_copying">Copiando el disco al móvil… %1$d MB\nSolo la primera vez: después arranca al momento.</string>
+    <string name="hql_nes_save">Guardar</string>
+    <string name="hql_nes_load">Cargar</string>
+    <string name="hql_nes_saved">Partida guardada</string>
+    <string name="hql_nes_loaded">Partida cargada</string>
+    <string name="hql_nes_save_failed">No se pudo guardar</string>
+    <string name="hql_nes_load_failed">No se pudo cargar esa partida</string>
+    <string name="hql_nes_no_save">Aún no hay ninguna partida guardada</string>
+    <string name="hql_nes_resume">¿Seguir donde lo dejaste?</string>
+    <string name="hql_nes_resume_yes">Seguir</string>
+    <string name="hql_nes_resume_no">Empezar de nuevo</string>
 </resources>

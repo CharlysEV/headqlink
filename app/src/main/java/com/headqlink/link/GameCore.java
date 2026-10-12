@@ -32,6 +32,30 @@ interface GameCore {
 
     String romInfo();
 
+    /** Fin de un guardado o una carga de estado (en el hilo del emulador). */
+    interface StateDone {
+        void done(boolean ok);
+    }
+
+    /** ¿Sabe guardar el estado completo del juego («Guardar» / «Cargar» y seguir donde se dejó)? */
+    default boolean supportsStates() {
+        return false;
+    }
+
+    /** Guarda el estado completo en ese archivo, entre dos fotogramas. */
+    default void saveState(String path, StateDone done) {
+        done.done(false);
+    }
+
+    /** Vuelve al estado de ese archivo, entre dos fotogramas. */
+    default void loadState(String path, StateDone done) {
+        done.done(false);
+    }
+
+    /** Dónde se guarda solo el estado al salir del juego (para seguir donde se dejó), o null para no guardarlo. */
+    default void setAutoState(String path) {
+    }
+
     /**
      * Abre la ROM con el núcleo de su consola. NES: Nestopia y, si no hay librería o no la lee, halfNES; las NSF (música)
      * van a halfNES, que las reproduce solas. Devuelve el núcleo ya cargado; si ninguno puede, lanza el error del último.

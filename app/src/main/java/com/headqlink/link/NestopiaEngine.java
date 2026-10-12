@@ -36,6 +36,10 @@ final class NestopiaEngine extends NativeCore {
 
     private static native byte[] nUnload();
 
+    private static native byte[] nSaveState();
+
+    private static native boolean nLoadState(byte[] state);
+
     private static native String nInfo();
 
     private final Context ctx;
@@ -105,5 +109,15 @@ final class NestopiaEngine extends NativeCore {
             L.w("NES: sin " + name + ": " + e);
             return null;
         }
+    }
+
+    @Override
+    byte[] nativeSaveState() {
+        return nSaveState();
+    }
+
+    @Override
+    boolean nativeLoadState(byte[] state) {
+        return nLoadState(state);
     }
 }

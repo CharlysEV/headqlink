@@ -285,3 +285,42 @@ Java_com_headqlink_link_MdEngine_nUnload(JNIEnv *env, jclass cls) {
     rom = NULL;
     return out;
 }
+
+/* Estado completo del juego (para «Guardar» y seguir donde se dejó): «HQMD», el tamaño y la copia de ClownMDEmu
+   (ClownMDEmu_SaveState). Solo vale para esta misma versión del núcleo: si no cuadra el tamaño, no se carga. */
+JNIEXPORT jbyteArray JNICALL
+Java_com_headqlink_link_MdEngine_nSaveState(JNIEnv *env, jclass cls) {
+    (void)cls;
+    if (!loaded) return NULL;
+    ClownMDEmu_StateBackup *b = malloc(sizeof *b);
+    if (!b) return NULL;
+    ClownMDEmu_SaveState(&emu, b);
+    uint32_t size = (uint32_t)sizeof *b;
+    jbyteArray out = (*env)->NewByteArray(env, (jsize)(8 + size));
+    if (out) {
+        (*env)->SetByteArrayRegion(env, out, 0, 4, (const jbyte *)"HQMD");
+        (*env)->SetByteArrayRegion(env, out, 4, 4, (const jbyte *)&size);
+        (*env)->SetByteArrayRegion(env, out, 8, (jsize)size, (const jbyte *)b);
+    }
+    free(b);
+    return out;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_headqlink_link_MdEngine_nLoadState(JNIEnv *env, jclass cls, jbyteArray data) {
+    (void)cls;
+    if (!loaded || !data) return JNI_FALSE;
+    uint32_t size = (uint32_t)sizeof(ClownMDEmu_StateBackup);
+    if ((*env)->GetArrayLength(env, data) != (jsize)(8 + size)) return JNI_FALSE;
+    char head[8];
+    (*env)->GetByteArrayRegion(env, data, 0, 8, (jbyte *)head);
+    uint32_t stored;
+    memcpy(&stored, head + 4, 4);
+    if (memcmp(head, "HQMD", 4) != 0 || stored != size) return JNI_FALSE;
+    ClownMDEmu_StateBackup *b = malloc(size);
+    if (!b) return JNI_FALSE;
+    (*env)->GetByteArrayRegion(env, data, 8, (jsize)size, (jbyte *)b);
+    ClownMDEmu_LoadState(&emu, b);
+    free(b);
+    return JNI_TRUE;
+}

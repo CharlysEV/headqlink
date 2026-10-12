@@ -501,9 +501,16 @@ final class NesScreen {
             return;
         }
         L.i(console.title + ": " + e.name + " · " + engine.romInfo());
+        // Estados del juego: «Guardar» / «Cargar» (una ranura) y el que se guarda solo al salir, en files/<consola>/estados.
+        File states = new File(new File(c.getExternalFilesDir(null), console.dir), "estados");
+        String base = PsxDisc.folder(GameConsole.title(e.name));
+        slotState = new File(states, base + ".state");
+        autoState = new File(states, base + ".auto.state");
+        boolean resume = engine.supportsStates() && autoState.isFile();
+        if (engine.supportsStates()) engine.setAutoState(autoState.getAbsolutePath());
         NesInput.newGame(engine.pad(), console);
         CarUi.gameDrawing(true);
-        host.setContent(game(GameConsole.title(e.name)));
+        host.setContent(game(GameConsole.title(e.name), resume));
         engine.start();
         // El mando Bluetooth: las teclas llegan por la accesibilidad; la cruceta y el stick (ejes) solo con una pantalla de
         // HeadQLink delante en el móvil. En el coche virtual ya lo está (CarSimActivity los pasa); con el coche de verdad,
@@ -511,7 +518,11 @@ final class NesScreen {
         if (!RoutePlanner.testMode()) NesPadActivity.notify(c.getApplicationContext(), e.name);
     }
 
-    private View game(String name) {
+    /** Estados del juego en marcha: la ranura de «Guardar» / «Cargar» y el que se guarda solo al salir. */
+    private File slotState;
+    private File autoState;
+
+    private View game(String name, boolean resume) {
         Context c = host.context();
         // Sin cabecera: el juego usa todo el alto (×4 en el C10) y los botones van a los lados, sobre el negro.
         FrameLayout stage = new FrameLayout(c);
@@ -551,6 +562,46 @@ final class NesScreen {
         right.addView(pad, plp);
         stage.addView(right, place(Gravity.TOP | Gravity.RIGHT, 0, 18, 14, 0, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        // Aviso corto arriba en el centro («Partida guardada»…).
+        TextView toast = CarStyle.text(c, "", 24, CarStyle.TEXT);
+        toast.setPadding(28, 12, 28, 12);
+        toast.setBackground(CarStyle.round(0xE6202124, 28));
+        toast.setVisibility(View.GONE);
+        stage.addView(toast, place(Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 24, 0, 0, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        Runnable hideToast = () -> toast.setVisibility(View.GONE);
+        Say say = text -> {
+            toast.setText(text);
+            toast.setVisibility(View.VISIBLE);
+            toast.removeCallbacks(hideToast);
+            toast.postDelayed(hideToast, 2500);
+        };
+        if (engine.supportsStates()) {
+            TextView save = CarStyle.pill(c, Str.get(R.string.hql_nes_save));
+            save.setOnClickListener(v -> {
+                GameCore g = engine;
+                if (g != null) g.saveState(slotState.getAbsolutePath(), ok -> host.post(() ->
+                        say.say(Str.get(ok ? R.string.hql_nes_saved : R.string.hql_nes_save_failed))));
+            });
+            LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            slp.topMargin = 12;
+            right.addView(save, slp);
+            TextView load = CarStyle.pill(c, Str.get(R.string.hql_nes_load));
+            load.setOnClickListener(v -> {
+                GameCore g = engine;
+                if (g == null) return;
+                if (!slotState.isFile()) {
+                    say.say(Str.get(R.string.hql_nes_no_save));
+                    return;
+                }
+                g.loadState(slotState.getAbsolutePath(), ok -> host.post(() ->
+                        say.say(Str.get(ok ? R.string.hql_nes_loaded : R.string.hql_nes_load_failed))));
+            });
+            LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            llp.topMargin = 12;
+            right.addView(load, llp);
+        }
+        if (resume) stage.addView(resumeCard(c, say), place(Gravity.CENTER, 0, 0, 0, 0, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
         pad.setOnClickListener(v -> {
             touchPad = !touchPad;
             overlay.setVisibility(touchPad ? View.VISIBLE : View.GONE);
@@ -573,6 +624,47 @@ final class NesScreen {
             }
         });
         return stage;
+    }
+
+    /** El aviso corto de la pantalla del juego. */
+    private interface Say {
+        void say(String text);
+    }
+
+    /**
+     * «¿Seguir donde lo dejaste?» al abrir un juego con estado de la última vez: «Seguir» lo carga; «Empezar de nuevo» (o
+     * no tocar nada en 30 s) lo deja empezar desde el principio. El juego ya corre por detrás.
+     */
+    private View resumeCard(Context c, Say say) {
+        LinearLayout card = new LinearLayout(c);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER_HORIZONTAL);
+        card.setPadding(40, 30, 40, 30);
+        card.setBackground(CarStyle.round(0xF0202124, 32));
+        TextView q = CarStyle.text(c, Str.get(R.string.hql_nes_resume), 30, CarStyle.TEXT);
+        q.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        q.setPadding(0, 0, 0, 24);
+        card.addView(q);
+        LinearLayout row = new LinearLayout(c);
+        TextView yes = CarStyle.pill(c, Str.get(R.string.hql_nes_resume_yes));
+        yes.setBackground(CarStyle.accent(28));
+        yes.setTextColor(CarStyle.ON_ACCENT);
+        TextView no = CarStyle.pill(c, Str.get(R.string.hql_nes_resume_no));
+        row.addView(yes);
+        LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        nlp.leftMargin = 20;
+        row.addView(no, nlp);
+        card.addView(row);
+        Runnable hide = () -> card.setVisibility(View.GONE);
+        yes.setOnClickListener(v -> {
+            hide.run();
+            GameCore g = engine;
+            if (g != null) g.loadState(autoState.getAbsolutePath(), ok -> host.post(() ->
+                    say.say(Str.get(ok ? R.string.hql_nes_loaded : R.string.hql_nes_load_failed))));
+        });
+        no.setOnClickListener(v -> hide.run());
+        card.postDelayed(hide, 30000);
+        return card;
     }
 
     /**

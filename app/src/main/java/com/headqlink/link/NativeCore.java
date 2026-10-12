@@ -45,6 +45,12 @@ abstract class NativeCore implements GameCore {
     private Thread thread;
     private volatile boolean running;
     private volatile boolean resetPending;
+    /** Guardado o carga de estado pendiente (lo hace el hilo del emulador entre dos fotogramas). */
+    private final Object stateLock = new Object();
+    private String statePath;
+    private boolean stateSave;
+    private StateDone stateDone;
+    private volatile String autoStatePath;
     /** Para el log: los primeros cambios del mando de cada partida (si llegan y con qué bits). */
     private int lastBits, loggedPad;
     private volatile Listener listener;
@@ -84,6 +90,103 @@ abstract class NativeCore implements GameCore {
 
     /** Fotogramas por segundo de la consola con el juego cargado (60 NTSC, 50 PAL). */
     abstract int consoleFps();
+
+    /** Estado completo del juego, o null si el núcleo no puede. */
+    byte[] nativeSaveState() {
+        return null;
+    }
+
+    /** Vuelve a un estado de nativeSaveState. */
+    boolean nativeLoadState(byte[] state) {
+        return false;
+    }
+
+    @Override
+    public boolean supportsStates() {
+        return true;
+    }
+
+    @Override
+    public void saveState(String path, StateDone done) {
+        requestState(path, true, done);
+    }
+
+    @Override
+    public void loadState(String path, StateDone done) {
+        requestState(path, false, done);
+    }
+
+    @Override
+    public void setAutoState(String path) {
+        autoStatePath = path;
+    }
+
+    private void requestState(String path, boolean save, StateDone done) {
+        synchronized (stateLock) {
+            if (stateDone != null) {
+                done.done(false);
+                return;
+            }
+            statePath = path;
+            stateSave = save;
+            stateDone = done;
+        }
+    }
+
+    /** En el hilo del emulador, entre dos fotogramas: el guardado o la carga pendiente. */
+    private void runStateRequest() {
+        String path;
+        boolean save;
+        StateDone done;
+        synchronized (stateLock) {
+            if (stateDone == null) return;
+            path = statePath;
+            save = stateSave;
+            done = stateDone;
+            stateDone = null;
+        }
+        done.done(save ? writeState(path) : readState(path));
+    }
+
+    private boolean writeState(String path) {
+        byte[] s;
+        try {
+            s = nativeSaveState();
+        } catch (Throwable t) {
+            L.w(name + ": no se pudo guardar el estado: " + t);
+            return false;
+        }
+        if (s == null || s.length == 0) {
+            L.w(name + ": el núcleo no pudo guardar el estado");
+            return false;
+        }
+        File f = new File(path);
+        File tmp = new File(path + ".tmp");
+        //noinspection ResultOfMethodCallIgnored
+        f.getParentFile().mkdirs();
+        try (FileOutputStream out = new FileOutputStream(tmp)) {
+            out.write(s);
+        } catch (Exception e) {
+            L.w(name + ": no se pudo guardar el estado: " + e);
+            return false;
+        }
+        if (!tmp.renameTo(f)) return false;
+        L.i(name + ": estado guardado (" + s.length / 1024 + " KB)");
+        return true;
+    }
+
+    private boolean readState(String path) {
+        File f = new File(path);
+        if (!f.isFile()) return false;
+        try {
+            boolean ok = nativeLoadState(read(f));
+            L.i(name + ": estado cargado: " + (ok ? "sí" : "no (de otra versión o roto)"));
+            return ok;
+        } catch (Throwable t) {
+            L.w(name + ": no se pudo cargar el estado: " + t);
+            return false;
+        }
+    }
 
     @Override
     public void setListener(Listener l) {
@@ -154,6 +257,7 @@ abstract class NativeCore implements GameCore {
                 resetPending = false;
                 nativeReset();
             }
+            runStateRequest();
             int bits = pad.read();
             if (bits != lastBits && loggedPad < 6) {
                 loggedPad++;
@@ -179,6 +283,10 @@ abstract class NativeCore implements GameCore {
             }
         }
         closeAudio();
+        runStateRequest();
+        // Al salir, el estado se guarda solo: la próxima vez se puede seguir donde se dejó.
+        String auto = autoStatePath;
+        if (auto != null && loaded) writeState(auto);
         unload();
     }
 
