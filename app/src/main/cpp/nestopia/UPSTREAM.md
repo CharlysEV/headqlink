@@ -4,5 +4,5 @@
 - Copiado sin cambios: `source/core` (GPL v2 o posterior, ver `COPYING`) y los ficheros de cabecera de
   `source/nes_ntsc` (LGPL v2.1 o posterior, ver `source/nes_ntsc/license.txt`). `NstDatabase.xml` va en
   `app/src/main/assets/nes/`.
-- No se usa el frontend de libretro (`libretro/`): el puente con la app es `../hql_nes.cpp`, propio de HeadQLink.
+- No se usa el frontend de libretro (`libretro/`): el puente con la app es `../hql_nes.cpp`, propio de Qonecta+.
 - Se compila como `libhqlnes` (ver `../CMakeLists.txt`).

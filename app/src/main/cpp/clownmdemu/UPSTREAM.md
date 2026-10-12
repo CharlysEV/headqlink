@@ -7,6 +7,6 @@
   - `core/`: el núcleo, con clown68000 y clownz80. AGPL v3 o posterior (`core/LICENCE.txt`); clowncommon, 0BSD.
   - `mixer.h`: el mezclador de clownmdemu-frontend-common, AGPL v3 o posterior (`LICENCE.txt`).
   - `clownresampler/`: 0BSD (`clownresampler/LICENCE.txt`).
-- No se usa el frontend de libretro: el puente con la app es `../hql_md.c`, propio de HeadQLink.
+- No se usa el frontend de libretro: el puente con la app es `../hql_md.c`, propio de Qonecta+.
 - Sin Mega CD.
 - Se compila como `libhqlmd` (ver `../CMakeLists.txt`).

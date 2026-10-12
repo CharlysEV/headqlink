@@ -1,22 +1,22 @@
-HeadQLink is licensed under the GNU Affero General Public License v3.0 (see LICENSE). Its base,
+Qonecta+ (formerly HeadQLink) is licensed under the GNU Affero General Public License v3.0 (see LICENSE). Its base,
 Open Headunit, and the other projects it builds on are credited in README.md.
 
 Leapmotor cloud client (real car data, optional):
   This product includes code ported from LMB10 (https://github.com/txurtxil/LPB10) by txurtxil,
-  licensed under the GNU General Public License v3.0 and combined with HeadQLink under section 13
+  licensed under the GNU General Public License v3.0 and combined with Qonecta+ under section 13
   of both licenses. Only the read-only part of the protocol was ported (login, session refresh,
   request signing, vehicle list and status); none of LMB10's remote-control functions.
     app/src/main/java/com/headqlink/link/LeapCrypto.java  - signing, HKDF key, account PKCS#12 password, device id
     app/src/main/java/com/headqlink/link/LeapApi.java     - login, session, token refresh, vehicle list and status
     app/src/main/java/com/headqlink/link/LeapStatus.java  - signal table, field merging, conversions, charge/tyre rules
-  The unofficial Leapmotor API may stop working at any time. HeadQLink is not affiliated with Leapmotor.
+  The unofficial Leapmotor API may stop working at any time. Qonecta+ is not affiliated with Leapmotor.
 
 Range-extender (REEV) signals and the Leapmotor cloud trip history:
   The fuel signals (3235 tank %, 3263 millilitres, 3259 fuel range, 3261 total range) and the
   per-trip history fields (routeStartTs, routeEndTs, totalMileage, totalEnergy, driveReevOil) follow
   leapmotor-mate (https://github.com/ProtossBlaster/leapmotor-mate) by ProtossBlaster; the weekly
   consumption endpoint follows leapmotor-api (https://github.com/markoceri/leapmotor-api) by markoceri.
-  Both are licensed under the GNU Affero General Public License v3.0. No code was copied; HeadQLink
+  Both are licensed under the GNU Affero General Public License v3.0. No code was copied; Qonecta+
   reimplements the read-only requests in LeapApi.java, LeapStatus.java and CloudHistory.java.
   The only command to the car, sentry mode on/off (opt-in: sent only with the car PIN the user saves),
   follows leapmotor-api's flow (certificate sync, AES-encrypted PIN verify, remote/ctl cmdId 220, result
@@ -25,7 +25,7 @@ Range-extender (REEV) signals and the Leapmotor cloud trip history:
 Charging point data (Route tab and charge plan):
   In Spain, chargers come from the official registry of public charging points of the Ministry for the
   Ecological Transition (MITECO), published by the DGT on Spain's National Access Point (nap.dgt.es,
-  DATEX II "electrolineras" publication) under a Creative Commons Attribution licence. HeadQLink
+  DATEX II "electrolineras" publication) under a Creative Commons Attribution licence. Qonecta+
   downloads it on the phone at most once a week and keeps a compact copy (DgtChargers.java). Elsewhere,
   and for points missing from the registry, chargers come from OpenStreetMap (© OpenStreetMap
   contributors, ODbL) through the public Overpass servers.
@@ -38,40 +38,40 @@ Super Nintendo emulator (Games > SNES, the user's own ROM files):
   The core is bsnes by byuu and contributors (libretro port, https://github.com/libretro/bsnes, based on
   https://github.com/bsnes-emu/bsnes), copied into app/src/main/cpp/bsnes: bsnes is licensed under the GNU General
   Public License version 3 (LICENSE.txt, GPLv3.txt there), nall and libco under the ISC license, and the Game Boy core
-  used for the Super Game Boy (bsnes/gb, SameBoy by Lior Halphon) under the MIT license. It is combined with HeadQLink
+  used for the Super Game Boy (bsnes/gb, SameBoy by Lior Halphon) under the MIT license. It is combined with Qonecta+
   under section 13 of the AGPL v3. The only change is the audio rate in target-libretro/libretro.cpp (44100 Hz instead
-  of 48000); see bsnes/UPSTREAM.md. app/src/main/cpp/hql_snes.cpp is HeadQLink's own minimal libretro frontend.
-  HeadQLink ships no game ROMs. Nintendo, Super Nintendo and SNES are trademarks of Nintendo; HeadQLink is not
+  of 48000); see bsnes/UPSTREAM.md. app/src/main/cpp/hql_snes.cpp is Qonecta+'s own minimal libretro frontend.
+  Qonecta+ ships no game ROMs. Nintendo, Super Nintendo and SNES are trademarks of Nintendo; Qonecta+ is not
   affiliated with Nintendo.
 
 PlayStation emulator (Games > PS1, the user's own disc images):
   The core is PCSX ReARMed by notaz and contributors (libretro port, https://github.com/libretro/pcsx_rearmed), based
   on PCSX-Reloaded and PCSX, with the psx_gpu NEON renderer by Exophase and the dfsound SPU by Pete Bernert and
   contributors, copied into app/src/main/cpp/pcsx_rearmed. It is licensed under the GNU General Public License version 2
-  or (at your option) any later version (COPYING there) and is used here under version 3, combined with HeadQLink under
+  or (at your option) any later version (COPYING there) and is used here under version 3, combined with Qonecta+ under
   section 13 of the AGPL v3. It includes libchdr (BSD 3-clause), the LZMA SDK (public domain), zstd (BSD) and
   libretro-common (MIT). The code is unmodified; see pcsx_rearmed/UPSTREAM.md. app/src/main/cpp/hql_psx.cpp is
-  HeadQLink's own minimal libretro frontend. No Sony BIOS is shipped: the core uses its own high-level BIOS emulation
-  unless the user provides one. HeadQLink ships no games. PlayStation and PS1 are trademarks of Sony Interactive
-  Entertainment; HeadQLink is not affiliated with Sony.
+  Qonecta+'s own minimal libretro frontend. No Sony BIOS is shipped: the core uses its own high-level BIOS emulation
+  unless the user provides one. Qonecta+ ships no games. PlayStation and PS1 are trademarks of Sony Interactive
+  Entertainment; Qonecta+ is not affiliated with Sony.
 
 Mega Drive emulator (Games > Mega Drive, the user's own ROM files):
   The core is ClownMDEmu by Clownacy (https://github.com/Clownacy/clownmdemu-core, through clownmdemu-libretro and
   clownmdemu-frontend-common), copied unmodified into app/src/main/cpp/clownmdemu: the emulator core, clown68000,
-  clownz80 and the audio mixer are licensed under the GNU Affero General Public License v3 or later, like HeadQLink;
+  clownz80 and the audio mixer are licensed under the GNU Affero General Public License v3 or later, like Qonecta+;
   clowncommon and clownresampler are 0BSD. See clownmdemu/UPSTREAM.md and the LICENCE.txt files there. The libretro
-  frontend is not used: app/src/main/cpp/hql_md.c is HeadQLink's own JNI bridge. Sega and Mega Drive are trademarks of
-  Sega; HeadQLink is not affiliated with Sega.
+  frontend is not used: app/src/main/cpp/hql_md.c is Qonecta+'s own JNI bridge. Sega and Mega Drive are trademarks of
+  Sega; Qonecta+ is not affiliated with Sega.
 
 NES emulator (Games > NES, the user's own ROM files):
   The main core is Nestopia (libretro port, https://github.com/libretro/nestopia, based on Nestopia JG,
   https://gitlab.com/jgemu/nestopia), copied unmodified into app/src/main/cpp/nestopia (source/core: GNU General
   Public License v2 or later; source/nes_ntsc by Shay Green: GNU Lesser General Public License v2.1 or later;
   see the COPYING and license.txt files there). Its cartridge database (app/src/main/assets/nes/NstDatabase.xml)
-  comes from the same project. The libretro frontend is not used: app/src/main/cpp/hql_nes.cpp is HeadQLink's own
-  JNI bridge. Both are combined with HeadQLink under the "or later" terms and section 13 of the AGPL v3.
+  comes from the same project. The libretro frontend is not used: app/src/main/cpp/hql_nes.cpp is Qonecta+'s own
+  JNI bridge. Both are combined with Qonecta+ under the "or later" terms and section 13 of the AGPL v3.
   The fallback core, the nescore module, is halfNES (https://github.com/andrew-hoffman/halfnes) by Andrew Hoffman, licensed under the
-  GNU General Public License v3.0 and combined with HeadQLink under section 13 of both licenses. Its desktop parts
-  (Swing, AWT, JavaFX, JInput) were removed; see nescore/UPSTREAM.md for the changes. HeadQLink ships no game ROMs:
-  the user picks a folder with their own files. Nintendo and NES are trademarks of Nintendo; HeadQLink is not
+  GNU General Public License v3.0 and combined with Qonecta+ under section 13 of both licenses. Its desktop parts
+  (Swing, AWT, JavaFX, JInput) were removed; see nescore/UPSTREAM.md for the changes. Qonecta+ ships no game ROMs:
+  the user picks a folder with their own files. Nintendo and NES are trademarks of Nintendo; Qonecta+ is not
   affiliated with Nintendo.

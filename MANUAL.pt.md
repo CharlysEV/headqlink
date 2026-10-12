@@ -1,8 +1,9 @@
-# HeadQLink · Manual do utilizador
+# Qonecta+ · Manual do utilizador
 
 **Idiomas:** [Español](MANUAL.md) · **Português** · [English](MANUAL.en.md) · [Italiano](MANUAL.it.md)
 
-Manual para condutores da versão **0.2** do HeadQLink (fork [CharlysEV/headqlink](https://github.com/CharlysEV/headqlink)).
+Manual para condutores da versão **0.2** do Qonecta+ (fork [CharlysEV/headqlink](https://github.com/CharlysEV/headqlink)).
+Qonecta+ é o novo nome do HeadQLink desde a versão 0.2.52 (a mesma aplicação; instala-se por cima e mantém as definições).
 Os nomes de botões e menus aparecem «entre aspas», tal como a aplicação os mostra em **Português (Portugal)**.
 
 > [!NOTE]
@@ -29,7 +30,7 @@ Os nomes de botões e menus aparecem «entre aspas», tal como a aplicação os 
 **Resumo rápido**
 
 1. Instale o APK a partir das [Releases do GitHub](https://github.com/CharlysEV/headqlink/releases).
-2. Abra o HeadQLink e siga o assistente de 3 passos até a «Verificação» dizer «Tudo pronto».
+2. Abra o Qonecta+ e siga o assistente de 3 passos até a «Verificação» dizer «Tudo pronto».
 3. No carro: ative o hotspot do telemóvel, abra a aplicação de espelhamento no ecrã do carro e toque em «Ligar».
 4. Quando o Android Auto aparecer, bloqueie o telemóvel e guarde-o.
 
@@ -49,7 +50,7 @@ Os nomes de botões e menus aparecem «entre aspas», tal como a aplicação os 
 
 ## 1. O que é e o que precisa
 
-O HeadQLink leva o **Android Auto** ao ecrã do **Leapmotor C10** através da ligação de espelhamento que o carro já
+O Qonecta+ leva o **Android Auto** ao ecrã do **Leapmotor C10** através da ligação de espelhamento que o carro já
 traz (a da aplicação QDLink/SSPLink). Não é preciso nenhum adaptador nem cabo: o telemóvel e o carro comunicam por
 Wi-Fi, e o telemóvel pode ficar **bloqueado e com o ecrã desligado**. Não precisa de root.
 
@@ -67,11 +68,11 @@ Há dois modos à escolha:
 | Carro | Leapmotor C10 com a aplicação de espelhamento (projeção do telemóvel) no ecrã. Também funciona num **T03** com o Android Auto normal (confirmado por um utilizador). |
 | Telemóvel | Android com o **Android Auto** instalado. Recomenda-se **Android 10 ou superior**; escolher o idioma da aplicação precisa do Android 13. |
 | Testado em | Samsung Galaxy **S25 Ultra** com **Android 16** e Android Auto 17.7. Outros telemóveis podem funcionar, mas não foram testados. |
-| Android Auto 17.4 ou superior | É preciso ativar uma vez o **modo de programador** do Android Auto e o serviço de **acessibilidade** do HeadQLink. A aplicação guia-o (secção 3). Com versões anteriores não é preciso. |
+| Android Auto 17.4 ou superior | É preciso ativar uma vez o **modo de programador** do Android Auto e o serviço de **acessibilidade** do Qonecta+. A aplicação guia-o (secção 3). Com versões anteriores não é preciso. |
 | Internet (opcional) | Só para funções do «Auto estendido», como rotas, meteorologia ou rádio. |
 
 > [!NOTE]
-> **Estado dos testes.** O HeadQLink é um projeto pessoal e experimental. Numa viagem real com um C10, um S25 Ultra e a
+> **Estado dos testes.** O Qonecta+ é um projeto pessoal e experimental. Numa viagem real com um C10, um S25 Ultra e a
 > ligação «Hotspot do telemóvel», o Android Auto funcionou em duas sessões de cerca de 16 minutos cada. Nesse teste o
 > telemóvel aqueceu demasiado, por isso esta versão acrescenta o perfil de imagem «Carro», o ecrã do telemóvel
 > desligado e a adaptação ao calor (secção 6). A ligação Wi-Fi Direct com o motor QDAuto ainda não foi testada no carro.
@@ -80,7 +81,7 @@ Há dois modos à escolha:
 
 ## 2. Instalação
 
-O HeadQLink não está no Google Play: instala-se com um ficheiro APK.
+O Qonecta+ não está no Google Play: instala-se com um ficheiro APK.
 
 ### Instalar
 
@@ -104,7 +105,7 @@ O HeadQLink não está no Google Play: instala-se com um ficheiro APK.
 
 1. Transfira o APK novo da mesma página de Releases.
 2. Instale-o por cima do que tem: as suas definições mantêm-se.
-3. Abra o HeadQLink e veja a «Verificação»: **o Android costuma desativar a acessibilidade ao atualizar**, e é preciso
+3. Abra o Qonecta+ e veja a «Verificação»: **o Android costuma desativar a acessibilidade ao atualizar**, e é preciso
    voltar a ativá-la.
 
 > [!IMPORTANT]
@@ -116,14 +117,14 @@ O HeadQLink não está no Google Play: instala-se com um ficheiro APK.
 ### Desinstalar
 
 1. Se não a voltar a usar: nas definições do Android Auto pode sair do modo de programador (menu ⋮).
-2. Definições do Android › Aplicações › HeadQLink › **Desinstalar**.
-3. Os registos exportados ficam em Transferências/HeadQLink: apague-os à mão se não os quiser.
+2. Definições do Android › Aplicações › Qonecta+ › **Desinstalar**.
+3. Os registos exportados ficam em Transferências/Qonecta+: apague-os à mão se não os quiser.
 
 ---
 
 ## 3. Primeiro arranque
 
-Da primeira vez que abre o HeadQLink aparece um assistente de 3 passos. Faça-o com o carro estacionado; melhor ainda,
+Da primeira vez que abre o Qonecta+ aparece um assistente de 3 passos. Faça-o com o carro estacionado; melhor ainda,
 dentro do carro e com a aplicação de espelhamento aberta no ecrã dele.
 
 ### Passo 1 de 3: boas-vindas
@@ -169,27 +170,27 @@ Aqui está a **Verificação**: uma lista com tudo o que a sua configuração pr
   faltar algo recomendado.
 - Cada linha tem um ícone (✓ feito, ! falta, ✕ erro, ? desconhecido, … a verificar, i sugestão), a importância
   («Obrigatório», «Recomendado», «Opcional» ou «Sugestão») e um **botão que o leva à definição exata**.
-- Atualiza-se sozinha quando volta ao HeadQLink.
+- Atualiza-se sozinha quando volta ao Qonecta+.
 
 **Linha a linha.** Só aparecem as que importam para o seu modo e a sua ligação.
 
 | Linha | O que significa | O que tocar |
 |---|---|---|
 | «Android Auto» | Tem de estar instalado e ativado. Mostra a versão. | «Instalar» (Play Store) ou «Info. da aplicação» se estiver desativado. |
-| «Acessibilidade do HeadQLink» (Obrigatório com Android Auto 17.4 ou superior; Opcional com o arranque manual) | O HeadQLink usa-a para iniciar o Android Auto sem que o veja e para receber os toques do carro. Nas Definições do Android chama-se **«HeadQLink tátil»**. | «Ativar» e ligue «HeadQLink tátil». Veja o aviso abaixo. |
+| «Acessibilidade do Qonecta+» (Obrigatório com Android Auto 17.4 ou superior; Opcional com o arranque manual) | O Qonecta+ usa-a para iniciar o Android Auto sem que o veja e para receber os toques do carro. Nas Definições do Android chama-se **«Qonecta+ tátil»**. | «Ativar» e ligue «Qonecta+ tátil». Veja o aviso abaixo. |
 | «Sem acessibilidade?» (Sugestão, só se faltar a acessibilidade) | Pode ser o utilizador a iniciar o servidor do Android Auto e não a ativar. | «Arranque manual» (ver [Sem acessibilidade](#sem-acessibilidade-arranque-manual-do-servidor-do-android-auto)). |
 | «Modo de programador do Android Auto» (Obrigatório com 17.4 ou superior) | O Android Auto só aceita um «ecrã de carro» dentro do telemóvel através do modo de programador. Ativa-se uma vez. | «Abrir AA» e siga o guia abaixo. «Verificar» confirma-o (precisa da acessibilidade ativada). |
-| «Servidor do Android Auto» (Informação, só com o arranque manual) | O que se sabe **sem se ligar a ele** (uma ligação de teste bloqueá-lo-ia): «Em uso pelo HeadQLink», «Não atende» (as tentativas com o carro falham) ou, se não se sabe, como iniciá-lo. Nunca impede ligar: se não atender, o HeadQLink avisa e volta a tentar. | «Abrir AA» (⋮ › «Parar servidor» se aparecer e ⋮ › «Iniciar servidor da unidade principal») ou «Modo automático». |
+| «Servidor do Android Auto» (Informação, só com o arranque manual) | O que se sabe **sem se ligar a ele** (uma ligação de teste bloqueá-lo-ia): «Em uso pelo Qonecta+», «Não atende» (as tentativas com o carro falham) ou, se não se sabe, como iniciá-lo. Nunca impede ligar: se não atender, o Qonecta+ avisa e volta a tentar. | «Abrir AA» (⋮ › «Parar servidor» se aparecer e ⋮ › «Iniciar servidor da unidade principal») ou «Modo automático». |
 | «Notificações» (Recomendado) | Para ver o estado da ligação e os avisos. | «Permitir» (ou «Abrir» se as bloqueou). |
-| «Sem restrições de bateria» (Recomendado) | Para que o Android não feche o HeadQLink com o ecrã desligado nem bloqueie a ligação automática. | «Permitir» e aceite o aviso do Android. |
-| «Samsung: aplicações nunca suspensas» (Sugestão, só Samsung) | A Samsung fecha aplicações em segundo plano por conta própria. A aplicação não consegue verificar isto. | «Abrir» e escolha «Sem restrições». Além disso: Definições › Bateria › Limites de utilização em segundo plano › Aplicações nunca suspensas › adicione o HeadQLink. |
+| «Sem restrições de bateria» (Recomendado) | Para que o Android não feche o Qonecta+ com o ecrã desligado nem bloqueie a ligação automática. | «Permitir» e aceite o aviso do Android. |
+| «Samsung: aplicações nunca suspensas» (Sugestão, só Samsung) | A Samsung fecha aplicações em segundo plano por conta própria. A aplicação não consegue verificar isto. | «Abrir» e escolha «Sem restrições». Além disso: Definições › Bateria › Limites de utilização em segundo plano › Aplicações nunca suspensas › adicione o Qonecta+. |
 | «Gestor de energia (…)» (Sugestão, outras marcas) | Xiaomi, Honor, Oppo e outras têm a sua própria poupança de bateria. | «Abrir» e permita o arranque automático ou a atividade em segundo plano. |
 | «Hotspot do telemóvel» (Obrigatório com «Hotspot do telemóvel») | O hotspot tem de estar ativo. Se estiver bem, diz «Hotspot ativo (…)». | «Abrir» e ative-o. |
 | «Banda de 5 GHz» (Sugestão) | A aplicação não consegue ler isto. Em 5 GHz funciona melhor, porque em 2,4 GHz o rádio é partilhado com o Bluetooth do carro. | «Abrir»: escolha 5 GHz e desative o desligar automático do hotspot. |
 | «Dispositivos Wi-Fi próximos» ou «Localização» (Obrigatório com «Wi-Fi Direct») | Autorização para entrar na rede Wi-Fi Direct do carro («Localização» no Android 12 ou anterior). | «Permitir» (ou «Abrir» se a recusou). |
 | «Wi-Fi ligado» (Obrigatório com «Wi-Fi Direct») | O Wi-Fi Direct precisa do Wi-Fi ligado, mesmo sem estar ligado a nenhuma rede. | «Abrir». |
 | «Hotspot desligado» (Obrigatório com «Wi-Fi Direct») | O Wi-Fi Direct não funciona com o hotspot ativo. | «Abrir» e desligue-o. |
-| «QDLink» (Recomendado) | A aplicação oficial QDLink está instalada no telemóvel. Se estiver aberta, ocupa a porta 18463 e o carro não encontra o HeadQLink. | «Info. da aplicação» › «Forçar paragem» antes de ligar. |
+| «QDLink» (Recomendado) | A aplicação oficial QDLink está instalada no telemóvel. Se estiver aberta, ocupa a porta 18463 e o carro não encontra o Qonecta+. | «Info. da aplicação» › «Forçar paragem» antes de ligar. |
 | «QDLink» ou «Porta 18463» a vermelho («Ocupada») | O QDLink (ou outra aplicação) está aberto neste momento. | «Forçar paragem». |
 | «Bluetooth (dispositivos próximos)» (Obrigatório se ativar a ligação automática) | Para reconhecer o Bluetooth do carro e ligar sozinho. | «Permitir». |
 | «Apresentar sobre outras aplicações» (Opcional) | Para abrir o Android Auto com o telemóvel em segundo plano. | «Permitir». |
@@ -198,13 +199,13 @@ Aqui está a **Verificação**: uma lista com tudo o que a sua configuração pr
 
 > [!IMPORTANT]
 > **«Definição restrita» ao ativar a acessibilidade.** No Android 13 ou superior, às aplicações instaladas a partir de
-> um APK o Android não deixa ativar a acessibilidade à primeira. Se ao ativar «HeadQLink tátil» aparecer «Definição
+> um APK o Android não deixa ativar a acessibilidade à primeira. Se ao ativar «Qonecta+ tátil» aparecer «Definição
 > restrita»:
 >
-> 1. Toque no segundo botão da linha, «Info. da aplicação» (ou vá a Definições › Aplicações › HeadQLink).
+> 1. Toque no segundo botão da linha, «Info. da aplicação» (ou vá a Definições › Aplicações › Qonecta+).
 > 2. Toque no menu ⋮ (canto superior direito) › **«Permitir definições restritas»** e confirme. Esta opção aparece
 >    depois de ter tentado ativá-la uma vez.
-> 3. Volte, toque em «Ativar» e ligue «HeadQLink tátil».
+> 3. Volte, toque em «Ativar» e ligue «Qonecta+ tátil».
 >
 > Se a linha disser «Ativada mas sem funcionar (o Android parou-a)», desative-a e volte a ativá-la.
 >
@@ -215,7 +216,7 @@ Aqui está a **Verificação**: uma lista com tudo o que a sua configuração pr
 1. Toque em «Abrir AA». Se não aparecer, toque primeiro em «Verificar».
 2. Desloque-se até ao fim das definições do Android Auto.
 3. Toque **10 vezes em «Versão»** e aceite o aviso.
-4. Volte ao HeadQLink: a verificação é automática.
+4. Volte ao Qonecta+: a verificação é automática.
 
 <!-- captura: definições do Android Auto com «Versão» no fim -->
 
@@ -225,7 +226,7 @@ Toque em **«Concluir»**. Se faltar algo obrigatório, o aviso «Ainda falta» 
 mesmo assim» e completar mais tarde.
 
 > [!NOTE]
-> Ao concluir o assistente, e sempre que abre o HeadQLink já configurado, **a aplicação começa a ligar sozinha** (é como
+> Ao concluir o assistente, e sempre que abre o Qonecta+ já configurado, **a aplicação começa a ligar sozinha** (é como
 > tocar em «Ligar») e aguarda o carro até 5 minutos (ou «Esperar pelo carro», se for mais). Com o Android Auto 17.4 ou
 > superior verá por um momento a camada
 > «A iniciar o Auto…»: não toque em nada. Se não estiver no carro, toque em «Desligar».
@@ -234,31 +235,31 @@ mesmo assim» e completar mais tarde.
 
 Se não quiser (ou não puder) ativar a acessibilidade, escolha **«Definições de imagem» › «Avançado ▾» › «Arranque do
 servidor do Android Auto» › «Manual (sem acessibilidade)»**, ou toque em «Arranque manual» na linha «Sem
-acessibilidade?» da «Verificação». Com «Auto» e «Auto estendido» o HeadQLink deixa de a usar: a acessibilidade passa a
+acessibilidade?» da «Verificação». Com «Auto» e «Auto estendido» o Qonecta+ deixa de a usar: a acessibilidade passa a
 «Opcional» («Só para o modo automático») e aparece a linha «Servidor do Android Auto».
 
 > [!IMPORTANT]
 > **O servidor do Android Auto continua a atender enquanto estiver ligado, desde que as ligações se fechem de forma
-> ordenada.** O HeadQLink fecha sempre a sua assim (Desligar, fim da viagem, mudança de perfil de imagem), por isso
+> ordenada.** O Qonecta+ fecha sempre a sua assim (Desligar, fim da viagem, mudança de perfil de imagem), por isso
 > **não é preciso reiniciá-lo entre viagens**. O que o bloqueia é uma ligação **cortada a meio** (algo que se liga e se
 > vai embora sem dizer nada, ou uma sessão que cai de repente): a partir daí aceita ligações mas não responde a ninguém
-> até o parar e voltar a iniciar. Por isso o HeadQLink **não o verifica antes de ligar** (verificá-lo seria exatamente
+> até o parar e voltar a iniciar. Por isso o Qonecta+ **não o verifica antes de ligar** (verificá-lo seria exatamente
 > isso): diz-o a primeira tentativa real com o carro.
 
 1. Inicie o servidor: «Abrir AA» › ⋮ (canto superior direito) › **«Iniciar servidor da unidade principal»**. Se essa
    opção não aparecer, ative primeiro o modo de programador (10 toques em «Versão»). Se o menu disser «Parar servidor
    da unidade principal», já está ligado: não é preciso mexer. Ao reiniciar o telemóvel (ou ao atualizar-se o Android
    Auto) pode desligar-se: aí é preciso voltar a iniciá-lo.
-2. Toque em «Ligar» (ou deixe-o arrancar sozinho por Bluetooth ou por cabo). Quando o carro se liga, o HeadQLink lança
+2. Toque em «Ligar» (ou deixe-o arrancar sozinho por Bluetooth ou por cabo). Quando o carro se liga, o Qonecta+ lança
    o Android Auto e espera que ele **responda** (6 s no máximo). Com o servidor ligado funciona também **com o telemóvel
    bloqueado**: sem desbloquear nem automatizar nada.
 3. Se não responder (desligado, ou bloqueado por uma ligação cortada a meio), verá a notificação **«Inicie (ou
    reinicie) o servidor do Android Auto»** e a linha «Auto» (e o widget) dirá «À espera do servidor do Android Auto».
    Toque nela: Android Auto › ⋮ › «Parar servidor» (se aparecer) e ⋮ › «Iniciar servidor da unidade principal», e
-   volte. O HeadQLink volta a tentar sozinho a cada 5 s enquanto o carro estiver ligado; assim que o Android Auto
+   volte. O Qonecta+ volta a tentar sozinho a cada 5 s enquanto o carro estiver ligado; assim que o Android Auto
    responde, a notificação desaparece sozinha.
 4. O resto, como com o automático: se o carro se for embora, 30 s de vídeo ativo e depois o Android Auto em pausa;
-   quando acaba «Esperar pelo carro» (ou com «Desligar») o HeadQLink fecha o Android Auto de forma ordenada. A única
+   quando acaba «Esperar pelo carro» (ou com «Desligar») o Qonecta+ fecha o Android Auto de forma ordenada. A única
    coisa que não faz é desligar o servidor (sem acessibilidade não consegue): **fica ligado, e a viagem seguinte volta a
    usá-lo sem o reiniciar**, também com o telemóvel bloqueado, enquanto continuar ligado.
 
@@ -277,13 +278,13 @@ O que muda, e porque é que o automático continua a ser o **recomendado**:
 
 ### Versões do Android Auto
 
-Desde a 17.4, o HeadQLink arranca o Android Auto através do «servidor da unidade principal» de programador, e cada
+Desde a 17.4, o Qonecta+ arranca o Android Auto através do «servidor da unidade principal» de programador, e cada
 versão nova do Android Auto pode mudá-lo (os textos do menu ⋮ ou a forma como atende a ligação). Com que versões foi
 testado:
 
 | Android Auto | Estado |
 |---|---|
-| 17.7.x | **Testada** com o HeadQLink (outubro de 2026) |
+| 17.7.x | **Testada** com o Qonecta+ (outubro de 2026) |
 | 17.8, 17.9 e posteriores | **Ainda não testadas.** Outros projetos (Open Headunit) relatam problemas: com a 17.8 a ligação corta-se ao fim de 1-2 s; com a 17.9, o arranque automático do servidor deixa de funcionar |
 
 A «Verificação» mostra-o na linha «Android Auto 17.x» (testada / ainda não testada), e o registo anota-o ao arrancar
@@ -295,18 +296,18 @@ outro; atualize à mão quando tiver sido testada.
 
 Se uma versão nova deixar de funcionar:
 
-1. **«O HeadQLink não encontra o botão do servidor»**: o Android Auto mudou o menu. Toque em «Abrir AA» e inicie-o à mão
+1. **«O Qonecta+ não encontra o botão do servidor»**: o Android Auto mudou o menu. Toque em «Abrir AA» e inicie-o à mão
    (⋮ › «Iniciar servidor da unidade principal», ou como se chamar agora), ou toque em «Arranque manual» para não
    depender da acessibilidade (ver [Sem acessibilidade](#sem-acessibilidade-arranque-manual-do-servidor-do-android-auto)).
 2. **«O Android Auto liga-se e corta ao fim de poucos segundos»** (dois cortes seguidos em menos de 10 s): limpe a cache
    do Android Auto (Definições › Aplicações › Android Auto › Armazenamento › **Limpar cache**; não é preciso limpar os
-   dados) e pare e inicie o servidor (⋮). O HeadQLink tenta de novo sozinho, no máximo a cada 10 s.
-3. Se continuar, **exporte o registo** (secção 8) e envie-o: leva a versão do Android Auto e, uma vez, o que o HeadQLink
+   dados) e pare e inicie o servidor (⋮). O Qonecta+ tenta de novo sozinho, no máximo a cada 10 s.
+3. Se continuar, **exporte o registo** (secção 8) e envie-o: leva a versão do Android Auto e, uma vez, o que o Qonecta+
    viu no menu (os textos do menu, sem dados pessoais), que é o que faz falta para o adaptar.
 
 > [!WARNING]
 > **Voltar a uma versão anterior do Android Auto não é «Desinstalar atualizações».** Em muitos telemóveis a cópia de
-> fábrica do Android Auto é só um esqueleto (1.x) que não serve para o HeadQLink: é preciso instalar à mão o APK da
+> fábrica do Android Auto é só um esqueleto (1.x) que não serve para o Qonecta+: é preciso instalar à mão o APK da
 > versão testada (17.7.x) que corresponda ao seu telemóvel (arquitetura e versão do Android) e depois desativar a
 > atualização automática, ou a Play Store volta a atualizá-lo.
 
@@ -316,7 +317,7 @@ Se uma versão nova deixar de funcionar:
 
 ### O ecrã principal
 
-<!-- captura: ecrã principal do HeadQLink -->
+<!-- captura: ecrã principal do Qonecta+ -->
 
 - No topo, o modo e a ligação (por exemplo «Auto estendido · Hotspot do telemóvel») com o botão «Alterar», e o menu ⚙.
 - O interruptor «Ligar ao detetar o Bluetooth do carro».
@@ -341,7 +342,7 @@ Se uma versão nova deixar de funcionar:
 2. **Só da primeira vez:** no carro, vá a Definições › Wi-Fi e escolha o hotspot do seu telemóvel. Depois o carro
    liga-se sozinho.
 3. **Abra a aplicação de espelhamento** no ecrã do carro.
-4. **Abra o HeadQLink** com o telemóvel desbloqueado. Começa a ligar sozinho; se o tinha aberto e desligado, toque em
+4. **Abra o Qonecta+** com o telemóvel desbloqueado. Começa a ligar sozinho; se o tinha aberto e desligado, toque em
    «Ligar». Com o Android Auto 17.4 ou superior verá por um momento «A iniciar o Auto…».
 5. A linha «Carro» passa a «Encontrado, a ligar…» e depois a «Ligado». **O Android Auto aparece no ecrã do carro.**
 6. **Bloqueie o telemóvel** e deixe-o num sítio fresco. A imagem continua a chegar ao carro com o ecrã desligado.
@@ -350,30 +351,30 @@ Se uma versão nova deixar de funcionar:
 > Com o hotspot ativo, **o carro pode usar os seus dados móveis.**
 
 **Com «Wi-Fi Direct»:** mantenha o hotspot desligado e o Wi-Fi ligado, abra a aplicação de espelhamento no carro e
-depois o HeadQLink. A linha «Rede» passa de «Wi-Fi Direct: a procurar o carro» a «Wi-Fi Direct: no grupo do carro (…)».
+depois o Qonecta+. A linha «Rede» passa de «Wi-Fi Direct: a procurar o carro» a «Wi-Fi Direct: no grupo do carro (…)».
 
 > [!IMPORTANT]
 > Se o QDLink estiver instalado no telemóvel, **force a paragem dele antes de ligar**. Se estiver aberto, ocupa a porta
-> de que o HeadQLink precisa e o carro não o encontra.
+> de que o Qonecta+ precisa e o carro não o encontra.
 
 ### Ligação por cabo USB
 
 > **Testado no C10 (2026-10-06): 5 minutos a 40 fps sem cortes**, e o telemóvel carrega. Se o carro não responder em poucos segundos, **desligue e volte a ligar o cabo**: o carro só fala nos primeiros segundos depois de ligar o cabo.
 
-Tal como a aplicação original do carro, o HeadQLink pode levar a imagem **por cabo** em vez de por Wi-Fi: o carro põe o
+Tal como a aplicação original do carro, o Qonecta+ pode levar a imagem **por cabo** em vez de por Wi-Fi: o carro põe o
 telemóvel em «modo acessório» e a sessão de sempre passa pelo cabo. O C10 fá-lo (a aplicação original diz que só
 alguns modelos), e depois de muitas viagens é a ligação recomendada para «Auto estendido».
 
 1. Use um **cabo de dados** (não um só de carregamento) e ligue-o à **porta USB de dados** do carro (a da música ou do
    Android Auto/CarPlay, não uma só de carregamento).
 2. Abra a aplicação de espelhamento no ecrã do carro.
-3. Se o carro puser o telemóvel em modo acessório, o Android abre o HeadQLink sozinho. Se o **QDLink** também estiver
-   instalado, o Android pode perguntar **que aplicação abre «QDriveLink»**: escolha o **HeadQLink** e **«Sempre»** (ou
+3. Se o carro puser o telemóvel em modo acessório, o Android abre o Qonecta+ sozinho. Se o **QDLink** também estiver
+   instalado, o Android pode perguntar **que aplicação abre «QDriveLink»**: escolha o **Qonecta+** e **«Sempre»** (ou
    desinstale o QDLink).
 4. A linha «Rede» diz «Cabo USB: Neusoft QDriveLink 1» e o carro liga-se como sempre.
 
 - **Não é preciso o hotspot.** Com o cabo ligado, **o cabo tem prioridade**: mesmo que a ligação escolhida seja outra,
-  o HeadQLink põe o Wi-Fi em pausa e, ao retirar o cabo, volta a ele. Para usar só o cabo, escolha «Cabo USB» em
+  o Qonecta+ põe o Wi-Fi em pausa e, ao retirar o cabo, volta a ele. Para usar só o cabo, escolha «Cabo USB» em
   «Alterar».
 - Retirar o cabo é como se o carro se fosse embora (vídeo ativo 30 s e depois o Android Auto em pausa); ao voltar a
   ligá-lo, retoma de imediato.
@@ -468,13 +469,13 @@ admite.
     reais do carro, com a idade do dado; as pressões, sobre **um C10 em 3D que roda com o dedo** (as portas e a mala
     abertas aparecem abertas, a âmbar). Sem conta, explica como a configurar.
   - **Com o telemóvel bloqueado: «Localização sempre».** Rota, Condução, Viagens, Instrumentos e Eficiência usam o GPS
-    do telemóvel. Se a localização do HeadQLink for só «Permitir durante a utilização da app», o Android só lhe dá o
-    GPS com o HeadQLink à vista ou se a ligação passou a primeiro plano com o HeadQLink à frente. Quando arranca sem ele
+    do telemóvel. Se a localização do Qonecta+ for só «Permitir durante a utilização da app», o Android só lhe dá o
+    GPS com o Qonecta+ à vista ou se a ligação passou a primeiro plano com o Qonecta+ à frente. Quando arranca sem ele
     (a ligação automática por Bluetooth, o widget, o arranque do Android Auto…), ao bloquear o telemóvel o ecrã do
     carro continua e os sensores de movimento também, mas a velocidade, a rota, a viagem e o consumo param até
-    desbloquear. O HeadQLink recupera-o sozinho assim que o vê com o telemóvel desbloqueado, mas para não depender disso
+    desbloquear. O Qonecta+ recupera-o sozinho assim que o vê com o telemóvel desbloqueado, mas para não depender disso
     a «Verificação» recomenda no «Auto estendido» **«Localização sempre»**: «Abrir» › «Permitir sempre» (ou Definições ›
-    Apps › HeadQLink › Autorizações › Localização). No «Auto» não é preciso. O HeadQLink só usa o GPS com a ligação em
+    Apps › Qonecta+ › Autorizações › Localização). No «Auto» não é preciso. O Qonecta+ só usa o GPS com a ligação em
     curso ou os ecrãs «Carro» abertos.
   - **Sem GPS, sem números congelados.** Com mais de 5 s sem posições, a velocidade mostra «—» e os painéis dizem «GPS
     em pausa · telemóvel bloqueado (ative a localização «sempre»)» (ou «sem GPS», por exemplo num túnel). Quando volta,
@@ -493,15 +494,15 @@ admite.
   imagem volta sozinha, normalmente em menos de um segundo, **sem reiniciar o Android Auto** (com o motor QDAuto, o
   predefinido).
 - Se o carro **desaparecer durante mais tempo** (por exemplo, porque o desliga numa paragem curta), ao fim de 30
-  segundos o HeadQLink deixa de enviar imagem e põe o **Android Auto em pausa**, mas **continua à escuta do carro**
+  segundos o Qonecta+ deixa de enviar imagem e põe o **Android Auto em pausa**, mas **continua à escuta do carro**
   durante «Esperar pelo carro» (**5 minutos** por predefinição; muda-se em «Definições de imagem» › «Avançado»). A
   notificação diz «A aguardar o carro · Android Auto em pausa». Se o carro voltar nesse tempo, a imagem regressa **de
   imediato**, sem desbloquear o telemóvel nem tocar em nada.
-- Passado «Esperar pelo carro», o HeadQLink fecha tudo: o Android Auto, o servidor dele e a ligação. Para voltar a
+- Passado «Esperar pelo carro», o Qonecta+ fecha tudo: o Android Auto, o servidor dele e a ligação. Para voltar a
   usá-lo, toque em «Ligar», ou deixe isso à ligação automática por Bluetooth. Com o arranque manual do servidor fecha
   tudo da mesma forma exceto o servidor, que continua ligado para a próxima viagem ([Sem
   acessibilidade](#sem-acessibilidade-arranque-manual-do-servidor-do-android-auto)).
-- Se tocar em «Ligar» e em **5 minutos** (ou «Esperar pelo carro», se for mais) não aparecer nenhum carro, o HeadQLink
+- Se tocar em «Ligar» e em **5 minutos** (ou «Esperar pelo carro», se for mais) não aparecer nenhum carro, o Qonecta+
   para sozinho. Enquanto o carro se continuar a anunciar, mesmo sem chegar a ligar, a espera recomeça.
 
 ### O vídeo adapta-se à ligação
@@ -510,7 +511,7 @@ A rádio entre o telemóvel e o carro nem sempre leva os 5 Mbit/s que o C10 pede
 2,4 GHz ou com interferências, a imagem ia aos saltos e com atraso. Agora, com os perfis «Carro», «Automático», «Médio»
 e «Muito baixo» (os que recodificam no telemóvel):
 
-- O HeadQLink mede a ligação dez vezes por segundo (dados à espera de envio e tempo de ida e volta) e, se entupir a
+- O Qonecta+ mede a ligação dez vezes por segundo (dados à espera de envio e tempo de ida e volta) e, se entupir a
   sério (meio segundo seguido com dados acumulados ou com o tempo de ida e volta disparado), **baixa a taxa de bits**
   (×0,75 de cada vez, nunca abaixo de metade do que o carro pede: 2,5 Mbit/s no C10); se mesmo assim continuar
   entupida, desce para **24 fps**. Quando a ligação leva 3 segundos limpa, volta depressa (primeiro os fps, depois
@@ -526,7 +527,7 @@ congestiones 4`.
 
 ### No fim da viagem
 
-- Desligue o carro (o HeadQLink fecha-se sozinho quando termina «Esperar pelo carro», 5 minutos por predefinição) ou
+- Desligue o carro (o Qonecta+ fecha-se sozinho quando termina «Esperar pelo carro», 5 minutos por predefinição) ou
   toque em «Desligar» para o fechar já.
 - Se o telemóvel estava bloqueado quando se fechou, verá a notificação «Auto em espera até desbloquear o telemóvel
   (depois fecha-se sozinho)». **Desbloqueie o telemóvel uma vez** para que feche de vez: verá durante uns segundos «A
@@ -540,7 +541,7 @@ congestiones 4`.
 
 ### Ligação automática: «Ligar ao detetar o Bluetooth do carro»
 
-Com este interruptor, o HeadQLink começa a aguardar o carro assim que o telemóvel se liga ao Bluetooth dele, sem abrir
+Com este interruptor, o Qonecta+ começa a aguardar o carro assim que o telemóvel se liga ao Bluetooth dele, sem abrir
 a aplicação.
 
 1. Ative-o no ecrã principal.
@@ -551,35 +552,35 @@ a aplicação.
 
 Depois:
 
-- Se o Bluetooth se desligar sem ter chegado a ligar ao carro, o HeadQLink para. Se se desligar depois de uma sessão
+- Se o Bluetooth se desligar sem ter chegado a ligar ao carro, o Qonecta+ para. Se se desligar depois de uma sessão
   (desliga o carro), continua a aguardar o carro até terminar «Esperar pelo carro».
 - Se o Android Auto ainda estava em pausa (volta antes de terminar «Esperar pelo carro», ou ficou em espera com o
   telemóvel bloqueado), a imagem regressa de imediato, **sem desbloquear o telemóvel**.
 - Se o Android não o deixar arrancar em segundo plano, verá a notificação «Carro detetado · Toque para ligar o
-  HeadQLink». Toque nela.
+  Qonecta+». Toque nela.
 - Se for preciso iniciar o Android Auto e o telemóvel estiver bloqueado, verá a notificação **«Desbloqueie o telemóvel
-  para iniciar o Android Auto»**. Desbloqueie-o (com o carro parado): o HeadQLink inicia-o sozinho, sem abrir a
+  para iniciar o Android Auto»**. Desbloqueie-o (com o carro parado): o Qonecta+ inicia-o sozinho, sem abrir a
   aplicação (verá por um momento «A iniciar o Auto…»).
 
 ### Widget e botão das definições rápidas
 
 Para ligar sem abrir a aplicação:
 
-- **Widget «HeadQLink»** (ecrã principal): menu ⚙ › «Adicionar widget ao ecrã principal», ou mantenha premido um espaço
-  livre do ecrã principal › Widgets › HeadQLink. Ocupa 4x2 e pode reduzi-lo até 2x2.
+- **Widget «Qonecta+»** (ecrã principal): menu ⚙ › «Adicionar widget ao ecrã principal», ou mantenha premido um espaço
+  livre do ecrã principal › Widgets › Qonecta+. Ocupa 4x2 e pode reduzi-lo até 2x2.
   - O **botão grande** faz o mesmo que «Ligar» / «Desligar» na aplicação: se faltar algo obrigatório, abre a
     «Verificação». A cor indica o estado: cinzento desligado, âmbar a procurar ou a aguardar o carro, verde com imagem no
     carro (com os fps e os Mbit/s, atualizados a cada 5 s) e vermelho se houver um problema (por exemplo, o QDLink
     aberto).
-  - Em baixo, a **ligação**: «Hotspot», «Wi-Fi Direct» ou «Cabo USB». Toque noutra para a mudar; com o HeadQLink em
+  - Em baixo, a **ligação**: «Hotspot», «Wi-Fi Direct» ou «Cabo USB». Toque noutra para a mudar; com o Qonecta+ em
     funcionamento muda de imediato, sem reiniciar o Android Auto. Se o cabo do carro estiver ligado e em uso, continua a
     ter prioridade: a ligação escolhida é aquela a que volta ao retirá-lo.
-  - Em cima, o **modo** («Auto» / «Estendido»). Com o HeadQLink em funcionamento, mudá-lo volta a ligar o vídeo e o
+  - Em cima, o **modo** («Auto» / «Estendido»). Com o Qonecta+ em funcionamento, mudá-lo volta a ligar o vídeo e o
     Android Auto, como ao guardar outro perfil de imagem.
   - Em 2x2 ficam o botão, o estado e o ícone da ligação: toque nele para passar à seguinte.
   - «HEADQLINK» abre a aplicação sem ligar. O widget só se atualiza quando algo muda: não gasta bateria em segundo
     plano.
-- **Botão «HeadQLink» das definições rápidas** (Android 8+): com Android 13+, menu ⚙ › «Adicionar botão às definições
+- **Botão «Qonecta+» das definições rápidas** (Android 8+): com Android 13+, menu ⚙ › «Adicionar botão às definições
   rápidas»; caso contrário, abra as definições rápidas, toque no lápis (editar) e arraste-o. Ao tocar nele liga ou
   desliga (para ligar com o telemóvel bloqueado, pede primeiro para o desbloquear); mantendo-o premido abre a aplicação.
   Por baixo indica o estado («A procurar o carro…», «30 fps · 4,8 Mbit/s»…).
@@ -625,7 +626,7 @@ Se estiver ligado, ao guardar outro perfil o carro e o Android Auto voltam a lig
 - «30 fps · menos calor (recomendado)»: o que o carro pede (30 fps e cerca de 5 Mbit/s no C10). É o que menos aquece
   o telemóvel.
 - «60 fps · fluidez máxima»: 60 fps e entre 8 e 12 Mbit/s, como o HeadQLink original (o C10 aceita-os). A imagem fica
-  mais fluida, mas o telemóvel aquece mais: se chegar ao estado térmico «moderado», o HeadQLink desce sozinho para
+  mais fluida, mas o telemóvel aquece mais: se chegar ao estado térmico «moderado», o Qonecta+ desce sozinho para
   30 fps (secção 6). Se estiver ligado, ao guardar o carro e o Android Auto voltam a ligar-se sozinhos; se não, vale
   para a próxima sessão.
 
@@ -634,7 +635,7 @@ Se estiver ligado, ao guardar outro perfil o carro e o Android Auto voltam a lig
 - «Ocultar o painel lateral após alguns segundos (Auto estendido)»: ativada por predefinição.
 - «Manter o ecrã do telemóvel ligado (mais calor e bateria; caso contrário, desliga-se como sempre e a projeção
   continua)»: desativada por predefinição. **Deixe-a desativada**, salvo se precisar dela.
-- «Proteção térmica»: o que o HeadQLink faz quando o Android avisa que o telemóvel está a aquecer (secção 6).
+- «Proteção térmica»: o que o Qonecta+ faz quando o Android avisa que o telemóvel está a aquecer (secção 6).
   - «Normal (recomendada)»: desce para 30 fps em «moderado» (só se a sessão vai a 60), para 24 fps em «grave» e para
     20 fps em «crítico», sempre com menos taxa de bits.
   - «Suave»: só baixa a taxa de bits; os fps não descem de 30, salvo em «crítico» (20 fps). Para quem prefere a fluidez
@@ -647,7 +648,7 @@ Se estiver ligado, ao guardar outro perfil o carro e o Android Auto voltam a lig
   - «headqlink original»: o motor do HeadQLink original, como **plano B** se o QDAuto lhe der problemas.
 
   A mudança «Aplica-se na próxima ligação»: toque em «Desligar» e depois em «Ligar».
-- «Avançado ▾» › «Esperar pelo carro»: «1 min», «5 min (recomendado)» ou «15 min». É o tempo que o HeadQLink continua
+- «Avançado ▾» › «Esperar pelo carro»: «1 min», «5 min (recomendado)» ou «15 min». É o tempo que o Qonecta+ continua
   à escuta do carro, com o Android Auto em pausa, depois de o perder (secção 4). Mais tempo = regressa de imediato
   depois de paragens mais longas; menos = o servidor do Android Auto desliga-se mais cedo. Vale já para a próxima
   paragem.
@@ -671,7 +672,7 @@ lateral à direita» põe o painel do outro lado, com o Android Auto encostado �
 escolhe quais se veem (Sim / Não) e por que ordem (setas); «Auto» e «Definições» ficam fixos. Com o painel reduzido a
 ícones, em baixo aparecem a hora, a temperatura exterior e a bateria do carro (quando há dado). E no ecrã principal do
 telemóvel, quando sai uma versão nova aparece um aviso com as novidades e «Transferir e instalar» (a aplicação transfere o APK e abre o instalador do
-Android; da primeira vez pede para permitir ao HeadQLink instalar aplicações desconhecidas); da primeira vez que
+Android; da primeira vez pede para permitir ao Qonecta+ instalar aplicações desconhecidas); da primeira vez que
 arranca uma versão acabada de instalar, mostram-se as suas novidades. No menu ⚙, «Procurar versão nova» verifica
 logo.
 
@@ -720,7 +721,7 @@ PlayStation (Jogos › PS1): os discos em .chd (o melhor: um só arquivo comprim
 
 ### Dados reais do carro (conta Leapmotor)
 
-**O que é.** Opcional. Com a sua conta Leapmotor, o HeadQLink lê da nuvem da Leapmotor o estado do seu carro (bateria e
+**O que é.** Opcional. Com a sua conta Leapmotor, o Qonecta+ lê da nuvem da Leapmotor o estado do seu carro (bateria e
 autonomia, carga, pressões dos pneus, portas, mala e fecho, temperaturas e conta-quilómetros) e usa-o no «Auto
 estendido»:
 
@@ -731,7 +732,7 @@ estendido»:
   dos outros, ou com o aviso do próprio carro); as portas e a mala abertas (abertas no modelo), o fecho, o
   conta-quilómetros e de quando é o dado. A nuvem não indica as janelas. O 3D só se desenha enquanto o move (não aquece o
   telemóvel); sem WebGL aparece o carro visto de cima.
-- **C10 REEV (autonomia alargada):** o HeadQLink reconhece-o sozinho (o carro envia o depósito) e passa a bateria a
+- **C10 REEV (autonomia alargada):** o Qonecta+ reconhece-o sozinho (o carro envia o depósito) e passa a bateria a
   28,4 kWh. Em «Estado», o **depósito** (%, litros exatos, autonomia com gasolina e autonomia total); em «Viagens», os
   **litros** de cada viagem e os L/100 km (com o gerador parado, «0 L: tudo elétrico»), e o custo com a gasolina; em
   «Rota», a bateria não desce dos 20 % (aí entra o gerador) e diz quantos litros vai gastar para chegar.
@@ -746,7 +747,7 @@ estendido»:
   oficial da Leapmotor) ou, se não houver, o real da descida da % (marcado «REAL»); em «Recordes», o total dos últimos
   30 dias segundo o carro.
 - **Histórico do carro:** a nuvem guarda as suas viagens das últimas semanas com os kWh (e num REEV os litros) medidos
-  pelo próprio carro, e o consumo médio semanal. O HeadQLink lê-o no máximo a cada 30 minutos (aos 3 e 12 minutos de
+  pelo próprio carro, e o consumo médio semanal. O Qonecta+ lê-o no máximo a cada 30 minutos (aos 3 e 12 minutos de
   acabar uma viagem) e a média semanal a cada 12 horas.
 
 Cada valor diz de onde vem: «real · há 40 s» (a idade do dado: a nuvem não é em tempo real e, com o carro desligado,
@@ -754,7 +755,7 @@ dá o último que soube) ou «estimado».
 
 **Como se configura** (⚙ › «Dados do carro (conta Leapmotor)», Android 6 ou superior):
 
-1. **Certificado de cliente.** É o mesmo que a app LMB10 pede; o HeadQLink não o inclui nem o fornece. Toque em
+1. **Certificado de cliente.** É o mesmo que a app LMB10 pede; o Qonecta+ não o inclui nem o fornece. Toque em
    «Importar certificado…» e escolha no seletor de ficheiros app.crt e app.key: os dois de uma vez (toque longo para
    marcar dois) ou **um a seguir ao outro** (diz qual falta; «Começar de novo» esquece o que foi escolhido a meio), um
    .pem com os dois blocos ou um .p12/.pfx (se tiver palavra-passe, é pedida).
@@ -764,7 +765,7 @@ dá o último que soube) ou «estimado».
    gasolina» (escolhe-se sozinha se o carro tiver depósito) ou «Outra» (os kWh à mão). Serve para passar a % a kWh.
 5. **«Ler o estado agora»** para o confirmar: bateria, autonomia, carga, pressões e a idade do dado.
 
-Com o «Auto estendido» em funcionamento (ou a «Pré-visualização do modo estendido»), o HeadQLink lê o carro a cada 2 minutos
+Com o «Auto estendido» em funcionamento (ou a «Pré-visualização do modo estendido»), o Qonecta+ lê o carro a cada 2 minutos
 (90 s com a secção «Carro» no ecrã, como o LMB10); se o carro não enviar nada novo (estacionado ou a dormir), a cada 5 e
 depois a cada 15 minutos; se falhar, aos 2, 5 e 10 minutos; e no máximo 400 leituras por dia (contando o histórico),
 para não abusar de uma API não oficial. Para ao desligar. «Usar os dados reais
@@ -774,20 +775,20 @@ do carro» desativa-o sem apagar nada.
 
 - Só de leitura, com uma exceção opcional: o **modo sentinela** (ligar e desligar, em «Dados do carro» →
   «5 · Modo sentinela»), e só se guardar aí o PIN do carro (o da app da Leapmotor; fica cifrado no telemóvel e nunca
-  vai para o registo). Sem PIN, o HeadQLink **nunca envia ordens ao carro**, e nenhuma outra ordem existe (nem
+  vai para o registo). Sem PIN, o Qonecta+ **nunca envia ordens ao carro**, e nenhuma outra ordem existe (nem
   trancar, nem climatização, nem carga). Cada ordem é confirmada antes de ser enviada; «Esquecer PIN» apaga-o.
 - Os seus dados vão **só para os servidores da Leapmotor**. A posição do carro não é lida nem guardada.
 - O certificado, a sessão e o histórico de viagens ficam **cifrados** com uma chave do Android Keystore, fora das
   cópias de segurança. A
   palavra-passe não é guardada: se a sessão expirar, «Estado» avisa e volta a entrar no telemóvel.
-- O servidor da Leapmotor usa um certificado da sua própria autoridade. O HeadQLink verifica que a chave é a conhecida;
+- O servidor da Leapmotor usa um certificado da sua própria autoridade. O Qonecta+ verifica que a chave é a conhecida;
   se um dia mudar, não se liga até que a aceite no telemóvel (só numa rede de confiança).
 - No registo: o e-mail mascarado (c\*\*\*@e\*\*\*.com) e uma linha por leitura (%, autonomia, carga, kW, km e latência),
   sem tokens, VIN nem posição.
 - «Terminar sessão e apagar dados» apaga deste telemóvel o certificado, a sessão e as definições da conta.
 
 > [!WARNING]
-> Usa uma **API não oficial** da Leapmotor: pode deixar de funcionar a qualquer momento, e o HeadQLink não tem relação
+> Usa uma **API não oficial** da Leapmotor: pode deixar de funcionar a qualquer momento, e o Qonecta+ não tem relação
 > com a Leapmotor. Com o **C10 REEV**, o consumo real pela descida da % não serve quando o gerador carrega em andamento:
 > aí mandam o histórico do carro e o seu contador de gasolina.
 
@@ -842,25 +843,25 @@ Comece sempre pelo menu ⚙ › «Verificação»: cada linha a vermelho tem o s
 
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
-| O carro não aparece («A procurar…» o tempo todo) | O carro não está no hotspot do telemóvel, o hotspot desligou-se sozinho, ou a aplicação de espelhamento não está aberta no carro. Com Wi-Fi Direct: o hotspot ativo ou o Wi-Fi desligado. | Veja a linha «Rede»: deve dizer «Hotspot ativo (…)». Ligue o carro ao hotspot (Definições › Wi-Fi do carro) e abra a aplicação de espelhamento. Desative o desligar automático do hotspot. Ao fim de 5 minutos sem anúncios do carro o HeadQLink para: toque em «Ligar» outra vez. |
-| «A porta 18463 está ocupada (o QDLink está aberto?)», ou «Porta 18463 · Ocupada» na «Verificação» | O QDLink (ou outra aplicação) está aberto no telemóvel e ocupa a porta. | «Forçar paragem» do QDLink. O HeadQLink tenta de novo a cada 5 s e o aviso desaparece sozinho. |
+| O carro não aparece («A procurar…» o tempo todo) | O carro não está no hotspot do telemóvel, o hotspot desligou-se sozinho, ou a aplicação de espelhamento não está aberta no carro. Com Wi-Fi Direct: o hotspot ativo ou o Wi-Fi desligado. | Veja a linha «Rede»: deve dizer «Hotspot ativo (…)». Ligue o carro ao hotspot (Definições › Wi-Fi do carro) e abra a aplicação de espelhamento. Desative o desligar automático do hotspot. Ao fim de 5 minutos sem anúncios do carro o Qonecta+ para: toque em «Ligar» outra vez. |
+| «A porta 18463 está ocupada (o QDLink está aberto?)», ou «Porta 18463 · Ocupada» na «Verificação» | O QDLink (ou outra aplicação) está aberto no telemóvel e ocupa a porta. | «Forçar paragem» do QDLink. O Qonecta+ tenta de novo a cada 5 s e o aviso desaparece sozinho. |
 | Ecrã preto no carro, ou a linha «Auto» com um erro | O Android Auto não arrancou: o telemóvel estava bloqueado («Não arranca: desbloqueie o telemóvel»), falta o modo de programador ou a acessibilidade. | Desbloqueie o telemóvel (com o aviso «Desbloqueie o telemóvel para iniciar o Android Auto», arranca sozinho ao desbloquear). Se continuar, veja a «Verificação» e toque em «Desligar» e «Ligar». Para saber o que falha, ative Diagnóstico › «Teste sem Android Auto (padrão)»: se vir a imagem de teste, a ligação está bem e o problema é o Android Auto (desative-o depois). Se nada resultar, experimente o motor «headqlink original». |
 | A imagem vai aos solavancos ou com atraso | Hotspot em 2,4 GHz, telemóvel quente, perfil demasiado alto ou ecrã do telemóvel ligado (com ele, o Android procura redes Wi-Fi muitas vezes). | Hotspot em 5 GHz, perfil «Automático» ou «Carro», bloqueie o telemóvel e arrefeça-o. Se continuar, experimente «Médio». |
-| Muitos cortes de rádio (a imagem para meio segundo vezes sem conta; no registo, linhas «Corte … RADIO» e «enlace muy congestionado») | O rádio entre o telemóvel e o carro não dá mais: hotspot em 2,4 GHz, o telemóvel num bolso, num tabuleiro metálico ou longe do ecrã. O HeadQLink já baixa a qualidade o mais que pode (até 1,2 Mbit/s e 20 fps), mas com o rádio saturado não chega. | Ponha o hotspot em **5 GHz** (Definições › Hotspot › Banda). Tire o telemóvel de bolsos e tabuleiros metálicos e deixe-o perto do ecrã do carro. O mais estável é o **cabo USB**. No registo, a linha «radio de la zona Wi-Fi» diz a banda e o canal quando o Android os deixa ler. |
-| A imagem fica menos fluida do que com o HeadQLink original | O original enviava 60 fps; o HeadQLink envia 30 (o que o carro pede) para o telemóvel não aquecer. Ou o telemóvel já está quente e a adaptação térmica baixou os fps, ou a ligação vai à justa e baixaram-se a taxa de bits ou os fps. | «Definições de imagem» › «Fluidez» › «60 fps · fluidez máxima» (com o perfil «Carro» ou «Automático»). Se o calor baixa os fps, «Proteção térmica» › «Suave» (secção 6). No registo, as linhas «HQL/Térmico» («estado térmico 2» ou mais) e «enlace:» dizem qual das duas coisas se passa. |
-| A imagem congela uns 10 s e depois volta a ligar | Em versões anteriores, uma imagem completa de mais de ~512 KB bloqueava o recetor do carro, que deixava de ler até a ligação cair. **Corrigido**: o HeadQLink já não envia nenhuma tão grande e mantém-nas em cerca de 300 KB no máximo. | Atualize o HeadQLink. Se acontecer com o perfil «Básico» (aí o tamanho é decidido pelo Android Auto), use «Automático» ou «Carro». Se continuar, exporte o registo (secção 8). |
+| Muitos cortes de rádio (a imagem para meio segundo vezes sem conta; no registo, linhas «Corte … RADIO» e «enlace muy congestionado») | O rádio entre o telemóvel e o carro não dá mais: hotspot em 2,4 GHz, o telemóvel num bolso, num tabuleiro metálico ou longe do ecrã. O Qonecta+ já baixa a qualidade o mais que pode (até 1,2 Mbit/s e 20 fps), mas com o rádio saturado não chega. | Ponha o hotspot em **5 GHz** (Definições › Hotspot › Banda). Tire o telemóvel de bolsos e tabuleiros metálicos e deixe-o perto do ecrã do carro. O mais estável é o **cabo USB**. No registo, a linha «radio de la zona Wi-Fi» diz a banda e o canal quando o Android os deixa ler. |
+| A imagem fica menos fluida do que com o HeadQLink original | O original enviava 60 fps; o Qonecta+ envia 30 (o que o carro pede) para o telemóvel não aquecer. Ou o telemóvel já está quente e a adaptação térmica baixou os fps, ou a ligação vai à justa e baixaram-se a taxa de bits ou os fps. | «Definições de imagem» › «Fluidez» › «60 fps · fluidez máxima» (com o perfil «Carro» ou «Automático»). Se o calor baixa os fps, «Proteção térmica» › «Suave» (secção 6). No registo, as linhas «HQL/Térmico» («estado térmico 2» ou mais) e «enlace:» dizem qual das duas coisas se passa. |
+| A imagem congela uns 10 s e depois volta a ligar | Em versões anteriores, uma imagem completa de mais de ~512 KB bloqueava o recetor do carro, que deixava de ler até a ligação cair. **Corrigido**: o Qonecta+ já não envia nenhuma tão grande e mantém-nas em cerca de 300 KB no máximo. | Atualize o Qonecta+. Se acontecer com o perfil «Básico» (aí o tamanho é decidido pelo Android Auto), use «Automático» ou «Carro». Se continuar, exporte o registo (secção 8). |
 | Desliga-se muitas vezes | Desligar automático do hotspot, poupança de bateria, QDLink aberto ou a aplicação de espelhamento do carro fechada. | Os cortes curtos voltam a ligar sozinhos («A voltar a ligar…»). Se forem longos ou frequentes: «Sem restrições de bateria», «Samsung: aplicações nunca suspensas», desative o desligar automático e feche o QDLink. Se continuar, exporte o registo (secção 8). |
-| Notificação «Inicie (ou reinicie) o servidor do Android Auto», ou a linha «Auto» diz «À espera do servidor do Android Auto» | Arranque manual e o Android Auto não atende: o servidor está desligado (depois de reiniciar o telemóvel ou atualizar o Android Auto) ou bloqueado: uma ligação cortou-se a meio (algo se ligou e foi embora sem dizer nada, ou uma sessão caiu de repente). | Toque na notificação ou na linha: Android Auto › ⋮ › «Parar servidor» (se aparecer) e ⋮ › «Iniciar servidor da unidade principal». O HeadQLink volta a tentar a cada 5 s e continua sozinho. |
-| Notificação «O HeadQLink não encontra o botão do servidor» | O Android Auto atualizou-se e mudou o menu ⋮ (a automatização procura-o pelo texto). | «Abrir AA» e inicie-o à mão, ou «Arranque manual». Veja [Versões do Android Auto](#versões-do-android-auto) e exporte o registo (secção 8). |
+| Notificação «Inicie (ou reinicie) o servidor do Android Auto», ou a linha «Auto» diz «À espera do servidor do Android Auto» | Arranque manual e o Android Auto não atende: o servidor está desligado (depois de reiniciar o telemóvel ou atualizar o Android Auto) ou bloqueado: uma ligação cortou-se a meio (algo se ligou e foi embora sem dizer nada, ou uma sessão caiu de repente). | Toque na notificação ou na linha: Android Auto › ⋮ › «Parar servidor» (se aparecer) e ⋮ › «Iniciar servidor da unidade principal». O Qonecta+ volta a tentar a cada 5 s e continua sozinho. |
+| Notificação «O Qonecta+ não encontra o botão do servidor» | O Android Auto atualizou-se e mudou o menu ⋮ (a automatização procura-o pelo texto). | «Abrir AA» e inicie-o à mão, ou «Arranque manual». Veja [Versões do Android Auto](#versões-do-android-auto) e exporte o registo (secção 8). |
 | Notificação «O Android Auto liga-se e corta ao fim de poucos segundos» | Sintoma conhecido de algumas versões novas do Android Auto (17.8). | Limpe a cache do Android Auto (Definições › Aplicações › Android Auto › Armazenamento › Limpar cache), pare e inicie o servidor, ou volte a uma versão testada ([Versões do Android Auto](#versões-do-android-auto)). |
 | A acessibilidade desativa-se sozinha | O Android desativa-a ao atualizar a aplicação, ou se a aplicação fechou de repente. Alguns fabricantes também. | «Verificação» › «Ativar». Se disser «Ativada mas sem funcionar», desative-a e volte a ativá-la. Se disser «Definição restrita», «Permitir definições restritas» (secção 3). Retire as restrições de bateria. |
 | O Android Auto pede no carro que olhe para o telemóvel | É a primeira vez que o Android Auto vê este «ecrã de carro», ou precisa de lhe pedir uma autorização ou confirmação. | Estacione, desbloqueie o telemóvel e aceite o que o Android Auto pedir. Normalmente só acontece uma vez. |
 | O telemóvel aquece muito | Perfil «Muito alto» ou «Alto», sol direto, ecrã ligado, carregamento sem fios. | Secção 6. |
-| Notificação «Servidor do Android Auto aberto · Desbloqueie o telemóvel para o fechar» | A sessão terminou com o telemóvel bloqueado e o servidor do Android Auto continua aberto. | Desbloqueie o telemóvel: o HeadQLink fecha-o. |
-| Depois de uma paragem demora muito a voltar, ou é preciso fechar e abrir a aplicação | A paragem durou mais do que «Esperar pelo carro» e o HeadQLink fechou tudo; ao desbloquear, primeiro fecha o Android Auto («A fechar o Auto…») e depois é preciso iniciá-lo outra vez. | Suba «Esperar pelo carro» para «15 min» (Definições de imagem › Avançado) e ative a ligação automática por Bluetooth: ao voltar, o Android Auto regressa de imediato sem desbloquear. Se vir «Desbloqueie o telemóvel para iniciar o Android Auto», desbloqueie-o e aguarde: inicia sozinho, sem abrir a aplicação. |
+| Notificação «Servidor do Android Auto aberto · Desbloqueie o telemóvel para o fechar» | A sessão terminou com o telemóvel bloqueado e o servidor do Android Auto continua aberto. | Desbloqueie o telemóvel: o Qonecta+ fecha-o. |
+| Depois de uma paragem demora muito a voltar, ou é preciso fechar e abrir a aplicação | A paragem durou mais do que «Esperar pelo carro» e o Qonecta+ fechou tudo; ao desbloquear, primeiro fecha o Android Auto («A fechar o Auto…») e depois é preciso iniciá-lo outra vez. | Suba «Esperar pelo carro» para «15 min» (Definições de imagem › Avançado) e ative a ligação automática por Bluetooth: ao voltar, o Android Auto regressa de imediato sem desbloquear. Se vir «Desbloqueie o telemóvel para iniciar o Android Auto», desbloqueie-o e aguarde: inicia sozinho, sem abrir a aplicação. |
 | «A fechar o Auto…» ou «A iniciar o Auto…» não desaparece, ou a notificação «O servidor do Android Auto continua ligado · Toque para o desligar» | A automatização das definições do Android Auto não terminou (por exemplo, o telemóvel bloqueou-se a meio). | A camada desaparece sozinha ao fim de 15 s. Toque na notificação com o telemóvel desbloqueado para desligar o servidor. Se se repetir, exporte o registo (secção 8): as linhas «ciclo:» contam cada passo. |
-| Os dados do carro congelam ao bloquear o telemóvel (velocidade, rota, viagem, consumo; voltam ao desbloquear) | A localização do HeadQLink é só «durante a utilização da app» e o Android corta-lhe o GPS com o telemóvel bloqueado. O ecrã do carro e os sensores de movimento continuam; o GPS não. | «Verificação» › «Localização sempre» › «Abrir» › «Permitir sempre». No registo, «GPS: ubicación todo el tiempo sí · con el móvil bloqueado llega» confirma que já funciona. |
-| A ligação automática não arranca | O nome Bluetooth não coincide, ou o Android não a deixa arrancar em segundo plano. | Reveja o texto do aviso «Ligação automática», retire as restrições de bateria ou toque na notificação «Toque para ligar o HeadQLink». |
+| Os dados do carro congelam ao bloquear o telemóvel (velocidade, rota, viagem, consumo; voltam ao desbloquear) | A localização do Qonecta+ é só «durante a utilização da app» e o Android corta-lhe o GPS com o telemóvel bloqueado. O ecrã do carro e os sensores de movimento continuam; o GPS não. | «Verificação» › «Localização sempre» › «Abrir» › «Permitir sempre». No registo, «GPS: ubicación todo el tiempo sí · con el móvil bloqueado llega» confirma que já funciona. |
+| A ligação automática não arranca | O nome Bluetooth não coincide, ou o Android não a deixa arrancar em segundo plano. | Reveja o texto do aviso «Ligação automática», retire as restrições de bateria ou toque na notificação «Toque para ligar o Qonecta+». |
 | Não instala ou não atualiza | Play Protect, Bloqueador automático da Samsung ou uma versão com outra assinatura. | Secção 2. |
 
 ---
@@ -872,12 +873,12 @@ hora em que aconteceu.
 
 1. Menu ⚙ › «Diagnóstico».
 2. Toque em **«Exportar registo»**. Verá «A exportar o registo…» e depois «Guardado em Transferências/HeadQLink/…».
-3. Abre-se «Partilhar registo do HeadQLink»: envie-o por e-mail, Telegram, Drive ou a aplicação que quiser, ou deixe-o
+3. Abre-se «Partilhar registo do Qonecta+»: envie-o por e-mail, Telegram, Drive ou a aplicação que quiser, ou deixe-o
    guardado.
 
 <!-- captura: ecrã Diagnóstico com «Exportar registo» -->
 
-**Onde fica:** `Transferências/HeadQLink/HeadQLink-log-AAAAMMDD-HHMMSS.zip`. No Android 9 ou anterior fica na pasta da
+**Onde fica:** `Transferências/HeadQLink/Qonecta-log-AAAAMMDD-HHMMSS.zip`. No Android 9 ou anterior fica na pasta da
 aplicação (`Android/data/com.headqlink.app/files/exports/`) e o aviso indica o caminho exato.
 
 **O que tem o ZIP**
@@ -906,7 +907,7 @@ Pode pedir ajuda na página do projeto no GitHub: [CharlysEV/headqlink](https://
 
 | Autorização | Para quê | Quando |
 |---|---|---|
-| Acessibilidade «HeadQLink tátil» | Iniciar e parar o servidor do Android Auto tocando no menu de programador dele, e receber os toques do carro. **Está limitada ao Android Auto:** não vê outras aplicações. | Android Auto 17.4 ou superior |
+| Acessibilidade «Qonecta+ tátil» | Iniciar e parar o servidor do Android Auto tocando no menu de programador dele, e receber os toques do carro. **Está limitada ao Android Auto:** não vê outras aplicações. | Android Auto 17.4 ou superior |
 | Dispositivos Wi-Fi próximos (ou Localização no Android 12 ou anterior) | Entrar na rede Wi-Fi Direct do carro. | Só com «Wi-Fi Direct» |
 | Notificações | Ver o estado da ligação e os avisos. | Sempre (recomendado) |
 | Bluetooth (dispositivos próximos) | Reconhecer o Bluetooth do carro. | Só com a ligação automática |
@@ -917,32 +918,32 @@ Pode pedir ajuda na página do projeto no GitHub: [CharlysEV/headqlink](https://
 | Microfone | «Falar» em «Procurar destino»: entende-o o reconhecimento de voz do telemóvel. | Opcional, «Auto estendido» |
 | Internet | Serviços do «Auto estendido» (OpenStreetMap, OSRM, Open-Meteo, radio-browser.info), a procura de destinos (Photon e a pesquisa de moradas do Android, da Google: recebem o que escreve), o mapa das viagens (mosaicos do OpenStreetMap), as suas listas de TV e rádio e, se a configurar, a nuvem da Leapmotor (dados reais do carro, só de leitura). | Só essas funções |
 
-- O HeadQLink **não envia telemetria** nem tem anúncios.
+- O Qonecta+ **não envia telemetria** nem tem anúncios.
 - **Não partilha o GPS** com o Android Auto por predefinição.
 - Os serviços internos não estão abertos a outras aplicações.
-- O APK declara outras autorizações herdadas do Open Headunit. O HeadQLink não as pede durante a configuração; o
+- O APK declara outras autorizações herdadas do Open Headunit. O Qonecta+ não as pede durante a configuração; o
   microfone só se usa para «Falar» na procura (se não estiver autorizado, o carro diz como o autorizar).
 - Os **destinos recentes** da procura e os **percursos das viagens** ficam só no telemóvel (o registo não leva nem
   destinos nem posições).
 
 > [!IMPORTANT]
-> **O servidor do Android Auto.** Com o Android Auto 17.4 ou superior, o HeadQLink liga o «servidor de unidade
+> **O servidor do Android Auto.** Com o Android Auto 17.4 ou superior, o Qonecta+ liga o «servidor de unidade
 > principal» do modo de programador do Android Auto. Enquanto está ligado, escuta em todas as redes do telemóvel, por
-> isso **o HeadQLink desliga-o quando termina**: ao tocar em «Desligar» ou quando acaba «Esperar pelo carro» (no
+> isso **o Qonecta+ desliga-o quando termina**: ao tocar em «Desligar» ou quando acaba «Esperar pelo carro» (no
 > máximo 15 minutos sem carro, com o Android Auto em pausa e a ocupar o servidor). Com o telemóvel bloqueado não o
 > consegue desligar, e deixa-o em espera até o desbloquear («Auto em espera até desbloquear o telemóvel…»).
 > **Desbloqueie o telemóvel depois de cada viagem.**
 >
-> Com o arranque manual (sem acessibilidade), o HeadQLink não o consegue desligar: no fim fecha o Android Auto, mas o
+> Com o arranque manual (sem acessibilidade), o Qonecta+ não o consegue desligar: no fim fecha o Android Auto, mas o
 > servidor continua ligado (é isso que deixa começar a viagem seguinte sem mexer em nada). **Pare-o** (Android Auto ›
 > ⋮ › «Parar servidor da unidade principal») se não o for usar, sobretudo numa Wi-Fi pública.
 
 **Quando não o usar:**
 
-- Toque em «Desligar» se abriu o HeadQLink fora do carro: começa a ligar sozinho quando se abre.
+- Toque em «Desligar» se abriu o Qonecta+ fora do carro: começa a ligar sozinho quando se abre.
 - Desligue o hotspot.
 - Desative «Ligar ao detetar o Bluetooth do carro» se não quiser que arranque sozinho.
-- Se deixar de o usar durante uns tempos, desative a acessibilidade «HeadQLink tátil» e, se quiser, saia do modo de
+- Se deixar de o usar durante uns tempos, desative a acessibilidade «Qonecta+ tátil» e, se quiser, saia do modo de
   programador do Android Auto.
 
 ### Aviso legal
@@ -954,7 +955,7 @@ Pode pedir ajuda na página do projeto no GitHub: [CharlysEV/headqlink](https://
   **por sua conta e risco**.
 - **Não o use enquanto conduz.** O condutor é o único responsável por cumprir o código da estrada. Não veja vídeos, TV,
   páginas web nem jogos com o carro em andamento.
-- O HeadQLink **não é afiliado, apoiado nem patrocinado** pela Leapmotor, Google, Neusoft, Open Headunit nem por qualquer
+- O Qonecta+ **não é afiliado, apoiado nem patrocinado** pela Leapmotor, Google, Neusoft, Open Headunit nem por qualquer
   outra empresa ou projeto. Leapmotor, C10, Android Auto e QDLink são marcas dos respetivos proprietários.
 
 ### Licença e créditos
@@ -964,7 +965,7 @@ Pode pedir ajuda na página do projeto no GitHub: [CharlysEV/headqlink](https://
   garantia e limitação de responsabilidade) também se aplicam.
 - Baseado no **[headqlink](https://github.com/ryazrm/headqlink)** de **ryazrm**, que por sua vez parte do
   **[Open Headunit](https://github.com/andreknieriem/open-headunit)** de **André Rinas (andreknieriem)**, e do trabalho
-  original de **Michael Reid** ([aviso de copyright](COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt)). O HeadQLink é um projeto
+  original de **Michael Reid** ([aviso de copyright](COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt)). O Qonecta+ é um projeto
   independente, sem relação com o Open Headunit nem com os seus autores.
 - Motor de protocolo **QDAuto**: [CharlysEV/qdauto](https://github.com/CharlysEV/qdauto).
 - Dados reais do carro (conta Leapmotor): cliente só de leitura portado do **[LMB10](https://github.com/txurtxil/LPB10)**,

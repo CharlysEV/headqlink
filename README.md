@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="docs/icon.png" width="128" alt="HeadQLink icon" />
+  <img src="docs/icon.png" width="128" alt="Qonecta+ icon" />
 </p>
 
-# HeadQLink
+# Qonecta+
+
+> **Qonecta+** es el nuevo nombre de **HeadQLink** desde la versión 0.2.52: la misma app, con el mismo paquete (`com.headqlink.app`), que se instala encima y conserva los ajustes.
 
 > **Este fork (CharlysEV/headqlink) — rama `main`.** Sobre el HeadQLink original añade:
 >
@@ -34,7 +36,7 @@ Android app that brings **Android Auto** and a custom side panel with extra feat
 The phone can stay locked with the screen off. No root required.
 
 <p align="center">
-  <img src="docs/car_screen.png" width="700" alt="HeadQLink car interface: side panel with tabs and splash screen" />
+  <img src="docs/car_screen.png" width="700" alt="Qonecta+ car interface: side panel with tabs and splash screen" />
   <br/>
   <em>Car screen: side panel + Android Auto (shown during startup)</em>
 </p>
@@ -61,16 +63,16 @@ Personal and experimental project. Fork of [Open Headunit](https://github.com/an
 | **AA developer mode** | Not needed | Required (one-time setup) |
 | **Complexity** | Simple and automatic | Requires initial configuration |
 
-With **AA < 17.4**, HeadQLink launches Android Auto's wireless projection directly — no developer mode, no accessibility service, no exposed network port. This is the ideal path.
+With **AA < 17.4**, Qonecta+ launches Android Auto's wireless projection directly — no developer mode, no accessibility service, no exposed network port. This is the ideal path.
 
-With **AA ≥ 17.4**, Google removed the direct launch path. The only viable route is AA's built-in developer head unit server, which requires enabling developer mode once and granting HeadQLink the accessibility permission so it can start and stop the server automatically. The server listens on all network interfaces while active, so HeadQLink shuts it down as soon as the session ends.
+With **AA ≥ 17.4**, Google removed the direct launch path. The only viable route is AA's built-in developer head unit server, which requires enabling developer mode once and granting Qonecta+ the accessibility permission so it can start and stop the server automatically. The server listens on all network interfaces while active, so Qonecta+ shuts it down as soon as the session ends.
 
 ## Requirements
 
 - A Leapmotor C10 with the mirroring app on its screen.
 - An Android phone with Android Auto installed. Tested on Android 16 with Snapdragon 8 Gen 3;
   other devices may work but are untested.
-- For **AA ≥ 17.4**: AA developer mode enabled and the HeadQLink accessibility service active.
+- For **AA ≥ 17.4**: AA developer mode enabled and the Qonecta+ accessibility service active.
 - To build from source: JDK 17 and the Android SDK (compileSdk 36). Dependencies (AndroidX, Media3,
   Glide, protobuf…) are downloaded by Gradle.
 - Internet for features that use it: OpenStreetMap (Nominatim, Overpass), OSRM, Open-Meteo,
@@ -81,7 +83,7 @@ With **AA ≥ 17.4**, Google removed the direct launch path. The only viable rou
 
 1. Download the APK from the latest **[Release](../../releases)** and install it (Android will ask
    to allow installation from the browser or file manager).
-2. Open HeadQLink and follow the setup wizard: permissions and, for AA ≥ 17.4, accessibility service
+2. Open Qonecta+ and follow the setup wizard: permissions and, for AA ≥ 17.4, accessibility service
    and Android Auto developer mode.
 3. On the car's screen, open the mirroring app and tap **Connect** on the phone (or enable automatic
    connection via Bluetooth).
@@ -110,7 +112,7 @@ app/src/main/java/
 │   ├── aap/                       #   AA Protocol (control, transport, video, navigation)
 │   ├── connection/                #   Connection management and self-launchers
 │   └── decoder/video/             #   Video decoder and frame relay
-└── com/headqlink/link/            # HeadQLink additions
+└── com/headqlink/link/            # Qonecta+ additions
     ├── SspSession.java            #   SSPLink protocol (UDP discovery, TCP session, H.264)
     ├── CarUi.java                 #   Car screen UI (side panel + AA on VirtualDisplay)
     ├── LinkService.java           #   Foreground service managing the connection
@@ -126,7 +128,7 @@ app/src/main/java/
 
 [GNU AGPL-3.0](LICENSE). This project incorporates code from
 [Open Headunit](https://github.com/andreknieriem/open-headunit) (whose original copyright notices
-are preserved, including [Michael Reid's](COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt)), but **HeadQLink
+are preserved, including [Michael Reid's](COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt)), but **Qonecta+
 is an independent project with no relationship to Open Headunit or its authors.** It is not
 endorsed, supported or affiliated with them in any way.
 
