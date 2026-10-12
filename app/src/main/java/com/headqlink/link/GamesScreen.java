@@ -144,7 +144,8 @@ final class GamesScreen implements CarScreen {
         tlp.leftMargin = 20;
         top.addView(tag, tlp);
         card.addView(top);
-        TextView title = CarStyle.text(c, name, 44, 0xFFFFFFFF);
+        // Los nombres largos («MEGA DRIVE») un poco más pequeños: en pantallas estrechas (T03) no caben a 44.
+        TextView title = CarStyle.text(c, name, name.length() > 6 ? 36 : 44, 0xFFFFFFFF);
         title.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
         title.setSingleLine(true);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
