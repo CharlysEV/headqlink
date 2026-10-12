@@ -99,16 +99,21 @@ public final class LinkWidget extends AppWidgetProvider {
      * imagen con otro perfil (ACTION_APPLY: sesión nueva y Android Auto reconectado con la geometría del modo).
      */
     static void setMode(Context c, Config cfg, String mode) {
+        setMode(c, cfg, mode, "widget");
+    }
+
+    /** Lo mismo desde otro sitio (from, para el registro): también la pantalla de modo de la configuración. */
+    static void setMode(Context c, Config cfg, String mode, String from) {
         if (!Config.isAa(mode) || mode.equals(cfg.mode())) return;
         String before = cfg.mode();
         cfg.setMode(mode);
-        L.i("widget: modo " + before + " → " + mode + (LinkState.running ? " (enlace en marcha: reconecto el vídeo y Android Auto)" : ""));
+        L.i(from + ": modo " + before + " → " + mode + (LinkState.running ? " (enlace en marcha: reconecto el vídeo y Android Auto)" : ""));
         if (LinkState.running) {
             try {
                 c.startService(new Intent(c, LinkService.class).setAction(LinkService.ACTION_APPLY)
                         .putExtra(LinkService.EXTRA_AA_RENEGOTIATE, true));
             } catch (RuntimeException e) {
-                L.w("widget: no se pudo aplicar el modo con el enlace en marcha: " + e);
+                L.w(from + ": no se pudo aplicar el modo con el enlace en marcha: " + e);
             }
         }
         WidgetUpdater.poke();

@@ -152,7 +152,7 @@ public class SetupActivity extends Activity {
                     new CarCloudStore(this).setProfile(carProfile, 0);
                     L.i("configuración inicial: coche " + carProfile);
                 }
-                cfg.setMode(mode);
+                saveMode();
                 cfg.setLinkMode(linkMode);
                 warnIfPending();
             }
@@ -171,11 +171,21 @@ public class SetupActivity extends Activity {
         finishSetup(false);
     }
 
+    /**
+     * Guarda el modo y, si ha cambiado con el coche conectado, lo aplica ya (sesión nueva y Android Auto reconectado):
+     * con «Auto», solo Android Auto; con «Auto extendido», el panel. Antes se guardaba y el coche seguía con el de antes
+     * hasta la conexión siguiente.
+     */
+    private void saveMode() {
+        if (Config.isAa(mode)) LinkWidget.setMode(this, cfg, mode, "configuración");
+        else cfg.setMode(mode);
+    }
+
     /** anyway: terminado con algo obligatorio pendiente (ya avisado: la pantalla principal no vuelve a avisar al conectar). */
     private void finishSetup(boolean anyway) {
         if (!cfg.setupDone() && !responsibilityAccepted) return;
         if (responsibilityAccepted) cfg.putBool("responsibility_accepted", true);
-        cfg.setMode(mode);
+        saveMode();
         cfg.setLinkMode(linkMode);
         warnIfPending();
         cfg.setSetupDone(true);
