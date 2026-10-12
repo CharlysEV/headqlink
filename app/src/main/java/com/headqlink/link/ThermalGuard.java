@@ -25,10 +25,16 @@ final class ThermalGuard {
     }
 
     private static final long BATTERY_LOG_MS = 60_000;
+    /** Cada cuánto se mira la previsión del margen térmico (Android no la da más de una vez por segundo). */
+    private static final long FORECAST_MS = 10_000;
+    /** Segundos de la previsión: lo bastante lejos para adelantarse al estado grave. */
+    private static final int FORECAST_S = 30;
 
     /** Último estado térmico (-1 = no se sabe) y nivel, para los resúmenes de sesión. */
     private static volatile int currentStatus = -1;
     private static volatile int currentLevel = ThermalPolicy.NORMAL;
+    /** Etapa de anticipación por el margen previsto (ThermalForecast), para el vídeo. */
+    private static volatile int currentStage;
     /** El vigía en marcha (para volver a aplicar el nivel al cambiar la «Protección térmica»). */
     private static volatile ThermalGuard active;
 
@@ -45,12 +51,24 @@ final class ThermalGuard {
     /** El vídeo del motor QDAuto; puede llegar después (cable USB con el motor original: setSink). */
     private volatile Sink sink;
     private final ThermalPolicy policy = new ThermalPolicy();
+    private final ThermalForecast forecast = new ThermalForecast();
+    /** Aviso de carga con calor (una vez al día). */
+    private ChargeHeatTip chargeTip;
     private final HandlerThread thread = new HandlerThread("hql-thermal");
     private Handler h;
     /** PowerManager.OnThermalStatusChangedListener (API 29); Object para no cargar la clase en Android 9 o menos. */
     private Object listener;
 
     private final Runnable check = () -> evaluate(policy.status());
+
+    /** Previsión del margen térmico: anticipación (ThermalForecast) antes del aviso de Android. */
+    private final Runnable forecastCheck = new Runnable() {
+        @Override
+        public void run() {
+            checkForecast();
+            h.postDelayed(this, FORECAST_MS);
+        }
+    };
 
     private final Runnable batteryLog = new Runnable() {
         @Override
@@ -84,6 +102,11 @@ final class ThermalGuard {
         return currentLevel;
     }
 
+    /** Etapa de anticipación (0 = ninguna; ThermalForecast). */
+    static int forecastStage() {
+        return currentStage;
+    }
+
     void start() {
         thread.start();
         h = new Handler(thread.getLooper());
@@ -95,6 +118,8 @@ final class ThermalGuard {
             QdTrace.i("HQL/Térmico", "Android " + Build.VERSION.SDK_INT + ": sin estado térmico, sin adaptación");
         }
         h.post(batteryLog);
+        chargeTip = new ChargeHeatTip(ctx);
+        if (Build.VERSION.SDK_INT >= 30) h.postDelayed(forecastCheck, FORECAST_MS);
     }
 
     @android.annotation.TargetApi(29)
@@ -126,6 +151,25 @@ final class ThermalGuard {
         if (active == this) active = null;
         currentStatus = -1;
         currentLevel = ThermalPolicy.NORMAL;
+        currentStage = 0;
+    }
+
+    /** Hilo hql-thermal: el margen previsto; si cambia la etapa, el vídeo lo aplica con el nivel que haya. */
+    private void checkForecast() {
+        float v = headroomValue(FORECAST_S);
+        if (!forecast.update(v, SystemClock.elapsedRealtime())) return;
+        currentStage = forecast.stage();
+        PerfTrace.event("thermal_stage", currentStage);
+        String mode = new Config(ctx).thermalMode();
+        String line = String.format(Locale.US, "margen previsto %.2f → %s (protección %s)", v, ThermalForecast.describe(currentStage),
+                ThermalPolicy.modeName(mode));
+        Sink s = sink;
+        if (s == null) {
+            L.i(line + "; motor original: solo se registra");
+            return;
+        }
+        L.i(line);
+        s.onThermalLevel(currentLevel, Math.max(0, currentStatus));
     }
 
     /** Hilo hql-thermal. */
@@ -186,7 +230,12 @@ final class ThermalGuard {
             String headroom = headroom();
             if (!headroom.isEmpty()) sb.append(" · margen ").append(headroom);
             sb.append(" · nivel ").append(ThermalPolicy.name(currentLevel));
+            if (currentStage > 0) sb.append(" · anticipación ").append(currentStage);
             QdTrace.i("HQL/Térmico", sb.toString());
+            int status = b.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+            if (chargeTip != null && tenths != Integer.MIN_VALUE && lvl >= 0 && scale > 0) {
+                chargeTip.check(status == BatteryManager.BATTERY_STATUS_CHARGING, lvl * 100 / scale, tenths / 10.0);
+            }
         } catch (RuntimeException e) {
             L.w("térmico: no se pudo leer la batería: " + e.getMessage());
         }
@@ -194,12 +243,17 @@ final class ThermalGuard {
 
     /** Previsión de margen térmico a 10 s (API 30; 1,0 = límite de estrangulamiento), o "". */
     private String headroom() {
-        if (Build.VERSION.SDK_INT < 30) return "";
+        float v = headroomValue(10);
+        return Float.isNaN(v) ? "" : String.format(Locale.US, "%.2f", v);
+    }
+
+    /** Margen térmico previsto a esos segundos (API 30), o NaN. */
+    private float headroomValue(int seconds) {
+        if (Build.VERSION.SDK_INT < 30) return Float.NaN;
         try {
-            float v = ctx.getSystemService(PowerManager.class).getThermalHeadroom(10);
-            return Float.isNaN(v) ? "" : String.format(Locale.US, "%.2f", v);
+            return ctx.getSystemService(PowerManager.class).getThermalHeadroom(seconds);
         } catch (RuntimeException e) {
-            return "";
+            return Float.NaN;
         }
     }
 

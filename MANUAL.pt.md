@@ -824,6 +824,10 @@ cortar a sessão nem reiniciar o Android Auto, e sem avisos: só notará a image
 registo. Com a «Proteção térmica» em «Desligada» não muda nada (só o anota). Se além disso a ligação for à justa, manda
 o limite mais baixo dos dois (calor ou ligação).
 
+**Antecipação** (Android 11 ou superior): além do estado, o Android dá uma previsão da margem térmica. Se durante 20 segundos ficar perto do limite (0,85), a imagem desce para 45 fps (se estava a 60) e 90 % do bitrate; mais perto ainda (0,92), para 30 fps e 80 %. Assim o telemóvel não chega a «grave» e não há quebras bruscas. Volta passo a passo após um minuto mais fresco. Com «Desligada» também não atua.
+
+**Carregamento e calor:** acima de 80 % é o carregamento que mais aquece. Se o telemóvel carregar acima de 80 % com a bateria a 39 °C ou mais, o Qonecta+ sugere (uma vez por dia) ativar «Proteger bateria» (carrega até 80 %), com um botão para as definições de bateria.
+
 **Conselhos**
 
 - Use o perfil «Automático» ou «Carro».

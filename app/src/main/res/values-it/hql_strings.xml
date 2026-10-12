@@ -970,4 +970,8 @@
     <string name="hql_setup_car_promax_detail">Batteria grande da 81,9 kWh e 800 V: ricarica rapida fino a ~130 kW.</string>
     <string name="hql_setup_car_reev_detail">Autonomia estesa: batteria piccola e generatore a benzina.</string>
     <string name="hql_setup_car_t03_detail">La citycar: ricarica rapida a 48 kW, 265 km WLTP e schermo da 10,1\" (quello dell\'auto si adatta).</string>
+    <string name="hql_tips_channel">Consigli</string>
+    <string name="hql_charge_heat_title">Il telefono si scalda mentre si ricarica</string>
+    <string name="hql_charge_heat_text">Si sta ricaricando al %1$d %% con la batteria a %2$s °C. Attiva «Proteggi batteria» (ricarica fino all\'80 %%) perché si scaldi meno in auto.</string>
+    <string name="hql_charge_heat_action">Impostazioni batteria</string>
 </resources>

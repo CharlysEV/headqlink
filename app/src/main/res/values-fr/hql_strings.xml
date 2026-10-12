@@ -970,4 +970,8 @@
     <string name="hql_setup_car_promax_detail">Grande batterie de 81,9 kWh et 800 V : recharge rapide jusqu\'à ~130 kW.</string>
     <string name="hql_setup_car_reev_detail">Prolongateur d\'autonomie : petite batterie et générateur essence.</string>
     <string name="hql_setup_car_t03_detail">La citadine : recharge rapide de 48 kW, 265 km WLTP et écran de 10,1\" (celui de la voiture s\'adapte).</string>
+    <string name="hql_tips_channel">Conseils</string>
+    <string name="hql_charge_heat_title">Le téléphone chauffe en charge</string>
+    <string name="hql_charge_heat_text">Il charge à %1$d %% avec la batterie à %2$s °C. Activez « Protéger la batterie » (charge jusqu\'à 80 %%) pour qu\'il chauffe moins en voiture.</string>
+    <string name="hql_charge_heat_action">Paramètres de batterie</string>
 </resources>

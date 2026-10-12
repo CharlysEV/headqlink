@@ -253,7 +253,7 @@ final class VideoHub {
             pipeline = p;
             live = p;
             // Con calor, la pipeline nueva empieza ya con el tope térmico.
-            if (thermalLevel != ThermalPolicy.NORMAL) p.applyThermal(thermalLevel, thermalStatus);
+            if (thermalLevel != ThermalPolicy.NORMAL || ThermalGuard.forecastStage() > 0) p.applyThermal(thermalLevel, thermalStatus);
         }
         lastVerdict = verdict;
         p.attach(port);

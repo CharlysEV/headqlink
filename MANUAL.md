@@ -809,6 +809,10 @@ cortar la sesión ni reiniciar Android Auto, y sin avisos: solo notarás la imag
 log. Con «Protección térmica» en «Apagada» no cambia nada (solo lo anota). Si además el enlace va justo, manda el tope
 más bajo de los dos (calor o enlace).
 
+**Anticipación** (Android 11 o superior): además del estado, Android da una previsión del margen térmico. Si durante 20 segundos se acerca al límite (0,85), la imagen baja a 45 fps (si iba a 60) y al 90 % del bitrate; si se acerca más (0,92), a 30 fps y al 80 %. Así el móvil no llega a «grave» y no hay bajones bruscos. Vuelve paso a paso tras un minuto más fresco. Con «Apagada», tampoco actúa.
+
+**Carga y calor:** por encima del 80 % la carga es lo que más calienta. Si el móvil carga por encima del 80 % con la batería a 39 °C o más, Qonecta+ avisa (una vez al día) de que actives «Proteger batería» (carga hasta el 80 %), con un botón a los ajustes de batería.
+
 **Consejos**
 
 - Usa el perfil «Automático» o «Coche».

@@ -974,4 +974,8 @@
     <string name="hql_setup_car_promax_detail">Larger 81.9 kWh, 800 V battery: fast charging up to ~130 kW.</string>
     <string name="hql_setup_car_reev_detail">Range extender: small battery plus a petrol generator.</string>
     <string name="hql_setup_car_t03_detail">The city car: 48 kW fast charging, 265 km WLTP and a 10.1\" screen (the car display adapts).</string>
+    <string name="hql_tips_channel">Tips</string>
+    <string name="hql_charge_heat_title">The phone is getting hot while charging</string>
+    <string name="hql_charge_heat_text">It is charging at %1$d %% with the battery at %2$s °C. Turn on «Protect battery» (charges up to 80 %%) so it heats up less in the car.</string>
+    <string name="hql_charge_heat_action">Battery settings</string>
 </resources>

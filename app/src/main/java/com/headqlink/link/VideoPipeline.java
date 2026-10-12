@@ -111,6 +111,8 @@ final class VideoPipeline {
      */
     private int thermalLevel = ThermalPolicy.NORMAL;
     private String thermalMode = ThermalPolicy.MODE_NORMAL;
+    /** Etapa de anticipación aplicada (ThermalForecast). */
+    private int thermalStage;
     private int thermalMaxBps;
     private int thermalFpsCap;
     private volatile int fpsCap;
@@ -568,17 +570,21 @@ final class VideoPipeline {
     void applyThermal(int level, int status) {
         if (stopped) return;
         String mode = cfg.thermalMode();
-        if (level == thermalLevel && mode.equals(thermalMode)) return;
+        int stage = ThermalGuard.forecastStage();
+        if (level == thermalLevel && mode.equals(thermalMode) && stage == thermalStage) return;
         thermalLevel = level;
         thermalMode = mode;
+        thermalStage = stage;
         VideoEncoder enc = encoder;
-        String head = "térmico " + status + " → perfil " + ThermalPolicy.name(level) + " (protección " + ThermalPolicy.modeName(mode) + ")";
+        String head = "térmico " + status + " → perfil " + ThermalPolicy.name(level) + (stage > 0 ? " + anticipación " + stage : "")
+                + " (protección " + ThermalPolicy.modeName(mode) + ")";
         if (enc == null || vp == null) {
             L.i(head + ": reenvío directo de AA, sin encoder propio; no se cambia nada");
             return;
         }
         int base = abrMax > 0 ? abrInitial : vp.bitrate;
-        int cap = ThermalPolicy.bitrateCap(mode, level, base);
+        // El tope más bajo: el del estado de Android y el de la anticipación por el margen previsto.
+        int cap = Math.min(ThermalPolicy.bitrateCap(mode, level, base), ThermalForecast.bitrateCap(mode, stage, base));
         thermalMaxBps = cap >= base ? 0 : cap;
         int bps;
         LinkRateController lk = link;
@@ -593,7 +599,7 @@ final class VideoPipeline {
             bps = thermalMaxBps > 0 ? thermalMaxBps : vp.bitrate;
         }
         enc.setBitrate(bps);
-        thermalFpsCap = ThermalPolicy.fpsCap(mode, level, vp.fps);
+        thermalFpsCap = Math.min(ThermalPolicy.fpsCap(mode, level, vp.fps), ThermalForecast.fpsCap(mode, stage, vp.fps));
         // Sin relay GL (patrón, app) la fuente dibuja a su ritmo: solo baja el bitrate.
         applyFpsCap();
         PerfTrace.event("thermal_fps", fpsCap);

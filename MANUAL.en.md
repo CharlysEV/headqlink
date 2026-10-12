@@ -800,6 +800,10 @@ this without cutting the session or restarting Android Auto, and without any war
 smooth picture. It's recorded in the log. With "Heat protection" set to "Off" nothing changes (it's only logged). If the
 link is also tight, the lower of the two caps (heat or link) applies.
 
+**Anticipation** (Android 11 or later): besides the status, Android gives a forecast of the thermal headroom. If it stays close to the limit (0.85) for 20 seconds, the picture drops to 45 fps (if it was at 60) and 90 % of the bitrate; closer still (0.92), to 30 fps and 80 %. That way the phone does not reach "severe" and there are no sudden drops. It goes back step by step after a cooler minute. With "Off" it does nothing either.
+
+**Charging and heat:** above 80 %, charging is what heats the most. If the phone is charging above 80 % with the battery at 39 °C or more, Qonecta+ suggests (once a day) turning on "Protect battery" (charges up to 80 %), with a button to the battery settings.
+
 **Tips**
 
 - Use the "Automatic" or "Car" profile.

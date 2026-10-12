@@ -969,4 +969,8 @@
     <string name="hql_setup_car_promax_detail">Großer 81,9-kWh-Akku mit 800 V: Schnellladen bis ~130 kW.</string>
     <string name="hql_setup_car_reev_detail">Range Extender: kleiner Akku und Benzingenerator.</string>
     <string name="hql_setup_car_t03_detail">Der Stadtwagen: 48 kW Schnellladen, 265 km WLTP und 10,1\"-Bildschirm (die Anzeige passt sich an).</string>
+    <string name="hql_tips_channel">Tipps</string>
+    <string name="hql_charge_heat_title">Das Handy wird beim Laden heiß</string>
+    <string name="hql_charge_heat_text">Es lädt bei %1$d %% und der Akku hat %2$s °C. Schalte „Akku schützen“ ein (lädt bis 80 %%), damit es im Auto weniger heiß wird.</string>
+    <string name="hql_charge_heat_action">Akku-Einstellungen</string>
 </resources>

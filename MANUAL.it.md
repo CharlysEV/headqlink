@@ -828,6 +828,10 @@ interrompere la sessione né riavviare Android Auto, e senza avvisi: noterai sol
 annotato nel log. Con «Protezione dal calore» su «Disattivata» non cambia nulla (lo annota solo). Se anche il
 collegamento è al limite, vale il più basso dei due limiti (calore o collegamento).
 
+**Anticipo** (Android 11 o successivo): oltre allo stato, Android dà una previsione del margine termico. Se per 20 secondi resta vicino al limite (0,85), l'immagine scende a 45 fps (se era a 60) e al 90 % del bitrate; ancora più vicino (0,92), a 30 fps e all'80 %. Così il telefono non arriva a «grave» e non ci sono cali bruschi. Torna indietro un passo alla volta dopo un minuto più fresco. Con «Disattivata» non fa nulla.
+
+**Ricarica e calore:** sopra l'80 % è la ricarica a scaldare di più. Se il telefono si ricarica sopra l'80 % con la batteria a 39 °C o più, Qonecta+ propone (una volta al giorno) di attivare «Proteggi batteria» (ricarica fino all'80 %), con un pulsante alle impostazioni della batteria.
+
 **Consigli**
 
 - Usa il profilo «Automatico» o «Veicolo».
