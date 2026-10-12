@@ -145,8 +145,21 @@ final class ChargePlanner {
     private ChargePlanner() {
     }
 
-    /** Potencia que admite el C10 a ese % (kW): la máxima hasta el 50 %, luego baja hasta ~55 % al 80 % y ~25 % al 100 %. */
+    /** Hasta este pico (kW), un coche pequeño de carga lenta (el T03, 48 kW) con su curva (SMALL_CAR_*). */
+    static final double SMALL_CAR_PEAK_KW = 60;
+
+    /**
+     * Potencia que admite el coche a ese % (kW). El C10: la máxima hasta el 50 %, luego baja hasta ~55 % al 80 % y ~25 %
+     * al 100 %. El T03 (pico ≤ SMALL_CAR_PEAK_KW): la máxima solo hasta el 20 %, ~70 % al 50 %, ~50 % al 80 % y ~20 % al
+     * 100 %, lo que da los ~36 min del 30 al 80 % de su ficha.
+     */
     static double carPowerKw(double pct, double peakKw) {
+        if (peakKw <= SMALL_CAR_PEAK_KW) {
+            if (pct <= 20) return peakKw;
+            if (pct <= 50) return peakKw * (1 - 0.30 * (pct - 20) / 30);
+            if (pct <= 80) return peakKw * (0.70 - 0.20 * (pct - 50) / 30);
+            return peakKw * (0.50 - 0.30 * Math.min(20, pct - 80) / 20);
+        }
         if (pct <= 50) return peakKw;
         if (pct <= 80) return peakKw * (1 - 0.45 * (pct - 50) / 30);
         return peakKw * (0.55 - 0.30 * Math.min(20, pct - 80) / 20);

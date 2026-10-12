@@ -1,5 +1,7 @@
 package com.headqlink.link;
 
+import com.andrerinas.openheadunit.R;
+
 import android.content.Context;
 
 /**
@@ -18,11 +20,35 @@ public final class Str {
     }
 
     static String get(int id) {
-        return app.getString(id);
+        return car(id, app.getString(id));
     }
 
     static String get(int id, Object... args) {
-        return app.getString(id, args);
+        return car(id, app.getString(id, args));
+    }
+
+    /**
+     * Textos donde «C10» es el coche del usuario (juegos, bienvenida, estimaciones): con otro modelo (CarSpec, el T03)
+     * dicen el suyo, y la autonomía WLTP la suya. Los que hablan del C10 como referencia («probado en el C10») no cambian.
+     */
+    private static final int[] CAR_NAMED = {R.string.hql_fly_10, R.string.hql_game_fly, R.string.hql_game_range_sub,
+            R.string.hql_game_ttt_sub, R.string.hql_ttt_lose, R.string.hql_ttt_start, R.string.hql_welcome_title,
+            R.string.hql_trips_note, R.string.hql_estimated_model, R.string.hql_ins_curve_help, R.string.hql_range_wltp};
+
+    private static String car(int id, String text) {
+        CarSpec spec = CarSpec.current();
+        if (spec.name.equals("C10") || text == null) return text;
+        for (int k : CAR_NAMED) {
+            if (k != id) continue;
+            String out = carText(text, spec);
+            return out;
+        }
+        return text;
+    }
+
+    /** Puro: el texto con el nombre del coche (y su autonomía WLTP en vez de los 420 km del C10). */
+    static String carText(String text, CarSpec spec) {
+        return text.replace("C10", spec.name).replace("420", String.valueOf(Math.round(spec.wltpKm)));
     }
 
     /** Idioma de los textos (para la voz). */

@@ -32,8 +32,12 @@ import com.andrerinas.openheadunit.utils.ToastUtils;
  * SurfaceTexture de la vista sigue viva mientras la vista no se quite de la ventana).
  */
 public class CarSimActivity extends Activity {
-    private static final int W = 1920;
-    private static final int H = 882;
+    /**
+     * La pantalla del coche del perfil (CarSpec): la del C10 (1920x882) o la del T03 (10,1", que se supone de 1280x720
+     * hasta tener su CAR_INFO), para ver el modo extendido como en su coche.
+     */
+    private final int W = CarSpec.current().isT03() ? 1280 : 1920;
+    private final int H = CarSpec.current().isT03() ? 720 : 882;
     private static final int FPS = 30;
 
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -336,11 +340,11 @@ public class CarSimActivity extends Activity {
     }
 
     /**
-     * La pantalla del coche, lo más grande posible con su proporción, centrada. La vista mide siempre 1920x882 y se
+     * La pantalla del coche, lo más grande posible con su proporción, centrada. La vista mide siempre lo que la pantalla del coche (W x H) y se
      * escala: al volver de otra app, la vista rehace su búfer con su tamaño, y si no fuera el del coche el motor (que
-     * pinta a 1920x882) dejaría el resto con basura.
+     * pinta a ese tamaño) dejaría el resto con basura.
      */
-    private static void fit(View v, int w, int h) {
+    private void fit(View v, int w, int h) {
         if (v == null || w <= 0 || h <= 0) return;
         float scale = Math.min(w / (float) W, h / (float) H);
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) v.getLayoutParams();

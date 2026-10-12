@@ -230,6 +230,7 @@ android {
                 it.systemProperty("hql.preview.suffix", (project.findProperty("previewSuffix") ?: "").toString())
                 it.systemProperty("hql.preview.only", (project.findProperty("previewOnly") ?: "").toString())
                 it.systemProperty("hql.preview.lang", (project.findProperty("previewLang") ?: "").toString())
+                it.systemProperty("hql.preview.size", (project.findProperty("previewSize") ?: "").toString())
             }
         }
     }

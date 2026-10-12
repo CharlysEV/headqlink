@@ -69,6 +69,9 @@ final class CarCloudStore {
     static final double KWH_C10_LIFE = 69.9;
     static final double KWH_C10_PROMAX = 81.9;
     static final double KWH_C10_REEV = 28.4;
+    /** Leapmotor T03 (CarSpec.T03): se elige solo si la cuenta dice que el coche es un T03. */
+    static final String PROFILE_T03 = "t03";
+    static final double KWH_T03 = 37.3;
 
     private final File dir;
     private final SharedPreferences sp;
@@ -116,6 +119,7 @@ final class CarCloudStore {
         SharedPreferences.Editor e = sp.edit().putString(K_PROFILE, id == null ? "" : id);
         if (PROFILE_CUSTOM.equals(id)) e.putFloat(K_CUSTOM_KWH, (float) clampKwh(customKwh));
         e.apply();
+        CarSpec.use(CarSpec.forProfile(id));
     }
 
     static double clampKwh(double kwh) {
@@ -130,6 +134,7 @@ final class CarCloudStore {
     static double capacityFor(String profile, double customKwh) {
         if (PROFILE_C10_PROMAX.equals(profile)) return KWH_C10_PROMAX;
         if (PROFILE_C10_REEV.equals(profile)) return KWH_C10_REEV;
+        if (PROFILE_T03.equals(profile)) return KWH_T03;
         if (PROFILE_CUSTOM.equals(profile) && customKwh >= 10) return clampKwh(customKwh);
         return KWH_C10_LIFE;
     }
@@ -143,6 +148,23 @@ final class CarCloudStore {
         if (PROFILE_C10_REEV.equals(p) || PROFILE_CUSTOM.equals(p)) return false;
         setProfile(PROFILE_C10_REEV, 0);
         return true;
+    }
+
+    /**
+     * La cuenta dice qué coche es: si es un T03 y el perfil no es el suyo (ni uno «a mano»), se pasa al del T03. true si
+     * ha cambiado.
+     */
+    boolean adoptCarType(String type) {
+        if (!isT03(type)) return false;
+        String p = profile();
+        if (PROFILE_T03.equals(p) || PROFILE_CUSTOM.equals(p)) return false;
+        setProfile(PROFILE_T03, 0);
+        return true;
+    }
+
+    /** Puro: ¿el «carType» de la cuenta de Leapmotor es un T03? */
+    static boolean isT03(String type) {
+        return type != null && type.trim().toUpperCase(java.util.Locale.ROOT).startsWith("T03");
     }
 
     String carType() {

@@ -74,7 +74,7 @@ final class RouteTab implements CarScreen {
     /** El % de ahora es el real del coche (nube de Leapmotor), no el indicado. */
     private boolean realSoc;
     /** Capacidad con la que se pasa de kWh a %: la de la variante con datos reales; si no, la del modelo. */
-    private double capKwh = EnergyModel.USABLE_KWH;
+    private double capKwh = EnergyModel.usableKwh();
     private CarCloud.Snapshot cloud = CarCloud.Snapshot.of(CarCloud.State.NO_ACCOUNT);
     private LinearLayout socControls;
     private String status = "";
@@ -606,7 +606,7 @@ final class RouteTab implements CarScreen {
         double real = cloud.soc(DemoMode.wallClockMs(), CarCloud.SOC_MAX_AGE_MS);
         realSoc = !Double.isNaN(real) && !RoutePlanner.testMode();
         soc = realSoc ? real : planner.socNow();
-        capKwh = realSoc || (RoutePlanner.testMode() && cloud.hasData()) ? cloud.capacityKwh : EnergyModel.USABLE_KWH;
+        capKwh = realSoc || (RoutePlanner.testMode() && cloud.hasData()) ? cloud.capacityKwh : EnergyModel.usableKwh();
         socControls.setVisibility(realSoc ? View.GONE : View.VISIBLE);
         status = planner.status();
         CarSensors.Snapshot gps = planner.sensorSnapshot();

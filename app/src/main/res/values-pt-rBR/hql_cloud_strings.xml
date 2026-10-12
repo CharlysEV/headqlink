@@ -175,4 +175,5 @@
     <string name="hql_cloud_sentry_done_off">Modo sentinela desligado (confirmado pelo carro).</string>
     <string name="hql_cloud_sentry_sent">Comando enviado; o carro ainda não confirmou (pode estar dormindo).</string>
     <string name="hql_cloud_sentry_failed">Não foi possível enviar o comando: %1$s</string>
+    <string name="hql_cloud_profile_t03">T03 · 37,3 kWh</string>
 </resources>

@@ -355,6 +355,10 @@ final class CarCloud {
                 L.i(String.format(Locale.US, "nube Leapmotor: el coche tiene depósito de gasolina (REEV): batería de %.1f kWh y "
                         + "consumo de gasolina", CarCloudStore.KWH_C10_REEV));
             }
+            if (st.adoptCarType(st.carType())) {
+                L.i(String.format(Locale.US, "nube Leapmotor: el coche es un T03: batería de %.1f kWh, carga rápida de %.0f kW",
+                        CarCloudStore.KWH_T03, CarSpec.T03.peakDcKw));
+            }
             long lat = SystemClock.elapsedRealtime() - t0;
             long wall = System.currentTimeMillis();
             Snapshot snap = new Snapshot(State.OK, s, wall, lat, st.capacityKwh(), st.carType(), 0, false);

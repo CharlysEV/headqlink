@@ -327,7 +327,7 @@ final class DemoMode {
 
     /** % de batería de la demostración: el indicado menos la energía estimada desde entonces. */
     static double soc(double kwhTotal) {
-        return Math.max(0, socSet - (kwhTotal - socKwhAt) / EnergyModel.USABLE_KWH * 100);
+        return Math.max(0, socSet - (kwhTotal - socKwhAt) / EnergyModel.usableKwh() * 100);
     }
 
     static void setSoc(double pct, double kwhTotal) {

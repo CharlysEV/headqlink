@@ -62,6 +62,13 @@ final class AaPassthroughSource implements VideoSource {
     private volatile int panelCarW = PANEL_W;
     /** Ancho de AA en la pantalla del coche con la pantalla partida; 0 = hasta el borde derecho. */
     private volatile int aaCarW;
+    /**
+     * Interfaz propia en una pantalla más pequeña que la del C10 (UiScale): se dibuja en un lienzo de uiW x uiH y el relay
+     * la reduce a la pantalla (uiScale ≤ 1). Los toques que van a ella se pasan al lienzo; lo de AA sigue en px del coche.
+     */
+    private float uiScale = 1f;
+    private int uiW = 1920;
+    private int uiH = 882;
     private int logTouches = 20;
     private int logCrops = 3;
     private int targetFps = 30;
@@ -507,6 +514,14 @@ final class AaPassthroughSource implements VideoSource {
     public void start(Surface surface, int width, int height, int fps, String info) {
         if (!reencode) return;
         applyRememberedCarTheme();
+        uiScale = extended ? UiScale.forCar(carW, carH, new Config(ctx).uiScalePercent()) : 1f;
+        uiW = UiScale.canvas(carW, uiScale);
+        uiH = UiScale.canvas(carH, uiScale);
+        if (extended) {
+            panelCarW = panelCar();
+            if (uiScale < 1f) L.i("CarUi: pantalla " + carW + "x" + carH + " · interfaz en " + uiW + "x" + uiH + " reducida al "
+                    + Math.round(uiScale * 100) + " %");
+        }
         configureAa();
         HeadUnitScreenConfig sc = HeadUnitScreenConfig.INSTANCE;
         int nw = sc.getNegotiatedWidth();
@@ -533,7 +548,7 @@ final class AaPassthroughSource implements VideoSource {
         // Panel a la derecha: AA empieza en el borde izquierdo y acaba donde empieza el panel.
         if (extended && new Config(ctx).panelRight()) {
             panelCarW = 0;
-            aaCarW = carW - PANEL_W;
+            aaCarW = carW - panelCar();
         }
         // Siempre con capa: en el modo ampliado es nuestra interfaz; sin panel, solo la animación de carga.
         relay = new GlFrameRelay(surface, width, height, nw, nh, fps, aaVideoX(), aaVideoW(), true);
@@ -541,7 +556,7 @@ final class AaPassthroughSource implements VideoSource {
         relay.setFixedRate(fixedRate);
         relay.setSplashOnly(!extended);
         // La capa se diseña a la resolución de la pantalla del coche; el relay la escala al vídeo.
-        relay.setOverlaySize(carW, carH);
+        relay.setOverlaySize(extended ? uiW : carW, extended ? uiH : carH);
         // El color fijo de la barra (si se eligió) y su transparencia también van alrededor de AA desde el primer fotograma.
         Config pcfg = new Config(ctx);
         CarTheme.setFixedPanel(pcfg.panelFixedColor());
@@ -563,7 +578,7 @@ final class AaPassthroughSource implements VideoSource {
         }
         if (extended) {
             GlFrameRelay r = relay;
-            carUi = new CarUi(ctx, carW, carH, PANEL_W, dpi, new CarUi.Listener() {
+            carUi = new CarUi(ctx, uiW, uiH, PANEL_W, dpi, new CarUi.Listener() {
                 @Override
                 public void onAaVisible(boolean visible) {
                     r.setAaVisible(visible);
@@ -571,7 +586,9 @@ final class AaPassthroughSource implements VideoSource {
 
                 @Override
                 public void onAaRegion(int x, int w) {
-                    setAaRegion(x, w);
+                    // Del lienzo de la interfaz a px del coche (hasta el borde derecho sigue siendo hasta el borde).
+                    int cx = UiScale.toCar(x, uiScale);
+                    setAaRegion(cx, x + w >= uiW ? carW - cx : UiScale.toCar(w, uiScale));
                 }
 
                 @Override
@@ -608,7 +625,7 @@ final class AaPassthroughSource implements VideoSource {
         if (r != null) r.setAaRegion(aaVideoX(), aaVideoW());
         announceTopAlignedMargins();
         // Pantalla partida: AA acaba antes de donde empezaría el panel (con el panel a la derecha, aw > 0 sin partir).
-        boolean split = aw > 0 && x + aw + PANEL_W < carW;
+        boolean split = aw > 0 && x + aw + panelCar() < carW;
         L.i("AA: panel " + x + " px -> AA en x=" + aaVideoX() + " ancho " + aaVideoW() + " (vídeo)"
                 + (split ? " · pantalla partida" : ""));
     }
@@ -621,6 +638,28 @@ final class AaPassthroughSource implements VideoSource {
         f.x = x;
         f.y = y;
         touchMulti(action == 1 ? 0 : action == 2 ? 1 : 2, new Proto.Finger[]{f});
+    }
+
+    /** Ancho del panel propio en px del coche (PANEL_W es el del lienzo de la interfaz). */
+    private int panelCar() {
+        return UiScale.toCar(PANEL_W, uiScale);
+    }
+
+    /** Los dedos en px del lienzo de la interfaz (copias; los de AA siguen en px del coche). */
+    private Proto.Finger[] toUi(Proto.Finger[] fingers) {
+        if (uiScale == 1f) return fingers;
+        Proto.Finger[] out = new Proto.Finger[fingers.length];
+        for (int i = 0; i < fingers.length; i++) {
+            Proto.Finger f = fingers[i];
+            if (f == null) continue;
+            Proto.Finger c = new Proto.Finger();
+            c.id = f.id;
+            c.action = f.action;
+            c.x = Math.round(f.x / uiScale);
+            c.y = Math.round(f.y / uiScale);
+            out[i] = c;
+        }
+        return out;
     }
 
     /** Dedos ahora mismo en contacto con AA (id del coche -> x, y en AA), en orden de llegada. */
@@ -651,12 +690,12 @@ final class AaPassthroughSource implements VideoSource {
                 // A nuestra interfaz si AA no se ve, o si el toque cae fuera de su zona (la barra, o la otra mitad con la
                 // pantalla partida).
                 touchToUi = !ui.aaVisible() || first.x < aaCarX() || first.x >= aaCarX() + aaCarW()
-                        || ui.floatHit(first.x, first.y);
+                        || ui.floatHit(first.x / uiScale, first.y / uiScale);
                 ui.noteTouch(touchToUi);
             }
             if (touchToUi) {
                 // Todos los dedos: los botones táctiles del emulador NES (correr y saltar) necesitan dos a la vez.
-                ui.touchMulti(fingers);
+                ui.touchMulti(toUi(fingers));
                 return;
             }
         }

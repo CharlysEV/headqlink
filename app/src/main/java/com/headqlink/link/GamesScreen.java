@@ -625,7 +625,8 @@ final class GamesScreen implements CarScreen {
      */
     private static final class Range extends Board {
         private static final float PX_PER_KM = 400f;
-        private static final float WLTP_KM = 420f;
+        /** Autonomía WLTP del coche (CarSpec: 420 km el C10, 265 el T03). */
+        private final float WLTP_KM = (float) CarSpec.current().wltpKm;
         private static final int CONE = 0;
         private static final int CAR = 1;
         private static final int CHARGER = 2;
@@ -929,8 +930,12 @@ final class GamesScreen implements CarScreen {
                 if (pt[2] == 0 && pt[0] + postW() < cx - carW() / 2) {
                     pt[2] = 1;
                     score++;
-                    if (score == 10) say(Str.get(R.string.hql_fly_10));
-                    else if (score == 70) say(Str.get(R.string.hql_fly_70));
+                    // Los guiños van con el coche: 10 postes como el C10 (3 como el T03) y tantos como kWh tiene su batería.
+                    CarSpec car = CarSpec.current();
+                    int nameNum = car.isT03() ? 3 : 10;
+                    int kwhNum = (int) Math.round(car.grossKwh);
+                    if (score == nameNum) say(Str.get(R.string.hql_fly_10).replace("10", String.valueOf(nameNum)));
+                    else if (score == kwhNum) say(Str.get(R.string.hql_fly_70).replace("70", String.valueOf(kwhNum)));
                 }
                 boolean overlapX = cx + carW() / 2 - 8 > pt[0] && cx - carW() / 2 + 8 < pt[0] + postW();
                 boolean inGap = y - carH() / 2 + 6 > pt[1] - gap() / 2 && y + carH() / 2 - 6 < pt[1] + gap() / 2;

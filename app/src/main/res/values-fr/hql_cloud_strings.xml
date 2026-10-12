@@ -175,4 +175,5 @@
     <string name="hql_cloud_sentry_done_off">Mode sentinelle désactivé (confirmé par la voiture).</string>
     <string name="hql_cloud_sentry_sent">Commande envoyée ; la voiture ne l\'a pas encore confirmée (elle est peut-être en veille).</string>
     <string name="hql_cloud_sentry_failed">Impossible d\'envoyer la commande : %1$s</string>
+    <string name="hql_cloud_profile_t03">T03 · 37,3 kWh</string>
 </resources>

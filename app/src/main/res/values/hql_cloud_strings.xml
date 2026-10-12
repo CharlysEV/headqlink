@@ -175,4 +175,5 @@
     <string name="hql_cloud_sentry_done_off">Sentry mode off (confirmed by the car).</string>
     <string name="hql_cloud_sentry_sent">Order sent; the car has not confirmed it yet (it may be asleep).</string>
     <string name="hql_cloud_sentry_failed">Could not send the order: %1$s</string>
+    <string name="hql_cloud_profile_t03">T03 · 37.3 kWh</string>
 </resources>

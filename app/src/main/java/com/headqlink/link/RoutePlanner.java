@@ -303,7 +303,7 @@ final class RoutePlanner {
         Config c = new Config(ctx);
         double set = c.socPct();
         if (Double.isNaN(set)) return Double.NaN;
-        return Math.max(0, set - c.socUsedKwh() / EnergyModel.USABLE_KWH * 100);
+        return Math.max(0, set - c.socUsedKwh() / EnergyModel.usableKwh() * 100);
     }
 
     /** El usuario indica el % de batería actual. */
@@ -629,13 +629,13 @@ final class RoutePlanner {
      * indicado.
      */
     double[] battery(CarCloud.Snapshot cs) {
-        if (testMode) return new double[]{socNow(), cs != null && cs.hasData() ? cs.capacityKwh : EnergyModel.USABLE_KWH, 0};
+        if (testMode) return new double[]{socNow(), cs != null && cs.hasData() ? cs.capacityKwh : EnergyModel.usableKwh(), 0};
         double real = cs == null ? Double.NaN : cs.soc(DemoMode.wallClockMs(), CarCloud.SOC_MAX_AGE_MS);
         if (!Double.isNaN(real)) {
             double est = sinceReading(real, cs.capacityKwh, cs.dataTimeMs(), sensors.snapshot().kwhTotal);
             return new double[]{est, cs.capacityKwh, 1};
         }
-        return new double[]{socNow(), EnergyModel.USABLE_KWH, 0};
+        return new double[]{socNow(), EnergyModel.usableKwh(), 0};
     }
 
     /** El dato de la nube del que se parte y la energía del modelo en ese momento. */
@@ -761,6 +761,8 @@ final class RoutePlanner {
      * de pico, lo que da los 28 min del 19 al 81 % de ABRP en un cargador de 400 kW.
      */
     static double carPeakKw(double capKwh) {
+        // El T03 (37,3 kWh): 48 kW.
+        if (capKwh < 45) return CarSpec.T03.peakDcKw;
         return capKwh >= 80 ? 130 : 84;
     }
 
@@ -786,7 +788,7 @@ final class RoutePlanner {
             }
         }
         if (s == null && charging && !Double.isNaN(cs.status.socBest())) {
-            double cap = cs.capacityKwh > 0 ? cs.capacityKwh : EnergyModel.USABLE_KWH;
+            double cap = cs.capacityKwh > 0 ? cs.capacityKwh : EnergyModel.usableKwh();
             Charger at = p == null ? null : chargerHere(p);
             s = new ChargeSession(cs.dataTimeMs(), cs.status.socBest(), cs.status.dcPlugged(), at, cap, carPeakKw(cap), carVolts(cap));
             sessionKey = "";
@@ -1042,7 +1044,7 @@ final class RoutePlanner {
         double perKm = speedKmh < 35 ? 1.5 : speedKmh < 50 ? 1.0 : speedKmh < 70 ? 0.4 : 0;
         if (perKm == 0) return 0;
         double v = speedKmh / 3.6;
-        double lost = 0.5 * EnergyModel.MASS_KG * v * v * (1 / EnergyModel.DRIVE_EFF - EnergyModel.REGEN_EFF);
+        double lost = 0.5 * EnergyModel.massKg() * v * v * (1 / EnergyModel.DRIVE_EFF - EnergyModel.REGEN_EFF);
         return perKm * dkm * lost / 3.6e6;
     }
 

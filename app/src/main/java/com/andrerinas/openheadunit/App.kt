@@ -46,6 +46,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
         super.onCreate()
         // headqlink: logcat continuo del proceso y registro de fallos, siempre activos.
         com.headqlink.link.Str.init(this)
+        com.headqlink.link.CarSpec.load(this)  // headqlink: el coche del perfil (C10 o T03)
         com.headqlink.link.LogcatCapture.start(this)
         com.headqlink.link.QdTrace.init(this)
         instance = this

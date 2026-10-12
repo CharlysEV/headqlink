@@ -155,6 +155,8 @@ public class CarCloudActivity extends Activity {
                 setProfile(CarCloudStore.PROFILE_C10_PROMAX, 0);
             } else if (id == R.id.hql_cloud_profile_reev) {
                 setProfile(CarCloudStore.PROFILE_C10_REEV, 0);
+            } else if (id == R.id.hql_cloud_profile_t03) {
+                setProfile(CarCloudStore.PROFILE_T03, 0);
             } else if (id == R.id.hql_cloud_profile_custom) {
                 askCustomKwh();
             }
@@ -217,6 +219,7 @@ public class CarCloudActivity extends Activity {
         int checked = CarCloudStore.PROFILE_C10_LIFE.equals(p) ? R.id.hql_cloud_profile_life
                 : CarCloudStore.PROFILE_C10_PROMAX.equals(p) ? R.id.hql_cloud_profile_promax
                 : CarCloudStore.PROFILE_C10_REEV.equals(p) ? R.id.hql_cloud_profile_reev
+                : CarCloudStore.PROFILE_T03.equals(p) ? R.id.hql_cloud_profile_t03
                 : CarCloudStore.PROFILE_CUSTOM.equals(p) ? R.id.hql_cloud_profile_custom : View.NO_ID;
         if (checked == View.NO_ID) profile.clearCheck();
         else profile.check(checked);
@@ -646,15 +649,24 @@ public class CarCloudActivity extends Activity {
 
     /** Elegido el coche: si aún no hay variante de batería, se pregunta (la nube no la dice). */
     private void afterCarChosen() {
+        // Un T03 no tiene variantes: se elige solo.
+        if (store.adoptCarType(store.carType())) {
+            L.i("nube Leapmotor: el coche es un T03");
+            CarCloud.settingsChanged();
+            render();
+            return;
+        }
         if (store.profile().isEmpty()) {
             String[] names = {Str.get(R.string.hql_cloud_profile_life), Str.get(R.string.hql_cloud_profile_promax),
-                    Str.get(R.string.hql_cloud_profile_reev), Str.get(R.string.hql_cloud_profile_custom_none)};
+                    Str.get(R.string.hql_cloud_profile_reev), Str.get(R.string.hql_cloud_profile_t03),
+                    Str.get(R.string.hql_cloud_profile_custom_none)};
             new MaterialAlertDialogBuilder(this)
                     .setTitle(R.string.hql_cloud_step_battery)
                     .setItems(names, (d, which) -> {
                         if (which == 0) setProfile(CarCloudStore.PROFILE_C10_LIFE, 0);
                         else if (which == 1) setProfile(CarCloudStore.PROFILE_C10_PROMAX, 0);
                         else if (which == 2) setProfile(CarCloudStore.PROFILE_C10_REEV, 0);
+                        else if (which == 3) setProfile(CarCloudStore.PROFILE_T03, 0);
                         else askCustomKwh();
                     })
                     .show();

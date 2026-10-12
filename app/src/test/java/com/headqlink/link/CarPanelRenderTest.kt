@@ -26,6 +26,7 @@ import java.util.Locale
  * Dibuja en el PC los paneles del modo extendido con los datos de demostración, como PNG de 1920x882 (el tamaño de la
  * pantalla del C10), para ver los cambios sin coche ni móvil:
  *   gradlew :app:testGithubDebugUnitTest --tests "*CarPanelRender*" -Ppreview [-PpreviewSuffix=_despues]
+ * Con -PpreviewSize=1280x720, la pantalla de otro coche (el T03, por ejemplo).
  * Deja los PNG en app/build/preview. Sin -Ppreview se salta. Usa Robolectric con gráficos nativos (Skia de Android),
  * así que el resultado es muy parecido al del móvil; las capturas exactas, con PreviewActivity.
  */
@@ -51,12 +52,21 @@ class CarPanelRenderTest {
         val act = Robolectric.buildActivity(Activity::class.java).setup().get()
         Str.init(act)
         assertTrue(DemoMode.enable(false, 0.0))
-        val ui = CarUi(act, W, H, 320, 200) { }
+        val size = (System.getProperty("hql.preview.size") ?: "").split("x").mapNotNull { it.toIntOrNull() }
+        if (size.size == 2) {
+            W = size[0]
+            H = size[1]
+        }
+        // Como en el coche (AaPassthroughSource): en una pantalla pequeña, la interfaz en un lienzo mayor, reducida.
+        val scale = UiScale.forCar(W, H, 0)
+        CW = UiScale.canvas(W, scale)
+        CH = UiScale.canvas(H, scale)
+        val ui = CarUi(act, CW, CH, 320, 200) { }
         try {
             val container = FrameLayout(act)
             act.setContentView(container)
             val root = ui.attachOffscreen(act)
-            container.addView(root, FrameLayout.LayoutParams(W, H))
+            container.addView(root, FrameLayout.LayoutParams(CW, CH))
             idle(500)
             val only = System.getProperty("hql.preview.only") ?: ""
             val wanted = only.split(",").filter { it.isNotBlank() }
@@ -88,15 +98,19 @@ class CarPanelRenderTest {
     }
 
     private fun save(v: View, f: File) {
-        v.measure(View.MeasureSpec.makeMeasureSpec(W, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(H, View.MeasureSpec.EXACTLY))
-        v.layout(0, 0, W, H)
-        val b = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
-        v.draw(Canvas(b))
+        v.measure(View.MeasureSpec.makeMeasureSpec(CW, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(CH, View.MeasureSpec.EXACTLY))
+        v.layout(0, 0, CW, CH)
+        val full = Bitmap.createBitmap(CW, CH, Bitmap.Config.ARGB_8888)
+        v.draw(Canvas(full))
+        val b = if (CW == W && CH == H) full else Bitmap.createScaledBitmap(full, W, H, true)
         FileOutputStream(f).use { b.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
     private companion object {
-        const val W = 1920
-        const val H = 882
+        var W = 1920
+        var H = 882
+        /** Lienzo de la interfaz (mayor que W x H en pantallas pequeñas). */
+        var CW = 1920
+        var CH = 882
     }
 }

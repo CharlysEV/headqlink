@@ -615,6 +615,20 @@ final class Config {
         return sp.getBoolean(PANEL_RIGHT, false);
     }
 
+    /**
+     * Tamaño de la interfaz del modo extendido en la pantalla del coche (UiScale): 0 = automático (como en el C10; en
+     * pantallas más pequeñas, como la del T03, se reduce para que quepa), o el porcentaje elegido (50-100).
+     */
+    static final String UI_SCALE = "ui_scale";
+
+    int uiScalePercent() {
+        return sp.getInt(UI_SCALE, 0);
+    }
+
+    void setUiScalePercent(int pct) {
+        sp.edit().putInt(UI_SCALE, pct).apply();
+    }
+
     /** Transparencia del panel (0-100): cuanta más, más se funde con el negro de la pantalla. */
     static final String PANEL_ALPHA = "panel_alpha";
 

@@ -175,4 +175,5 @@
     <string name="hql_cloud_sentry_done_off">Modo centinela apagado (lo ha confirmado el coche).</string>
     <string name="hql_cloud_sentry_sent">Orden enviada; el coche aún no la ha confirmado (puede estar dormido).</string>
     <string name="hql_cloud_sentry_failed">No se pudo mandar la orden: %1$s</string>
+    <string name="hql_cloud_profile_t03">T03 · 37,3 kWh</string>
 </resources>

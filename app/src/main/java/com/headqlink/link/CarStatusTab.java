@@ -279,7 +279,8 @@ final class CarStatusTab implements CarScreen {
                     return true;
                 }
             });
-            w.loadUrl("file:///android_asset/car3d.html");
+            // El modelo del coche (CarSpec): el C10 o el T03.
+            w.loadUrl("file:///android_asset/car3d.html" + (CarSpec.current().isT03() ? "?model=t03" : ""));
             FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT);
             lp.bottomMargin = TYRES_TEXT_H - 8;

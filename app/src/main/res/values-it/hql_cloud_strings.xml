@@ -175,4 +175,5 @@
     <string name="hql_cloud_sentry_done_off">Modalità sentinella disattivata (confermato dall\'auto).</string>
     <string name="hql_cloud_sentry_sent">Comando inviato; l\'auto non l\'ha ancora confermato (potrebbe essere in standby).</string>
     <string name="hql_cloud_sentry_failed">Impossibile inviare il comando: %1$s</string>
+    <string name="hql_cloud_profile_t03">T03 · 37,3 kWh</string>
 </resources>

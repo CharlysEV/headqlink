@@ -44,10 +44,18 @@
   var probe = document.createElement('canvas');
   if (!(probe.getContext('webgl') || probe.getContext('experimental-webgl'))) { fail('sin WebGL'); return; }
 
-  // ---------------------------------------------------------------- medidas del C10 (m)
+  // ---------------------------------------------------------------- medidas (m): el C10, o el T03 con ?model=t03
+  var T03 = /[?&]model=t03\b/.test(location.search);
   var L = 4.739, W = 1.900, H = 1.680, WB = 2.825;
-  var FX = 1.44, RX = FX - WB;            // ejes delantero y trasero (el morro mira a +x)
+  var FX = 1.44;
   var TRACK = 1.62, WR = 0.37;            // vía y radio de la rueda (235/55 R19)
+  if (T03) {
+    // Leapmotor T03: urbano de 3,62 m, 2,40 entre ejes, ruedas 165/65 R15.
+    L = 3.620; W = 1.652; H = 1.592; WB = 2.400;
+    FX = 1.19;
+    TRACK = 1.42; WR = 0.29;
+  }
+  var RX = FX - WB;                       // ejes delantero y trasero (el morro mira a +x)
   var BEVEL = 0.09;
   var OUT = BEVEL * 0.9;                  // lo que el redondeo agranda el perfil
 
@@ -84,122 +92,211 @@
   var rimMat = new THREE.MeshStandardMaterial({ color: 0x2b3138, metalness: 0.7, roughness: 0.35 });
   var amber = new THREE.MeshStandardMaterial({ color: 0xffb547, emissive: 0x7a4a00, roughness: 0.5 });
 
-  // ---------------------------------------------------------------- carrocería: el perfil del C10 extruido a lo ancho
-  var s = new THREE.Shape();
-  s.moveTo(-L / 2 + 0.02, 0.36);
-  s.lineTo(-L / 2 - 0.01, 0.62);
-  s.lineTo(-L / 2, 0.98);                                  // portón bajo (barra de luz)
-  s.lineTo(-L / 2 + 0.08, 1.08);
-  s.lineTo(-L / 2 + 0.35, 1.58);                           // luneta inclinada hasta el alerón
-  s.quadraticCurveTo(-0.8, H + 0.04, 0.30, 1.62);          // techo curvo
-  s.lineTo(1.30, 1.10);                                    // parabrisas tumbado
-  s.lineTo(2.05, 0.98);                                    // capó largo
-  s.quadraticCurveTo(L / 2 - 0.01, 0.95, L / 2 + 0.02, 0.70); // morro
-  s.lineTo(L / 2 - 0.04, 0.36);
-  var archR = 0.47, archY = WR, a0 = Math.asin((0.34 - archY) / archR);
-  s.lineTo(FX + archR * Math.cos(a0), 0.34);
-  s.absarc(FX, archY, archR, a0, Math.PI - a0, false);
-  s.lineTo(RX + archR * Math.cos(a0), 0.34);
-  s.absarc(RX, archY, archR, a0, Math.PI - a0, false);
-  s.lineTo(-L / 2, 0.32);
-  var bodyGeo = new THREE.ExtrudeGeometry(s, {
-    depth: W - 2 * BEVEL, bevelEnabled: true, bevelThickness: BEVEL, bevelSize: BEVEL * 0.9, bevelSegments: 4, curveSegments: 24
-  });
-  bodyGeo.translate(0, 0, -(W - 2 * BEVEL) / 2);
-  car.add(new THREE.Mesh(bodyGeo, paint));
-
-  // Faldones y pasos de rueda en negro (la franja baja del C10).
-  var sill = new THREE.Mesh(new THREE.BoxGeometry(WB - 2 * archR - 0.04, 0.16, W + 0.012), black);
-  sill.position.set((FX + RX) / 2, 0.42, 0);
-  car.add(sill);
-
-  // ---------------------------------------------------------------- cristales (franja oscura de techo flotante)
-  function sideGlass(z) {
-    var g = new THREE.Shape();
-    g.moveTo(1.18, 1.13);
-    g.lineTo(0.36, 1.555);
-    g.quadraticCurveTo(-0.8, 1.64, -1.55, 1.575);
-    g.lineTo(-L / 2 + 0.36, 1.20);
-    g.lineTo(1.18, 1.13);
-    var m = new THREE.Mesh(new THREE.ShapeGeometry(g), glass);
-    m.position.z = z;
-    if (z < 0) m.rotation.y = Math.PI, m.scale.x = -1;
-    return m;
-  }
-  car.add(sideGlass(W / 2 + 0.004));
-  car.add(sideGlass(-W / 2 - 0.004));
-  function quad(p1, p2, halfW, mat) {
-    // Cristal inclinado entre dos puntos del perfil (x, y), a lo ancho.
-    var g = new THREE.BufferGeometry();
-    var v = new Float32Array([
-      p1[0], p1[1], -halfW, p2[0], p2[1], -halfW, p2[0], p2[1], halfW,
-      p1[0], p1[1], -halfW, p2[0], p2[1], halfW, p1[0], p1[1], halfW]);
-    g.setAttribute('position', new THREE.BufferAttribute(v, 3));
-    g.computeVertexNormals();
-    var m = new THREE.Mesh(g, mat);
-    m.material.side = THREE.DoubleSide;
-    return m;
-  }
-  car.add(quad([1.31, 1.20], [0.37, 1.69], W / 2 - 0.16, glass));            // parabrisas (fuera del redondeo)
-  car.add(quad([-L / 2 + 0.025, 1.15], [-L / 2 + 0.265, 1.605], W / 2 - 0.2, glass)); // luneta
-
-  // ---------------------------------------------------------------- techo negro, alerón y barras
-  var roof = new THREE.Shape();
-  roof.moveTo(0.30, 1.625);
-  roof.quadraticCurveTo(-0.8, H + 0.045, -L / 2 + 0.36, 1.585);
-  roof.lineTo(-L / 2 + 0.40, 1.55);
-  roof.quadraticCurveTo(-0.8, H - 0.005, 0.24, 1.59);
-  roof.lineTo(0.30, 1.625);
-  var roofGeo = new THREE.ExtrudeGeometry(roof, { depth: W - 0.34, bevelEnabled: false, curveSegments: 20 });
-  // Por encima del redondeo de la carrocería (el bisel la agranda ~8 cm).
-  roofGeo.translate(0, OUT + 0.012, -(W - 0.34) / 2);
-  car.add(new THREE.Mesh(roofGeo, gloss));
-  var spoiler = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.05, W - 0.30), gloss);
-  spoiler.position.set(-L / 2 + 0.26, 1.60 + OUT, 0);
-  spoiler.rotation.z = 0.12;
-  car.add(spoiler);
-  [1, -1].forEach(function (sz) {
-    var rail = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.035, 0.05), gloss);
-    rail.position.set(-0.78, 1.66 + OUT + 0.05, sz * (W / 2 - 0.28));
-    car.add(rail);
-  });
-  // Aletines de los pasos de rueda y paragolpes inferiores en negro.
-  [FX, RX].forEach(function (ax) {
-    [1, -1].forEach(function (sz) {
-      var flare = new THREE.Mesh(new THREE.TorusGeometry(archR + 0.02, 0.045, 8, 24, Math.PI), black);
-      flare.position.set(ax, archY, sz * (W / 2 - 0.02));
-      car.add(flare);
+  function buildC10() {
+    // ---------------------------------------------------------------- carrocería: el perfil del C10 extruido a lo ancho
+    var s = new THREE.Shape();
+    s.moveTo(-L / 2 + 0.02, 0.36);
+    s.lineTo(-L / 2 - 0.01, 0.62);
+    s.lineTo(-L / 2, 0.98);                                  // portón bajo (barra de luz)
+    s.lineTo(-L / 2 + 0.08, 1.08);
+    s.lineTo(-L / 2 + 0.35, 1.58);                           // luneta inclinada hasta el alerón
+    s.quadraticCurveTo(-0.8, H + 0.04, 0.30, 1.62);          // techo curvo
+    s.lineTo(1.30, 1.10);                                    // parabrisas tumbado
+    s.lineTo(2.05, 0.98);                                    // capó largo
+    s.quadraticCurveTo(L / 2 - 0.01, 0.95, L / 2 + 0.02, 0.70); // morro
+    s.lineTo(L / 2 - 0.04, 0.36);
+    var archR = 0.47, archY = WR, a0 = Math.asin((0.34 - archY) / archR);
+    s.lineTo(FX + archR * Math.cos(a0), 0.34);
+    s.absarc(FX, archY, archR, a0, Math.PI - a0, false);
+    s.lineTo(RX + archR * Math.cos(a0), 0.34);
+    s.absarc(RX, archY, archR, a0, Math.PI - a0, false);
+    s.lineTo(-L / 2, 0.32);
+    var bodyGeo = new THREE.ExtrudeGeometry(s, {
+      depth: W - 2 * BEVEL, bevelEnabled: true, bevelThickness: BEVEL, bevelSize: BEVEL * 0.9, bevelSegments: 4, curveSegments: 24
     });
-  });
-  var fBump = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.20, W - 0.22), black);
-  fBump.position.set(L / 2 + OUT - 0.03, 0.44, 0);
-  car.add(fBump);
-  var rBump = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.20, W - 0.22), black);
-  rBump.position.set(-L / 2 - OUT + 0.03, 0.44, 0);
-  car.add(rBump);
+    bodyGeo.translate(0, 0, -(W - 2 * BEVEL) / 2);
+    car.add(new THREE.Mesh(bodyGeo, paint));
 
-  // ---------------------------------------------------------------- luces (la barra de luz de delante y la de atrás)
-  var front = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.035, W - 0.32),
-    new THREE.MeshBasicMaterial({ color: 0xdffcff }));
-  front.position.set(L / 2 + OUT + 0.005, 0.84, 0);
-  car.add(front);
-  var rear = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.05, W - 0.22),
-    new THREE.MeshBasicMaterial({ color: 0xff3045 }));
-  rear.position.set(-L / 2 - OUT - 0.005, 1.0, 0);
-  car.add(rear);
-  // Faros (bajo la barra de luz, en las esquinas del morro).
-  [1, -1].forEach(function (sz) {
-    var lamp = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.07, 0.30), new THREE.MeshBasicMaterial({ color: 0xeefbff }));
-    lamp.position.set(L / 2 + OUT + 0.025, 0.70, sz * (W / 2 - 0.30));
-    car.add(lamp);
-  });
+    // Faldones y pasos de rueda en negro (la franja baja del C10).
+    var sill = new THREE.Mesh(new THREE.BoxGeometry(WB - 2 * archR - 0.04, 0.16, W + 0.012), black);
+    sill.position.set((FX + RX) / 2, 0.42, 0);
+    car.add(sill);
 
-  // Retrovisores.
-  [1, -1].forEach(function (sz) {
-    var m = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.12), gloss);
-    m.position.set(0.98, 1.17, sz * (W / 2 + 0.08));
-    car.add(m);
-  });
+    // ---------------------------------------------------------------- cristales (franja oscura de techo flotante)
+    function sideGlass(z) {
+      var g = new THREE.Shape();
+      g.moveTo(1.18, 1.13);
+      g.lineTo(0.36, 1.555);
+      g.quadraticCurveTo(-0.8, 1.64, -1.55, 1.575);
+      g.lineTo(-L / 2 + 0.36, 1.20);
+      g.lineTo(1.18, 1.13);
+      var m = new THREE.Mesh(new THREE.ShapeGeometry(g), glass);
+      m.position.z = z;
+      if (z < 0) m.rotation.y = Math.PI, m.scale.x = -1;
+      return m;
+    }
+    car.add(sideGlass(W / 2 + 0.004));
+    car.add(sideGlass(-W / 2 - 0.004));
+    function quad(p1, p2, halfW, mat) {
+      // Cristal inclinado entre dos puntos del perfil (x, y), a lo ancho.
+      var g = new THREE.BufferGeometry();
+      var v = new Float32Array([
+        p1[0], p1[1], -halfW, p2[0], p2[1], -halfW, p2[0], p2[1], halfW,
+        p1[0], p1[1], -halfW, p2[0], p2[1], halfW, p1[0], p1[1], halfW]);
+      g.setAttribute('position', new THREE.BufferAttribute(v, 3));
+      g.computeVertexNormals();
+      var m = new THREE.Mesh(g, mat);
+      m.material.side = THREE.DoubleSide;
+      return m;
+    }
+    car.add(quad([1.31, 1.20], [0.37, 1.69], W / 2 - 0.16, glass));            // parabrisas (fuera del redondeo)
+    car.add(quad([-L / 2 + 0.025, 1.15], [-L / 2 + 0.265, 1.605], W / 2 - 0.2, glass)); // luneta
+
+    // ---------------------------------------------------------------- techo negro, alerón y barras
+    var roof = new THREE.Shape();
+    roof.moveTo(0.30, 1.625);
+    roof.quadraticCurveTo(-0.8, H + 0.045, -L / 2 + 0.36, 1.585);
+    roof.lineTo(-L / 2 + 0.40, 1.55);
+    roof.quadraticCurveTo(-0.8, H - 0.005, 0.24, 1.59);
+    roof.lineTo(0.30, 1.625);
+    var roofGeo = new THREE.ExtrudeGeometry(roof, { depth: W - 0.34, bevelEnabled: false, curveSegments: 20 });
+    // Por encima del redondeo de la carrocería (el bisel la agranda ~8 cm).
+    roofGeo.translate(0, OUT + 0.012, -(W - 0.34) / 2);
+    car.add(new THREE.Mesh(roofGeo, gloss));
+    var spoiler = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.05, W - 0.30), gloss);
+    spoiler.position.set(-L / 2 + 0.26, 1.60 + OUT, 0);
+    spoiler.rotation.z = 0.12;
+    car.add(spoiler);
+    [1, -1].forEach(function (sz) {
+      var rail = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.035, 0.05), gloss);
+      rail.position.set(-0.78, 1.66 + OUT + 0.05, sz * (W / 2 - 0.28));
+      car.add(rail);
+    });
+    // Aletines de los pasos de rueda y paragolpes inferiores en negro.
+    [FX, RX].forEach(function (ax) {
+      [1, -1].forEach(function (sz) {
+        var flare = new THREE.Mesh(new THREE.TorusGeometry(archR + 0.02, 0.045, 8, 24, Math.PI), black);
+        flare.position.set(ax, archY, sz * (W / 2 - 0.02));
+        car.add(flare);
+      });
+    });
+    var fBump = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.20, W - 0.22), black);
+    fBump.position.set(L / 2 + OUT - 0.03, 0.44, 0);
+    car.add(fBump);
+    var rBump = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.20, W - 0.22), black);
+    rBump.position.set(-L / 2 - OUT + 0.03, 0.44, 0);
+    car.add(rBump);
+
+    // ---------------------------------------------------------------- luces (la barra de luz de delante y la de atrás)
+    var front = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.035, W - 0.32),
+      new THREE.MeshBasicMaterial({ color: 0xdffcff }));
+    front.position.set(L / 2 + OUT + 0.005, 0.84, 0);
+    car.add(front);
+    var rear = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.05, W - 0.22),
+      new THREE.MeshBasicMaterial({ color: 0xff3045 }));
+    rear.position.set(-L / 2 - OUT - 0.005, 1.0, 0);
+    car.add(rear);
+    // Faros (bajo la barra de luz, en las esquinas del morro).
+    [1, -1].forEach(function (sz) {
+      var lamp = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.07, 0.30), new THREE.MeshBasicMaterial({ color: 0xeefbff }));
+      lamp.position.set(L / 2 + OUT + 0.025, 0.70, sz * (W / 2 - 0.30));
+      car.add(lamp);
+    });
+
+    // Retrovisores.
+    [1, -1].forEach(function (sz) {
+      var m = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.12), gloss);
+      m.position.set(0.98, 1.17, sz * (W / 2 + 0.08));
+      car.add(m);
+    });
+  }
+
+  // ---------------------------------------------------------------- el T03: urbano alto, capó corto y portón casi recto
+  function buildT03() {
+    var s = new THREE.Shape();
+    s.moveTo(-L / 2 + 0.03, 0.30);
+    s.lineTo(-L / 2, 0.95);                                  // trasera casi vertical
+    s.lineTo(-L / 2 + 0.05, 1.30);
+    s.lineTo(-L / 2 + 0.20, 1.52);                           // arriba del portón
+    s.quadraticCurveTo(-0.55, H + 0.02, 0.32, 1.56);         // techo
+    s.lineTo(1.02, 1.02);                                    // parabrisas
+    s.lineTo(1.50, 0.90);                                    // capó corto
+    s.quadraticCurveTo(L / 2, 0.88, L / 2 + 0.01, 0.62);     // morro redondo
+    s.lineTo(L / 2 - 0.03, 0.30);
+    var archR = 0.37, archY = WR, a0 = Math.asin((0.30 - archY) / archR);
+    s.lineTo(FX + archR * Math.cos(a0), 0.30);
+    s.absarc(FX, archY, archR, a0, Math.PI - a0, false);
+    s.lineTo(RX + archR * Math.cos(a0), 0.30);
+    s.absarc(RX, archY, archR, a0, Math.PI - a0, false);
+    s.lineTo(-L / 2, 0.30);
+    var bodyGeo = new THREE.ExtrudeGeometry(s, {
+      depth: W - 2 * BEVEL, bevelEnabled: true, bevelThickness: BEVEL, bevelSize: BEVEL * 0.9, bevelSegments: 4, curveSegments: 24
+    });
+    bodyGeo.translate(0, 0, -(W - 2 * BEVEL) / 2);
+    car.add(new THREE.Mesh(bodyGeo, paint));
+
+    var sill = new THREE.Mesh(new THREE.BoxGeometry(WB - 2 * archR - 0.04, 0.10, W + 0.012), black);
+    sill.position.set((FX + RX) / 2, 0.36, 0);
+    car.add(sill);
+
+    function sideGlass(z) {
+      var g = new THREE.Shape();
+      g.moveTo(0.96, 1.07);
+      g.lineTo(0.36, 1.49);
+      g.quadraticCurveTo(-0.55, 1.55, -1.48, 1.47);
+      g.lineTo(-L / 2 + 0.16, 1.12);
+      g.lineTo(0.96, 1.07);
+      var m = new THREE.Mesh(new THREE.ShapeGeometry(g), glass);
+      m.position.z = z;
+      if (z < 0) m.rotation.y = Math.PI, m.scale.x = -1;
+      return m;
+    }
+    car.add(sideGlass(W / 2 + 0.004));
+    car.add(sideGlass(-W / 2 - 0.004));
+    function quad(p1, p2, halfW) {
+      var g = new THREE.BufferGeometry();
+      var v = new Float32Array([
+        p1[0], p1[1], -halfW, p2[0], p2[1], -halfW, p2[0], p2[1], halfW,
+        p1[0], p1[1], -halfW, p2[0], p2[1], halfW, p1[0], p1[1], halfW]);
+      g.setAttribute('position', new THREE.BufferAttribute(v, 3));
+      g.computeVertexNormals();
+      var m = new THREE.Mesh(g, glass);
+      m.material.side = THREE.DoubleSide;
+      return m;
+    }
+    car.add(quad([1.08, 1.10], [0.40, 1.60], W / 2 - 0.15));             // parabrisas
+    car.add(quad([-L / 2 - 0.02, 1.08], [-L / 2 + 0.12, 1.55], W / 2 - 0.18)); // luneta
+
+    // Pasos de rueda y paragolpes en negro.
+    [FX, RX].forEach(function (ax) {
+      [1, -1].forEach(function (sz) {
+        var flare = new THREE.Mesh(new THREE.TorusGeometry(archR + 0.015, 0.035, 8, 24, Math.PI), black);
+        flare.position.set(ax, archY, sz * (W / 2 - 0.02));
+        car.add(flare);
+      });
+    });
+    var fBump = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.16, W - 0.20), black);
+    fBump.position.set(L / 2 + OUT - 0.03, 0.40, 0);
+    car.add(fBump);
+    var rBump = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.16, W - 0.20), black);
+    rBump.position.set(-L / 2 - OUT + 0.03, 0.40, 0);
+    car.add(rBump);
+
+    // Faros en las esquinas del morro y pilotos verticales detrás.
+    [1, -1].forEach(function (sz) {
+      var lamp = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.12, 0.30), new THREE.MeshBasicMaterial({ color: 0xeefbff }));
+      lamp.position.set(L / 2 + OUT + 0.01, 0.78, sz * (W / 2 - 0.26));
+      car.add(lamp);
+      var tail = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.30, 0.10), new THREE.MeshBasicMaterial({ color: 0xff3045 }));
+      tail.position.set(-L / 2 - OUT - 0.005, 1.05, sz * (W / 2 - 0.10));
+      car.add(tail);
+      var m = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.10, 0.10), gloss);
+      m.position.set(0.92, 1.08, sz * (W / 2 + 0.07));
+      car.add(m);
+    });
+  }
+
+  if (T03) buildT03(); else buildC10();
 
   // ---------------------------------------------------------------- ruedas: FL, FR, RL, RR (izquierda = -z mirando a +x)
   var wheelPos = [[FX, -TRACK / 2], [FX, TRACK / 2], [RX, -TRACK / 2], [RX, TRACK / 2]];
@@ -226,7 +323,10 @@
 
   // ---------------------------------------------------------------- puertas y maletero (se ven al abrirse)
   // Bisagra en el borde delantero de cada puerta; al abrirse, giran hacia fuera en ámbar.
-  var doorDefs = [
+  var doorDefs = T03 ? [
+    { x0: 0.96, x1: 0.05, z: -1 }, { x0: 0.96, x1: 0.05, z: 1 },
+    { x0: 0.03, x1: -0.85, z: -1 }, { x0: 0.03, x1: -0.85, z: 1 }
+  ] : [
     { x0: 1.18, x1: 0.02, z: -1 }, { x0: 1.18, x1: 0.02, z: 1 },   // delanteras izquierda y derecha
     { x0: 0.0, x1: -1.08, z: -1 }, { x0: 0.0, x1: -1.08, z: 1 }    // traseras
   ];
@@ -234,8 +334,8 @@
     var len = d.x0 - d.x1;
     var pivot = new THREE.Group();
     pivot.position.set(d.x0, 0, d.z * (W / 2 + 0.01));
-    var panel = new THREE.Mesh(new THREE.BoxGeometry(len, 0.98, 0.05), amber);
-    panel.position.set(-len / 2, 0.92, d.z * 0.025);
+    var panel = new THREE.Mesh(new THREE.BoxGeometry(len, T03 ? 0.86 : 0.98, 0.05), amber);
+    panel.position.set(-len / 2, T03 ? 0.82 : 0.92, d.z * 0.025);
     pivot.add(panel);
     pivot.visible = false;
     pivot.userData = { target: 0, angle: 0, side: d.z };
@@ -243,7 +343,7 @@
     return pivot;
   });
   var bootPivot = new THREE.Group();
-  bootPivot.position.set(-L / 2 + 0.35, 1.58, 0);
+  bootPivot.position.set(T03 ? -L / 2 + 0.20 : -L / 2 + 0.35, T03 ? 1.52 : 1.58, 0);
   var bootPanel = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.62, W - 0.2), amber);
   bootPanel.position.set(-0.17, -0.31, 0);
   bootPanel.rotation.z = -0.32;
@@ -268,11 +368,11 @@
   scene.add(shadow);
 
   car.position.y = 0;
-  var target = new THREE.Vector3(0, 0.78, 0);
+  var target = new THREE.Vector3(0, T03 ? 0.72 : 0.78, 0);
 
   // ---------------------------------------------------------------- cámara: girar con el dedo (con inercia)
   // Tres cuartos de frente por la izquierda (la rueda delantera izquierda, la más cercana).
-  var yaw = -0.66, pitch = 0.34, dist = 9.2;
+  var yaw = -0.66, pitch = 0.34, dist = T03 ? 7.6 : 9.2;
   var vYaw = 0, dragging = false, lastX = 0, lastY = 0, lastT = 0;
   var intro = { from: -0.2, to: -0.66, t0: 0, ms: 1400 };
 

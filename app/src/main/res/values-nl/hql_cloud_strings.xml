@@ -175,4 +175,5 @@
     <string name="hql_cloud_sentry_done_off">Schildwachtmodus uit (bevestigd door de auto).</string>
     <string name="hql_cloud_sentry_sent">Opdracht verstuurd; de auto heeft hem nog niet bevestigd (misschien slaapt hij).</string>
     <string name="hql_cloud_sentry_failed">Kon de opdracht niet versturen: %1$s</string>
+    <string name="hql_cloud_profile_t03">T03 · 37,3 kWh</string>
 </resources>
