@@ -378,26 +378,92 @@ final class Config {
         return sp.getBoolean("stop_aa_server", true);
     }
 
-    private static final String RADIO_SOURCE = "radio_source";
+    /**
+     * Listas M3U de TV (IPTV) y de radio (RADIO): varias, cada una {nombre, URL http(s) o content:// de un archivo}, y la
+     * elegida, que es la que se ve en el coche. La lista única de antes («iptv_source», «radio_source») entra como la primera.
+     */
+    static final String IPTV = "iptv";
+    static final String RADIO = "radio";
 
-    /** Lista de radio (M3U): URL http(s) o content:// de un archivo; vacía = solo las populares. */
+    String[][] m3uLists(String kind) {
+        return m3uListsFrom(sp.getString(kind + "_lists", null), sp.getString(kind + "_source", ""));
+    }
+
+    void setM3uLists(String kind, String[][] lists) {
+        sp.edit().putString(kind + "_lists", webShortcutsJson(lists)).remove(kind + "_source").apply();
+    }
+
+    int m3uSelected(String kind) {
+        return clampSel(sp.getInt(kind + "_list_sel", 0), m3uLists(kind).length);
+    }
+
+    void setM3uSelected(String kind, int i) {
+        sp.edit().putInt(kind + "_list_sel", Math.max(0, i)).apply();
+    }
+
+    /** URL o archivo de la lista elegida; vacía si no hay ninguna. */
+    String m3uSource(String kind) {
+        String[][] l = m3uLists(kind);
+        return l.length == 0 ? "" : l[clampSel(sp.getInt(kind + "_list_sel", 0), l.length)][1];
+    }
+
+    /** Lista de radio elegida (M3U); vacía = solo las populares. */
     String radioSource() {
-        return sp.getString(RADIO_SOURCE, "");
+        return m3uSource(RADIO);
     }
 
-    void setRadioSource(String s) {
-        sp.edit().putString(RADIO_SOURCE, s == null ? "" : s.trim()).apply();
-    }
-
-    private static final String IPTV_SOURCE = "iptv_source";
-
-    /** Lista de TV (M3U): URL http(s) o content:// de un archivo elegido en el móvil. */
+    /** Lista de TV elegida (M3U). */
     String iptvSource() {
-        return sp.getString(IPTV_SOURCE, "");
+        return m3uSource(IPTV);
     }
 
-    void setIptvSource(String s) {
-        sp.edit().putString(IPTV_SOURCE, s == null ? "" : s.trim()).apply();
+    /**
+     * Puro: el JSON guardado ([["Nombre","url"],…]) → listas; sin guardar, la lista única de antes si la había; roto,
+     * ninguna. Sin URL, fuera; sin nombre, el de la URL o el archivo (m3uName).
+     */
+    static String[][] m3uListsFrom(String json, String legacy) {
+        java.util.List<String[]> out = new java.util.ArrayList<>();
+        if (json == null) {
+            String src = legacy == null ? "" : legacy.trim();
+            if (!src.isEmpty()) out.add(new String[]{m3uName(src), src});
+            return out.toArray(new String[0][]);
+        }
+        try {
+            org.json.JSONArray a = new org.json.JSONArray(json);
+            for (int i = 0; i < a.length(); i++) {
+                org.json.JSONArray e = a.optJSONArray(i);
+                if (e == null || e.length() < 2) continue;
+                String name = e.optString(0).trim();
+                String src = e.optString(1).trim();
+                if (src.isEmpty()) continue;
+                out.add(new String[]{name.isEmpty() ? m3uName(src) : name, src});
+            }
+        } catch (org.json.JSONException ignored) {
+            // Roto: ninguna (se vuelven a añadir).
+        }
+        return out.toArray(new String[0][]);
+    }
+
+    /** Puro: nombre por defecto de una lista: el servidor de la URL, o el nombre del archivo sin «.m3u». */
+    static String m3uName(String src) {
+        String s = src.trim();
+        if (s.startsWith("http://") || s.startsWith("https://")) {
+            return s.replaceFirst("^https?://(www\\.)?", "").replaceFirst("[/?#:].*$", "");
+        }
+        String last = s.substring(s.lastIndexOf('/') + 1);
+        try {
+            last = java.net.URLDecoder.decode(last, "UTF-8");
+        } catch (Exception ignored) {
+            // Se queda como está.
+        }
+        last = last.substring(Math.max(last.lastIndexOf('/'), last.lastIndexOf(':')) + 1);
+        last = last.replaceFirst("(?i)\\.m3u8?$", "");
+        return last.isEmpty() ? "M3U" : last;
+    }
+
+    /** Puro: la elegida dentro de [0, n). */
+    static int clampSel(int i, int n) {
+        return n <= 0 ? 0 : Math.max(0, Math.min(n - 1, i));
     }
 
     // Batería indicada por el usuario (hasta tener datos del coche) y energía estimada desde entonces.

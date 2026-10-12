@@ -38,7 +38,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * TV por internet: lista M3U/M3U8 (URL o archivo elegido en el móvil, ver Config.iptvSource),
+ * TV por internet: listas M3U/M3U8 (URL o archivo elegido en el móvil, ver Config.m3uLists; arriba se elige cuál),
  * canales por grupos y reproducción con ExoPlayer (HLS, TS…).
  * Pendiente (fases finales): bloquear el vídeo con el coche en marcha.
  */
@@ -62,17 +62,34 @@ final class IptvScreen implements CarScreen {
     private MediaFocus mediaFocus;
     private PlaybackMetadata metadata;
     private volatile boolean destroyed;
+    /** Las listas guardadas (Config.m3uLists) y la que se ve; arriba se cambia de una a otra si hay varias. */
+    private String[][] lists;
+    private int sel;
+    private int loadSeq;
 
     @Override
     public View create(Host h) {
         host = h;
         Context c = h.context();
-        String src = new Config(c).iptvSource();
-        if (src == null || src.isEmpty()) {
+        Config cfg = new Config(c);
+        lists = cfg.m3uLists(Config.IPTV);
+        if (lists.length == 0) {
             return CarStyle.message(c, Str.get(R.string.hql_tv_setup_list));
         }
+        return load(c, cfg.m3uSelected(Config.IPTV));
+    }
+
+    /** Lee la lista i (en segundo plano) y la pone; devuelve la vista de «cargando». */
+    private View load(Context c, int i) {
+        sel = i;
+        int seq = ++loadSeq;
+        String src = lists[i][1];
+        all.clear();
+        shown.clear();
         FrameLayout loading = new FrameLayout(c);
         loading.addView(CarStyle.message(c, Str.get(R.string.hql_tv_loading)), CarStyle.match());
+        View first = withLists(c, loading);
+        Host h = host;
         new Thread(() -> {
             List<Channel> list;
             String error = null;
@@ -86,17 +103,37 @@ final class IptvScreen implements CarScreen {
             List<Channel> fl = list;
             String fe = error;
             h.post(() -> {
-                if (destroyed) return;
+                if (destroyed || seq != loadSeq) return;
                 if (fl.isEmpty()) {
-                    host.setContent(CarStyle.message(c, fe != null ? Str.get(R.string.hql_tv_read_failed, fe) : Str.get(R.string.hql_tv_empty)));
+                    host.setContent(withLists(c, CarStyle.message(c, fe != null ? Str.get(R.string.hql_tv_read_failed, fe) : Str.get(R.string.hql_tv_empty))));
                     return;
                 }
                 all.addAll(fl);
-                listView = buildList(c);
+                listView = withLists(c, buildList(c));
                 host.setContent(listView);
             });
         }, "iptv-load").start();
-        return loading;
+        return first;
+    }
+
+    /** Encima de la vista, una fila con las listas para pasar de una a otra (solo si hay más de una). */
+    private View withLists(Context c, View body) {
+        if (lists.length < 2) return body;
+        LinearLayout col = new LinearLayout(c);
+        col.setOrientation(LinearLayout.VERTICAL);
+        HorizontalScrollView hs = new HorizontalScrollView(c);
+        hs.setHorizontalScrollBarEnabled(false);
+        String[] names = new String[lists.length];
+        for (int i = 0; i < lists.length; i++) names[i] = lists[i][0];
+        hs.addView(CarStyle.tabs(c, names, sel, i -> {
+            if (i == sel) return;
+            new Config(c).setM3uSelected(Config.IPTV, i);
+            L.i("IPTV: lista " + (i + 1) + " de " + lists.length);
+            host.setContent(load(c, i));
+        }));
+        col.addView(hs);
+        col.addView(body, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        return col;
     }
 
     @Override

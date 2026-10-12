@@ -929,36 +929,126 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 .show();
     }
 
+    /**
+     * Listas M3U para la TV o la radio del coche: varias (una URL o un archivo del móvil cada una); la marcada es la que se
+     * ve en el coche, donde también se puede cambiar. Cada cambio se guarda al momento.
+     */
     private void showList(boolean radio) {
+        String kind = radio ? Config.RADIO : Config.IPTV;
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         int pad = Math.round(24 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad / 2, pad, 0);
+        TextView info = new TextView(this);
+        info.setText(Str.get(R.string.hql_lists_help) + (radio ? " " + Str.get(R.string.hql_list_radio_default) : ""));
+        box.addView(info);
+        LinearLayout rows = new LinearLayout(this);
+        rows.setOrientation(LinearLayout.VERTICAL);
+        box.addView(rows);
+        EditText name = M3.field(this);
+        name.setHint(Str.get(R.string.hql_bookmark_name));
+        name.setSingleLine(true);
         EditText url = M3.field(this);
         url.setHint(Str.get(R.string.hql_list_url_hint));
         url.setSingleLine(true);
-        String cur = radio ? cfg.radioSource() : cfg.iptvSource();
-        if (cur.startsWith("http")) url.setText(cur);
-        TextView info = new TextView(this);
-        info.setText(cur.startsWith("content://") ? Str.get(R.string.hql_list_now_file) : Str.get(R.string.hql_list_paste)
-                + (radio ? " " + Str.get(R.string.hql_list_radio_default) : ""));
-        box.addView(info);
+        url.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
+        box.addView(M3.outlined(name));
         box.addView(M3.outlined(url));
+        android.widget.Button add = M3.button(this, "", true);
+        add.setText(Str.get(R.string.hql_list_add));
+        box.addView(add);
+        Runnable[] render = new Runnable[1];
+        render[0] = () -> {
+            rows.removeAllViews();
+            String[][] lists = cfg.m3uLists(kind);
+            int sel = cfg.m3uSelected(kind);
+            for (int i = 0; i < lists.length; i++) {
+                int idx = i;
+                boolean on = i == sel;
+                LinearLayout r = new LinearLayout(this);
+                r.setOrientation(LinearLayout.HORIZONTAL);
+                r.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                TextView t = new TextView(this);
+                String where = lists[i][1].startsWith("http") ? lists[i][1] : Str.get(R.string.hql_list_now_file);
+                t.setText((on ? "✓  " : "") + lists[i][0] + "\n" + where);
+                t.setTextColor(getColor(on ? R.color.hql_accent : R.color.hql_text));
+                t.setTypeface(null, on ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+                t.setMaxLines(2);
+                t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                t.setPadding(0, pad / 3, 0, pad / 3);
+                t.setOnClickListener(v -> {
+                    cfg.setM3uSelected(kind, idx);
+                    render[0].run();
+                });
+                r.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                com.google.android.material.button.MaterialButton b = new com.google.android.material.button.MaterialButton(
+                        this, null, com.google.android.material.R.attr.materialIconButtonStyle);
+                b.setIconResource(R.drawable.ic_close_white);
+                b.setIconTint(android.content.res.ColorStateList.valueOf(getColor(R.color.hql_text_dim)));
+                b.setContentDescription(Str.get(R.string.hql_remove));
+                b.setOnClickListener(v -> {
+                    java.util.List<String[]> l = new java.util.ArrayList<>(java.util.Arrays.asList(cfg.m3uLists(kind)));
+                    int s = cfg.m3uSelected(kind);
+                    l.remove(idx);
+                    cfg.setM3uLists(kind, l.toArray(new String[0][]));
+                    cfg.setM3uSelected(kind, idx < s ? s - 1 : idx == s ? 0 : s);
+                    render[0].run();
+                });
+                r.addView(b);
+                rows.addView(r);
+            }
+        };
+        add.setOnClickListener(v -> {
+            String u = url.getText().toString().trim();
+            if (u.isEmpty()) return;
+            if (!u.contains("://")) u = "https://" + u;
+            addList(kind, name.getText().toString().trim(), u);
+            name.setText("");
+            url.setText("");
+            render[0].run();
+        });
+        render[0].run();
+        android.widget.ScrollView sv = new android.widget.ScrollView(this);
+        sv.addView(box);
         new MaterialAlertDialogBuilder(this)
                 .setTitle(radio ? Str.get(R.string.hql_radio_list) : Str.get(R.string.hql_tv_list))
-                .setView(box)
-                .setPositiveButton(Str.get(R.string.hql_save), (d, w) -> {
-                    String s = url.getText().toString().trim();
-                    String source = s.isEmpty() && cur.startsWith("content://") ? cur : s;
-                    if (radio) cfg.setRadioSource(source);
-                    else cfg.setIptvSource(source);
-                })
+                .setView(sv)
+                .setPositiveButton(Str.get(R.string.hql_close), null)
                 .setNeutralButton(Str.get(R.string.hql_choose_file), (d, w) -> {
                     Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
                     startActivityForResult(i, radio ? REQ_RADIO_FILE : REQ_IPTV_FILE);
                 })
-                .setNegativeButton(Str.get(R.string.hql_cancel), null)
                 .show();
+    }
+
+    /** Añade una lista y la deja elegida (si ya estaba, solo la elige). */
+    private void addList(String kind, String name, String src) {
+        String[][] cur = cfg.m3uLists(kind);
+        for (int i = 0; i < cur.length; i++) {
+            if (cur[i][1].equals(src)) {
+                cfg.setM3uSelected(kind, i);
+                return;
+            }
+        }
+        java.util.List<String[]> l = new java.util.ArrayList<>(java.util.Arrays.asList(cur));
+        l.add(new String[]{name.isEmpty() ? Config.m3uName(src) : name, src});
+        cfg.setM3uLists(kind, l.toArray(new String[0][]));
+        cfg.setM3uSelected(kind, l.size() - 1);
+        L.i("listas de " + kind + ": " + l.size());
+    }
+
+    /** Nombre visible de un archivo elegido (sin «.m3u»), o vacío. */
+    private String fileName(android.net.Uri u) {
+        try (android.database.Cursor cur = getContentResolver().query(u,
+                new String[]{android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (cur != null && cur.moveToFirst()) {
+                String n = cur.getString(0);
+                if (n != null) return n.replaceFirst("(?i)\\.m3u8?$", "");
+            }
+        } catch (Exception ignored) {
+            // Sin nombre: el de la URI.
+        }
+        return "";
     }
 
     @Override
@@ -988,11 +1078,10 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             L.i("NES: carpeta de ROMs elegida");
             android.widget.Toast.makeText(this, Str.get(R.string.hql_nes_folder_set), android.widget.Toast.LENGTH_LONG).show();
         }
-        if (req == REQ_IPTV_FILE && !uris.isEmpty()) {
-            cfg.setIptvSource(uris.get(0).toString());
-        }
-        if (req == REQ_RADIO_FILE && !uris.isEmpty()) {
-            cfg.setRadioSource(uris.get(0).toString());
+        if ((req == REQ_IPTV_FILE || req == REQ_RADIO_FILE) && !uris.isEmpty()) {
+            boolean radio = req == REQ_RADIO_FILE;
+            addList(radio ? Config.RADIO : Config.IPTV, fileName(uris.get(0)), uris.get(0).toString());
+            showList(radio);
         }
     }
 

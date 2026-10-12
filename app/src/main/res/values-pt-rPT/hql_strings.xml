@@ -982,4 +982,6 @@
     <string name="hql_aa_size_smaller">Mais pequeno</string>
     <string name="hql_aa_size_smallest">Muito mais pequeno</string>
     <string name="hql_aa_size_note">Em ecrãs pequenos (de 10\" como o do T03) já fica mais pequeno sozinho. Aplica-se ao voltar a ligar.</string>
+    <string name="hql_list_add">Adicionar lista</string>
+    <string name="hql_lists_help">Toque numa lista para a usar no carro (lá também pode mudar de lista).</string>
 </resources>

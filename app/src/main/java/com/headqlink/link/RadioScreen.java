@@ -44,6 +44,8 @@ final class RadioScreen implements CarScreen {
     private ImageView npToggle;
     private volatile boolean destroyed;
     private int loadSeq;
+    /** Las listas M3U del usuario (Config.m3uLists): la pestaña 1 + i es la lista i. */
+    private String[][] lists = new String[0][];
     private final Runnable onChange = this::renderNowPlaying;
 
     @Override
@@ -53,13 +55,24 @@ final class RadioScreen implements CarScreen {
         LinearLayout col = new LinearLayout(c);
         col.setOrientation(LinearLayout.VERTICAL);
         col.addView(nowPlaying(c));
-        boolean hasList = !new Config(c).radioSource().isEmpty();
-        col.addView(CarStyle.tabs(c, new String[]{Str.get(R.string.hql_radio_popular), Str.get(R.string.hql_radio_my_list)}, hasList ? 1 : 0, i -> load(i)));
+        // Pestañas: las populares y cada lista del usuario (o «Mi lista» si no tiene ninguna).
+        Config cfg = new Config(c);
+        lists = cfg.m3uLists(Config.RADIO);
+        boolean hasList = lists.length > 0;
+        String[] tabs = new String[1 + Math.max(1, lists.length)];
+        tabs[0] = Str.get(R.string.hql_radio_popular);
+        if (hasList) for (int i = 0; i < lists.length; i++) tabs[1 + i] = lists[i][0];
+        else tabs[1] = Str.get(R.string.hql_radio_my_list);
+        int first = hasList ? 1 + cfg.m3uSelected(Config.RADIO) : 0;
+        android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(c);
+        hs.setHorizontalScrollBarEnabled(false);
+        hs.addView(CarStyle.tabs(c, tabs, first, i -> load(i)));
+        col.addView(hs);
         listArea = new FrameLayout(c);
         col.addView(listArea, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         RadioPlayer.addListener(onChange);
         renderNowPlaying();
-        load(hasList ? 1 : 0);
+        load(first);
         return col;
     }
 
@@ -142,15 +155,16 @@ final class RadioScreen implements CarScreen {
         }
     }
 
-    /** 0: populares del directorio; 1: la lista M3U del usuario. */
+    /** 0: populares del directorio; 1 + i: la lista M3U i del usuario (queda elegida). */
     private void load(int source) {
         Context c = host.context();
         int seq = ++loadSeq;
-        String src = new Config(c).radioSource();
-        if (source == 1 && src.isEmpty()) {
+        if (source >= 1 && lists.length == 0) {
             showMessage(Str.get(R.string.hql_radio_setup_list));
             return;
         }
+        String src = source >= 1 ? lists[source - 1][1] : "";
+        if (source >= 1) new Config(c).setM3uSelected(Config.RADIO, source - 1);
         showMessage(source == 0 ? Str.get(R.string.hql_radio_loading_popular) : Str.get(R.string.hql_radio_loading_list));
         new Thread(() -> {
             List<RadioPlayer.Station> list = new ArrayList<>();
