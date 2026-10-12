@@ -986,4 +986,11 @@
     <string name="hql_tv_formats">M3U-lijsten of de JSON-lijst van TDTChannels (…/lists/tv.json), met ook de YouTube- en webzenders.</string>
     <string name="hql_tv_backup">reservebron</string>
     <string name="hql_tv_other_source">Andere bron</string>
+    <string name="hql_plan_cost">\u0020· ≈ %1$.0f € aan laden</string>
+    <string name="hql_speed_advice">Tip: met %1$d km/u bespaar je in totaal %2$s (%3$s langer rijden, %4$s korter laden).</string>
+    <string name="hql_speed_advice_stops">Tip: met %1$d km/u %2$d stops in plaats van %3$d (%4$s langer rijden, %5$s korter laden).</string>
+    <string name="hql_speed_advice_nostop">Tip: met %1$d km/u kom je zonder te stoppen aan (%2$s langer rijden, %3$s korter laden).</string>
+    <string name="hql_speed_advice_rescue">Met het plan haal je het niet: met %1$d km/u wel (%2$s langer rijden).</string>
+    <string name="hql_settings_price_fast">Prijs bij snelladen</string>
+    <string name="hql_settings_price_fast_help">Voor de kosten van het laadplan van de route (de stops bij snelladers).</string>
 </resources>

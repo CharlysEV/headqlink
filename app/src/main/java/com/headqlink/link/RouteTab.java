@@ -1281,6 +1281,26 @@ final class RouteTab implements CarScreen {
         chargePlan = planner.chargePlan(soc, capKwh, realSoc, reev(), charging);
     }
 
+    /** El consejo de velocidad (SpeedAdvice) debajo del resumen del plan, si lo hay. */
+    private void addSpeedAdvice(SpeedAdvice a) {
+        String t = speedText(a);
+        if (t == null) return;
+        TextView v = hint(t);
+        v.setTextColor(a.rescue ? CarKit.AMBER : CarKit.GREEN);
+        chargers.addView(v);
+    }
+
+    /** El texto del consejo de velocidad, o null. */
+    static String speedText(SpeedAdvice a) {
+        if (a == null) return null;
+        String drive = DriveTab.duration(Math.round(a.extraDriveMin * 60));
+        String charge = DriveTab.duration(Math.round(Math.max(0, a.chargeSavedMin) * 60));
+        if (a.rescue) return Str.get(R.string.hql_speed_advice_rescue, a.capKmh, drive);
+        if (a.stopsAfter == 0) return Str.get(R.string.hql_speed_advice_nostop, a.capKmh, drive, charge);
+        if (a.stopsAfter < a.stopsBefore) return Str.get(R.string.hql_speed_advice_stops, a.capKmh, a.stopsAfter, a.stopsBefore, drive, charge);
+        return Str.get(R.string.hql_speed_advice, a.capKmh, DriveTab.duration(Math.round(a.gainMin() * 60)), drive, charge);
+    }
+
     /** La sección del plan de carga encima de la lista de cargadores. */
     private void addPlan(RoutePlanner.Plan p) {
         ChargePlanner.Result cp = chargePlan;
@@ -1309,9 +1329,11 @@ final class RouteTab implements CarScreen {
                 ? Str.get(R.string.hql_plan_summary_stuck, cp.stops.size(), dur, cp.stops.get(cp.stops.size() - 1).km)
                 : cp.stops.size() == 1 ? Str.get(R.string.hql_plan_summary_one, dur, cp.arrivalPct)
                 : Str.get(R.string.hql_plan_summary_many, cp.stops.size(), dur, cp.arrivalPct);
+        if (cp.costEur >= 0.5) sum += Str.get(R.string.hql_plan_cost, cp.costEur);
         TextView s = CarStyle.text(ctx, sum, 22, cp.outcome == ChargePlanner.Outcome.PLANNED ? CarKit.TEXT : CarKit.AMBER);
         chargers.addView(s);
         addReplanNote(cp);
+        addSpeedAdvice(cp.speed);
         if (cp.outcome == ChargePlanner.Outcome.NO_CHARGER) chargers.addView(hint(Str.get(R.string.hql_plan_impossible)));
         int n = 1;
         for (ChargePlanner.Stop st : cp.stops) {

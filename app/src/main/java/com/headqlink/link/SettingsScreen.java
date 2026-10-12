@@ -353,11 +353,23 @@ final class SettingsScreen implements CarScreen {
 
         // Energía: €/kWh para el coste de los viajes y la pestaña Eficiencia.
         LinearLayout energy = card(c, Str.get(R.string.hql_settings_energy));
+        priceRow(c, energy, Str.get(R.string.hql_settings_price_kwh), Str.get(R.string.hql_settings_price_help),
+                cfg::electricityPrice, cfg::setElectricityPrice);
+        energy.addView(divider(c));
+        // La carga rápida, para lo que cuesta el plan de carga de la Ruta.
+        priceRow(c, energy, Str.get(R.string.hql_settings_price_fast), Str.get(R.string.hql_settings_price_fast_help),
+                cfg::fastChargePrice, cfg::setFastChargePrice);
+        col.addView(energy, cardLp());
+    }
+
+    /** Un precio (€/kWh) con − y + de céntimo en céntimo, y su explicación debajo. */
+    private void priceRow(Context c, LinearLayout card, String label, String help, java.util.function.DoubleSupplier get,
+                          java.util.function.DoubleConsumer set) {
         LinearLayout priceRow = new LinearLayout(c);
         priceRow.setOrientation(LinearLayout.HORIZONTAL);
         priceRow.setGravity(Gravity.CENTER_VERTICAL);
         priceRow.setPadding(0, 16, 0, 4);
-        TextView priceLabel = CarStyle.text(c, Str.get(R.string.hql_settings_price_kwh), 24, CarStyle.TEXT);
+        TextView priceLabel = CarStyle.text(c, label, 24, CarStyle.TEXT);
         priceRow.addView(priceLabel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView minus = CarStyle.pill(c, "−");
         TextView value = CarStyle.text(c, "", 32, CarStyle.TEXT);
@@ -373,23 +385,22 @@ final class SettingsScreen implements CarScreen {
         priceRow.addView(value);
         priceRow.addView(plus);
         Runnable showPrice = () -> {
-            value.setText(String.format(java.util.Locale.getDefault(), "%.2f €/kWh", cfg.electricityPrice()));
+            value.setText(String.format(java.util.Locale.getDefault(), "%.2f €/kWh", get.getAsDouble()));
             refreshSummaries();
         };
         showPrice.run();
         minus.setOnClickListener(v -> {
-            cfg.setElectricityPrice(cfg.electricityPrice() - 0.01);
+            set.accept(get.getAsDouble() - 0.01);
             showPrice.run();
         });
         plus.setOnClickListener(v -> {
-            cfg.setElectricityPrice(cfg.electricityPrice() + 0.01);
+            set.accept(get.getAsDouble() + 0.01);
             showPrice.run();
         });
-        energy.addView(priceRow);
-        TextView priceHelp = CarStyle.text(c, Str.get(R.string.hql_settings_price_help), 20, CarStyle.TEXT_DIM);
+        card.addView(priceRow);
+        TextView priceHelp = CarStyle.text(c, help, 20, CarStyle.TEXT_DIM);
         priceHelp.setPadding(4, 8, 0, 0);
-        energy.addView(priceHelp);
-        col.addView(energy, cardLp());
+        card.addView(priceHelp);
     }
 
     // ------------------------------------------------------------------ Conexión

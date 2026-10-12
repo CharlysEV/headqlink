@@ -63,6 +63,8 @@ final class RoutePlanner {
         double[] elev;
         double[] headwind;
         double[] temp;
+        /** Segundos de cada tramo (el i va del punto i-1 al i), con los que se calculó su velocidad y su gasto. */
+        double[] segS;
         double[] kwhCum;
         /** La parte de kwhCum que se debe a las cuestas (kWh acumulados; negativa si se recupera bajando). */
         double[] gravCum;
@@ -718,6 +720,10 @@ final class RoutePlanner {
             double from = pl.km[prog];
             ChargePlanner.Result r = ChargePlanner.plan(pl.km, ChargePlanner.scaled(pl.km, pl.kwhCum, from, f), from, soc, list, s, keep);
             r.trend = f;
+            // Lo que cuestan las paradas y si yendo más despacio sale mejor (SpeedAdvice).
+            r.costEur = ChargePlanner.cost(r, c.fastChargePrice());
+            r.speed = SpeedAdvice.best(pl, r, list, s);
+            logSpeed(r.speed);
             // Cargando (en una parada del plan o en otra), el plan cambia sin avisar: lo ha decidido el conductor.
             ChargePlanner.Change change = same && !charging ? ChargePlanner.change(charge, r) : ChargePlanner.Change.NONE;
             ChargePlanner.Result before = charge;
@@ -733,6 +739,19 @@ final class RoutePlanner {
             if (change != ChargePlanner.Change.NONE) alert(change, before, r);
             return r;
         }
+    }
+
+    private String speedLogged = "";
+
+    /** El consejo de velocidad, al registro cuando cambia. */
+    private void logSpeed(SpeedAdvice a) {
+        String k = a == null ? "" : a.capKmh + "/" + a.stopsAfter + "/" + Math.round(a.gainMin());
+        if (k.equals(speedLogged)) return;
+        speedLogged = k;
+        if (a == null) return;
+        L.i(String.format(Locale.US, "ruta: consejo de velocidad: a %d km/h, %d → %d paradas, +%.0f min conduciendo, −%.0f min "
+                        + "cargando (%+.0f min en total)%s", a.capKmh, a.stopsBefore, a.stopsAfter, a.extraDriveMin, a.chargeSavedMin,
+                -a.gainMin(), a.rescue ? ", y así se llega" : ""));
     }
 
     /** Los márgenes del plan y lo que se sabe del coche. */
@@ -1167,6 +1186,7 @@ final class RoutePlanner {
             p.totalSeconds = Math.round(p.totalSeconds * f);
             p.googleTime = true;
         }
+        p.segS = segS;
 
         // 3. Elevación (Open-Meteo, 100 puntos por petición), suavizada.
         p.elev = new double[n];

@@ -987,4 +987,11 @@
     <string name="hql_tv_formats">Listas M3U ou a lista JSON do TDTChannels (…/lists/tv.json), que também traz os canais do YouTube e da web.</string>
     <string name="hql_tv_backup">fonte reserva</string>
     <string name="hql_tv_other_source">Outra fonte</string>
+    <string name="hql_plan_cost">\u0020· ≈ %1$.0f € em recargas</string>
+    <string name="hql_speed_advice">Dica: a %1$d km/h você economiza %2$s no total (%3$s a mais dirigindo, %4$s a menos carregando).</string>
+    <string name="hql_speed_advice_stops">Dica: a %1$d km/h, %2$d paradas em vez de %3$d (%4$s a mais dirigindo, %5$s a menos carregando).</string>
+    <string name="hql_speed_advice_nostop">Dica: a %1$d km/h você chega sem parar (%2$s a mais dirigindo, %3$s a menos carregando).</string>
+    <string name="hql_speed_advice_rescue">Com o plano você não chega: a %1$d km/h chega (%2$s a mais dirigindo).</string>
+    <string name="hql_settings_price_fast">Preço na recarga rápida</string>
+    <string name="hql_settings_price_fast_help">Para o custo do plano de recarga da rota (as paradas em carregadores rápidos).</string>
 </resources>

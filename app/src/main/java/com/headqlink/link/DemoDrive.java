@@ -286,6 +286,7 @@ final class DemoDrive {
         p.elev = new double[n];
         p.headwind = new double[n];
         p.temp = new double[n];
+        p.segS = new double[n];
         p.kwhCum = new double[n];
         p.gravCum = new double[n];
         p.totalKm = total;
@@ -310,6 +311,7 @@ final class DemoDrive {
                 double v = km > 520 ? 60 : 110;
                 double grade = Math.max(-15, Math.min(15, (p.elev[i] - p.elev[i - 1]) / (dkm * 1000) * 100));
                 double s = dkm / v * 3600;
+                p.segS[i] = s;
                 secs += s;
                 double kw = m.compute(v, grade, p.headwind[i], p.temp[i], 0);
                 double flat = m.compute(v, 0, p.headwind[i], p.temp[i], 0);

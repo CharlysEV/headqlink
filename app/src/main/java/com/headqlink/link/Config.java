@@ -494,6 +494,15 @@ final class Config {
         sp.edit().putFloat("price_kwh", (float) Math.max(0, Math.min(1, Math.round(eurPerKwh * 100) / 100.0))).apply();
     }
 
+    /** €/kWh en los cargadores rápidos, para lo que cuesta el plan de carga (Ajustes del coche), entre 0 y 1,5 €. */
+    double fastChargePrice() {
+        return sp.getFloat("price_fast_kwh", 0.49f);
+    }
+
+    void setFastChargePrice(double eurPerKwh) {
+        sp.edit().putFloat("price_fast_kwh", (float) Math.max(0, Math.min(1.5, Math.round(eurPerKwh * 100) / 100.0))).apply();
+    }
+
     double fuelPrice() {
         return sp.getFloat("price_fuel", 1.60f);
     }

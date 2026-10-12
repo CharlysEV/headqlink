@@ -75,6 +75,10 @@ final class ChargePlanner {
         double trend = 1;
         /** Voltaje de la batería del coche con el que se calculó (V). */
         double carVolts = 400;
+        /** Lo que cuestan las paradas (€, con el precio de la carga rápida); NaN si no se ha calculado. */
+        double costEur = Double.NaN;
+        /** Si yendo más despacio sale mejor (SpeedAdvice), o null. */
+        SpeedAdvice speed;
 
         Result(Outcome outcome, List<Stop> stops, double arrivalPct, double[] km, double[] kwhCum, double fromKm, double socNow,
                double capacityKwh) {
@@ -108,6 +112,14 @@ final class ChargePlanner {
             for (Stop s : stops) if (s.km > fromKm + HERE_KM) return s;
             return null;
         }
+    }
+
+    /** Puro: lo que cuestan las paradas del plan (€): lo que da el cargador (con las pérdidas de la carga) por el precio. */
+    static double cost(Result r, double eurPerKwh) {
+        if (r == null || !(eurPerKwh >= 0)) return Double.NaN;
+        double kwh = 0;
+        for (Stop s : r.stops) kwh += s.kwh;
+        return kwh / CHARGE_EFF * eurPerKwh;
     }
 
     /** Minutos que se pierden en cada parada aparte de cargar (aparcar, enchufar, pagar). */
