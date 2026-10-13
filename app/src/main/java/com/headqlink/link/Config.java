@@ -352,6 +352,16 @@ final class Config {
         return sp.getBoolean(BT_AUTO, false);
     }
 
+    /**
+     * Arrancar el enlace solo al enchufar el cable del coche (UsbAccessoryActivity); encendido de serie. Apagado, al
+     * enchufar no se hace nada hasta pulsar «Conectar» (que coge el cable ya puesto).
+     */
+    static final String USB_AUTO = "usb_auto";
+
+    boolean usbAutoConnect() {
+        return sp.getBoolean(USB_AUTO, true);
+    }
+
     /** Texto que debe contener el nombre Bluetooth del coche (sin distinguir mayúsculas). */
     String btAutoName() {
         return sp.getString(BT_AUTO_NAME, "Leapmotor_BT");

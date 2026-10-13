@@ -1025,4 +1025,6 @@
     <string name="hql_backup_invalid">Diese Datei ist keine Qonecta+-Einstellungssicherung</string>
     <string name="hql_backup_confirm">Die Datei enthält %1$d Einstellungen: %2$d TV-Listen, %3$d Radiolisten, %4$d Favoriten und %5$d Web-Lesezeichen. Sie ersetzen die auf diesem Handy; alles andere bleibt, wie es ist.</string>
     <string name="hql_backup_done">Einstellungen importiert. Bild- und Verbindungseinstellungen gelten ab der nächsten Verbindung.</string>
+    <string name="hql_usb_auto_switch">Verbinden, wenn das Autokabel eingesteckt wird</string>
+    <string name="hql_usb_auto_off">Beim Einstecken passiert nichts: tippe auf Verbinden, wenn du willst. Öffnet Android mit dem Kabel immer Qonecta+ und du willst QDLink nutzen, entferne „Standardmäßig öffnen“ in den App-Einstellungen.</string>
 </resources>

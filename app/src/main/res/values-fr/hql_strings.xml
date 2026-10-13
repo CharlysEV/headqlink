@@ -1026,4 +1026,6 @@
     <string name="hql_backup_invalid">Ce fichier n\'est pas une sauvegarde de réglages Qonecta+</string>
     <string name="hql_backup_confirm">Le fichier contient %1$d réglages : %2$d listes TV, %3$d radio, %4$d favoris et %5$d marque-pages web. Ils remplacent ceux de ce téléphone ; le reste ne change pas.</string>
     <string name="hql_backup_done">Réglages importés. Ceux de l\'image et de la connexion s\'appliquent à la prochaine connexion.</string>
+    <string name="hql_usb_auto_switch">Se connecter en branchant le câble de la voiture</string>
+    <string name="hql_usb_auto_off">Brancher le câble ne fera rien : appuie sur Connecter quand tu veux. Si Android ouvre toujours Qonecta+ avec le câble et que tu veux utiliser QDLink, retire « Ouvrir par défaut » dans les réglages de l\'appli.</string>
 </resources>

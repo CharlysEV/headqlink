@@ -1030,4 +1030,6 @@
     <string name="hql_backup_invalid">That file is not a Qonecta+ settings backup</string>
     <string name="hql_backup_confirm">The file has %1$d settings: %2$d TV lists, %3$d radio lists, %4$d favourites and %5$d web bookmarks. They replace the ones on this phone; anything it does not have stays as it is.</string>
     <string name="hql_backup_done">Settings imported. Picture and connection changes apply the next time you connect.</string>
+    <string name="hql_usb_auto_switch">Connect when the car cable is plugged in</string>
+    <string name="hql_usb_auto_off">Plugging in the cable will do nothing: tap Connect when you want it. If Android always opens Qonecta+ with the cable and you want to use QDLink, remove "Open by default" in the app settings.</string>
 </resources>

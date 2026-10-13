@@ -139,6 +139,19 @@
                 android:text="@string/hql_bt_auto_switch"
                 android:textColor="@color/hql_text"
                 android:textSize="15sp" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/hql_home_usb_auto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_usb"
+                android:drawablePadding="14dp"
+                android:drawableTint="@color/hql_accent"
+                android:minHeight="60dp"
+                android:paddingEnd="12dp"
+                android:text="@string/hql_usb_auto_switch"
+                android:textColor="@color/hql_text"
+                android:textSize="15sp" />
         </LinearLayout>
 
         <!-- Estado -->

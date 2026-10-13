@@ -43,6 +43,11 @@ public final class UsbAccessoryActivity extends Activity {
             UsbProbe.warn("aviso de accesorio sin permiso y que no está conectado: lo ignoro");
             return;
         }
+        if (!LinkState.running && !new Config(this).usbAutoConnect()) {
+            // El usuario lo ha apagado (pantalla principal): el cable se queda sin usar hasta que pulse «Conectar».
+            UsbProbe.step("accesorio " + UsbProbe.shortName(acc) + " conectado: conexión automática por cable apagada, no arranco");
+            return;
+        }
         Intent svc = new Intent(this, LinkService.class)
                 .setAction(LinkService.ACTION_USB_ATTACHED)
                 .putExtra(UsbManager.EXTRA_ACCESSORY, acc);

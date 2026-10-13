@@ -94,6 +94,13 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         btAuto = findViewById(R.id.hql_home_bt_auto);
         btAuto.setChecked(cfg.btAutoConnect());
         btAuto.setOnCheckedChangeListener((b2, on) -> setBtAuto(on));
+        com.google.android.material.materialswitch.MaterialSwitch usbAuto = findViewById(R.id.hql_home_usb_auto);
+        usbAuto.setChecked(cfg.usbAutoConnect());
+        usbAuto.setOnCheckedChangeListener((b2, on) -> {
+            cfg.putBool(Config.USB_AUTO, on);
+            L.i("conexión automática por cable: " + (on ? "sí" : "no"));
+            if (!on) android.widget.Toast.makeText(this, Str.get(R.string.hql_usb_auto_off), android.widget.Toast.LENGTH_LONG).show();
+        });
 
         live = findViewById(R.id.hql_home_live);
         liveDot = findViewById(R.id.hql_home_live_dot);

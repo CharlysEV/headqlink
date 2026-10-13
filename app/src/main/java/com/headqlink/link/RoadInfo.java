@@ -55,6 +55,8 @@ final class RoadInfo {
     private int limit = -1;
     private boolean limitEst;
     private String road = "";
+    /** La vía por la que se va es de sentido único (una calzada de autovía): el radar sin sentido conocido a la izquierda es de la de enfrente. */
+    private volatile boolean roadOneway;
 
     /** Modo demostración: la vía es la del guion (DemoMode), sin consultas a OpenStreetMap. */
     private final boolean demo;
@@ -176,7 +178,7 @@ final class RoadInfo {
         if (s.speedKmh > 5) {
             synchronized (cameras) {
                 for (double[] c : cameras) {
-                    double ahead = aheadOnRoad(s.lat, s.lon, s.headingDeg, c[0], c[1], c[3]);
+                    double ahead = aheadOnRoad(s.lat, s.lon, s.headingDeg, c[0], c[1], c[3], roadOneway);
                     if (ahead >= 0 && (st.cameraM < 0 || ahead < st.cameraM)) {
                         st.cameraM = ahead;
                         st.cameraLimit = (int) c[2];
@@ -232,9 +234,11 @@ final class RoadInfo {
         if (best == null) {
             limit = -1;
             road = "";
+            roadOneway = false;
             return;
         }
         JSONObject tags = best.getJSONObject("tags");
+        roadOneway = oneway(tags) != 0;
         road = firstNonEmpty(tags.optString("name"), tags.optString("ref"));
         int l = parseLimit(tags.optString("maxspeed"));
         if (l > 0) {
@@ -248,20 +252,34 @@ final class RoadInfo {
 
     /**
      * Radares en 15 km, con las vías en las que están: de la vía sale su sentido (en una autovía, cada calzada es de un
-     * sentido; el radar de la de enfrente no es para nosotros).
+     * sentido; el radar de la de enfrente no es para nosotros). Y sus relaciones de control (type=enforcement): el punto
+     * «from» (donde empieza lo vigilado) da el sentido de los radares que no lo llevan ni están en una vía de un sentido,
+     * que son la mayoría.
      */
     private void loadCameras(double lat, double lon) throws Exception {
         String q = String.format(Locale.US, "[out:json][timeout:25];node[\"highway\"=\"speed_camera\"](around:15000,%.5f,%.5f)->.c;"
-                + ".c out body;way(bn.c)[\"highway\"];out tags geom;", lat, lon);
+                + ".c out body;way(bn.c)[\"highway\"];out tags geom;"
+                + "rel(bn.c)[\"type\"=\"enforcement\"]->.r;.r out body;(node(r.r);- node.c;);out skel;", lat, lon);
         JSONArray els = new JSONObject(Http.overpass(q))
                 .getJSONArray("elements");
         List<JSONObject> nodes = new ArrayList<>();
         List<JSONObject> ways = new ArrayList<>();
+        List<JSONObject> rels = new ArrayList<>();
+        java.util.Map<Long, double[]> points = new java.util.HashMap<>();
         for (int i = 0; i < els.length(); i++) {
             JSONObject e = els.getJSONObject(i);
-            if ("node".equals(e.optString("type"))) nodes.add(e);
-            else if ("way".equals(e.optString("type"))) ways.add(e);
+            String type = e.optString("type");
+            if ("node".equals(type)) {
+                JSONObject t = e.optJSONObject("tags");
+                if (t != null && "speed_camera".equals(t.optString("highway"))) nodes.add(e);
+                points.put(e.optLong("id"), new double[]{e.optDouble("lat"), e.optDouble("lon")});
+            } else if ("way".equals(type)) {
+                ways.add(e);
+            } else if ("relation".equals(type)) {
+                rels.add(e);
+            }
         }
+        int fromRel = 0;
         List<double[]> list = new ArrayList<>();
         int withDir = 0;
         for (JSONObject e : nodes) {
@@ -287,6 +305,10 @@ final class RoadInfo {
                 if (!Double.isNaN(wayBrg)) break;
             }
             double dir = cameraDirection(dirTag, wayBrg, oneway);
+            if (Double.isNaN(dir)) {
+                dir = relationDirection(e.optLong("id"), la, lo, rels, points);
+                if (!Double.isNaN(dir)) fromRel++;
+            }
             if (!Double.isNaN(dir)) withDir++;
             list.add(new double[]{la, lo, t != null ? parseLimit(t.optString("maxspeed")) : -1, dir});
         }
@@ -294,7 +316,34 @@ final class RoadInfo {
             cameras.clear();
             cameras.addAll(list);
         }
-        L.i("vía: " + list.size() + " radares en 15 km (" + withDir + " con sentido conocido)");
+        L.i("vía: " + list.size() + " radares en 15 km (" + withDir + " con sentido conocido, " + fromRel + " por su relación de control)");
+    }
+
+    /**
+     * Puro: sentido de un radar por su relación de control (type=enforcement): de «from» (donde empieza lo vigilado) al
+     * radar o, si no hay «from», del radar a «to». NaN si no está en ninguna o los puntos están encima del radar.
+     */
+    static double relationDirection(long camId, double la, double lo, List<JSONObject> rels, java.util.Map<Long, double[]> points) {
+        for (JSONObject r : rels) {
+            JSONArray ms = r.optJSONArray("members");
+            if (ms == null) continue;
+            boolean device = false;
+            double[] from = null;
+            double[] to = null;
+            for (int i = 0; i < ms.length(); i++) {
+                JSONObject m = ms.optJSONObject(i);
+                if (m == null || !"node".equals(m.optString("type"))) continue;
+                String role = m.optString("role");
+                long ref = m.optLong("ref");
+                if ("device".equals(role) && ref == camId) device = true;
+                else if ("from".equals(role) && from == null) from = points.get(ref);
+                else if ("to".equals(role) && to == null) to = points.get(ref);
+            }
+            if (!device) continue;
+            if (from != null && dist(from[0], from[1], la, lo) > 10) return bearing(from[0], from[1], la, lo);
+            if (to != null && dist(la, lo, to[0], to[1]) > 10) return bearing(la, lo, to[0], to[1]);
+        }
+        return Double.NaN;
     }
 
     /** Puro: 1 si la vía es de sentido único en el de su dibujo, -1 si al revés, 0 si de doble sentido. */
@@ -338,13 +387,24 @@ final class RoadInfo {
      * radar a ±25° del rumbo, que a 1 km son 400 m a cada lado: los de otras carreteras y calles cercanas.
      */
     static double aheadOnRoad(double lat, double lon, double heading, double camLat, double camLon, double camDir) {
+        return aheadOnRoad(lat, lon, heading, camLat, camLon, camDir, false);
+    }
+
+    /**
+     * Igual, sabiendo si se va por una vía de un solo sentido (una calzada de autovía o autopista). Ahí, un radar sin
+     * sentido conocido que queda claramente a la izquierda (más de 12 m, y algo más de lejos) está en la calzada de
+     * enfrente (se circula por la derecha): no es para nosotros.
+     */
+    static double aheadOnRoad(double lat, double lon, double heading, double camLat, double camLon, double camDir, boolean onewayRoad) {
         double d = dist(lat, lon, camLat, camLon);
         if (d > AHEAD_M) return -1;
         double diff = Math.toRadians(((bearing(lat, lon, camLat, camLon) - heading) + 540) % 360 - 180);
         double along = d * Math.cos(diff);
-        double cross = Math.abs(d * Math.sin(diff));
+        double side = d * Math.sin(diff); // + a la derecha, − a la izquierda
+        double cross = Math.abs(side);
         if (along <= 0 || cross > 25 + 0.08 * along) return -1;
         if (!Double.isNaN(camDir) && Math.abs(((camDir - heading) + 540) % 360 - 180) > 60) return -1;
+        if (Double.isNaN(camDir) && onewayRoad && -side > 12 + 0.02 * along) return -1;
         return along;
     }
 

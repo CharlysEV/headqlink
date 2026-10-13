@@ -1026,4 +1026,6 @@
     <string name="hql_backup_invalid">Esse ficheiro não é uma cópia de definições do Qonecta+</string>
     <string name="hql_backup_confirm">O ficheiro tem %1$d definições: %2$d listas de TV, %3$d de rádio, %4$d favoritos e %5$d marcadores da web. Substituem as deste telemóvel; o que não vier no ficheiro fica como está.</string>
     <string name="hql_backup_done">Definições importadas. As de imagem e ligação aplicam-se na próxima ligação.</string>
+    <string name="hql_usb_auto_switch">Ligar ao ligar o cabo do carro</string>
+    <string name="hql_usb_auto_off">Ao ligar o cabo, nada acontece: toca em Ligar quando quiseres. Se o Android abre sempre o Qonecta+ com o cabo e queres usar o QDLink, retira «Abrir por predefinição» nas definições da app.</string>
 </resources>

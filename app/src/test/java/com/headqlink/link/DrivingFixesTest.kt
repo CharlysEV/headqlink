@@ -36,6 +36,36 @@ class DrivingFixesTest {
     }
 
     @Test
+    fun unknownDirectionCameraOnTheLeftOfAMotorwayIsTheOtherCarriageway() {
+        val ahead = lat + 400 * mLat
+        // Por una calzada de un sentido: a 25 m a la izquierda (la de enfrente), no; a la derecha o encima, sí.
+        assertEquals(-1.0, RoadInfo.aheadOnRoad(lat, lon, 0.0, ahead, lon - 25 * mLon, Double.NaN, true), 0.0)
+        assertEquals(400.0, RoadInfo.aheadOnRoad(lat, lon, 0.0, ahead, lon + 15 * mLon, Double.NaN, true), 2.0)
+        assertEquals(400.0, RoadInfo.aheadOnRoad(lat, lon, 0.0, ahead, lon - 5 * mLon, Double.NaN, true), 2.0)
+        // En una carretera de doble sentido no se sabe: vale.
+        assertEquals(400.0, RoadInfo.aheadOnRoad(lat, lon, 0.0, ahead, lon - 25 * mLon, Double.NaN, false), 2.0)
+    }
+
+    @Test
+    fun enforcementRelationGivesTheDirection() {
+        val rel = org.json.JSONObject(
+            """{"type":"relation","id":1,"members":[{"type":"node","ref":10,"role":"device"},
+               {"type":"node","ref":11,"role":"from"},{"type":"node","ref":12,"role":"to"}]}"""
+        )
+        val cam = doubleArrayOf(lat + 500 * mLat, lon)
+        // Lo vigilado empieza 300 m al sur: el radar es para quien va hacia el norte.
+        val points = hashMapOf(11L to doubleArrayOf(lat + 200 * mLat, lon), 12L to doubleArrayOf(lat + 520 * mLat, lon))
+        assertEquals(0.0, RoadInfo.relationDirection(10, cam[0], cam[1], listOf(rel), points), 0.5)
+        // Sin «from»: del radar a «to».
+        val onlyTo = hashMapOf(12L to doubleArrayOf(lat + 400 * mLat, lon))
+        assertEquals(180.0, RoadInfo.relationDirection(10, cam[0], cam[1], listOf(rel), onlyTo), 0.5)
+        // Otro radar o puntos encima del radar: no se sabe.
+        assertTrue(RoadInfo.relationDirection(99, cam[0], cam[1], listOf(rel), points).isNaN())
+        val onTop = hashMapOf(11L to doubleArrayOf(cam[0], cam[1]))
+        assertTrue(RoadInfo.relationDirection(10, cam[0], cam[1], listOf(rel), onTop).isNaN())
+    }
+
+    @Test
     fun cameraForTheOtherCarriagewayIsSkipped() {
         val ahead = lat + 400 * mLat
         assertEquals(-1.0, RoadInfo.aheadOnRoad(lat, lon, 0.0, ahead, lon + 15 * mLon, 180.0), 0.0)
