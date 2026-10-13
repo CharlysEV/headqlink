@@ -2714,3 +2714,37 @@ Tras un inventario de todas las pantallas del móvil: los diálogos ya eran Mate
 - **Probado en casa** (carsim por Wi-Fi pidiendo 1920x882 a 60 fps, modo ampliado, AA 17.7): SPS High 4.2 con CABAC, 1 SPS/PPS, mensaje máximo de 110 KB, sin cortes, y ffmpeg descodifica todo sin errores; 30 fps en reposo y 59,6 tocando.
 - **Sin hacer, a propósito:** frenar a Android Auto (retener sus acks) en reposo. Por cable AA no respeta la ventana anunciada (12 → 120 mensajes de atraso) y un IDR ocupa una docena de mensajes: arriesga atascar la imagen.
 - **Pendiente:** probarlo en el C10 por cable (que el coche acepte High; fluidez; calor del móvil).
+
+## 39. Calor: estudio del enlace por Wi-Fi y lote 1 (2026-10-13)
+
+Dos lecturas completas del código (enlace Wi-Fi y fuentes de calor) y una comparativa con las tablas de sesiones de
+cuatro móviles. Conclusiones:
+
+- Nada del vídeo depende del modo de conexión: por Wi-Fi el C10 pide 30 fps y 5,08 Mbit/s; por cable, 60 fps. La otra
+  diferencia es el socket TCP (cola del kernel, rtt, retransmisiones), que por cable no existe.
+- Datos reales (sesiones con vídeo ≥ 2 min): cable 66 sesiones / 17 h, 33 fps, 0,5 cortes/h, escritura 17 ms (mediana);
+  zona Wi-Fi 58 sesiones / 9 h, 24 fps, 8-31 cortes/h, escritura 241 ms, techo 3,5 Mbit/s en el HONOR y 5.762
+  retransmisiones TCP en 83 min; Wi-Fi Direct: ninguna sesión en ningún log. En el mismo móvil (HONOR), el estado
+  térmico estuvo en «grave» o peor el 45-80 % del tiempo por Wi-Fi y el 3-18 % por cable.
+- El control de bitrate hace diente de sierra en radio ruidosa (+25 % cada 3 s limpios, ×0,75 con congestión: un ciclo
+  cada ~10 s). La banda del hotspot no se puede leer (permiso de sistema): sale siempre «desconocida».
+
+**Lote 1 (766637f2):** `Config.DIAG_TRACE` («Traza detallada», apagada de serie) manda sobre la línea por fotograma del
+qd-log, el volcado de los toques, PerfTrace, el logcat completo y los contadores sysfs; los escritores de log vacían
+como mucho una vez por segundo; el monitor de red va a 100 ms y las puertas leen solo SIOCOUTQ (`NetStat.outq`);
+el escaneo de interfaces baja a 30 s con el coche conectado; sensores del modo extendido a ritmo de interfaz y GPS a
+2 Hz; AapService no coge bloqueos de Wi-Fi para la sesión local y LinkService solo con el enlace por Wi-Fi.
+
+**Medida (S25 Ultra, coche virtual por Wi-Fi a 30 fps, 214 s, perfil Máximo, app a la vista):** antes 26,9 s de CPU
+del proceso (12,6 % de un núcleo), después 28,1 s: sin diferencia medible; estado térmico 0 en las dos. Las trazas
+estaban de verdad apagadas (sin perf-*.csv, 0 líneas VIDEO_P, log de 113 KB frente a 825 KB). Reparto por hilos con
+la app a la vista: RenderThread 24 % (la animación continua del punto «En directo» de HomeActivity, corregida en el
+mismo lote: un fundido de 300 ms cada 2 s), MediaCodec_loop 14 %, c10-gl 9 %, AapTransport 7 %. Con la app en segundo
+plano: 9,6 % de un núcleo, de los que ~47 % son los hilos de los códecs (decodificar AA, codificar para el coche),
+14 % el relé GL, 10 % el descifrado TLS de AA y ~15 % binder. Logs, sensores y sondeos no aparecen entre los
+primeros: el lote 1 es higiene (30 MB/día menos de escrituras, menos despertares), no la palanca del calor.
+
+**Siguiente palanca (lote 3):** el volumen de la cadena de vídeo: AA al ritmo y resolución de lo que se envía (hoy
+AA puede ir a 60 fps y 1080p mientras se codifica a 30 y 720p) y el suelo del keep-alive (10 fps con AA quieto).
+Lote 2 (Wi-Fi): bitrate a 720p (hoy el mismo que a 1080p), objetivo de IDR según el bitrate, subida más lenta tras
+congestiones repetidas y recomendar 5 GHz.

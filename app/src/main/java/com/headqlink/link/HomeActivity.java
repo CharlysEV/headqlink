@@ -352,21 +352,39 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         live.setContentDescription(Str.get(R.string.hql_live) + ": " + video);
     }
 
-    /** El punto de «En directo» late mientras llega vídeo. */
+    /**
+     * El punto de «En directo» late mientras llega vídeo: un fundido de 300 ms cada 2 s. Antes era una animación continua
+     * (900 ms ida y vuelta, sin fin), que con la app a la vista hacía redibujar la pantalla a 120 Hz todo el rato: en una
+     * medida del 2026-10-13 era un tercio de la CPU del proceso durante la proyección.
+     */
     private void pulse(boolean on) {
         if (on) {
             if (livePulse == null) {
                 livePulse = android.animation.ObjectAnimator.ofFloat(liveDot, View.ALPHA, 1f, 0.25f);
-                livePulse.setDuration(900);
-                livePulse.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+                livePulse.setDuration(300);
+                livePulse.setRepeatCount(1);
                 livePulse.setRepeatMode(android.animation.ValueAnimator.REVERSE);
             }
-            if (!livePulse.isStarted()) livePulse.start();
-        } else if (livePulse != null) {
-            livePulse.cancel();
+            pulsing = true;
+            liveDot.removeCallbacks(pulseTick);
+            liveDot.post(pulseTick);
+        } else {
+            pulsing = false;
+            liveDot.removeCallbacks(pulseTick);
+            if (livePulse != null) livePulse.cancel();
             liveDot.setAlpha(1f);
         }
     }
+
+    private boolean pulsing;
+    private final Runnable pulseTick = new Runnable() {
+        @Override
+        public void run() {
+            if (!pulsing || livePulse == null) return;
+            if (!livePulse.isStarted()) livePulse.start();
+            liveDot.postDelayed(this, 2000);
+        }
+    };
 
     private View statusRow(LinearLayout parent, String name, int icon) {
         if (parent.getChildCount() > 0) {
