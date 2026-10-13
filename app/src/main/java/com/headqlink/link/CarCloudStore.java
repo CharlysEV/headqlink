@@ -162,6 +162,40 @@ final class CarCloudStore {
         return true;
     }
 
+    /**
+     * Puro: el perfil que corresponde al CarType del CAR_INFO del coche: «2D6» es el T03 (visto el 2026-10-13); «2D4» y
+     * «2D5» el C10 (volante a la izquierda o a la derecha; no distingue Life, ProMax ni REEV). null: no se sabe.
+     */
+    static String profileForCarType(String code) {
+        if (code == null) return null;
+        String c = code.trim().toUpperCase(java.util.Locale.ROOT);
+        if ("2D6".equals(c)) return PROFILE_T03;
+        if ("2D4".equals(c) || "2D5".equals(c)) return PROFILE_C10_LIFE;
+        return null;
+    }
+
+    /**
+     * Puro: con el perfil de ahora y el CarType del coche, el perfil que debería haber, o null si se deja como está: sin
+     * perfil, el del coche; un T03 con perfil de C10 (o al revés), el del coche; un perfil «a mano», nunca. Entre Life,
+     * ProMax y REEV no se cambia (el código no los distingue).
+     */
+    static String adoptFor(String current, String code) {
+        String want = profileForCarType(code);
+        if (want == null || PROFILE_CUSTOM.equals(current)) return null;
+        if (current == null || current.isEmpty()) return want;
+        boolean curT03 = PROFILE_T03.equals(current);
+        boolean wantT03 = PROFILE_T03.equals(want);
+        return curT03 != wantT03 ? want : null;
+    }
+
+    /** El coche dice qué es (CAR_INFO CarType): si hace falta, se pasa a su perfil. true si ha cambiado. */
+    boolean adoptCarInfoType(String code) {
+        String p = adoptFor(profile(), code);
+        if (p == null) return false;
+        setProfile(p, 0);
+        return true;
+    }
+
     /** Puro: ¿el «carType» de la cuenta de Leapmotor es un T03? */
     static boolean isT03(String type) {
         return type != null && type.trim().toUpperCase(java.util.Locale.ROOT).startsWith("T03");

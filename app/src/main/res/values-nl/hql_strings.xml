@@ -997,4 +997,18 @@
     <string name="hql_profile_best_detail">Voor de kabel: 60 fps, volledige resolutie, 12-16 Mbit/s, H.264 High en encoder met lage latentie. De telefoon wordt warmer. Blijft het autoscherm zwart, ga dan terug naar Volgens de auto.</string>
     <string name="hql_speed_advice_stops_total">Tip: met %1$d km/u %2$d stops in plaats van %3$d (in totaal %4$s langer).</string>
     <string name="hql_route_flat">Nu geen hoogtegegevens: de schatting houdt geen rekening met hellingen.</string>
+    <string name="hql_usb_cut_title">De auto heeft de USB-stroom afgesloten</string>
+    <string name="hql_usb_cut_text">%1$d s lang had de kabel geen stroom; dat deed de auto, en Qonecta+ heeft zichzelf opnieuw verbonden. Gebeurt het vaak, probeer dan een kortere datakabel zonder adapters.</string>
+    <string name="hql_usb_silent_title">De auto praat niet over de kabel</string>
+    <string name="hql_usb_silent_text">Er komt niets van de auto. Haal de kabel los en steek hem opnieuw in; blijft het zo, gebruik dan een datakabel (geen laadkabel).</string>
+    <string name="hql_usb_early_title">De auto herstart USB meteen na het verbinden</string>
+    <string name="hql_usb_early_text">Drie keer achter elkaar verbrak de auto de verbinding na enkele seconden. Qonecta+ blijft proberen; een andere kabel of poort lost het meestal op.</string>
+    <string name="hql_fav_none">Nog geen favorieten. Houd een zender ingedrukt om hem hier toe te voegen.</string>
+    <string name="hql_trip_notice">Ritsamenvatting bij verbreken</string>
+    <string name="hql_trip_notice_help">Een melding op de telefoon met fps, herverbindingen, warmte en hoe goed de route klopte.</string>
+    <string name="hql_trip_notice_channel">Ritsamenvatting</string>
+    <string name="hql_trip_notice_title">Rit voorbij · %1$s</string>
+    <string name="hql_trip_notice_video">%1$.0f fps gemiddeld · %2$d herverbindingen · %3$d onderbrekingen</string>
+    <string name="hql_trip_notice_heat">warmte: niveau %1$d max. · %2$.0f °C</string>
+    <string name="hql_trip_notice_route">route: %1$.1f kWh geschat, %2$.1f echt</string>
 </resources>

@@ -34,6 +34,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -87,6 +90,7 @@ final class IptvScreen implements CarScreen {
         Context c = h.context();
         Config cfg = new Config(c);
         lists = cfg.m3uLists(Config.IPTV);
+        favs = Favorites.load(cfg, Favorites.TV);
         if (lists.length == 0) {
             return CarStyle.message(c, Str.get(R.string.hql_tv_setup_list));
         }
@@ -173,10 +177,12 @@ final class IptvScreen implements CarScreen {
         hs.addView(chips);
         List<TextView> chipViews = new ArrayList<>();
         List<String> names = new ArrayList<>();
+        // ★ (favoritos, de cualquier lista), Todos y los grupos de la lista.
+        names.add(FAV_GROUP);
         names.add(null);
         names.addAll(groups);
         for (String g : names) {
-            TextView chip = CarStyle.pill(c, g == null ? Str.get(R.string.hql_all) : g);
+            TextView chip = CarStyle.pill(c, g == null ? Str.get(R.string.hql_all) : FAV_GROUP.equals(g) ? "★" : g);
             chipViews.add(chip);
             chip.setOnClickListener(v -> {
                 for (TextView o : chipViews) o.setBackground(CarStyle.round(o == chip ? CarStyle.ACCENT_BG : CarStyle.PILL_BG, 28));
@@ -184,8 +190,8 @@ final class IptvScreen implements CarScreen {
             });
             chips.addView(chip);
         }
-        if (!chipViews.isEmpty()) chipViews.get(0).setBackground(CarStyle.round(CarStyle.ACCENT_BG, 28));
-        if (!groups.isEmpty()) col.addView(hs);
+        if (chipViews.size() > 1) chipViews.get(1).setBackground(CarStyle.round(CarStyle.ACCENT_BG, 28));
+        col.addView(hs);
 
         RecyclerView rv = new RecyclerView(c);
         rv.setLayoutManager(new GridLayoutManager(c, COLUMNS));
@@ -217,7 +223,8 @@ final class IptvScreen implements CarScreen {
                 Channel ch = shown.get(pos);
                 LinearLayout item = (LinearLayout) vh.itemView;
                 ImageView logo = (ImageView) item.getChildAt(0);
-                ((TextView) item.getChildAt(1)).setText(ch.name);
+                boolean fav = Favorites.contains(favs, ch.url);
+                ((TextView) item.getChildAt(1)).setText(fav ? "★ " + ch.name : ch.name);
                 if (ch.logo != null && !ch.logo.isEmpty()) {
                     Glide.with(c.getApplicationContext()).load(ch.logo).into(logo);
                 } else {
@@ -226,6 +233,12 @@ final class IptvScreen implements CarScreen {
                 item.setOnClickListener(v -> {
                     int i = vh.getBindingAdapterPosition();
                     if (i >= 0) play(i);
+                });
+                // Mantener pulsado: entra o sale de favoritos.
+                item.setOnLongClickListener(v -> {
+                    int i = vh.getBindingAdapterPosition();
+                    if (i >= 0) toggleFavorite(c, shown.get(i));
+                    return true;
                 });
             }
 
@@ -240,11 +253,40 @@ final class IptvScreen implements CarScreen {
         return col;
     }
 
+    /** Grupo de la pestaña ★ (los favoritos, Favorites.TV). */
+    static final String FAV_GROUP = "\u0000fav";
+    private JSONArray favs = new JSONArray();
+    private String currentGroup;
+
     @SuppressWarnings("NotifyDataSetChanged")
     private void filter(String group) {
+        currentGroup = group;
         shown.clear();
-        for (Channel ch : all) if (group == null || group.equals(ch.group)) shown.add(ch);
+        if (FAV_GROUP.equals(group)) {
+            for (int i = 0; i < favs.length(); i++) {
+                JSONObject o = favs.optJSONObject(i);
+                if (o == null) continue;
+                Channel ch = new Channel();
+                ch.name = o.optString("name");
+                ch.logo = o.optString("logo");
+                ch.group = o.optString("group");
+                ch.urls.addAll(Favorites.urls(o));
+                ch.url = ch.urls.get(0);
+                shown.add(ch);
+            }
+        } else {
+            for (Channel ch : all) if (group == null || group.equals(ch.group)) shown.add(ch);
+        }
         if (adapter != null) adapter.notifyDataSetChanged();
+    }
+
+    @SuppressWarnings("NotifyDataSetChanged")
+    private void toggleFavorite(Context c, Channel ch) {
+        boolean in = Favorites.toggle(favs, Favorites.item(ch.name, ch.url, ch.logo, ch.group, ch.urls));
+        Favorites.save(new Config(c), Favorites.TV, favs);
+        L.i("TV: " + (in ? "favorito añadido" : "favorito quitado") + " (" + favs.length() + ")");
+        if (FAV_GROUP.equals(currentGroup)) filter(currentGroup);
+        else if (adapter != null) adapter.notifyDataSetChanged();
     }
 
     private void play(int index) {

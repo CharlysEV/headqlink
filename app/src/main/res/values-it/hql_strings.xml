@@ -998,4 +998,18 @@
     <string name="hql_profile_best_detail">Per il cavo: 60 fps, risoluzione piena, 12-16 Mbit/s, H.264 High e codificatore a bassa latenza. Scalda di più il telefono. Se lo schermo dell\'auto resta nero, torna a Veicolo.</string>
     <string name="hql_speed_advice_stops_total">Consiglio: a %1$d km/h, %2$d soste invece di %3$d (%4$s in più in totale).</string>
     <string name="hql_route_flat">Nessun dato di altitudine ora: la stima non conta le salite.</string>
+    <string name="hql_usb_cut_title">L\'auto ha tolto corrente alla USB</string>
+    <string name="hql_usb_cut_text">Per %1$d s il cavo è rimasto senza corrente; è stata l\'auto, e Qonecta+ si è ricollegata da sola. Se succede spesso, prova un cavo dati più corto e senza adattatori.</string>
+    <string name="hql_usb_silent_title">L\'auto non parla sul cavo</string>
+    <string name="hql_usb_silent_text">Dall\'auto non arriva nulla. Scollega e ricollega il cavo; se continua, usa un cavo dati (non solo di ricarica).</string>
+    <string name="hql_usb_early_title">L\'auto riavvia la USB appena collegata</string>
+    <string name="hql_usb_early_text">Tre volte di seguito l\'auto ha interrotto la connessione dopo pochi secondi. Qonecta+ continua a provare; un altro cavo o un\'altra porta di solito risolve.</string>
+    <string name="hql_fav_none">Ancora nessun preferito. Tieni premuto un canale per aggiungerlo qui.</string>
+    <string name="hql_trip_notice">Riepilogo del viaggio alla disconnessione</string>
+    <string name="hql_trip_notice_help">Una notifica sul telefono con fps, riconnessioni, calore e precisione del percorso.</string>
+    <string name="hql_trip_notice_channel">Riepilogo del viaggio</string>
+    <string name="hql_trip_notice_title">Viaggio terminato · %1$s</string>
+    <string name="hql_trip_notice_video">%1$.0f fps in media · %2$d riconnessioni · %3$d interruzioni</string>
+    <string name="hql_trip_notice_heat">calore: livello %1$d max · %2$.0f °C</string>
+    <string name="hql_trip_notice_route">percorso: previsti %1$.1f kWh, reali %2$.1f</string>
 </resources>

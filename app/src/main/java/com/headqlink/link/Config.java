@@ -1093,6 +1093,20 @@ final class Config {
         return v > 0 ? v : 200;
     }
 
+    /** Favoritos de la TV o de la radio (Favorites: JSON). */
+    String favorites(String kind) {
+        return sp.getString(kind + "_favs", "");
+    }
+
+    void setFavorites(String kind, String json) {
+        sp.edit().putString(kind + "_favs", json == null ? "" : json).apply();
+    }
+
+    /** Resumen del viaje en el móvil al desconectar (TripNotice). */
+    boolean tripNotice() {
+        return sp.getBoolean("trip_notice", true);
+    }
+
     /** La densidad puesta a mano con el extra aa_dpi, o 0 (entonces la decide AaSize por la pantalla del coche). */
     int aaDpiManual() {
         return sp.getInt("aa_dpi", 0);

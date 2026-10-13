@@ -236,6 +236,37 @@ internal object SessionSummary {
     // ---------------------------------------------------------------- viaje (servicio)
 
     private val trip = ArrayList<Record>()
+    /** Lo que hace falta para el aviso del viaje en el móvil (TripNotice). */
+    class TripStats(
+        val minutes: Double,
+        val sessions: Int,
+        val videoMinutes: Double,
+        /** fps medios ponderados por el tiempo con vídeo (0 sin vídeo). */
+        val fps: Double,
+        val reconnects: Int,
+        val stalls: Int,
+        val thermalMax: Int,
+    )
+
+    /** Puro: las cifras del viaje para el aviso, o null si no hubo ninguna sesión con vídeo. */
+    @Synchronized
+    fun tripStats(nowMs: Long): TripStats? {
+        val withVideo = trip.filter { it.reachedVideo && it.videoSeconds > 0 }
+        if (withVideo.isEmpty()) return null
+        val start = if (tripStartMs > 0) tripStartMs else trip.first().startWallMs
+        val videoS = withVideo.sumOf { it.videoSeconds }
+        val frames = withVideo.sumOf { it.frames }
+        return TripStats(
+            minutes = (nowMs - start) / 60_000.0,
+            sessions = trip.size,
+            videoMinutes = videoS / 60,
+            fps = if (videoS > 0) frames / videoS else 0.0,
+            reconnects = trip.count { it.reconnectMs >= 0 },
+            stalls = trip.sumOf { it.stalls },
+            thermalMax = trip.maxOfOrNull { it.thermalMax } ?: -1,
+        )
+    }
+
     private var tripStartMs = 0L
 
     /** Arranques de AA del proceso al empezar el viaje: el contador es de todo el proceso, no del servicio. */

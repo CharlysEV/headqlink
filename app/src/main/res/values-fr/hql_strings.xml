@@ -998,4 +998,18 @@
     <string name="hql_profile_best_detail">Pour le câble : 60 i/s, pleine résolution, 12-16 Mbit/s, H.264 High et encodeur à faible latence. Le téléphone chauffe davantage. Si l\'écran de la voiture reste noir, revenez à Voiture.</string>
     <string name="hql_speed_advice_stops_total">Conseil : à %1$d km/h, %2$d arrêts au lieu de %3$d (%4$s de plus au total).</string>
     <string name="hql_route_flat">Pas de données de relief pour l\'instant : l\'estimation ignore les côtes.</string>
+    <string name="hql_usb_cut_title">La voiture a coupé l\'alimentation USB</string>
+    <string name="hql_usb_cut_text">Pendant %1$d s le câble n\'a plus eu de courant ; c\'est la voiture, et Qonecta+ s\'est reconnectée seule. Si cela arrive souvent, essayez un câble de données plus court et sans adaptateur.</string>
+    <string name="hql_usb_silent_title">La voiture ne parle pas par le câble</string>
+    <string name="hql_usb_silent_text">Rien n\'arrive de la voiture. Débranchez et rebranchez le câble ; si cela continue, utilisez un câble de données (pas seulement de charge).</string>
+    <string name="hql_usb_early_title">La voiture redémarre la USB juste après la connexion</string>
+    <string name="hql_usb_early_text">Trois fois de suite la voiture a coupé la connexion au bout de quelques secondes. Qonecta+ réessaie ; un autre câble ou un autre port règle souvent le problème.</string>
+    <string name="hql_fav_none">Pas encore de favoris. Maintenez une chaîne appuyée pour l\'ajouter ici.</string>
+    <string name="hql_trip_notice">Résumé du trajet à la déconnexion</string>
+    <string name="hql_trip_notice_help">Une notification sur le téléphone avec les i/s, les reconnexions, la chaleur et la justesse de l\'itinéraire.</string>
+    <string name="hql_trip_notice_channel">Résumé du trajet</string>
+    <string name="hql_trip_notice_title">Trajet terminé · %1$s</string>
+    <string name="hql_trip_notice_video">%1$.0f i/s en moyenne · %2$d reconnexions · %3$d coupures</string>
+    <string name="hql_trip_notice_heat">chaleur : niveau %1$d max · %2$.0f °C</string>
+    <string name="hql_trip_notice_route">itinéraire : %1$.1f kWh prévus, %2$.1f réels</string>
 </resources>

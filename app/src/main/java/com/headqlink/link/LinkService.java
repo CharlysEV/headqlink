@@ -469,6 +469,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             transportStarted = true;
             // Cada viaje empieza por la resolución más baja (720p); con el móvil fresco sube (ThermalResolution).
             ThermalResolution.reset();
+            UsbDiagnosis.reset();
+            ThermalGuard.resetTripPeak();
             L.i("servicio iniciado. " + cfg.summary());
             main.removeCallbacks(relatchTick);
             main.postDelayed(relatchTick, 20_000);
@@ -1124,6 +1126,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             QdTrace.block("HQL/Viaje", trip);
             for (String line : trip.split("\n")) L.quiet("I", line);
             CarTrace.note("VIAJE", trip.replace('\n', ' '));
+            // El resumen del viaje en el móvil (si lo hubo con vídeo y el ajuste está puesto).
+            TripNotice.show(this, cfg, SessionSummary.INSTANCE.tripStats(System.currentTimeMillis()));
         }
         // Después del resumen de la última sesión, que lleva el estado térmico.
         if (thermal != null) thermal.stop();

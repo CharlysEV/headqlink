@@ -302,6 +302,7 @@ internal class UsbLink(
     /** Como QDLink: sin alimentación por el cable se cierra la sesión. Si el accesorio sigue, se vuelve a abrir. */
     private fun onPowerLost() {
         UsbProbe.log("alimentación desconectada (ACTION_POWER_DISCONNECTED) · ${UsbProbe.power(ctx)}")
+        UsbDiagnosis.powerLost(ctx)
         val s = session
         if (s != null && !s.isClosed) {
             UsbProbe.step("cierro la sesión S${s.id}: el cable dejó de alimentar el móvil (como QDLink)")
@@ -544,6 +545,7 @@ internal class UsbLink(
         val reasonText = describe(reason)
         submit {
             val d = reopen.onSessionEnd(carMessages, carInfo, lived, reasonText)
+            UsbDiagnosis.sessionEnd(ctx, UsbReopenPolicy.isAccessoryGone(reasonText), carInfo, lived, reopen.failures)
             network(LinkState.Level.BUSY, Str.get(R.string.hql_usb_net_waiting))
             if (!d.reopen) {
                 retry?.cancel(false)

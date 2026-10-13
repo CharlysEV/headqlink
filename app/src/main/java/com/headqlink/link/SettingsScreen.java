@@ -349,6 +349,9 @@ final class SettingsScreen implements CarScreen {
             cfg.putBool(Config.FLOAT_CARD, on);
             CarUi.applyFloatCard();
         }));
+        alerts.addView(divider(c));
+        alerts.addView(toggle(c, Str.get(R.string.hql_trip_notice), Str.get(R.string.hql_trip_notice_help), cfg.tripNotice(),
+                on -> cfg.putBool("trip_notice", on)));
         col.addView(alerts, cardLp());
 
         // Energía: €/kWh para el coste de los viajes y la pestaña Eficiencia.

@@ -66,9 +66,26 @@ final class ThermalGuard {
         @Override
         public void run() {
             checkForecast();
+            noteTripPeak(batteryTempC(ctx));
             h.postDelayed(this, FORECAST_MS);
         }
     };
+
+    /** Temperatura máxima de la batería en el viaje (°C; NaN sin dato), para el resumen del viaje en el móvil. */
+    private static volatile double tripPeakC = Double.NaN;
+
+    static void resetTripPeak() {
+        tripPeakC = Double.NaN;
+    }
+
+    static void noteTripPeak(double c) {
+        if (Double.isNaN(c)) return;
+        if (Double.isNaN(tripPeakC) || c > tripPeakC) tripPeakC = c;
+    }
+
+    static double tripPeakC() {
+        return tripPeakC;
+    }
 
     private final Runnable batteryLog = new Runnable() {
         @Override

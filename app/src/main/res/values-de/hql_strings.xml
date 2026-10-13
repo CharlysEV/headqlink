@@ -997,4 +997,18 @@
     <string name="hql_profile_best_detail">Für das Kabel: 60 fps, volle Auflösung, 12-16 Mbit/s, H.264 High und Encoder mit niedriger Latenz. Das Handy wird wärmer. Bleibt der Autobildschirm schwarz, zurück zu Fahrzeug.</string>
     <string name="hql_speed_advice_stops_total">Tipp: Mit %1$d km/h %2$d statt %3$d Stopps (insgesamt %4$s länger).</string>
     <string name="hql_route_flat">Gerade keine Höhendaten: Die Prognose berücksichtigt keine Steigungen.</string>
+    <string name="hql_usb_cut_title">Das Auto hat den USB-Strom abgeschaltet</string>
+    <string name="hql_usb_cut_text">%1$d s lang hatte das Kabel keinen Strom; das war das Auto, und Qonecta+ hat sich selbst neu verbunden. Passiert es oft, probiere ein kürzeres Datenkabel ohne Adapter.</string>
+    <string name="hql_usb_silent_title">Das Auto spricht nicht über das Kabel</string>
+    <string name="hql_usb_silent_text">Vom Auto kommt nichts. Kabel abziehen und wieder einstecken; bleibt es so, ein Datenkabel nehmen (kein reines Ladekabel).</string>
+    <string name="hql_usb_early_title">Das Auto startet USB direkt nach dem Verbinden neu</string>
+    <string name="hql_usb_early_text">Dreimal hintereinander hat das Auto die Verbindung nach wenigen Sekunden getrennt. Qonecta+ versucht es weiter; ein anderes Kabel oder ein anderer Anschluss hilft meist.</string>
+    <string name="hql_fav_none">Noch keine Favoriten. Halte einen Sender gedrückt, um ihn hier hinzuzufügen.</string>
+    <string name="hql_trip_notice">Fahrtzusammenfassung beim Trennen</string>
+    <string name="hql_trip_notice_help">Eine Benachrichtigung auf dem Handy mit fps, Neuverbindungen, Wärme und der Treffsicherheit der Route.</string>
+    <string name="hql_trip_notice_channel">Fahrtzusammenfassung</string>
+    <string name="hql_trip_notice_title">Fahrt beendet · %1$s</string>
+    <string name="hql_trip_notice_video">%1$.0f fps im Mittel · %2$d Neuverbindungen · %3$d Aussetzer</string>
+    <string name="hql_trip_notice_heat">Wärme: Stufe %1$d max. · %2$.0f °C</string>
+    <string name="hql_trip_notice_route">Route: %1$.1f kWh geschätzt, %2$.1f real</string>
 </resources>

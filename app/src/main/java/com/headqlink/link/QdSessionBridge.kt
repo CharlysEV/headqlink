@@ -234,6 +234,17 @@ internal class QdSessionBridge(
         if (carInfoNanos == 0L) carInfoNanos = System.nanoTime()
         val detail = "${info.carWidth}×${info.carHeight}"
         host.onCarSize(this, detail)
+        // El coche dice qué es (CarType): el perfil de batería y pantalla, si no estaba o estaba mal elegido.
+        try {
+            val store = CarCloudStore(ctx)
+            val before = store.profile()
+            if (store.adoptCarInfoType(info.carType)) {
+                L.i("coche: CAR_INFO CarType ${info.carType}: perfil de coche ${before.ifEmpty { "(ninguno)" }} → ${store.profile()}")
+            }
+        } catch (e: RuntimeException) {
+            L.w("coche: no se pudo adoptar el perfil por CarType: $e")
+        }
+        if (host.isUsb) UsbDiagnosis.carInfo(ctx)
     }
 
     override fun onVideoArgs(args: VideoArgs, message: ControlMessage) {

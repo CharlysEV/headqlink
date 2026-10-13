@@ -1003,4 +1003,18 @@
     <string name="hql_profile_best_detail">Para el cable: 60 fps, resolución completa, 12-16 Mbit/s, H.264 High y codificador de baja latencia. Calienta más el móvil. Si el coche se queda en negro, vuelve a Coche.</string>
     <string name="hql_speed_advice_stops_total">Consejo: a %1$d km/h, %2$d paradas en vez de %3$d (%4$s más en total).</string>
     <string name="hql_route_flat">Sin datos de relieve ahora mismo: la previsión no cuenta las cuestas.</string>
+    <string name="hql_usb_cut_title">El coche cortó la corriente del USB</string>
+    <string name="hql_usb_cut_text">Durante %1$d s el cable se quedó sin corriente; lo hizo el coche, y Qonecta+ volvió a conectar sola. Si pasa a menudo, prueba un cable de datos más corto y sin adaptadores.</string>
+    <string name="hql_usb_silent_title">El coche no habla por el cable</string>
+    <string name="hql_usb_silent_text">No llega nada del coche. Desenchufa y vuelve a enchufar el cable; si sigue, usa un cable de datos (no solo de carga).</string>
+    <string name="hql_usb_early_title">El coche reinicia el USB nada más conectar</string>
+    <string name="hql_usb_early_text">Tres veces seguidas el coche cortó la conexión a los pocos segundos. Qonecta+ sigue intentándolo; otro cable u otro puerto suele arreglarlo.</string>
+    <string name="hql_fav_none">Aún no hay favoritos. Mantén pulsado un canal para añadirlo aquí.</string>
+    <string name="hql_trip_notice">Resumen del viaje al desconectar</string>
+    <string name="hql_trip_notice_help">Una notificación en el móvil con los fps, las reconexiones, el calor y el acierto de la ruta.</string>
+    <string name="hql_trip_notice_channel">Resumen del viaje</string>
+    <string name="hql_trip_notice_title">Viaje terminado · %1$s</string>
+    <string name="hql_trip_notice_video">%1$.0f fps de media · %2$d reconexiones · %3$d cortes</string>
+    <string name="hql_trip_notice_heat">calor: nivel %1$d máx. · %2$.0f °C</string>
+    <string name="hql_trip_notice_route">ruta: previsto %1$.1f kWh, real %2$.1f</string>
 </resources>

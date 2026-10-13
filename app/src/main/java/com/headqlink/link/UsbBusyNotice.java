@@ -50,6 +50,30 @@ final class UsbBusyNotice {
         }
     }
 
+    private static final int ID_DIAGNOSIS = 7742;
+
+    /** Un diagnóstico del cable (UsbDiagnosis): aviso normal, que abre la app. */
+    static void showDiagnosis(Context c, String title, String text) {
+        try {
+            NotificationManager nm = c.getSystemService(NotificationManager.class);
+            if (nm == null) return;
+            nm.createNotificationChannel(new NotificationChannel(CHANNEL, Str.get(R.string.hql_usb_busy_channel),
+                    NotificationManager.IMPORTANCE_HIGH));
+            PendingIntent pi = PendingIntent.getActivity(c, ID_DIAGNOSIS, HomeActivity.openIntent(c),
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            nm.notify(ID_DIAGNOSIS, new Notification.Builder(c, CHANNEL)
+                    .setSmallIcon(R.drawable.hql_ic_notif)
+                    .setContentTitle(title)
+                    .setContentText(text)
+                    .setStyle(new Notification.BigTextStyle().bigText(text))
+                    .setContentIntent(pi)
+                    .setAutoCancel(true)
+                    .build());
+        } catch (RuntimeException e) {
+            L.w("USB: no se pudo avisar del diagnóstico: " + e);
+        }
+    }
+
     static void clear(Context c) {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (nm != null) nm.cancel(ID);

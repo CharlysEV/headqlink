@@ -59,20 +59,23 @@ final class RadioScreen implements CarScreen {
         Config cfg = new Config(c);
         lists = cfg.m3uLists(Config.RADIO);
         boolean hasList = lists.length > 0;
-        String[] tabs = new String[1 + Math.max(1, lists.length)];
-        tabs[0] = Str.get(R.string.hql_radio_popular);
-        if (hasList) for (int i = 0; i < lists.length; i++) tabs[1 + i] = lists[i][0];
-        else tabs[1] = Str.get(R.string.hql_radio_my_list);
-        int first = hasList ? 1 + cfg.m3uSelected(Config.RADIO) : 0;
+        favs = Favorites.load(cfg, Favorites.RADIO);
+        // ★ (favoritos), Populares y cada lista (o «Mi lista» si no hay ninguna): la pestaña i es la fuente i - 1.
+        String[] tabs = new String[2 + Math.max(1, lists.length)];
+        tabs[0] = "★";
+        tabs[1] = Str.get(R.string.hql_radio_popular);
+        if (hasList) for (int i = 0; i < lists.length; i++) tabs[2 + i] = lists[i][0];
+        else tabs[2] = Str.get(R.string.hql_radio_my_list);
+        int first = hasList ? 2 + cfg.m3uSelected(Config.RADIO) : 1;
         android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(c);
         hs.setHorizontalScrollBarEnabled(false);
-        hs.addView(CarStyle.tabs(c, tabs, first, i -> load(i)));
+        hs.addView(CarStyle.tabs(c, tabs, first, i -> load(i - 1)));
         col.addView(hs);
         listArea = new FrameLayout(c);
         col.addView(listArea, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         RadioPlayer.addListener(onChange);
         renderNowPlaying();
-        load(first);
+        load(first - 1);
         return col;
     }
 
@@ -155,10 +158,30 @@ final class RadioScreen implements CarScreen {
         }
     }
 
-    /** 0: populares del directorio; 1 + i: la lista M3U i del usuario (queda elegida). */
+    private JSONArray favs = new JSONArray();
+    private int currentSource;
+
+    /** -1: favoritos; 0: populares del directorio; 1 + i: la lista M3U i del usuario (queda elegida). */
     private void load(int source) {
         Context c = host.context();
         int seq = ++loadSeq;
+        currentSource = source;
+        if (source < 0) {
+            shown.clear();
+            for (int i = 0; i < favs.length(); i++) {
+                JSONObject o = favs.optJSONObject(i);
+                if (o == null) continue;
+                RadioPlayer.Station s = new RadioPlayer.Station();
+                s.name = o.optString("name");
+                s.url = o.optString("url");
+                s.logo = o.optString("logo");
+                s.group = o.optString("group");
+                shown.add(s);
+            }
+            if (shown.isEmpty()) showMessage(Str.get(R.string.hql_fav_none));
+            else showGrid(c);
+            return;
+        }
         if (source >= 1 && lists.length == 0) {
             showMessage(Str.get(R.string.hql_radio_setup_list));
             return;
@@ -268,7 +291,7 @@ final class RadioScreen implements CarScreen {
                 RadioPlayer.Station s = shown.get(pos);
                 LinearLayout item = (LinearLayout) vh.itemView;
                 ImageView logo = (ImageView) item.getChildAt(0);
-                ((TextView) item.getChildAt(1)).setText(s.name);
+                ((TextView) item.getChildAt(1)).setText(Favorites.contains(favs, s.url) ? "★ " + s.name : s.name);
                 if (s.logo != null && !s.logo.isEmpty()) {
                     Glide.with(c.getApplicationContext()).load(s.logo).error(R.drawable.hql_ic_radio).into(logo);
                 } else {
@@ -277,6 +300,18 @@ final class RadioScreen implements CarScreen {
                 item.setOnClickListener(v -> {
                     int i = vh.getBindingAdapterPosition();
                     if (i >= 0) RadioPlayer.play(c, shown, i);
+                });
+                // Mantener pulsado: entra o sale de favoritos.
+                item.setOnLongClickListener(v -> {
+                    int i = vh.getBindingAdapterPosition();
+                    if (i < 0) return true;
+                    RadioPlayer.Station st = shown.get(i);
+                    boolean in = Favorites.toggle(favs, Favorites.item(st.name, st.url, st.logo, st.group, null));
+                    Favorites.save(new Config(c), Favorites.RADIO, favs);
+                    L.i("radio: " + (in ? "favorita añadida" : "favorita quitada") + " (" + favs.length() + ")");
+                    if (currentSource < 0) load(-1);
+                    else if (adapter != null) adapter.notifyDataSetChanged();
+                    return true;
                 });
             }
 

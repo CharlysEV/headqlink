@@ -1002,4 +1002,18 @@
     <string name="hql_profile_best_detail">For the cable: 60 fps, full resolution, 12-16 Mbit/s, H.264 High and a low-latency encoder. The phone gets warmer. If the car screen stays black, go back to Car.</string>
     <string name="hql_speed_advice_stops_total">Tip: at %1$d km/h, %2$d stops instead of %3$d (%4$s more in total).</string>
     <string name="hql_route_flat">No elevation data right now: the estimate ignores hills.</string>
+    <string name="hql_usb_cut_title">The car cut the USB power</string>
+    <string name="hql_usb_cut_text">For %1$d s the cable had no power; the car did that, and Qonecta+ reconnected by itself. If it happens often, try a shorter data cable with no adapters.</string>
+    <string name="hql_usb_silent_title">The car is not talking over the cable</string>
+    <string name="hql_usb_silent_text">Nothing comes from the car. Unplug and plug the cable again; if it keeps happening, use a data cable (not a charge-only one).</string>
+    <string name="hql_usb_early_title">The car restarts the USB right after connecting</string>
+    <string name="hql_usb_early_text">Three times in a row the car cut the connection within seconds. Qonecta+ keeps retrying; a different cable or port usually fixes it.</string>
+    <string name="hql_fav_none">No favorites yet. Hold a channel down to add it here.</string>
+    <string name="hql_trip_notice">Trip summary when disconnecting</string>
+    <string name="hql_trip_notice_help">A notification on the phone with fps, reconnections, heat and the route estimate.</string>
+    <string name="hql_trip_notice_channel">Trip summary</string>
+    <string name="hql_trip_notice_title">Trip over · %1$s</string>
+    <string name="hql_trip_notice_video">%1$.0f fps average · %2$d reconnections · %3$d cuts</string>
+    <string name="hql_trip_notice_heat">heat: level %1$d max · %2$.0f °C</string>
+    <string name="hql_trip_notice_route">route: %1$.1f kWh estimated, %2$.1f real</string>
 </resources>

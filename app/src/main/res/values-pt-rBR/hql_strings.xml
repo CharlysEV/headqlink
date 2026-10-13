@@ -998,4 +998,18 @@
     <string name="hql_profile_best_detail">Para o cabo: 60 fps, resolução total, 12-16 Mbit/s, H.264 High e codificador de baixa latência. Esquenta mais o celular. Se a tela do carro ficar preta, volte para Carro.</string>
     <string name="hql_speed_advice_stops_total">Dica: a %1$d km/h, %2$d paradas em vez de %3$d (%4$s a mais no total).</string>
     <string name="hql_route_flat">Sem dados de relevo agora: a previsão não conta as subidas.</string>
+    <string name="hql_usb_cut_title">O carro cortou a energia do USB</string>
+    <string name="hql_usb_cut_text">Por %1$d s o cabo ficou sem energia; foi o carro, e o Qonecta+ reconectou sozinho. Se acontecer com frequência, tente um cabo de dados mais curto e sem adaptadores.</string>
+    <string name="hql_usb_silent_title">O carro não fala pelo cabo</string>
+    <string name="hql_usb_silent_text">Nada chega do carro. Desconecte e conecte o cabo de novo; se continuar, use um cabo de dados (não só de carga).</string>
+    <string name="hql_usb_early_title">O carro reinicia o USB logo ao conectar</string>
+    <string name="hql_usb_early_text">Três vezes seguidas o carro cortou a conexão em poucos segundos. O Qonecta+ continua tentando; outro cabo ou outra porta costuma resolver.</string>
+    <string name="hql_fav_none">Ainda não há favoritos. Segure um canal para adicioná-lo aqui.</string>
+    <string name="hql_trip_notice">Resumo da viagem ao desconectar</string>
+    <string name="hql_trip_notice_help">Uma notificação no celular com fps, reconexões, calor e o acerto da rota.</string>
+    <string name="hql_trip_notice_channel">Resumo da viagem</string>
+    <string name="hql_trip_notice_title">Viagem terminada · %1$s</string>
+    <string name="hql_trip_notice_video">%1$.0f fps em média · %2$d reconexões · %3$d cortes</string>
+    <string name="hql_trip_notice_heat">calor: nível %1$d máx. · %2$.0f °C</string>
+    <string name="hql_trip_notice_route">rota: previsto %1$.1f kWh, real %2$.1f</string>
 </resources>
