@@ -33,11 +33,11 @@ import com.andrerinas.openheadunit.utils.ToastUtils;
  */
 public class CarSimActivity extends Activity {
     /**
-     * La pantalla del coche del perfil (CarSpec): la del C10 (1920x882) o la del T03 (10,1", que se supone de 1280x720
-     * hasta tener su CAR_INFO), para ver el modo extendido como en su coche.
+     * La pantalla del coche del perfil (CarSpec): la del C10 (1920x882) o la del T03 (1024x498, la de su CAR_INFO del
+     * 2026-10-13: CarType 2D6, versión 2.3), para ver el modo extendido como en su coche.
      */
-    private final int W = CarSpec.current().isT03() ? 1280 : 1920;
-    private final int H = CarSpec.current().isT03() ? 720 : 882;
+    private final int W = CarSpec.current().isT03() ? 1024 : 1920;
+    private final int H = CarSpec.current().isT03() ? 498 : 882;
     private static final int FPS = 30;
 
     private final Handler main = new Handler(Looper.getMainLooper());
