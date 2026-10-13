@@ -471,6 +471,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             ThermalResolution.reset();
             UsbDiagnosis.reset();
             ThermalGuard.resetTripPeak();
+            PhoneCall.watch(this);
             L.i("servicio iniciado. " + cfg.summary());
             main.removeCallbacks(relatchTick);
             main.postDelayed(relatchTick, 20_000);
@@ -1115,6 +1116,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         // aparcado y con su servidor encendido sin nadie que lo cierre.
         if (!aaClosed && AaPark.parked && !AaGuardService.active) closeAa(false);
         if (sysMonitor != null) sysMonitor.stop();
+        PhoneCall.unwatch(this);
         if (usb != null) usb.stop();
         if (qd != null || usbUsed) {
             // Primero se cierra la sesión en curso y se espera su resumen (como mucho 500 ms), para que el del viaje

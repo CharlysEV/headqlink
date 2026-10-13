@@ -10,6 +10,20 @@ class ResolutionLadderTest {
     private val min = 60_000L
 
     @Test
+    fun callsAreLoggedWithoutDetails() {
+        val n = android.media.AudioManager.MODE_NORMAL
+        val ring = android.media.AudioManager.MODE_RINGTONE
+        val call = android.media.AudioManager.MODE_IN_CALL
+        val voip = android.media.AudioManager.MODE_IN_COMMUNICATION
+        assertEquals("llamada: suena", PhoneCall.describe(n, ring, -1))
+        assertEquals("llamada: en curso", PhoneCall.describe(ring, call, -1))
+        assertEquals("llamada: en curso (por internet)", PhoneCall.describe(n, voip, -1))
+        assertEquals("llamada: acaba tras 95 s", PhoneCall.describe(call, n, 94_600))
+        assertEquals("llamada: deja de sonar sin cogerla", PhoneCall.describe(ring, n, -1))
+        assertEquals(null, PhoneCall.describe(n, n, -1))
+    }
+
+    @Test
     fun resolutionChangeWaitsForTheCallToEnd() {
         // En llamada no se cambia (reconectaría AA); al acabar, se hace lo que quedó pendiente.
         assertEquals(0, ThermalResolution.decide(-1, true, 0))

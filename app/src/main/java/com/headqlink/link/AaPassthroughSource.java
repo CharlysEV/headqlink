@@ -119,6 +119,16 @@ final class AaPassthroughSource implements VideoSource {
         return App.Companion.provide(ctx).getCommManager();
     }
 
+    /** ¿Android Auto conectado ahora? (para el log; false si no hay fuente en marcha). */
+    static boolean aaConnectedNow() {
+        AaPassthroughSource s = active;
+        try {
+            return s != null && s.comm().isConnected();
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     /**
      * Tecla del coche (QdSessionBridge.onKey) a Android Auto: pulsar y soltar. false si AA no está conectado (CommManager
      * la descarta igualmente).
