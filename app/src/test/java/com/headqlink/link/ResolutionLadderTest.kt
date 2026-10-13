@@ -10,6 +10,15 @@ class ResolutionLadderTest {
     private val min = 60_000L
 
     @Test
+    fun resolutionChangeWaitsForTheCallToEnd() {
+        // En llamada no se cambia (reconectaría AA); al acabar, se hace lo que quedó pendiente.
+        assertEquals(0, ThermalResolution.decide(-1, true, 0))
+        assertEquals(-1, ThermalResolution.decide(0, false, -1))
+        assertEquals(1, ThermalResolution.decide(1, false, -1))
+        assertEquals(0, ThermalResolution.decide(0, false, 0))
+    }
+
+    @Test
     fun goesUpAfterTenCoolMinutes() {
         val r = ResolutionLadder(false)
         assertEquals(0, r.update(0, 0.6f, 0, 0))

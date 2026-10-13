@@ -64,10 +64,19 @@ final class AaClose {
         lastOwnCloseMs = SystemClock.elapsedRealtime();
     }
 
-    /** ¿Pidió HeadQLink un cierre hace poco ({@link #OWN_CLOSE_WINDOW_MS})? */
+    /**
+     * ¿Pidió HeadQLink un cierre hace poco ({@link #OWN_CLOSE_WINDOW_MS}) y no ha vuelto a lanzar AA desde entonces? Viaje
+     * del 2026-10-13: el cambio a 720p por calor cerró AA y lo relanzó 3 s después; el handshake SSL del relanzamiento
+     * falló a los 4 s (en plena llamada) y ese corte, por caer dentro de la ventana del cierre, se tomó por nuestro: nadie
+     * relanzó y el coche se quedó 2 min sin Android Auto hasta que el usuario quitó el cable.
+     */
     static boolean ownCloseRecent() {
-        long at = lastOwnCloseMs;
-        return at >= 0 && SystemClock.elapsedRealtime() - at < OWN_CLOSE_WINDOW_MS;
+        return ownCloseRecent(lastOwnCloseMs, lastLaunchMs, SystemClock.elapsedRealtime());
+    }
+
+    /** Puro: el corte que llega ahora es de un cierre nuestro (reciente y posterior al último lanzamiento). */
+    static boolean ownCloseRecent(long closeMs, long launchMs, long nowMs) {
+        return closeMs >= 0 && nowMs - closeMs < OWN_CLOSE_WINDOW_MS && launchMs <= closeMs;
     }
 
     /**

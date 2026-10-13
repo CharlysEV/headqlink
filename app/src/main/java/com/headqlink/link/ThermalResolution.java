@@ -25,7 +25,13 @@ final class ThermalResolution {
     static synchronized void reset() {
         high = false;
         ladder = new ResolutionLadder(false);
+        deferred = 0;
+        deferredWhy = null;
     }
+
+    /** Un cambio decidido en plena llamada, a la espera de que acabe: +1 sube, -1 baja, 0 ninguno. */
+    private static int deferred;
+    private static String deferredWhy;
 
     /** Cada 10 s (ThermalGuard): estado térmico, margen previsto (NaN si no hay) y etapa de anticipación. */
     static void tick(Context ctx, int status, float headroom, int stage, long nowMs) {
@@ -33,10 +39,40 @@ final class ThermalResolution {
         synchronized (ThermalResolution.class) {
             step = ladder.update(status, headroom, stage, nowMs);
         }
-        if (step == 0) return;
+        boolean call = PhoneCall.active(ctx);
+        if (step == 0) {
+            // Lo que quedó aplazado por una llamada, cuando acaba.
+            int d;
+            String w;
+            synchronized (ThermalResolution.class) {
+                d = deferred;
+                w = deferredWhy;
+                if (call || d == 0) return;
+                deferred = 0;
+                deferredWhy = null;
+            }
+            change(ctx, d > 0, w + "; aplazado por la llamada");
+            return;
+        }
         String why = step > 0 ? String.format(java.util.Locale.US, "fresco: estado %d, margen %.2f", status, headroom)
                 : String.format(java.util.Locale.US, "calor: estado %d, anticipación %d", status, stage);
+        if (call) {
+            // Cambiar de resolución reconecta Android Auto (2-4 s en negro y, en una llamada, el handshake puede fallar y
+            // dejar el coche sin AA): se espera a que acabe. Mientras, los fps y el bitrate ya bajan con el nivel térmico.
+            synchronized (ThermalResolution.class) {
+                deferred = step;
+                deferredWhy = why;
+            }
+            L.i("resolución: " + (step > 0 ? "subiría a 1080p" : "bajaría a 720p") + " (" + why + "), pero hay una llamada: espero a que acabe");
+            return;
+        }
         change(ctx, step > 0, why);
+    }
+
+    /** Puro: con una llamada, el cambio espera; sin ella, se hace (y el que esperaba, también). */
+    static int decide(int step, boolean call, int pending) {
+        if (call) return 0;
+        return step != 0 ? step : pending;
     }
 
     /** Puro: ¿la resolución de este perfil la decide el calor? Los que siguen al coche («Coche», y «Automático» con él). */

@@ -14,6 +14,19 @@ import org.junit.Test
  */
 class AaCloseTest {
     @Test
+    fun aCutAfterOurRelaunchIsNotOurClose() {
+        val w = AaClose.OWN_CLOSE_WINDOW_MS
+        // Cierre nuestro hace 3 s y sin relanzar: el corte es nuestro.
+        assertTrue(AaClose.ownCloseRecent(10_000, -1, 13_000))
+        assertTrue(AaClose.ownCloseRecent(10_000, 9_000, 13_000))
+        // Relanzado después del cierre (viaje del 2026-10-13: 720p por calor en plena llamada): el corte ya no es nuestro.
+        assertFalse(AaClose.ownCloseRecent(10_000, 13_000, 17_000))
+        // Pasada la ventana, tampoco. Sin cierre, nunca.
+        assertFalse(AaClose.ownCloseRecent(10_000, -1, 10_000 + w))
+        assertFalse(AaClose.ownCloseRecent(-1, 5_000, 6_000))
+    }
+
+    @Test
     fun eachConnectionStateMapsToWhatMattersForClosing() {
         assertEquals(Link.NONE, AaClose.linkOf(ConnectionState.Disconnected()))
         assertEquals(Link.NONE, AaClose.linkOf(ConnectionState.Disconnected(isClean = true, isUserExit = true)))
