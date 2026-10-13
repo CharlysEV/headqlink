@@ -1001,4 +1001,5 @@
     <string name="hql_profile_best">Maximum (cable)</string>
     <string name="hql_profile_best_detail">For the cable: 60 fps, full resolution, 12-16 Mbit/s, H.264 High and a low-latency encoder. The phone gets warmer. If the car screen stays black, go back to Car.</string>
     <string name="hql_speed_advice_stops_total">Tip: at %1$d km/h, %2$d stops instead of %3$d (%4$s more in total).</string>
+    <string name="hql_route_flat">No elevation data right now: the estimate ignores hills.</string>
 </resources>

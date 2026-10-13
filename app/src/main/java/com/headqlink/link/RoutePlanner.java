@@ -79,6 +79,8 @@ final class RoutePlanner {
         boolean googleTime;
         /** Al hacerlo, ninguna ruta se parecía a la de Google (va a otro sitio): no se rehace por diferir de ella. */
         boolean googleMismatch;
+        /** Sin alturas (los servicios no respondían): la ruta es llana, sin cuestas (RoutePlanner.elevations). */
+        boolean flatElevation;
         double destTemp = Double.NaN;
         double destWind = Double.NaN;
         double destRain = Double.NaN;
@@ -1188,24 +1190,8 @@ final class RoutePlanner {
         }
         p.segS = segS;
 
-        // 3. Elevación (Open-Meteo, 100 puntos por petición), suavizada.
-        p.elev = new double[n];
-        for (int from = 0; from < n; from += 100) {
-            int to = Math.min(n, from + 100);
-            StringBuilder la = new StringBuilder();
-            StringBuilder lo = new StringBuilder();
-            for (int i = from; i < to; i++) {
-                if (i > from) {
-                    la.append(',');
-                    lo.append(',');
-                }
-                la.append(String.format(Locale.US, "%.5f", p.lat[i]));
-                lo.append(String.format(Locale.US, "%.5f", p.lon[i]));
-            }
-            JSONArray e = new JSONObject(Http.get("https://api.open-meteo.com/v1/elevation?latitude=" + la + "&longitude=" + lo))
-                    .getJSONArray("elevation");
-            for (int i = from; i < to; i++) p.elev[i] = e.optDouble(i - from, 0);
-        }
+        // 3. Elevación (elevations: Open-Meteo, OpenTopoData de reserva o llana), suavizada.
+        p.elev = elevations(p);
         double[] sm = new double[n];
         for (int i = 0; i < n; i++) {
             double a = 0;
@@ -1268,6 +1254,114 @@ final class RoutePlanner {
         findChargers(p);
         p.progress = nearest(p, lat0, lon0, -1);
         return p;
+    }
+
+    /** Puntos de la ruta a los que se piden alturas, como mucho (el resto, interpolados por km). */
+    static final int ELEV_SAMPLES = 400;
+
+    /**
+     * Alturas de los puntos de la ruta. Se piden como mucho ELEV_SAMPLES (cuatro peticiones de 100; antes todos los puntos,
+     * 15-20 peticiones en una ruta larga) y el resto se interpola. Open-Meteo limita por IP y con datos móviles la IP es
+     * compartida (CGNAT): a ratos responde HTTP 429 a todo, y la ruta entera fallaba. Entonces: un reintento, después
+     * OpenTopoData y, si tampoco, la ruta llana (sin cuestas, Plan.flatElevation) en vez de no salir.
+     */
+    private double[] elevations(Plan p) {
+        int[] idx = sampleIdx(p.n, ELEV_SAMPLES);
+        double[] lat = new double[idx.length];
+        double[] lon = new double[idx.length];
+        for (int j = 0; j < idx.length; j++) {
+            lat[j] = p.lat[idx[j]];
+            lon[j] = p.lon[idx[j]];
+        }
+        String why = "";
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                double[] e = attempt < 2 ? elevOpenMeteo(lat, lon) : elevOpenTopo(lat, lon);
+                if (attempt > 0) L.i("ruta: alturas de " + (attempt < 2 ? "Open-Meteo al reintentar" : "OpenTopoData (Open-Meteo no respondía: " + why + ")"));
+                return interpolate(p.km, idx, e);
+            } catch (Exception ex) {
+                why = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+                if (attempt == 0) SystemClock.sleep(1500);
+            }
+        }
+        p.flatElevation = true;
+        L.w("ruta: sin alturas (" + why + "): la ruta sale llana, sin cuestas");
+        return new double[p.n];
+    }
+
+    /** Open-Meteo: 100 puntos por petición. */
+    private static double[] elevOpenMeteo(double[] lat, double[] lon) throws Exception {
+        double[] out = new double[lat.length];
+        for (int from = 0; from < lat.length; from += 100) {
+            int to = Math.min(lat.length, from + 100);
+            StringBuilder la = new StringBuilder();
+            StringBuilder lo = new StringBuilder();
+            for (int i = from; i < to; i++) {
+                if (i > from) {
+                    la.append(',');
+                    lo.append(',');
+                }
+                la.append(String.format(Locale.US, "%.5f", lat[i]));
+                lo.append(String.format(Locale.US, "%.5f", lon[i]));
+            }
+            JSONArray e = new JSONObject(Http.get("https://api.open-meteo.com/v1/elevation?latitude=" + la + "&longitude=" + lo))
+                    .getJSONArray("elevation");
+            for (int i = from; i < to; i++) out[i] = e.optDouble(i - from, 0);
+        }
+        return out;
+    }
+
+    /** OpenTopoData (SRTM 90 m, servicio público): 100 puntos por petición y como mucho una por segundo. */
+    private static double[] elevOpenTopo(double[] lat, double[] lon) throws Exception {
+        double[] out = new double[lat.length];
+        for (int from = 0; from < lat.length; from += 100) {
+            if (from > 0) SystemClock.sleep(1100);
+            int to = Math.min(lat.length, from + 100);
+            StringBuilder q = new StringBuilder();
+            for (int i = from; i < to; i++) {
+                if (i > from) q.append("%7C");
+                q.append(String.format(Locale.US, "%.5f,%.5f", lat[i], lon[i]));
+            }
+            JSONArray r = new JSONObject(Http.get("https://api.opentopodata.org/v1/srtm90m?locations=" + q)).getJSONArray("results");
+            for (int i = from; i < to; i++) {
+                JSONObject o = r.optJSONObject(i - from);
+                out[i] = o == null || o.isNull("elevation") ? 0 : o.optDouble("elevation", 0);
+            }
+        }
+        return out;
+    }
+
+    /** Puro: índices de como mucho max puntos repartidos por igual entre 0 y n-1 (los dos extremos incluidos). */
+    static int[] sampleIdx(int n, int max) {
+        if (n <= max) {
+            int[] all = new int[n];
+            for (int i = 0; i < n; i++) all[i] = i;
+            return all;
+        }
+        int[] out = new int[max];
+        for (int j = 0; j < max; j++) out[j] = (int) Math.round(j * (n - 1) / (double) (max - 1));
+        return out;
+    }
+
+    /** Puro: los valores de los puntos idx (en orden) llevados a todos los puntos, interpolando por km. */
+    static double[] interpolate(double[] km, int[] idx, double[] vals) {
+        double[] out = new double[km.length];
+        int j = 0;
+        for (int i = 0; i < km.length; i++) {
+            while (j < idx.length - 2 && idx[j + 1] <= i) j++;
+            int a = idx[j];
+            int b = idx[Math.min(j + 1, idx.length - 1)];
+            if (b == a || i <= a) {
+                out[i] = vals[j];
+            } else if (i >= b) {
+                out[i] = vals[Math.min(j + 1, vals.length - 1)];
+            } else {
+                double span = km[b] - km[a];
+                double f = span > 0 ? (km[i] - km[a]) / span : (i - a) / (double) (b - a);
+                out[i] = vals[j] + (vals[j + 1] - vals[j]) * f;
+            }
+        }
+        return out;
     }
 
     private double[][] weatherAt(Plan p, int[] idx, double[] etaS) {

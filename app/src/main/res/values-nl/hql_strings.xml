@@ -996,4 +996,5 @@
     <string name="hql_profile_best">Maximaal (kabel)</string>
     <string name="hql_profile_best_detail">Voor de kabel: 60 fps, volledige resolutie, 12-16 Mbit/s, H.264 High en encoder met lage latentie. De telefoon wordt warmer. Blijft het autoscherm zwart, ga dan terug naar Volgens de auto.</string>
     <string name="hql_speed_advice_stops_total">Tip: met %1$d km/u %2$d stops in plaats van %3$d (in totaal %4$s langer).</string>
+    <string name="hql_route_flat">Nu geen hoogtegegevens: de schatting houdt geen rekening met hellingen.</string>
 </resources>

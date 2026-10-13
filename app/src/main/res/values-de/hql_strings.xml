@@ -996,4 +996,5 @@
     <string name="hql_profile_best">Maximum (Kabel)</string>
     <string name="hql_profile_best_detail">Für das Kabel: 60 fps, volle Auflösung, 12-16 Mbit/s, H.264 High und Encoder mit niedriger Latenz. Das Handy wird wärmer. Bleibt der Autobildschirm schwarz, zurück zu Fahrzeug.</string>
     <string name="hql_speed_advice_stops_total">Tipp: Mit %1$d km/h %2$d statt %3$d Stopps (insgesamt %4$s länger).</string>
+    <string name="hql_route_flat">Gerade keine Höhendaten: Die Prognose berücksichtigt keine Steigungen.</string>
 </resources>

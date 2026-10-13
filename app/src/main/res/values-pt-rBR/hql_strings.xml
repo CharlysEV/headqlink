@@ -997,4 +997,5 @@
     <string name="hql_profile_best">Máximo (cabo)</string>
     <string name="hql_profile_best_detail">Para o cabo: 60 fps, resolução total, 12-16 Mbit/s, H.264 High e codificador de baixa latência. Esquenta mais o celular. Se a tela do carro ficar preta, volte para Carro.</string>
     <string name="hql_speed_advice_stops_total">Dica: a %1$d km/h, %2$d paradas em vez de %3$d (%4$s a mais no total).</string>
+    <string name="hql_route_flat">Sem dados de relevo agora: a previsão não conta as subidas.</string>
 </resources>

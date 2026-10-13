@@ -1668,7 +1668,7 @@ final class RouteTab implements CarScreen {
         } else {
             // De dónde sale la previsión: las cuestas de lo que falta (o, al llegar, lo previsto y lo real), a la izquierda
             // de la nota «ruta aproximada».
-            String why = explain(pl, prog);
+            String why = pl.flatElevation ? Str.get(R.string.hql_route_flat) : explain(pl, prog);
             p.setTypeface(CarKit.MEDIUM);
             p.setTextSize(18);
             float right = CarKit.text(cv, Str.get(R.string.hql_route_source), r.right, cy0 + 114, 18, CarKit.FAINT, CarKit.MEDIUM, p,

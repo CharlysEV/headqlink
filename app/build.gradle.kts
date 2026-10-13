@@ -99,8 +99,8 @@ android {
         // Android 6+: lo pide Material 3 (1.14) y, de todas formas, Android Auto ya exige Android 9 en el móvil.
         minSdk = 23
         targetSdk = 36
-        versionCode = 41
-        versionName = "0.2.59-qdauto"
+        versionCode = 42
+        versionName = "0.2.60-qdauto"
         setProperty("archivesBaseName", "${applicationId}_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
