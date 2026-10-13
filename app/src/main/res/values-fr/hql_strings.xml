@@ -1016,4 +1016,14 @@
     <string name="hql_update_acc_channel">Qonecta+ mis à jour</string>
     <string name="hql_update_acc_title">Qonecta+ a été mis à jour</string>
     <string name="hql_update_acc_text">Android a désactivé l\'accessibilité « Qonecta+ tactile » lors de la mise à jour. Touchez pour la réactiver ; sans elle, l\'écran de la voiture reste noir.</string>
+    <string name="hql_epg_until">jusqu\'à %1$s</string>
+    <string name="hql_backup_menu">Sauvegarde des réglages</string>
+    <string name="hql_backup_help">Enregistre dans un fichier les listes TV et radio, les favoris, les marque-pages web, les prix, les filtres de bornes, le planificateur, l\'image, le panneau et le modèle de la voiture. Pour changer de téléphone ou partager ta configuration.\n\nN\'inclut jamais ton compte Leapmotor, Home Assistant, l\'historique web ni les lieux récents. Les listes ouvertes depuis un fichier de ce téléphone restent dehors. Si une liste TV contient un identifiant ou un mot de passe dans son adresse, il part dans le fichier.</string>
+    <string name="hql_backup_export">Exporter</string>
+    <string name="hql_backup_import">Importer</string>
+    <string name="hql_backup_saved">Réglages enregistrés dans le fichier</string>
+    <string name="hql_backup_failed">Impossible d\'enregistrer le fichier : %1$s</string>
+    <string name="hql_backup_invalid">Ce fichier n\'est pas une sauvegarde de réglages Qonecta+</string>
+    <string name="hql_backup_confirm">Le fichier contient %1$d réglages : %2$d listes TV, %3$d radio, %4$d favoris et %5$d marque-pages web. Ils remplacent ceux de ce téléphone ; le reste ne change pas.</string>
+    <string name="hql_backup_done">Réglages importés. Ceux de l\'image et de la connexion s\'appliquent à la prochaine connexion.</string>
 </resources>

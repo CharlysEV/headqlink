@@ -44,7 +44,8 @@ import java.util.regex.Pattern;
  * TV por internet: listas M3U/M3U8 o la JSON de TDTChannels (tv.json) (URL o archivo elegido en el móvil, ver
  * Config.m3uLists; arriba se elige cuál), canales por grupos y reproducción con ExoPlayer (HLS, TS…). Un canal repetido en
  * la lista sale una vez, con sus fuentes de reserva (si la primera falla, la siguiente). Los canales que solo están en
- * YouTube o en una web (los de tv.json) se ven con su reproductor en una WebView.
+ * YouTube o en una web (los de tv.json) se ven con su reproductor en una WebView. Si la lista trae guía de programación
+ * (Epg), debajo de cada canal sale lo que ponen ahora.
  * Pendiente (fases finales): bloquear el vídeo con el coche en marcha.
  */
 final class IptvScreen implements CarScreen {
@@ -55,6 +56,8 @@ final class IptvScreen implements CarScreen {
         String url;
         /** Todas sus fuentes, la principal primero; las de YouTube o web llevan delante WEB. */
         final List<String> urls = new ArrayList<>();
+        /** Su id en la guía de programación (tvg-id en la M3U, epg_id en la JSON); null si no lo trae. */
+        String epg;
     }
 
     /** Delante de una fuente que no es un vídeo directo (YouTube, Twitch, la web de la cadena). */
@@ -83,6 +86,10 @@ final class IptvScreen implements CarScreen {
     private String[][] lists;
     private int sel;
     private int loadSeq;
+    /** Guía de programación de la lista que se ve (llega después que los canales); null si no hay. */
+    private Epg epg;
+    private final java.text.DateFormat timeFmt = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT);
+    private static final long EPG_TICK_MS = 60_000;
 
     @Override
     public View create(Host h) {
@@ -104,6 +111,7 @@ final class IptvScreen implements CarScreen {
         String src = lists[i][1];
         all.clear();
         shown.clear();
+        epg = null;
         FrameLayout loading = new FrameLayout(c);
         loading.addView(CarStyle.message(c, Str.get(R.string.hql_tv_loading)), CarStyle.match());
         View first = withLists(c, loading);
@@ -111,8 +119,9 @@ final class IptvScreen implements CarScreen {
         new Thread(() -> {
             List<Channel> list;
             String error = null;
+            String[] epgUrl = new String[1];
             try {
-                list = read(open(c, src));
+                list = read(open(c, src), epgUrl);
             } catch (Exception e) {
                 list = new ArrayList<>();
                 error = e.getMessage();
@@ -129,9 +138,36 @@ final class IptvScreen implements CarScreen {
                 all.addAll(fl);
                 listView = withLists(c, buildList(c));
                 host.setContent(listView);
+                if (epgUrl[0] != null) loadEpg(c, epgUrl[0], seq);
             });
         }, "iptv-load").start();
         return first;
+    }
+
+    /** La guía de programación, en segundo plano; al llegar, los canales enseñan lo que ponen ahora. */
+    private void loadEpg(Context c, String url, int seq) {
+        Host h = host;
+        new Thread(() -> {
+            Epg e = Epg.load(c.getApplicationContext(), url);
+            if (e == null) return;
+            h.post(() -> {
+                if (destroyed || seq != loadSeq) return;
+                epg = e;
+                refreshEpg();
+            });
+        }, "iptv-epg").start();
+    }
+
+    @SuppressWarnings("NotifyDataSetChanged")
+    private void refreshEpg() {
+        if (adapter != null) adapter.notifyDataSetChanged();
+    }
+
+    /** Lo que ponen ahora en el canal («Telediario 1 · hasta 15:30»); null si no hay guía o no sale. */
+    private String nowOn(Channel ch) {
+        if (epg == null) return null;
+        Epg.Prog p = epg.now(ch.epg, ch.name, System.currentTimeMillis());
+        return p == null ? null : Epg.label(p, timeFmt);
     }
 
     /** Encima de la vista, una fila con las listas para pasar de una a otra (solo si hay más de una). */
@@ -210,10 +246,20 @@ final class IptvScreen implements CarScreen {
                 ImageView logo = new ImageView(parent.getContext());
                 logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 item.addView(logo, new LinearLayout.LayoutParams(110, 80));
+                LinearLayout texts = new LinearLayout(parent.getContext());
+                texts.setOrientation(LinearLayout.VERTICAL);
+                texts.setPadding(14, 0, 0, 0);
                 TextView name = CarStyle.text(parent.getContext(), "", 24, CarStyle.TEXT);
                 name.setMaxLines(2);
-                name.setPadding(14, 0, 0, 0);
-                item.addView(name, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                texts.addView(name);
+                // Lo que ponen ahora (guía de programación), en una línea.
+                TextView now = CarStyle.text(parent.getContext(), "", 18, CarStyle.TEXT_DIM);
+                now.setSingleLine(true);
+                now.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                now.setVisibility(View.GONE);
+                texts.addView(now);
+                item.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                 return new RecyclerView.ViewHolder(item) {
                 };
             }
@@ -224,7 +270,14 @@ final class IptvScreen implements CarScreen {
                 LinearLayout item = (LinearLayout) vh.itemView;
                 ImageView logo = (ImageView) item.getChildAt(0);
                 boolean fav = Favorites.contains(favs, ch.url);
-                ((TextView) item.getChildAt(1)).setText(fav ? "★ " + ch.name : ch.name);
+                LinearLayout texts = (LinearLayout) item.getChildAt(1);
+                TextView name = (TextView) texts.getChildAt(0);
+                TextView now = (TextView) texts.getChildAt(1);
+                name.setText(fav ? "★ " + ch.name : ch.name);
+                Epg.Prog p = epg == null ? null : epg.now(ch.epg, ch.name, System.currentTimeMillis());
+                name.setMaxLines(p == null ? 2 : 1);
+                now.setText(p == null ? "" : p.title);
+                now.setVisibility(p == null ? View.GONE : View.VISIBLE);
                 if (ch.logo != null && !ch.logo.isEmpty()) {
                     Glide.with(c.getApplicationContext()).load(ch.logo).into(logo);
                 } else {
@@ -250,6 +303,16 @@ final class IptvScreen implements CarScreen {
         rv.setAdapter(adapter);
         col.addView(rv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         filter(null);
+        // Con guía, cada minuto se repasa lo que ponen ahora (solo si la lista está a la vista).
+        Runnable tick = new Runnable() {
+            @Override
+            public void run() {
+                if (destroyed) return;
+                if (epg != null && rv.isAttachedToWindow()) refreshEpg();
+                rv.postDelayed(this, EPG_TICK_MS);
+            }
+        };
+        rv.postDelayed(tick, EPG_TICK_MS);
         return col;
     }
 
@@ -272,6 +335,7 @@ final class IptvScreen implements CarScreen {
                 ch.group = o.optString("group");
                 ch.urls.addAll(Favorites.urls(o));
                 ch.url = ch.urls.get(0);
+                ch.epg = o.optString("epg", null);
                 shown.add(ch);
             }
         } else {
@@ -282,7 +346,13 @@ final class IptvScreen implements CarScreen {
 
     @SuppressWarnings("NotifyDataSetChanged")
     private void toggleFavorite(Context c, Channel ch) {
-        boolean in = Favorites.toggle(favs, Favorites.item(ch.name, ch.url, ch.logo, ch.group, ch.urls));
+        JSONObject item = Favorites.item(ch.name, ch.url, ch.logo, ch.group, ch.urls);
+        try {
+            if (ch.epg != null) item.put("epg", ch.epg);
+        } catch (org.json.JSONException ignored) {
+            // No pasa con cadenas.
+        }
+        boolean in = Favorites.toggle(favs, item);
         Favorites.save(new Config(c), Favorites.TV, favs);
         L.i("TV: " + (in ? "favorito añadido" : "favorito quitado") + " (" + favs.length() + ")");
         if (FAV_GROUP.equals(currentGroup)) filter(currentGroup);
@@ -327,7 +397,9 @@ final class IptvScreen implements CarScreen {
         LinearLayout overlay = new LinearLayout(c);
         overlay.setOrientation(LinearLayout.VERTICAL);
         overlay.setPadding(16, 16, 16, 8);
-        TextView status = CarStyle.text(c, source > 0 ? ch.name + " · " + Str.get(R.string.hql_tv_backup) : ch.name, 26, Color.WHITE);
+        String on = nowOn(ch);
+        String title = on != null ? ch.name + " · " + on : ch.name;
+        TextView status = CarStyle.text(c, source > 0 ? title + " · " + Str.get(R.string.hql_tv_backup) : title, 26, Color.WHITE);
         status.setShadowLayer(6, 0, 0, Color.BLACK);
         status.setPadding(8, 12, 8, 8);
         status.setSingleLine(true);
@@ -410,7 +482,8 @@ final class IptvScreen implements CarScreen {
             other.setOnClickListener(v -> play(index, source + 1));
             top.addView(other);
         }
-        TextView name = CarStyle.text(c, ch.name, 24, Color.WHITE);
+        String on = nowOn(ch);
+        TextView name = CarStyle.text(c, on != null ? ch.name + " · " + on : ch.name, 24, Color.WHITE);
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         name.setPadding(16, 0, 0, 0);
@@ -534,14 +607,51 @@ final class IptvScreen implements CarScreen {
 
     /** La lista leída: M3U, o la JSON de TDTChannels (empieza por «{»), con los canales repetidos juntos (merge). */
     static List<Channel> read(InputStream in) throws Exception {
+        return read(in, null);
+    }
+
+    /** Igual, y en epgUrl[0] (si no es null) la URL de su guía de programación, si la trae. */
+    static List<Channel> read(InputStream in, String[] epgUrl) throws Exception {
         byte[] b;
         try (InputStream i = in) {
             b = Http.readAll(i);
         }
         String t = new String(b, StandardCharsets.UTF_8).trim();
         if (t.startsWith("\uFEFF")) t = t.substring(1).trim();
-        List<Channel> out = t.startsWith("{") ? parseTdtJson(t) : parse(new java.io.ByteArrayInputStream(b));
+        boolean json = t.startsWith("{");
+        List<Channel> out = json ? parseTdtJson(t) : parse(new java.io.ByteArrayInputStream(b));
+        if (epgUrl != null) epgUrl[0] = json ? jsonEpgUrl(t) : m3uEpgUrl(t);
         return merge(out);
+    }
+
+    private static final Pattern TVG_URL = Pattern.compile("(?:url-tvg|x-tvg-url)=\"([^\"]+)\"");
+
+    /** Puro: la guía que anuncia la cabecera de una M3U (url-tvg o x-tvg-url en las líneas #EXTM3U; la primera). */
+    static String m3uEpgUrl(String text) {
+        int n = 0;
+        for (String line : text.split("\n", 50)) {
+            String l = line.trim();
+            if (l.startsWith("#EXTINF") || ++n > 40) break;
+            if (!l.startsWith("#EXTM3U")) continue;
+            Matcher m = TVG_URL.matcher(l);
+            if (m.find()) {
+                String u = m.group(1).split(",")[0].trim();
+                if (u.startsWith("http")) return u;
+            }
+        }
+        return null;
+    }
+
+    /** Puro: la guía de la JSON de TDTChannels ({"epg":{"xml.gz":…,"xml":…}}); la comprimida, que pesa menos. */
+    static String jsonEpgUrl(String json) {
+        try {
+            JSONObject e = new JSONObject(json).optJSONObject("epg");
+            if (e == null) return null;
+            String u = e.optString("xml.gz", e.optString("xml", ""));
+            return u.startsWith("http") ? u : null;
+        } catch (org.json.JSONException ex) {
+            return null;
+        }
     }
 
     /**
@@ -569,6 +679,8 @@ final class IptvScreen implements CarScreen {
                     ch.name = o.optString("name").trim();
                     ch.logo = o.isNull("logo") ? null : o.optString("logo").trim();
                     ch.group = group;
+                    String eid = o.isNull("epg_id") ? "" : o.optString("epg_id").trim();
+                    if (!eid.isEmpty()) ch.epg = eid;
                     List<String> web = new ArrayList<>();
                     org.json.JSONArray opts = o.optJSONArray("options");
                     for (int n = 0; opts != null && n < opts.length(); n++) {
@@ -612,6 +724,7 @@ final class IptvScreen implements CarScreen {
             }
             for (String u : ch.urls) if (!first.urls.contains(u)) first.urls.add(u);
             if ((first.logo == null || first.logo.isEmpty()) && ch.logo != null) first.logo = ch.logo;
+            if (first.epg == null) first.epg = ch.epg;
         }
         return new ArrayList<>(by.values());
     }
@@ -633,6 +746,7 @@ final class IptvScreen implements CarScreen {
                     while (m.find()) {
                         if ("tvg-logo".equals(m.group(1))) pending.logo = m.group(2);
                         else if ("group-title".equals(m.group(1))) pending.group = m.group(2);
+                        else if ("tvg-id".equals(m.group(1)) && !m.group(2).trim().isEmpty()) pending.epg = m.group(2).trim();
                     }
                 } else if (!line.startsWith("#")) {
                     Channel ch = pending != null ? pending : new Channel();

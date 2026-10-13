@@ -63,6 +63,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     private static final int REQ_IPTV_FILE = 10;
     private static final int REQ_RADIO_FILE = 11;
     private static final int REQ_NES_TREE = 21;
+    private static final int REQ_BACKUP_EXPORT = 22;
+    private static final int REQ_BACKUP_IMPORT = 23;
     private static final int REQ_CHECKLIST = 12;
 
     @Override
@@ -624,6 +626,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         }
         java.util.List<int[]> app = new java.util.ArrayList<>();
         app.add(new int[]{13, R.string.hql_update_check});
+        app.add(new int[]{18, R.string.hql_backup_menu});
         app.add(new int[]{17, R.string.hql_terms_title});
         if (android.os.Build.VERSION.SDK_INT >= 33) app.add(new int[]{4, R.string.hql_language});
         if (android.os.Build.VERSION.SDK_INT >= 26) app.add(new int[]{8, R.string.hql_w_add_widget});
@@ -795,6 +798,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 break;
             case 17:
                 TermsOfUse.show(this);
+                break;
+            case 18:
+                showBackup();
                 break;
             case 11:
                 if (LinkState.running && (LinkState.car == LinkState.Car.CONNECTED || LinkState.car == LinkState.Car.RECONNECTING)) {
@@ -1061,6 +1067,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             return;
         }
         if (res != RESULT_OK || data == null) return;
+        if ((req == REQ_BACKUP_EXPORT || req == REQ_BACKUP_IMPORT) && data.getData() != null) {
+            if (req == REQ_BACKUP_EXPORT) exportSettings(data.getData());
+            else importSettings(data.getData());
+            return;
+        }
         java.util.List<android.net.Uri> uris = new java.util.ArrayList<>();
         if (data.getClipData() != null) {
             for (int i = 0; i < data.getClipData().getItemCount(); i++) uris.add(data.getClipData().getItemAt(i).getUri());
@@ -1084,6 +1095,68 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             addList(radio ? Config.RADIO : Config.IPTV, fileName(uris.get(0)), uris.get(0).toString());
             showList(radio);
         }
+    }
+
+    /**
+     * Copia de los ajustes (SettingsBackup): exportar a un archivo o importarlo, para cambiar de móvil o pasárselos a
+     * otro. Sin la cuenta de Leapmotor, Home Assistant ni nada personal.
+     */
+    private void showBackup() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(Str.get(R.string.hql_backup_menu))
+                .setMessage(Str.get(R.string.hql_backup_help))
+                .setPositiveButton(Str.get(R.string.hql_backup_export), (d, w) -> {
+                    Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                            .setType("application/json")
+                            .putExtra(Intent.EXTRA_TITLE, SettingsBackup.fileName(System.currentTimeMillis()));
+                    startActivityForResult(i, REQ_BACKUP_EXPORT);
+                })
+                .setNeutralButton(Str.get(R.string.hql_backup_import), (d, w) -> {
+                    Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+                    startActivityForResult(i, REQ_BACKUP_IMPORT);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void exportSettings(android.net.Uri uri) {
+        try (java.io.OutputStream out = getContentResolver().openOutputStream(uri, "wt")) {
+            if (out == null) throw new java.io.IOException("sin archivo");
+            out.write(SettingsBackup.export(this, com.andrerinas.openheadunit.BuildConfig.VERSION_NAME)
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            L.i("ajustes: copia exportada");
+            android.widget.Toast.makeText(this, Str.get(R.string.hql_backup_saved), android.widget.Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            L.w("ajustes: no se pudo exportar: " + e);
+            android.widget.Toast.makeText(this, Str.get(R.string.hql_backup_failed, String.valueOf(e.getMessage())),
+                    android.widget.Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void importSettings(android.net.Uri uri) {
+        org.json.JSONObject root;
+        try (java.io.InputStream in = getContentResolver().openInputStream(uri)) {
+            if (in == null) throw new java.io.IOException("sin archivo");
+            byte[] b = Http.readAll(in);
+            if (b.length > (2 << 20)) throw new java.io.IOException("archivo demasiado grande");
+            root = SettingsBackup.parse(new String(b, java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            L.w("ajustes: copia no válida: " + e);
+            android.widget.Toast.makeText(this, Str.get(R.string.hql_backup_invalid), android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        SettingsBackup.Result s = SettingsBackup.summary(root);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(Str.get(R.string.hql_backup_import))
+                .setMessage(Str.get(R.string.hql_backup_confirm, s.settings, s.tvLists, s.radioLists, s.favorites, s.bookmarks))
+                .setPositiveButton(Str.get(R.string.hql_backup_import), (d, w) -> {
+                    SettingsBackup.Result r = SettingsBackup.apply(this, root);
+                    L.i("ajustes: copia importada (" + r.settings + " ajustes)");
+                    android.widget.Toast.makeText(this, Str.get(R.string.hql_backup_done), android.widget.Toast.LENGTH_LONG).show();
+                    recreate();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     /**

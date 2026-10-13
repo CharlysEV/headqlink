@@ -1015,4 +1015,14 @@
     <string name="hql_update_acc_channel">Qonecta+ bijgewerkt</string>
     <string name="hql_update_acc_title">Qonecta+ is bijgewerkt</string>
     <string name="hql_update_acc_text">Android heeft de toegankelijkheidsservice «Qonecta+ aanraking» bij de update uitgeschakeld. Tik om hem weer in te schakelen; zonder blijft het autoscherm zwart.</string>
+    <string name="hql_epg_until">tot %1$s</string>
+    <string name="hql_backup_menu">Back-up van instellingen</string>
+    <string name="hql_backup_help">Slaat je tv- en radiolijsten, favorieten, webbladwijzers, prijzen, laadpaalfilters, routeplanner, beeld- en paneelinstellingen en het automodel op in een bestand. Handig bij een nieuwe telefoon of om je instellingen te delen.\n\nNooit inbegrepen: je Leapmotor-account, Home Assistant, webgeschiedenis en recente plaatsen. Lijsten uit een bestand op deze telefoon blijven buiten. Staat er een gebruikersnaam of wachtwoord in het adres van een tv-lijst, dan gaat dat mee.</string>
+    <string name="hql_backup_export">Exporteren</string>
+    <string name="hql_backup_import">Importeren</string>
+    <string name="hql_backup_saved">Instellingen in het bestand opgeslagen</string>
+    <string name="hql_backup_failed">Kon het bestand niet opslaan: %1$s</string>
+    <string name="hql_backup_invalid">Dat bestand is geen back-up van Qonecta+-instellingen</string>
+    <string name="hql_backup_confirm">Het bestand bevat %1$d instellingen: %2$d tv-lijsten, %3$d radiolijsten, %4$d favorieten en %5$d webbladwijzers. Ze vervangen die op deze telefoon; de rest blijft zoals het is.</string>
+    <string name="hql_backup_done">Instellingen geïmporteerd. Beeld- en verbindingsinstellingen gelden bij de volgende verbinding.</string>
 </resources>

@@ -1016,4 +1016,14 @@
     <string name="hql_update_acc_channel">Qonecta+ atualizado</string>
     <string name="hql_update_acc_title">O Qonecta+ foi atualizado</string>
     <string name="hql_update_acc_text">O Android desativou a acessibilidade «Qonecta+ toque» ao atualizar. Toque para a voltar a ativar; sem ela, o ecrã do carro fica preto.</string>
+    <string name="hql_epg_until">até às %1$s</string>
+    <string name="hql_backup_menu">Cópia das definições</string>
+    <string name="hql_backup_help">Guarda num ficheiro as listas de TV e rádio, os favoritos, os marcadores da web, os preços, os filtros de carregadores, o planeador, a imagem, o painel e o modelo do carro. Serve para mudar de telemóvel ou passar a tua configuração a outra pessoa.\n\nNunca inclui a tua conta Leapmotor, o Home Assistant, o histórico da web nem os locais recentes. As listas abertas a partir de um ficheiro deste telemóvel ficam de fora. Se uma lista de TV tiver utilizador ou palavra-passe no endereço, vai no ficheiro.</string>
+    <string name="hql_backup_export">Exportar</string>
+    <string name="hql_backup_import">Importar</string>
+    <string name="hql_backup_saved">Definições guardadas no ficheiro</string>
+    <string name="hql_backup_failed">Não foi possível guardar o ficheiro: %1$s</string>
+    <string name="hql_backup_invalid">Esse ficheiro não é uma cópia de definições do Qonecta+</string>
+    <string name="hql_backup_confirm">O ficheiro tem %1$d definições: %2$d listas de TV, %3$d de rádio, %4$d favoritos e %5$d marcadores da web. Substituem as deste telemóvel; o que não vier no ficheiro fica como está.</string>
+    <string name="hql_backup_done">Definições importadas. As de imagem e ligação aplicam-se na próxima ligação.</string>
 </resources>

@@ -1015,4 +1015,14 @@
     <string name="hql_update_acc_channel">Qonecta+ aktualisiert</string>
     <string name="hql_update_acc_title">Qonecta+ wurde aktualisiert</string>
     <string name="hql_update_acc_text">Android hat die Bedienungshilfe „Qonecta+ Touch“ beim Update abgeschaltet. Tippe, um sie wieder einzuschalten; ohne sie bleibt der Autobildschirm schwarz.</string>
+    <string name="hql_epg_until">bis %1$s</string>
+    <string name="hql_backup_menu">Einstellungen sichern</string>
+    <string name="hql_backup_help">Speichert TV- und Radiolisten, Favoriten, Web-Lesezeichen, Preise, Ladesäulenfilter, Routenplaner, Bild- und Paneleinstellungen und das Automodell in einer Datei. Zum Handywechsel oder um deine Einstellungen weiterzugeben.\n\nNie enthalten: dein Leapmotor-Konto, Home Assistant, Web-Verlauf und letzte Orte. Listen aus einer Datei auf diesem Handy bleiben draußen. Hat eine TV-Liste Benutzername oder Passwort in der Adresse, landet es in der Datei.</string>
+    <string name="hql_backup_export">Exportieren</string>
+    <string name="hql_backup_import">Importieren</string>
+    <string name="hql_backup_saved">Einstellungen in der Datei gespeichert</string>
+    <string name="hql_backup_failed">Datei konnte nicht gespeichert werden: %1$s</string>
+    <string name="hql_backup_invalid">Diese Datei ist keine Qonecta+-Einstellungssicherung</string>
+    <string name="hql_backup_confirm">Die Datei enthält %1$d Einstellungen: %2$d TV-Listen, %3$d Radiolisten, %4$d Favoriten und %5$d Web-Lesezeichen. Sie ersetzen die auf diesem Handy; alles andere bleibt, wie es ist.</string>
+    <string name="hql_backup_done">Einstellungen importiert. Bild- und Verbindungseinstellungen gelten ab der nächsten Verbindung.</string>
 </resources>
