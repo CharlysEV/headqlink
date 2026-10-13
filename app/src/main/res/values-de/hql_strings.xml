@@ -1011,4 +1011,8 @@
     <string name="hql_trip_notice_video">%1$.0f fps im Mittel · %2$d Neuverbindungen · %3$d Aussetzer</string>
     <string name="hql_trip_notice_heat">Wärme: Stufe %1$d max. · %2$.0f °C</string>
     <string name="hql_trip_notice_route">Route: %1$.1f kWh geschätzt, %2$.1f real</string>
+    <string name="hql_android_car_mode">Android-Automodus beim Projizieren (nicht nötig; beim Verlassen lädt das Handy alle Apps neu, wie ein Soft-Reset)</string>
+    <string name="hql_update_acc_channel">Qonecta+ aktualisiert</string>
+    <string name="hql_update_acc_title">Qonecta+ wurde aktualisiert</string>
+    <string name="hql_update_acc_text">Android hat die Bedienungshilfe „Qonecta+ Touch“ beim Update abgeschaltet. Tippe, um sie wieder einzuschalten; ohne sie bleibt der Autobildschirm schwarz.</string>
 </resources>

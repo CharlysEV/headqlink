@@ -1110,6 +1110,13 @@ class AapService : Service() {
             AppLog.i("AapService: Car launcher is active, skipping enableCarMode to prevent 'Driving app running' notification")
             return
         }
+        // headqlink: sin modo coche de Android (de serie): entrar y salir de él recrea el escritorio y todas las apps
+        // («soft reset» al desconectar). La pantalla encendida, si se pide, con un wake lock propio (PhoneScreen).
+        if (!com.headqlink.link.PhoneScreen.useCarMode(this)) {
+            AppLog.i("AapService: headqlink: sin modo coche de Android al proyectar (ajuste apagado)")
+            com.headqlink.link.PhoneScreen.applyScreenLock(this, true)
+            return
+        }
         try {
             val mgr = getSystemService(UI_MODE_SERVICE) as? UiModeManager
             if (mgr != null) {
@@ -1125,6 +1132,7 @@ class AapService : Service() {
 
     /** headqlink: vuelve a activar el modo coche con los indicadores del ajuste actual (solo si lo activó este servicio). */
     private fun refreshCarMode() {
+        com.headqlink.link.PhoneScreen.applyScreenLock(this, true)
         if (!::uiModeManager.isInitialized) return
         try {
             uiModeManager.enableCarMode(com.headqlink.link.PhoneScreen.carModeFlags(this))
@@ -2712,6 +2720,7 @@ class AapService : Service() {
         } catch (e: Exception) {
             AppLog.w("AapService: Error disabling car mode: ${e.message}")
         }
+        com.headqlink.link.PhoneScreen.applyScreenLock(this, false)
         try { selfLauncherManager.stop(wasConnected = commManager.isConnected) } catch (_: Exception) {}
         try { serviceScope.cancel() } catch (_: Exception) {}
         try { LogExporter.stopCapture() } catch (_: Exception) {}

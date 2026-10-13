@@ -76,6 +76,12 @@
         android:layout_height="wrap_content"
         android:text="@string/hql_keep_screen_on" />
 
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/hql_v_car_mode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_android_car_mode" />
+
     <!-- Protección térmica: Normal / Suave / Apagada (ThermalPolicy); se aplica en el acto -->
     <TextView
         style="@style/HQL.Text.Label"

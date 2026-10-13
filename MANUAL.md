@@ -25,6 +25,7 @@ Los nombres de botones y menús aparecen «entre comillas», tal como los muestr
 4. [Uso en el coche](#4-uso-en-el-coche)
 5. [Ajustes útiles](#5-ajustes-útiles)
 6. [Calor y batería](#6-calor-y-batería)
+- [Preguntas frecuentes](#preguntas-frecuentes)
 7. [Solución de problemas](#7-solución-de-problemas)
 8. [Exportar el log para pedir ayuda](#8-exportar-el-log-para-pedir-ayuda)
 9. [Seguridad, privacidad y aviso legal](#9-seguridad-privacidad-y-aviso-legal)
@@ -90,7 +91,7 @@ Qonecta+ no está en Google Play: se instala con un archivo APK.
 1. Descarga el APK nuevo de la misma página de Releases.
 2. Instálalo encima del que tienes: se conservan tus ajustes.
 3. Abre Qonecta+ y mira la «Comprobación»: **Android suele desactivar la accesibilidad al actualizar** y hay que
-   volver a activarla.
+   volver a activarla. Desde la 0.2.62, si pasa, Qonecta+ te lo dice con una notificación que abre el ajuste.
 
 > [!IMPORTANT]
 > Solo se puede actualizar con un APK **firmado con la misma clave**, es decir, de las Releases de este fork. Si Android
@@ -823,6 +824,50 @@ más bajo de los dos (calor o enlace).
 - Mientras proyectas, **no grabes vídeo en 4K**, no juegues ni uses otras apps pesadas en el móvil.
 - Quítale una funda gruesa en verano.
 - En viajes largos, lleva el móvil cargando; si puede ser, por cable.
+
+---
+
+## Preguntas frecuentes
+
+**Después de actualizar, ¿por qué tengo que volver a activar la accesibilidad?**
+Android (y algunos fabricantes) desactiva los servicios de accesibilidad de una app cuando se actualiza desde un APK.
+Desde la 0.2.62, si pasa, Qonecta+ te avisa con una notificación que abre el ajuste; también lo ves en ⚙ › «Comprobación»
+› «Activar». Es un momento: enciende «Qonecta+ táctil» y listo.
+
+**Al instalar dice «La aplicación no se ha instalado debido a un conflicto con un paquete».**
+Tienes otra app con el mismo identificador firmada con otra clave: casi siempre el HeadQLink original. Desinstálala
+(perderás sus ajustes) y vuelve a instalar Qonecta+.
+
+**Al desconectar, el móvil parece reiniciarse (se queda en negro un momento y recarga el escritorio).**
+Era el «modo coche» de Android: al salir de él, Android recarga todas las apps. Desde la 0.2.62 Qonecta+ no lo usa.
+Si lo quieres de vuelta, «Ajustes de imagen» › «Avanzado» › «Modo coche de Android al proyectar».
+
+**La música suena más baja que con un dongle.**
+Con Qonecta+ el audio va por el Bluetooth del coche, no por el cable. Sube al máximo el volumen multimedia del móvil y
+regula con el del coche. Si sigue bajo, en las Opciones de desarrollador del móvil activa «Inhabilitar volumen absoluto».
+
+**En el T03 todo se ve enorme.**
+Desde la 0.2.55 Android Auto se ajusta solo a las pantallas pequeñas. Si lo quieres más pequeño o más grande, «Ajustes
+de imagen» › «Tamaño de Android Auto» (también desde el coche, en Ajustes › Imagen).
+
+**Con el perfil «Máximo (cable)» la pantalla del coche se queda en negro o con fallos.**
+Es el formato H.264 High, que no todos los coches aceptan. Vuelve a «Coche», o quédate en «Máximo» con «Avanzado» ›
+«Perfil H.264» › «Baseline».
+
+**No sale la ruta ni los cargadores.**
+Casi siempre es que el servicio que da las alturas del terreno estaba saturado. Desde la 0.2.60 la ruta sale igual
+(sin contar las cuestas, y lo avisa). Si no sale nada, comprueba que el móvil tiene datos.
+
+**En la TV faltan Antena 3, laSexta, Cuatro…**
+No tienen emisión abierta por internet, así que ninguna lista M3U los trae. Con la lista JSON de TDTChannels
+(`https://www.tdtchannels.com/lists/tv.json`) los de Mediaset abren la web de su directo, y salen los canales de YouTube.
+
+**Con el mando Bluetooth, la pantalla del móvil se enciende con cada botón.**
+Lo hace Android, y una app no puede impedirlo. Desde la 0.2.60, durante el juego el móvil muestra una capa negra con el
+brillo al mínimo para que no pase; tocar el móvil la quita.
+
+**¿Cómo pido ayuda?**
+Exporta el log (sección 8) y cuenta qué pasó y a qué hora. No lleva contraseñas, direcciones ni lo que escribes.
 
 ---
 

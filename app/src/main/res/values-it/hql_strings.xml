@@ -1012,4 +1012,8 @@
     <string name="hql_trip_notice_video">%1$.0f fps in media · %2$d riconnessioni · %3$d interruzioni</string>
     <string name="hql_trip_notice_heat">calore: livello %1$d max · %2$.0f °C</string>
     <string name="hql_trip_notice_route">percorso: previsti %1$.1f kWh, reali %2$.1f</string>
+    <string name="hql_android_car_mode">Modalità auto di Android durante la proiezione (non serve; all\'uscita il telefono ricarica tutte le app, come un riavvio leggero)</string>
+    <string name="hql_update_acc_channel">Qonecta+ aggiornata</string>
+    <string name="hql_update_acc_title">Qonecta+ è stata aggiornata</string>
+    <string name="hql_update_acc_text">Android ha disattivato l\'accessibilità «Qonecta+ tocco» con l\'aggiornamento. Tocca per riattivarla; senza, lo schermo dell\'auto resta nero.</string>
 </resources>

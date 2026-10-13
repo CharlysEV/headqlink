@@ -25,6 +25,7 @@ I nomi di pulsanti e menu appaiono «tra virgolette», esattamente come li mostr
 4. [Uso in auto](#4-uso-in-auto)
 5. [Impostazioni utili](#5-impostazioni-utili)
 6. [Calore e batteria](#6-calore-e-batteria)
+- [Domande frequenti](#domande-frequenti)
 7. [Risoluzione dei problemi](#7-risoluzione-dei-problemi)
 8. [Esportare il log per chiedere aiuto](#8-esportare-il-log-per-chiedere-aiuto)
 9. [Sicurezza, privacy e note legali](#9-sicurezza-privacy-e-note-legali)
@@ -842,6 +843,50 @@ collegamento è al limite, vale il più basso dei due limiti (calore o collegame
 - Mentre proietti, **non registrare video in 4K**, non giocare e non usare altre app pesanti sul telefono.
 - D'estate togli una cover spessa.
 - Nei viaggi lunghi, tieni il telefono in carica, con il cavo se puoi.
+
+---
+
+## Domande frequenti
+
+**Dopo un aggiornamento, perché devo riattivare l'accessibilità?**
+Android (e alcuni produttori) disattiva i servizi di accessibilità di un'app quando viene aggiornata da un APK. Dalla
+0.2.62, se succede, Qonecta+ avvisa con una notifica che apre l'impostazione; anche da ⚙ › «Verifica» › «Attiva».
+
+**Installando dice che l'app non è stata installata per un conflitto con un pacchetto.**
+Hai un'altra app con lo stesso identificativo firmata con un'altra chiave, quasi sempre l'HeadQLink originale.
+Disinstallala (perdi le sue impostazioni) e installa di nuovo Qonecta+.
+
+**Alla disconnessione il telefono sembra riavviarsi (nero un attimo e la home si ricarica).**
+Era la «modalità auto» di Android: uscendone, Android ricarica tutte le app. Dalla 0.2.62 Qonecta+ non la usa. Per
+riaverla: «Impostazioni immagine» › «Avanzate» › «Modalità auto di Android durante la proiezione».
+
+**La musica si sente più bassa che con un dongle.**
+Con Qonecta+ l'audio passa dal Bluetooth dell'auto, non dal cavo. Metti al massimo il volume multimediale del telefono e
+regola con quello dell'auto. Se resta basso, attiva «Disattiva volume assoluto» nelle Opzioni sviluppatore.
+
+**Sulla T03 è tutto enorme.**
+Dalla 0.2.55 Android Auto si adatta da solo agli schermi piccoli. Per più piccolo o più grande: «Impostazioni immagine» ›
+«Dimensione di Android Auto» (anche dall'auto, Impostazioni › Immagine).
+
+**Con il profilo «Massimo (cavo)» lo schermo dell'auto resta nero o con difetti.**
+È il formato H.264 High, che non tutte le auto accettano. Torna a «Veicolo», oppure resta su «Massimo» con «Avanzate» ›
+«Profilo H.264» › «Baseline».
+
+**Non compaiono né il percorso né le colonnine.**
+Quasi sempre il servizio delle altitudini era saturo. Dalla 0.2.60 il percorso compare comunque (senza contare le salite,
+e lo dice). Se non compare nulla, controlla che il telefono abbia dati.
+
+**In TV mancano alcuni canali nazionali.**
+Non hanno trasmissione aperta su internet, quindi nessuna lista M3U li porta. Con la lista JSON di TDTChannels
+(`https://www.tdtchannels.com/lists/tv.json`) alcuni aprono la pagina web della diretta, e compaiono i canali YouTube.
+
+**Con il controller Bluetooth lo schermo del telefono si accende a ogni tasto.**
+Lo fa Android e un'app non può impedirlo. Dalla 0.2.60, durante il gioco il telefono mostra un velo nero con luminosità
+al minimo; toccare il telefono lo toglie.
+
+**Come chiedo aiuto?**
+Esporta il registro (sezione 8) e racconta cosa è successo e a che ora. Non contiene password, indirizzi né ciò che
+scrivi.
 
 ---
 

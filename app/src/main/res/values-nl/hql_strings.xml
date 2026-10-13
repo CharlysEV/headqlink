@@ -1011,4 +1011,8 @@
     <string name="hql_trip_notice_video">%1$.0f fps gemiddeld · %2$d herverbindingen · %3$d onderbrekingen</string>
     <string name="hql_trip_notice_heat">warmte: niveau %1$d max. · %2$.0f °C</string>
     <string name="hql_trip_notice_route">route: %1$.1f kWh geschat, %2$.1f echt</string>
+    <string name="hql_android_car_mode">Android-automodus tijdens projecteren (niet nodig; bij het verlaten laadt de telefoon alle apps opnieuw, als een zachte herstart)</string>
+    <string name="hql_update_acc_channel">Qonecta+ bijgewerkt</string>
+    <string name="hql_update_acc_title">Qonecta+ is bijgewerkt</string>
+    <string name="hql_update_acc_text">Android heeft de toegankelijkheidsservice «Qonecta+ aanraking» bij de update uitgeschakeld. Tik om hem weer in te schakelen; zonder blijft het autoscherm zwart.</string>
 </resources>

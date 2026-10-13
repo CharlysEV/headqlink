@@ -424,6 +424,15 @@
         </receiver>
 
         <!-- headqlink: conexión automática al detectar el Bluetooth del coche -->
+        <!-- headqlink: tras actualizar, si Android ha desactivado la accesibilidad, un aviso para volver a activarla -->
+        <receiver
+            android:name="com.headqlink.link.UpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <receiver
             android:name="com.headqlink.link.CarBtReceiver"
             android:exported="true">

@@ -25,6 +25,7 @@ Button and menu names are shown in "quotes", exactly as the app shows them in En
 4. [Using it in the car](#4-using-it-in-the-car)
 5. [Useful settings](#5-useful-settings)
 6. [Heat and battery](#6-heat-and-battery)
+- [FAQ](#faq)
 7. [Troubleshooting](#7-troubleshooting)
 8. [Exporting the log to ask for help](#8-exporting-the-log-to-ask-for-help)
 9. [Security, privacy and legal notice](#9-security-privacy-and-legal-notice)
@@ -814,6 +815,49 @@ link is also tight, the lower of the two caps (heat or link) applies.
 - While projecting, **don't record 4K video**, play games or run other heavy apps on the phone.
 - Take off a thick case in summer.
 - On long trips, keep the phone charging, by cable if possible.
+
+---
+
+## FAQ
+
+**After an update, why do I have to turn accessibility on again?**
+Android (and some manufacturers) turns off an app's accessibility services when it is updated from an APK. Since 0.2.62
+Qonecta+ notifies you when that happens, and the notification opens the setting; ⚙ › "Check" › "Enable" works too.
+
+**Installing says "App not installed as package conflicts with an existing package".**
+You have another app with the same identifier signed with a different key, almost always the original HeadQLink.
+Uninstall it (its settings are lost) and install Qonecta+ again.
+
+**When I disconnect, the phone seems to reboot (black for a moment, the launcher reloads).**
+That was Android's "car mode": leaving it makes Android reload every app. Since 0.2.62 Qonecta+ no longer uses it. If you
+want it back: "Picture settings" › "Advanced" › "Android car mode while projecting".
+
+**Music is quieter than with a dongle.**
+With Qonecta+ the audio goes over the car's Bluetooth, not the cable. Set the phone's media volume to maximum and use the
+car's. If it is still low, enable "Disable absolute volume" in the phone's Developer options.
+
+**On the T03 everything looks huge.**
+Since 0.2.55 Android Auto adapts to small screens by itself. For smaller or bigger: "Picture settings" › "Android Auto
+size" (also from the car, Settings › Picture).
+
+**With the "Maximum (cable)" profile the car screen stays black or glitches.**
+That is H.264 High, which not every car accepts. Go back to "Car", or stay on "Maximum" with "Advanced" › "H.264
+profile" › "Baseline".
+
+**No route and no chargers appear.**
+Usually the terrain-elevation service was overloaded. Since 0.2.60 the route appears anyway (ignoring hills, and says
+so). If nothing appears, check the phone has mobile data.
+
+**TV is missing some national channels.**
+They have no open internet stream, so no M3U list carries them. With the TDTChannels JSON list
+(`https://www.tdtchannels.com/lists/tv.json`) some broadcasters open their live web page, and YouTube channels show up.
+
+**With a Bluetooth controller the phone screen turns on with every button.**
+Android does that and an app cannot prevent it. Since 0.2.60 the phone shows a black cover at minimum brightness while
+you play; touching the phone removes it.
+
+**How do I ask for help?**
+Export the log (section 8) and say what happened and when. It carries no passwords, addresses or typed text.
 
 ---
 

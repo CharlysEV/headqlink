@@ -1017,4 +1017,8 @@
     <string name="hql_trip_notice_video">%1$.0f fps de media · %2$d reconexiones · %3$d cortes</string>
     <string name="hql_trip_notice_heat">calor: nivel %1$d máx. · %2$.0f °C</string>
     <string name="hql_trip_notice_route">ruta: previsto %1$.1f kWh, real %2$.1f</string>
+    <string name="hql_android_car_mode">Modo coche de Android al proyectar (no hace falta; al salir, el móvil recarga todas las apps, como un reinicio suave)</string>
+    <string name="hql_update_acc_channel">Qonecta+ actualizada</string>
+    <string name="hql_update_acc_title">Qonecta+ se ha actualizado</string>
+    <string name="hql_update_acc_text">Android ha desactivado la accesibilidad «Qonecta+ táctil» al actualizar. Toca para volver a activarla; sin ella, la pantalla del coche se queda en negro.</string>
 </resources>

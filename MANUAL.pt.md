@@ -42,6 +42,7 @@ Os nomes de botões e menus aparecem «entre aspas», tal como a aplicação os 
 4. [Utilização no carro](#4-utilização-no-carro)
 5. [Definições úteis](#5-definições-úteis)
 6. [Calor e bateria](#6-calor-e-bateria)
+- [Perguntas frequentes](#perguntas-frequentes)
 7. [Resolução de problemas](#7-resolução-de-problemas)
 8. [Exportar o registo para pedir ajuda](#8-exportar-o-registo-para-pedir-ajuda)
 9. [Segurança, privacidade e aviso legal](#9-segurança-privacidade-e-aviso-legal)
@@ -838,6 +839,50 @@ o limite mais baixo dos dois (calor ou ligação).
 - Enquanto projeta, **não grave vídeo em 4K**, não jogue nem use outras aplicações pesadas no telemóvel.
 - Tire uma capa grossa no verão.
 - Em viagens longas, leve o telemóvel a carregar; se possível, por cabo.
+
+---
+
+## Perguntas frequentes
+
+**Depois de atualizar, porque tenho de voltar a ativar a acessibilidade?**
+O Android (e alguns fabricantes) desativa os serviços de acessibilidade de uma app quando se atualiza a partir de um APK.
+Desde a 0.2.62, se acontecer, o Qonecta+ avisa com uma notificação que abre a definição; também em ⚙ › «Verificação» ›
+«Ativar».
+
+**Ao instalar diz que a app não foi instalada por conflito com um pacote.**
+Tem outra app com o mesmo identificador assinada com outra chave, quase sempre o HeadQLink original. Desinstale-a (perde
+as definições dela) e instale o Qonecta+ de novo.
+
+**Ao desligar, o telemóvel parece reiniciar (fica preto um momento e recarrega o ecrã inicial).**
+Era o «modo carro» do Android: ao sair dele, o Android recarrega todas as apps. Desde a 0.2.62 o Qonecta+ não o usa. Para
+o ter de volta: «Definições de imagem» › «Avançado» › «Modo carro do Android ao projetar».
+
+**A música soa mais baixa do que com um dongle.**
+Com o Qonecta+ o áudio vai pelo Bluetooth do carro, não pelo cabo. Ponha o volume multimédia do telemóvel no máximo e
+regule com o do carro. Se continuar baixo, ative «Desativar volume absoluto» nas Opções de programador.
+
+**No T03 tudo se vê enorme.**
+Desde a 0.2.55 o Android Auto ajusta-se sozinho aos ecrãs pequenos. Para mais pequeno ou maior: «Definições de imagem» ›
+«Tamanho do Android Auto» (também no carro, Definições › Imagem).
+
+**Com o perfil «Máximo (cabo)» o ecrã do carro fica preto ou com falhas.**
+É o formato H.264 High, que nem todos os carros aceitam. Volte a «Carro», ou fique em «Máximo» com «Avançado» › «Perfil
+H.264» › «Baseline».
+
+**Não aparece a rota nem os carregadores.**
+Quase sempre o serviço das altitudes do terreno estava saturado. Desde a 0.2.60 a rota aparece na mesma (sem contar as
+subidas, e avisa). Se não aparece nada, confirme que o telemóvel tem dados.
+
+**Na TV faltam canais nacionais.**
+Não têm emissão aberta na internet, por isso nenhuma lista M3U os traz. Com a lista JSON do TDTChannels
+(`https://www.tdtchannels.com/lists/tv.json`) alguns abrem a página web do seu direto, e aparecem os canais do YouTube.
+
+**Com o comando Bluetooth, o ecrã do telemóvel acende-se com cada botão.**
+É o Android, e uma app não o pode impedir. Desde a 0.2.60, durante o jogo o telemóvel mostra uma camada preta com o brilho
+no mínimo; tocar no telemóvel tira-a.
+
+**Como peço ajuda?**
+Exporte o registo (secção 8) e conte o que aconteceu e a que horas. Não leva palavras-passe, moradas nem o que escreve.
 
 ---
 

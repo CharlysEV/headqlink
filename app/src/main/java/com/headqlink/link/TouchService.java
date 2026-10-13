@@ -43,6 +43,8 @@ public class TouchService extends AccessibilityService {
         L.init(this);
         registerReceiver(userPresent, new android.content.IntentFilter(android.content.Intent.ACTION_USER_PRESENT));
         L.i("TouchService conectado");
+        // Para avisar si una actualización la desactiva (UpdateReceiver).
+        new Config(this).putBool(UpdateReceiver.ACC_WAS_ON, true);
     }
 
     @Override

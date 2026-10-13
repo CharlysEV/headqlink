@@ -1012,4 +1012,8 @@
     <string name="hql_trip_notice_video">%1$.0f i/s en moyenne · %2$d reconnexions · %3$d coupures</string>
     <string name="hql_trip_notice_heat">chaleur : niveau %1$d max · %2$.0f °C</string>
     <string name="hql_trip_notice_route">itinéraire : %1$.1f kWh prévus, %2$.1f réels</string>
+    <string name="hql_android_car_mode">Mode voiture d\'Android pendant la projection (inutile ; en sortant, le téléphone recharge toutes les applis, comme un redémarrage léger)</string>
+    <string name="hql_update_acc_channel">Qonecta+ mis à jour</string>
+    <string name="hql_update_acc_title">Qonecta+ a été mis à jour</string>
+    <string name="hql_update_acc_text">Android a désactivé l\'accessibilité « Qonecta+ tactile » lors de la mise à jour. Touchez pour la réactiver ; sans elle, l\'écran de la voiture reste noir.</string>
 </resources>

@@ -1102,6 +1102,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         android.widget.CheckBox lowLat = v.findViewById(R.id.hql_v_lowlatency);
         android.widget.CheckBox autoHide = v.findViewById(R.id.hql_v_autohide);
         android.widget.CheckBox keepScreen = v.findViewById(R.id.hql_v_keep_screen);
+        android.widget.CheckBox carMode = v.findViewById(R.id.hql_v_car_mode);
+        boolean carModeBefore = cfg.getBool(PhoneScreen.ANDROID_CAR_MODE);
+        carMode.setChecked(carModeBefore);
         View advanced = v.findViewById(R.id.hql_v_advanced);
         TextView advToggle = v.findViewById(R.id.hql_v_adv_toggle);
         advToggle.setOnClickListener(x -> {
@@ -1206,6 +1209,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                     // Ajuste manual solo si el usuario lo ha tocado; si no, manda el perfil.
                     if (lowLat.isChecked() != lowLatBefore) cfg.putBool(Config.LOW_LATENCY, lowLat.isChecked());
                     cfg.putBool(Config.PANEL_AUTOHIDE, autoHide.isChecked());
+                    if (carMode.isChecked() != carModeBefore) {
+                        // Se aplica en la próxima sesión de Android Auto (el modo coche se activa al crearse su servicio).
+                        cfg.putBool(PhoneScreen.ANDROID_CAR_MODE, carMode.isChecked());
+                        L.i("pantalla: «Modo coche de Android al proyectar» " + (carMode.isChecked() ? "sí" : "no") + " (próxima sesión)");
+                    }
                     if (keepScreen.isChecked() != keepScreenBefore) {
                         // Se aplica ya si Android Auto está en marcha (modo coche con o sin ALLOW_SLEEP).
                         cfg.putBool(Config.KEEP_SCREEN_ON, keepScreen.isChecked());

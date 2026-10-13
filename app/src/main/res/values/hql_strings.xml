@@ -1016,4 +1016,8 @@
     <string name="hql_trip_notice_video">%1$.0f fps average · %2$d reconnections · %3$d cuts</string>
     <string name="hql_trip_notice_heat">heat: level %1$d max · %2$.0f °C</string>
     <string name="hql_trip_notice_route">route: %1$.1f kWh estimated, %2$.1f real</string>
+    <string name="hql_android_car_mode">Android car mode while projecting (not needed; leaving it makes the phone reload every app, like a soft reset)</string>
+    <string name="hql_update_acc_channel">Qonecta+ updated</string>
+    <string name="hql_update_acc_title">Qonecta+ was updated</string>
+    <string name="hql_update_acc_text">Android turned off the «Qonecta+ touch» accessibility service with the update. Tap to turn it on again; without it the car screen stays black.</string>
 </resources>

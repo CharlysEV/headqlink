@@ -26,6 +26,43 @@ public final class PhoneScreen {
     private PhoneScreen() {
     }
 
+    /**
+     * Modo coche de Android (UiModeManager.enableCarMode) al proyectar: apagado de serie desde la 0.2.62. Entrar y salir
+     * del modo coche es un cambio de configuración (uiMode) para todo el sistema: Android recrea el escritorio y todas las
+     * apps abiertas, y al desconectar (o cerrar la app a lo bruto) el móvil parece reiniciarse («soft reset»). La
+     * proyección no lo necesita: va por nuestro head unit sin vista. Queda como ajuste (Avanzado) por si a alguien le
+     * hace falta.
+     */
+    static final String ANDROID_CAR_MODE = "android_car_mode";
+
+    public static boolean useCarMode(Context ctx) {
+        return new Config(ctx).getBool(ANDROID_CAR_MODE);
+    }
+
+    /** Sin modo coche, «Mantener la pantalla encendida» es un wake lock de pantalla propio. */
+    private static android.os.PowerManager.WakeLock screenLock;
+
+    /** Lo llama AapService al crearse, al cambiar el ajuste y al destruirse (on = false). */
+    public static synchronized void applyScreenLock(Context ctx, boolean on) {
+        boolean want = on && new Config(ctx).keepScreenOn() && !useCarMode(ctx);
+        try {
+            if (want && (screenLock == null || !screenLock.isHeld())) {
+                android.os.PowerManager pm = (android.os.PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
+                @SuppressWarnings("deprecation")
+                android.os.PowerManager.WakeLock wl = pm.newWakeLock(android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "headqlink:pantalla");
+                wl.acquire();
+                screenLock = wl;
+                L.i("pantalla: «Mantener la pantalla del móvil encendida»: wake lock de pantalla (sin modo coche de Android)");
+            } else if (!want && screenLock != null && screenLock.isHeld()) {
+                screenLock.release();
+                screenLock = null;
+                L.i("pantalla: wake lock de pantalla soltado");
+            }
+        } catch (RuntimeException e) {
+            L.w("pantalla: wake lock de pantalla: " + e);
+        }
+    }
+
     /** Indicadores para UiModeManager.enableCarMode según el ajuste (puro). */
     static int flagsFor(boolean keepScreenOn) {
         return keepScreenOn ? 0 : UiModeManager.ENABLE_CAR_MODE_ALLOW_SLEEP;
@@ -46,7 +83,7 @@ public final class PhoneScreen {
     static String describe(Context ctx) {
         UiModeManager um = (UiModeManager) ctx.getSystemService(Context.UI_MODE_SERVICE);
         boolean car = um != null && um.getCurrentModeType() == android.content.res.Configuration.UI_MODE_TYPE_CAR;
-        if (!car) return "sin modo coche de Android";
+        if (!car) return "sin modo coche de Android" + (new Config(ctx).keepScreenOn() ? " (wake lock de pantalla)" : "");
         return "modo coche de Android " + (new Config(ctx).keepScreenOn() ? "sin ALLOW_SLEEP (pantalla encendida)" : "con ALLOW_SLEEP");
     }
 }
