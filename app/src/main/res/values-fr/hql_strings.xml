@@ -1028,4 +1028,5 @@
     <string name="hql_backup_done">Réglages importés. Ceux de l\'image et de la connexion s\'appliquent à la prochaine connexion.</string>
     <string name="hql_usb_auto_switch">Se connecter en branchant le câble de la voiture</string>
     <string name="hql_usb_auto_off">Brancher le câble ne fera rien : appuie sur Connecter quand tu veux. Si Android ouvre toujours Qonecta+ avec le câble et que tu veux utiliser QDLink, retire « Ouvrir par défaut » dans les réglages de l\'appli.</string>
+    <string name="hql_qd_diag_trace">Trace détaillée (une ligne de journal par image, les touches, la trace de performance et le logcat complet ; plus de chaleur et des journaux très volumineux)</string>
 </resources>

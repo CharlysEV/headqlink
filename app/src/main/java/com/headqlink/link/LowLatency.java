@@ -50,12 +50,16 @@ final class LowLatency {
         if (writer != null) return;
         writer = new Thread(() -> {
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+            // Vaciado al disco como mucho una vez por segundo (exportar el log vacía aparte).
+            long lastFlush = 0;
             while (true) {
                 try {
                     QUEUE.take().run();
-                    if (QUEUE.isEmpty()) {
+                    long t = android.os.SystemClock.elapsedRealtime();
+                    if (QUEUE.isEmpty() && t - lastFlush >= 1000) {
                         L.flush();
                         CarTrace.flush();
+                        lastFlush = t;
                     }
                 } catch (InterruptedException e) {
                     return;

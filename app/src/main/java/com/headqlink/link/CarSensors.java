@@ -344,13 +344,15 @@ final class CarSensors implements SensorEventListener, LocationListener {
         tripStartMs = SystemClock.elapsedRealtime();
         tripStarted = true;
         sm = ctx.getSystemService(SensorManager.class);
-        register(Sensor.TYPE_GRAVITY, SensorManager.SENSOR_DELAY_GAME);
-        register(Sensor.TYPE_GYROSCOPE, SensorManager.SENSOR_DELAY_GAME);
+        // Ritmo de interfaz (~16 muestras/s): de sobra para el medidor G y la inclinación; a ritmo de juego (50/s) eran
+        // 100 despertares por segundo durante todo el viaje.
+        register(Sensor.TYPE_GRAVITY, SensorManager.SENSOR_DELAY_UI);
+        register(Sensor.TYPE_GYROSCOPE, SensorManager.SENSOR_DELAY_UI);
         s.baro = register(Sensor.TYPE_PRESSURE, SensorManager.SENSOR_DELAY_UI);
         if (hasLocationPermission()) {
             try {
                 ctx.getSystemService(LocationManager.class)
-                        .requestLocationUpdates(LocationManager.GPS_PROVIDER, 200, 0, this, thread.getLooper());
+                        .requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 0, this, thread.getLooper());
             } catch (RuntimeException e) {
                 L.w("sensores: sin GPS: " + e);
             }

@@ -40,8 +40,8 @@ public final class LogcatCapture {
         File dir = new File(app.getExternalFilesDir(null), "logcat");
         //noinspection ResultOfMethodCallIgnored
         dir.mkdirs();
-        // Con "Optimizaciones de latencia", solo información y superiores (sin el detalle de depuración).
-        infoOnly = new Config(app).lowLatency();
+        // Solo información y superiores; el detalle de depuración, con la traza detallada (Config.DIAG_TRACE).
+        infoOnly = !new Config(app).diagTrace();
         Thread t = new Thread(() -> capture(dir), "logcat-capture");
         t.setDaemon(true);
         t.start();

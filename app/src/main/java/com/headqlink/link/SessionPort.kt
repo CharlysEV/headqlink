@@ -34,14 +34,14 @@ internal class SessionPort(val session: PhoneSession) {
     @Volatile
     private var header: VideoOverrides? = null
 
-    /** Hilo GL: bytes en la cola del kernel (SIOCOUTQ), o -1 sin NetStat. */
-    fun gateOutq(): Int = sample(GATE)?.get(0) ?: -1
+    /** Hilo GL: bytes en la cola del kernel (SIOCOUTQ, sin TCP_INFO), o -1 sin NetStat. */
+    fun gateOutq(): Int = outq(GATE)
 
     /** Hilo escritor del núcleo (puerta de escritura del freno). */
-    fun writerOutq(): Int = sample(WRITER)?.get(0) ?: -1
+    fun writerOutq(): Int = outq(WRITER)
 
     /** Hilo aa-ack-drain (drenado del freno). */
-    fun drainOutq(): Int = sample(DRAIN)?.get(0) ?: -1
+    fun drainOutq(): Int = outq(DRAIN)
 
     /** Hilo net-monitor: copia de las 12 cifras de NetStat (cola, rtt, retrans, cwnd…), o null. */
     fun monitorSample(): IntArray? = sample(MONITOR)?.copyOf()
@@ -98,6 +98,25 @@ internal class SessionPort(val session: PhoneSession) {
     }
 
     private fun sample(slot: Int): IntArray? {
+        val ns = stat(slot) ?: return null
+        return try {
+            if (ns.sample()) ns.v else null
+        } catch (_: RuntimeException) {
+            null
+        }
+    }
+
+    private fun outq(slot: Int): Int {
+        val ns = stat(slot) ?: return -1
+        return try {
+            ns.outq()
+        } catch (_: RuntimeException) {
+            -1
+        }
+    }
+
+    /** El NetStat del hilo (uno por ranura), abierto la primera vez; null si no se puede. */
+    private fun stat(slot: Int): NetStat? {
         if (closed) return null
         var ns = netStats.get(slot)
         if (ns == null) {
@@ -120,11 +139,7 @@ internal class SessionPort(val session: PhoneSession) {
                 return null
             }
         }
-        return try {
-            if (ns.sample()) ns.v else null
-        } catch (_: RuntimeException) {
-            null
-        }
+        return ns
     }
 
     /**

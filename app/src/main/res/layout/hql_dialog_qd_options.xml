@@ -15,6 +15,13 @@
         android:paddingBottom="8dp"
         android:text="@string/hql_qd_options_help" />
 
+    <!-- headqlink: traza detallada (línea por fotograma, toques, traza de rendimiento, logcat completo) -->
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/hql_qd_diag_trace"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hql_qd_diag_trace" />
+
     <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/hql_qd_keep_video"
         android:layout_width="match_parent"

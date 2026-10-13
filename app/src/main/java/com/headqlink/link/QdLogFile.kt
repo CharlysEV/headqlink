@@ -45,6 +45,8 @@ internal class QdLogFile(
     private var out: Writer? = null
     private var written = 0L
     private var part = 1
+    /** Vaciado al disco como mucho una vez por segundo (antes, cada vez que se vaciaba la cola: casi continuo). */
+    private var lastFlushNs = 0L
     private var thread: Thread? = null
 
     @Volatile
@@ -117,7 +119,13 @@ internal class QdLogFile(
                 batch.clear()
                 val lost = dropped.getAndSet(0)
                 if (lost > 0) append("${now()} W/HQL/Log: $lost líneas perdidas (cola del log llena)")
-                if (queue.isEmpty()) flushOut()
+                if (queue.isEmpty()) {
+                    val t = System.nanoTime()
+                    if (t - lastFlushNs >= 1_000_000_000L) {
+                        flushOut()
+                        lastFlushNs = t
+                    }
+                }
             } catch (_: InterruptedException) {
                 flushOut()
                 return

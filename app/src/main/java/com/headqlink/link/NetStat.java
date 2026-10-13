@@ -21,6 +21,8 @@ final class NetStat implements Closeable {
 
     private static native int read(int fd, int[] out);
 
+    private static native int outq(int fd);
+
     private final ParcelFileDescriptor pfd;
     final int[] v = new int[12];
 
@@ -42,6 +44,11 @@ final class NetStat implements Closeable {
      *  caudal_kbps, ocupado_ms, limitado_receptor_ms, limitado_buffer_ms, ventana_coche_bytes. */
     boolean sample() {
         return read(pfd.getFd(), v) == 0;
+    }
+
+    /** Solo la cola de envío del kernel (bytes), sin TCP_INFO; -1 si no se puede. */
+    int outq() {
+        return outq(pfd.getFd());
     }
 
     @Override

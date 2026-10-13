@@ -123,13 +123,20 @@ object QdTrace {
      * lista blanca, repetitivos); táctil: decodificado y volcado completo (con los bits crudos de los floats); vídeo:
      * una línea por frame.
      */
+    /** Traza detallada (Config.DIAG_TRACE): con ella, el volcado hexadecimal de cada toque (hasta 60 por segundo). */
+    @JvmField
+    @Volatile
+    var verbose = false
+
     @JvmStatic
     fun trace(e: TraceEvent, sid: Int) {
         val f = file ?: return
         val arrow = if (e.direction == Direction.IN) "<-" else "->"
         val head = "${stamp(e.timeMillis)} T/S$sid $arrow ${e.kind} (${e.size} B) ${e.summary}"
         val bytes = e.bytes
-        if (e.isVideo || bytes == null || e.kind == "HEARTBEAT" || e.kind == "Mirror/WhitelistAppOn") {
+        if (e.isVideo || bytes == null || e.kind == "HEARTBEAT" || e.kind == "Mirror/WhitelistAppOn" ||
+            (!verbose && e.kind == "TOUCH")
+        ) {
             f.write(head)
         } else {
             f.write(head + "\n" + Hex.dump(bytes, maxBytes = 4096).trimEnd('\n'))

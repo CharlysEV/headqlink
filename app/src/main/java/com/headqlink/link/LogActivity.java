@@ -109,12 +109,14 @@ public class LogActivity extends Activity {
      */
     private void showQdOptions(Config cfg) {
         android.view.View v = getLayoutInflater().inflate(R.layout.hql_dialog_qd_options, null);
+        android.widget.CheckBox diag = v.findViewById(R.id.hql_qd_diag_trace);
         android.widget.CheckBox keep = v.findViewById(R.id.hql_qd_keep_video);
         android.widget.CheckBox supersede = v.findViewById(R.id.hql_qd_supersede);
         android.widget.CheckBox strict = v.findViewById(R.id.hql_qd_peer_strict);
         android.widget.CheckBox qdlink = v.findViewById(R.id.hql_qd_phone_info);
         android.widget.CheckBox usbOverTcp = v.findViewById(R.id.hql_qd_usb_over_tcp);
         android.widget.EditText gone = v.findViewById(R.id.hql_qd_car_gone);
+        diag.setChecked(cfg.diagTrace());
         keep.setChecked(cfg.qdKeepVideo());
         supersede.setChecked(cfg.qdSupersede());
         strict.setChecked(cfg.peerStrict());
@@ -128,6 +130,7 @@ public class LogActivity extends Activity {
                 .setTitle(Str.get(R.string.hql_qd_test_options))
                 .setView(sv)
                 .setPositiveButton(Str.get(R.string.hql_save), (d, which) -> {
+                    cfg.putBool(Config.DIAG_TRACE, diag.isChecked());
                     cfg.putBool(Config.QD_KEEP_VIDEO, keep.isChecked());
                     cfg.putBool(Config.QD_SUPERSEDE, supersede.isChecked());
                     cfg.putBool(Config.PEER_STRICT, strict.isChecked());
@@ -140,7 +143,7 @@ public class LogActivity extends Activity {
                     } catch (NumberFormatException ignored) {
                     }
                     cfg.putInt(Config.CAR_GONE_MS, secs > 0 ? Math.max(5, Math.min(600, secs)) * 1000 : 0);
-                    L.i("opciones de prueba de QDAuto: mantener vídeo " + cfg.qdKeepVideo() + " · relevo " + cfg.qdSupersede()
+                    L.i("opciones de prueba de QDAuto: traza detallada " + cfg.diagTrace() + " · mantener vídeo " + cfg.qdKeepVideo() + " · relevo " + cfg.qdSupersede()
                             + " · filtro estricto " + cfg.peerStrict() + " · PHONE_INFO " + cfg.qdPhoneInfo()
                             + " · trama del cable USB por Wi-Fi " + cfg.qdUsbOverTcp()
                             + " · vídeo vivo sin coche " + cfg.carGoneMs() / 1000 + " s (en la próxima pérdida del coche)");

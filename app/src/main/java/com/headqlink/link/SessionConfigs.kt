@@ -64,6 +64,8 @@ internal object SessionConfigs {
         val qdlinkPhoneInfo = "qdlink" == cfg.qdPhoneInfo()
         val stallTalking = cfg.getInt(Config.WRITE_STALL_MS).let { if (it > 0) it.toLong() else WRITE_STALL_CAR_TALKING_MS }
         return SessionConfig(
+            // Una línea del log por fotograma: solo con la traza detallada (Config.DIAG_TRACE).
+            traceVideoFrames = cfg.diagTrace(),
             tcpNoDelay = true,
             sendBufferBytes = if (brake) BRAKE_SEND_BUFFER else SEND_BUFFER,
             receiveBufferBytes = RECEIVE_BUFFER,

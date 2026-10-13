@@ -68,7 +68,9 @@ internal class HotspotWatcher(private val ctx: Context, private val listener: Li
     private val scan = object : Runnable {
         override fun run() {
             evaluate(null)
-            handler?.postDelayed(this, SCAN_MS)
+            // Con el coche conectado, la propia sesión demuestra que la zona sigue: el escaneo baja a uno cada 30 s.
+            val period = if (LinkState.car == LinkState.Car.CONNECTED) SESSION_SCAN_MS else SCAN_MS
+            handler?.postDelayed(this, period)
         }
     }
 
@@ -137,6 +139,7 @@ internal class HotspotWatcher(private val ctx: Context, private val listener: Li
     companion object {
         const val ACTION_AP_STATE = "android.net.wifi.WIFI_AP_STATE_CHANGED"
         private const val SCAN_MS = 3_000L
+        private const val SESSION_SCAN_MS = 30_000L
 
         /** Combinación de las tres fuentes (pura: la prueban los tests). */
         @JvmStatic

@@ -40,6 +40,7 @@ final class PerfTrace {
     private static final long MAX_BYTES = 200L * 1024 * 1024;
 
     private static File dir;
+    private static Context app;
     private static BufferedWriter out;
     private static long t0;
     private static long lastFlush;
@@ -51,6 +52,7 @@ final class PerfTrace {
 
     static synchronized void init(Context ctx) {
         if (dir != null) return;
+        app = ctx.getApplicationContext();
         dir = new File(ctx.getExternalFilesDir(null), "perf");
         //noinspection ResultOfMethodCallIgnored
         dir.mkdirs();
@@ -70,6 +72,8 @@ final class PerfTrace {
         endSession();
         generation++;
         if (dir == null) return generation;
+        // Solo con la traza detallada: ~220 filas por segundo desde los hilos del vídeo (y 8 MB por media hora).
+        if (app != null && !new Config(app).diagTrace()) return generation;
         // La retención también aquí (no solo al arrancar el proceso), contando la que se abre.
         LogRetention.prune(dir, "perf-", MAX_FILES - 1, MAX_BYTES);
         // Con milisegundos y la sesión: dos sesiones en el mismo segundo (relevo, reconexión rápida) no se pisan.

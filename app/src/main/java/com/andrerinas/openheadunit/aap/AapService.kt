@@ -1317,7 +1317,8 @@ class AapService : Service() {
         // than left to the loop's own 15 s poll. A wireless session also marks the P2P group as
         // one that works, which is what keeps it up when the phone leaves later.
         (wifiLauncherManager.active as? WifiLauncherNative)?.onSessionEstablished()
-        if (UsbSessionQuiescePolicy.shouldAcquireWifiLock(commManager.isWirelessSession)) {
+        // headqlink: la sesión de Self-Mode va por 127.0.0.1 y no toca la radio: sin bloqueos de Wi-Fi para ella.
+        if (UsbSessionQuiescePolicy.shouldAcquireWifiLock(commManager.isWirelessSession && !commManager.isLoopbackSession)) {
             acquireWifiLock()
         }
         // After the quiesce, which may have just stopped the P2P group: shouldStartForSession()

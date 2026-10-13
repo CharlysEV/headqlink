@@ -312,6 +312,17 @@ final class Config {
     }
 
     /**
+     * Traza detallada (Diagnóstico › Opciones de prueba): una línea del log por fotograma, el volcado de cada toque, la
+     * traza de rendimiento (~220 filas/s) y el logcat completo. Apagada de serie desde la 0.2.63: eran ~30 MB al día
+     * y escrituras casi continuas desde los hilos del vídeo (calor). Los resúmenes de 5 s y sessions.csv siguen siempre.
+     */
+    static final String DIAG_TRACE = "diag_trace";
+
+    boolean diagTrace() {
+        return sp.getBoolean(DIAG_TRACE, false);
+    }
+
+    /**
      * «Mantener la pantalla del móvil encendida» (por defecto, no): el modo coche de Android sin
      * ENABLE_CAR_MODE_ALLOW_SLEEP, como antes; enchufado, Android no deja apagar la pantalla (PhoneScreen).
      */

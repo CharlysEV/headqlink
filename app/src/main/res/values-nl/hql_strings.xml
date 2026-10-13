@@ -1027,4 +1027,5 @@
     <string name="hql_backup_done">Instellingen geïmporteerd. Beeld- en verbindingsinstellingen gelden bij de volgende verbinding.</string>
     <string name="hql_usb_auto_switch">Verbinden bij het insteken van de autokabel</string>
     <string name="hql_usb_auto_off">Bij het insteken gebeurt er niets: tik op Verbinden wanneer je wilt. Opent Android met de kabel altijd Qonecta+ en wil je QDLink gebruiken, verwijder dan „Standaard openen” in de app-instellingen.</string>
+    <string name="hql_qd_diag_trace">Gedetailleerde tracering (één logregel per frame, aanrakingen, prestatietracering en volledige logcat; meer warmte en zeer grote logs)</string>
 </resources>

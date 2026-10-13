@@ -1028,4 +1028,5 @@
     <string name="hql_backup_done">Definições importadas. As de imagem e ligação aplicam-se na próxima ligação.</string>
     <string name="hql_usb_auto_switch">Ligar ao ligar o cabo do carro</string>
     <string name="hql_usb_auto_off">Ao ligar o cabo, nada acontece: toca em Ligar quando quiseres. Se o Android abre sempre o Qonecta+ com o cabo e queres usar o QDLink, retira «Abrir por predefinição» nas definições da app.</string>
+    <string name="hql_qd_diag_trace">Registo detalhado (uma linha de log por fotograma, toques, registo de desempenho e logcat completo; mais calor e logs muito grandes)</string>
 </resources>

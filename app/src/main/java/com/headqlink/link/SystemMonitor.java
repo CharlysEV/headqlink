@@ -141,7 +141,8 @@ final class SystemMonitor {
             logPower();
             logBluetooth();
         });
-        h.post(p2pSampler);
+        // Los contadores de la interfaz solo alimentan la traza de rendimiento.
+        if (new Config(ctx).diagTrace()) h.post(p2pSampler);
     }
 
     void stop() {

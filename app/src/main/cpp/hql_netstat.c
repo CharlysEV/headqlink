@@ -35,3 +35,12 @@ Java_com_headqlink_link_NetStat_read(JNIEnv *env, jclass clazz, jint fd, jintArr
     (*env)->SetIntArrayRegion(env, out, 0, 12, v);
     return v[0] >= 0 ? 0 : -1;
 }
+
+// Solo la cola de envío (SIOCOUTQ), para las puertas que se consultan cientos de veces por segundo: sin TCP_INFO.
+JNIEXPORT jint JNICALL
+Java_com_headqlink_link_NetStat_outq(JNIEnv *env, jclass clazz, jint fd) {
+    (void) env;
+    (void) clazz;
+    int outq = 0;
+    return ioctl(fd, SIOCOUTQ, &outq) == 0 ? outq : -1;
+}

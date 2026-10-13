@@ -472,7 +472,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             UsbDiagnosis.reset();
             ThermalGuard.resetTripPeak();
             PhoneCall.watch(this);
-            L.i("servicio iniciado. " + cfg.summary());
+            QdTrace.verbose = cfg.diagTrace();
+            L.i("servicio iniciado. " + cfg.summary() + (cfg.diagTrace() ? " trazaDetallada=sí" : ""));
             main.removeCallbacks(relatchTick);
             main.postDelayed(relatchTick, 20_000);
             SessionSummary.INSTANCE.startTrip(System.currentTimeMillis(), AaPassthroughSource.AA_LAUNCHES.get());
@@ -539,6 +540,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         String linkMode = wifiLinkMode;
         String engine = wifiEngine;
         usbActive = false;
+        acquireWifiLocks();
         LinkState.setActiveTransport(linkMode, engine, false);
         if (Config.LINK_HOTSPOT.equals(linkMode)) {
             L.i("conexión: punto de acceso del móvil (sin Wi-Fi Direct)");
@@ -571,6 +573,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         boolean qdWasConnected = qd != null && qd.isConnected();
         boolean wifi = qd != null || udp != null || p2p != null || hotspot != null;
         stopWifi(why);
+        releaseWifiLocks();
         usbActive = true;
         usbUsed = true;
         boolean override = !Config.LINK_USB.equals(wifiLinkMode);
@@ -1074,11 +1077,33 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         PowerManager pm = getSystemService(PowerManager.class);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "headqlink:link");
         wakeLock.acquire();
-        WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "headqlink:wifi");
-        wifiLock.acquire();
-        mcLock = wm.createMulticastLock("headqlink:mc");
-        mcLock.acquire();
+        // Los de Wi-Fi (baja latencia y multicast), solo mientras el enlace va por Wi-Fi (startWifi / startUsb).
+    }
+
+    private void acquireWifiLocks() {
+        try {
+            WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            if (wifiLock == null) wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "headqlink:wifi");
+            if (!wifiLock.isHeld()) wifiLock.acquire();
+            if (mcLock == null) mcLock = wm.createMulticastLock("headqlink:mc");
+            if (!mcLock.isHeld()) mcLock.acquire();
+        } catch (RuntimeException e) {
+            L.w("bloqueos de Wi-Fi: " + e.getMessage());
+        }
+    }
+
+    /** Por cable no hacen nada y mantienen la radio despierta. */
+    private void releaseWifiLocks() {
+        boolean any = false;
+        if (wifiLock != null && wifiLock.isHeld()) {
+            wifiLock.release();
+            any = true;
+        }
+        if (mcLock != null) {
+            while (mcLock.isHeld()) mcLock.release();
+            any = true;
+        }
+        if (any) L.i("bloqueos de Wi-Fi soltados (enlace por cable)");
     }
 
     private AaPassthroughSource aaTest;

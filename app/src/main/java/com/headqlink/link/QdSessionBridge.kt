@@ -413,16 +413,16 @@ internal class QdSessionBridge(
                 L.w("traza: sin estado del socket (librería hqlnet no disponible)")
             }
             var last = SystemClock.elapsedRealtime()
-            var tick = 0
             try {
+                // Cada 100 ms (antes 50: el doble de despertares y de lecturas de TCP_INFO para lo mismo).
                 while (monitorRunning && !port.closed) {
-                    Thread.sleep(50)
+                    Thread.sleep(100)
                     val now = SystemClock.elapsedRealtime()
-                    if (now - last > 150) PerfTrace.event("stall", now - last)
+                    if (now - last > 250) PerfTrace.event("stall", now - last)
                     last = now
                     val net = port.monitorSample()
                     net?.let { PerfTrace.net(it) }
-                    if (++tick % 2 == 0) checkStalls(net)
+                    checkStalls(net)
                     maybeLogReconnect()
                     logStats(force = false)
                 }
