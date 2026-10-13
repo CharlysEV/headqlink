@@ -330,6 +330,8 @@ final class CarUi {
     static void gameDrawing(boolean on) {
         // Con un emulador, el vídeo al coche sube a 60 fps; sin él, 30 (VideoPipeline.contentCap).
         VideoPipeline.setGameMode(on);
+        // Con mando Bluetooth, la pantalla del móvil negra y quieta (cada botón la encendería: TouchService.gameCover).
+        TouchService.gameCover(on);
         CarUi ui = current;
         if (ui != null) ui.main.post(() -> {
             if (ui.phoneOff != null) ui.phoneOff.setForced(on);

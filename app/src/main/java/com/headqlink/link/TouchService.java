@@ -49,6 +49,7 @@ public class TouchService extends AccessibilityService {
     public boolean onUnbind(android.content.Intent intent) {
         instance = null;
         main.removeCallbacks(coverWatchdog);
+        hideGameCover("accesibilidad parada");
         try {
             unregisterReceiver(userPresent);
         } catch (IllegalArgumentException ignored) {
@@ -147,7 +148,95 @@ public class TouchService extends AccessibilityService {
     @Override
     protected boolean onKeyEvent(android.view.KeyEvent e) {
         if (NesInput.pad == null) return false;
+        // El mando se ha conectado con el juego ya abierto (o la capa no se puso): con su primer botón.
+        if (gameOn && gameCover == null && !gameCoverDismissed && fromGamepad(e.getDevice())) main.post(this::showGameCover);
         return NesInput.key(e.getKeyCode(), e.getAction());
+    }
+
+    // ------------------------------------------------------------------ capa negra durante los juegos
+
+    /**
+     * Con un mando o teclado Bluetooth, Android enciende la pantalla del móvil con cada botón: los dispositivos de entrada
+     * externos «despiertan» el móvil antes de que la tecla llegue a nadie, y una app no lo puede evitar. Encendidos y
+     * apagados seguidos, con la pantalla de bloqueo, en mitad de la partida (peor rendimiento). Durante un juego con mando,
+     * esta capa deja la pantalla encendida pero negra y con el brillo al mínimo (en OLED se ve apagada): los botones ya no
+     * la encienden y apagan cada vez. Tocar el móvil la quita hasta el siguiente juego.
+     */
+    private android.view.View gameCover;
+    private volatile boolean gameOn;
+    private boolean gameCoverDismissed;
+
+    /** Juego en marcha o terminado (CarUi.gameDrawing). */
+    static void gameCover(boolean on) {
+        TouchService t = instance;
+        if (t == null) return;
+        t.gameOn = on;
+        t.main.post(() -> {
+            if (!on) {
+                t.gameCoverDismissed = false;
+                t.hideGameCover("fin del juego");
+            } else if (gamepadConnected()) {
+                t.showGameCover();
+            }
+        });
+    }
+
+    /** Un mando (o algo con cruceta de juego) externo conectado al móvil. */
+    static boolean gamepadConnected() {
+        for (int id : android.view.InputDevice.getDeviceIds()) {
+            if (fromGamepad(android.view.InputDevice.getDevice(id))) return true;
+        }
+        return false;
+    }
+
+    private static boolean fromGamepad(android.view.InputDevice d) {
+        if (d == null || d.isVirtual()) return false;
+        if (android.os.Build.VERSION.SDK_INT >= 29 && !d.isExternal()) return false;
+        int s = d.getSources();
+        return (s & android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD
+                || (s & android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK;
+    }
+
+    private void showGameCover() {
+        if (gameCover != null || !gameOn || gameCoverDismissed) return;
+        android.view.View v = new android.view.View(this);
+        v.setBackgroundColor(0xFF000000);
+        v.setOnTouchListener((x, ev) -> {
+            if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
+                gameCoverDismissed = true;
+                hideGameCover("tocada en el móvil");
+            }
+            return true;
+        });
+        android.view.WindowManager.LayoutParams lp = new android.view.WindowManager.LayoutParams(
+                android.view.WindowManager.LayoutParams.MATCH_PARENT,
+                android.view.WindowManager.LayoutParams.MATCH_PARENT,
+                android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        | android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        | android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                android.graphics.PixelFormat.OPAQUE);
+        lp.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        // El mínimo de brillo (0 = lo más bajo que admita la pantalla).
+        lp.screenBrightness = 0f;
+        try {
+            getSystemService(android.view.WindowManager.class).addView(v, lp);
+            gameCover = v;
+            L.i("Juegos: capa negra en el móvil (mando conectado): los botones ya no encienden la pantalla cada vez");
+        } catch (RuntimeException e) {
+            L.w("Juegos: no se pudo poner la capa negra: " + e.getClass().getSimpleName());
+        }
+    }
+
+    private void hideGameCover(String why) {
+        if (gameCover == null) return;
+        try {
+            getSystemService(android.view.WindowManager.class).removeView(gameCover);
+        } catch (RuntimeException ignored) {
+        }
+        gameCover = null;
+        L.i("Juegos: capa negra quitada (" + why + ")");
     }
 
     /**
