@@ -47,6 +47,12 @@ final class GamesScreen implements CarScreen {
             R.drawable.hql_ic_game_range, R.drawable.hql_ic_game_fly, R.drawable.hql_ic_games, R.drawable.hql_ic_games};
     private static final int[] TINTS = {0xFFFDD663, 0xFF81C995, 0xFF8AB4F8, 0xFFF6AEA9, 0xFFC58AF9, 0xFFE8EAED, 0xFF78D9EC};
     /** Emuladores (ROMs del usuario): navegador y juego dentro de esta pantalla. */
+    /** Una partida (o un juego de espera) no se pierde al pasar de día a noche: el cambio espera a salir de Juegos. */
+    @Override
+    public boolean keepOnThemeChange() {
+        return true;
+    }
+
     private NesScreen nes;
     private NesScreen md;
     private NesScreen snes;

@@ -28,4 +28,12 @@ interface CarScreen {
     /** Al salir de la pantalla: parar vídeo, liberar el navegador… */
     default void destroy() {
     }
+
+    /**
+     * No rehacerla al pasar de día a noche (o al revés): hay un vídeo, una página o un juego en curso que se perdería. El
+     * cambio de colores espera a que se salga de ella (CarUi.applyNight).
+     */
+    default boolean keepOnThemeChange() {
+        return false;
+    }
 }

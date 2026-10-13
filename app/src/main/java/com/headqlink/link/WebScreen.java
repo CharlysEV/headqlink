@@ -58,6 +58,12 @@ import java.util.Locale;
  * Nunca se registran direcciones ni búsquedas (el log se exporta).
  */
 final class WebScreen implements CarScreen {
+    /** La página (y el vídeo que tenga) no se pierde al pasar de día a noche: el cambio espera a salir del navegador. */
+    @Override
+    public boolean keepOnThemeChange() {
+        return true;
+    }
+
     static final String[][] DEFAULT_SHORTCUTS = {
             {"YouTube", "https://m.youtube.com"},
             {"Google", "https://www.google.com"},

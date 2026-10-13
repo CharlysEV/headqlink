@@ -37,6 +37,12 @@ final class GalleryScreen implements CarScreen {
     private Host host;
     private View grid;
     private ExoPlayer player;
+
+    /** Con un vídeo puesto, no se corta al pasar de día a noche. */
+    @Override
+    public boolean keepOnThemeChange() {
+        return player != null;
+    }
     private MediaFocus mediaFocus;
 
     GalleryScreen(boolean videos) {

@@ -156,6 +156,12 @@ final class IptvScreen implements CarScreen {
         releasePlayer();
     }
 
+    /** Con un canal puesto, no se corta al pasar de día a noche. */
+    @Override
+    public boolean keepOnThemeChange() {
+        return player != null || webPlayer != null;
+    }
+
     private View buildList(Context c) {
         LinearLayout col = new LinearLayout(c);
         col.setOrientation(LinearLayout.VERTICAL);

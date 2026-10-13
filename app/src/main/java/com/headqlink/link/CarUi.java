@@ -196,9 +196,20 @@ final class CarUi {
 
     private void applyNight(boolean isNight) {
         if (!CarTheme.apply(isNight) || pres == null) return;
+        // Con un vídeo, una página o un juego en curso, rehacer la pantalla los cortaría (un túnel cambiaba a noche y el
+        // navegador volvía a su inicio en mitad de un vídeo): los colores nuevos, al salir de ella (open).
+        if (screen != null && screen.keepOnThemeChange()) {
+            themePending = true;
+            L.i("CarUi: modo " + (isNight ? "noche" : "día") + " (como Android Auto): al salir de " + screenName);
+            return;
+        }
+        themePending = false;
         L.i("CarUi: modo " + (isNight ? "noche" : "día") + " (como Android Auto)");
         rebuild();
     }
+
+    /** Cambio de día o noche aplazado (applyNight): se aplica al abrir otra pantalla. */
+    private boolean themePending;
 
     /** Rehace la interfaz entera con los colores de ahora (CarTheme) y vuelve a la misma pantalla. */
     private void rebuild() {
@@ -1432,6 +1443,15 @@ final class CarUi {
     }
 
     private void open(String name) {
+        if (themePending && pres != null) {
+            // El cambio de día o noche que esperaba: la interfaz entera con los colores de ahora, ya en la pantalla nueva.
+            themePending = false;
+            if (screen != null) screen.destroy();
+            screen = null;
+            screenName = name;
+            rebuild();
+            return;
+        }
         // WhitelistAppOn: Android Auto y la sección Coche son interfaces de conducción; el resto, ocio.
         // La radio también (solo audio, como la música de AA).
         SspSession.setDrivingUi("aa".equals(name) || "car".equals(name) || "radio".equals(name));
