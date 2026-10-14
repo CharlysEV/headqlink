@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla de Ajustes del móvil (SettingsActivity). -->
+<resources>
+    <string name="hql_aj_sec_car_screen">Autoscherm</string>
+    <string name="hql_aj_sec_phone_screen">Telefoonscherm</string>
+    <string name="hql_aj_mode">Modus en verbinding</string>
+    <string name="hql_aj_off">Uit</string>
+    <string name="hql_aj_bt_auto_sum">Bij verbinden met een bluetoothapparaat waarvan de naam „%1$s” bevat</string>
+    <string name="hql_aj_usb_auto_sum">Start vanzelf bij het insteken van de kabel</string>
+    <string name="hql_aj_usb_auto_off_sum">Alleen als je op Verbinden tikt</string>
+    <string name="hql_aj_ui_scale">Grootte van de interface in de auto</string>
+    <string name="hql_aj_ui_scale_auto">Automatisch (%1$d %% in de T03)</string>
+    <string name="hql_aj_percent">%1$d %%</string>
+    <string name="hql_aj_ui_scale_help">De grootte van de Qonecta+-interface (paneel en eigen schermen) op het autoscherm, alleen bij Android Auto uitgebreid. Automatisch: ongewijzigd in de C10 en kleiner op kleine schermen zoals dat van de T03. Geldt na opnieuw verbinden.</string>
+    <string name="hql_aj_ext_only">Alleen bij Android Auto uitgebreid</string>
+    <string name="hql_aj_panel_help">De kleur, transparantie en knoppen van het paneel kies je in Instellingen op het autoscherm.</string>
+    <string name="hql_aj_keep_screen">Scherm aan houden</string>
+    <string name="hql_aj_keep_screen_sum">Meer warmte en batterijverbruik. Anders gaat het zoals gewoonlijk uit en loopt de projectie door.</string>
+    <string name="hql_aj_car_mode">Android-automodus</string>
+    <string name="hql_aj_car_mode_sum">Tijdens projecteren. Niet nodig; bij het verlaten laadt de telefoon alle apps opnieuw (als een zachte herstart). Geldt vanaf de volgende sessie.</string>
+    <string name="hql_aj_price_home">Stroomprijs thuis</string>
+    <string name="hql_aj_price_invalid">Vul een prijs in van 0 tot %1$s €/kWh</string>
+    <string name="hql_aj_adv_warning">Om te testen. Een waarde hier gaat boven het profiel; leeg = automatisch (die van het profiel of wat de auto vraagt).</string>
+    <string name="hql_aj_low_latency">Optimalisaties voor lage vertraging</string>
+    <string name="hql_aj_low_latency_sum">Ingesteld door het profiel; kosten meer batterij</string>
+    <string name="hql_aj_fps">Frames per seconde (fps)</string>
+    <string name="hql_aj_kbps">Bitrate (kbps)</string>
+    <string name="hql_aj_width">Breedte (px)</string>
+    <string name="hql_aj_height">Hoogte (px)</string>
+    <string name="hql_aj_brake">Android Auto-rem</string>
+    <string name="hql_aj_window">Frames onderweg met de rem</string>
+    <string name="hql_aj_window_auto">Automatisch (2)</string>
+    <string name="hql_aj_range">Van 0 tot %1$d. Leeg = automatisch.</string>
+    <string name="hql_aj_range_invalid">Vul een getal in van 0 tot %1$d (leeg = automatisch)</string>
+    <string name="hql_aj_diag_trace">Gedetailleerde tracering</string>
+    <string name="hql_aj_diag_trace_sum">Eén logregel per frame, aanrakingen, prestaties en de volledige logcat: meer warmte en zeer grote logs. Geldt na opnieuw verbinden.</string>
+    <string name="hql_aj_reconnect_msg">Sommige wijzigingen gelden na opnieuw verbinden</string>
+    <string name="hql_aj_reconnect_now">Nu opnieuw verbinden</string>
+</resources>

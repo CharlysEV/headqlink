@@ -78,7 +78,7 @@ final class Config {
     static final String ENGINE_QDAUTO = "qdauto";
     static final String ENGINE_ORIGINAL = "original";
     /**
-     * Motor por defecto mientras no se elija otro: QDAuto. El original sigue disponible como respaldo (Ajustes de imagen ›
+     * Motor por defecto mientras no se elija otro: QDAuto. El original sigue disponible como respaldo (Ajustes ›
      * Avanzado › Motor de protocolo, o el extra link_engine=original).
      */
     static final String DEFAULT_ENGINE = ENGINE_QDAUTO;
@@ -183,7 +183,7 @@ final class Config {
     }
 
     /**
-     * «Fluidez» (Ajustes de imagen): VideoProfile.FLUID_30 (lo que pide el coche; menos calor, recomendado) o FLUID_60
+     * «Fluidez» (Ajustes › Imagen): VideoProfile.FLUID_30 (lo que pide el coche; menos calor, recomendado) o FLUID_60
      * (60 fps y 8-12 Mbit/s, como el HeadQLink original). Solo actúa con los perfiles Coche y Automático (cuando el
      * recomendado es Coche). Se aplica en la sesión siguiente (o al instante con «Guardar» estando conectado).
      */
@@ -333,7 +333,7 @@ final class Config {
     }
 
     /**
-     * «Protección térmica» (Ajustes de imagen): ThermalPolicy.MODE_NORMAL (recomendada), MODE_SOFT (solo baja el bitrate;
+     * «Protección térmica» (Ajustes › Imagen): ThermalPolicy.MODE_NORMAL (recomendada), MODE_SOFT (solo baja el bitrate;
      * nunca por debajo de 30 fps salvo en estado crítico) o MODE_OFF (solo se registra). Se aplica en el acto.
      */
     static final String THERMAL_MODE = "thermal_mode";

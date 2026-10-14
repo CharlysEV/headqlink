@@ -8,7 +8,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import com.andrerinas.openheadunit.R;
@@ -33,6 +32,12 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     /** Estado de la zona Wi-Fi visto desde esta pantalla (antes de conectar). */
     private volatile HotspotWatcher.Probe hotspotProbe;
     private android.widget.CompoundButton btAuto;
+    private android.widget.CompoundButton usbAuto;
+    /** Conexión automática (AutoConnect, lo mismo que en Ajustes); «Cancelar» en su diálogo desmarca el interruptor. */
+    private final android.widget.CompoundButton.OnCheckedChangeListener btAutoListener =
+            (b2, on) -> AutoConnect.setBt(this, cfg, on, () -> syncSwitch(btAuto, cfg.btAutoConnect(), this.btAutoListener));
+    private final android.widget.CompoundButton.OnCheckedChangeListener usbAutoListener =
+            (b2, on) -> AutoConnect.setUsb(this, cfg, on);
     /** Fila «Requisitos»: «Todo listo» o «Faltan N cosas»; al tocarla, la pantalla «Comprobación». */
     private View reqRow;
     /** Panel «En directo»: fps y Mbps del vídeo al coche, con sus barras. */
@@ -93,14 +98,10 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         menu.setOnClickListener(v -> showMenu(menu));
         btAuto = findViewById(R.id.hql_home_bt_auto);
         btAuto.setChecked(cfg.btAutoConnect());
-        btAuto.setOnCheckedChangeListener((b2, on) -> setBtAuto(on));
-        com.google.android.material.materialswitch.MaterialSwitch usbAuto = findViewById(R.id.hql_home_usb_auto);
+        btAuto.setOnCheckedChangeListener(btAutoListener);
+        usbAuto = findViewById(R.id.hql_home_usb_auto);
         usbAuto.setChecked(cfg.usbAutoConnect());
-        usbAuto.setOnCheckedChangeListener((b2, on) -> {
-            cfg.putBool(Config.USB_AUTO, on);
-            L.i("conexión automática por cable: " + (on ? "sí" : "no"));
-            if (!on) android.widget.Toast.makeText(this, Str.get(R.string.hql_usb_auto_off), android.widget.Toast.LENGTH_LONG).show();
-        });
+        usbAuto.setOnCheckedChangeListener(usbAutoListener);
 
         live = findViewById(R.id.hql_home_live);
         liveDot = findViewById(R.id.hql_home_live_dot);
@@ -150,6 +151,9 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         if (insights != null && tab == 1) insights.show();
         if (phoneHome != null && tab == 2) phoneHome.show();
         LinkState.addListener(this);
+        // Los interruptores de conexión automática también se cambian en Ajustes.
+        syncSwitch(btAuto, cfg.btAutoConnect(), btAutoListener);
+        syncSwitch(usbAuto, cfg.usbAutoConnect(), usbAutoListener);
         // El perfil de imagen pudo cambiar: los máximos de las barras se recalculan con el próximo dato.
         fpsMax = 0;
         mbpsMax = 0;
@@ -403,55 +407,17 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         Ui.chip(row.findViewById(R.id.hql_status_value), level, value);
     }
 
-    /**
-     * Conexión automática por Bluetooth: necesita leer el nombre de los dispositivos (permiso
-     * «Dispositivos cercanos») y, para que Android deje arrancar en segundo plano, que HeadQLink no
-     * tenga la optimización de batería. Se puede cambiar el texto que se busca en el nombre.
-     */
-    private void setBtAuto(boolean on) {
-        cfg.putBool(Config.BT_AUTO, on);
-        if (!on) return;
-        if (checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            Checklist.markAsked(this, Checklist.KEY_BT);
-            requestPermissions(new String[]{android.Manifest.permission.BLUETOOTH_CONNECT}, 3);
-        }
-        android.os.PowerManager pm = getSystemService(android.os.PowerManager.class);
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int pad = Math.round(24 * getResources().getDisplayMetrics().density);
-        box.setPadding(pad, pad / 2, pad, 0);
-        TextView info = new TextView(this);
-        info.setText(Str.get(R.string.hql_bt_auto_info)
-                + (pm.isIgnoringBatteryOptimizations(getPackageName()) ? "" : "\n\n" + Str.get(R.string.hql_bt_auto_battery)));
-        EditText name = M3.field(this);
-        name.setSingleLine(true);
-        name.setText(cfg.btAutoName());
-        box.addView(info);
-        box.addView(M3.outlined(name));
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(Str.get(R.string.hql_bt_auto_title))
-                .setView(box)
-                .setPositiveButton(Str.get(R.string.hql_save), (d, w) -> {
-                    String n = name.getText().toString().trim();
-                    cfg.setBtAutoName(n.isEmpty() ? "Leapmotor_BT" : n);
-                    if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
-                        try {
-                            startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                                    android.net.Uri.parse("package:" + getPackageName())));
-                        } catch (RuntimeException e) {
-                            L.w("no se pudo abrir el ajuste de batería: " + e.getMessage());
-                        }
-                    }
-                })
-                .setNegativeButton(Str.get(R.string.hql_cancel), (d, w) -> {
-                    cfg.putBool(Config.BT_AUTO, false);
-                    btAuto.setChecked(false);
-                })
-                .show();
+    /** Pone un interruptor como está guardado sin que cuente como un cambio del usuario. */
+    private static void syncSwitch(android.widget.CompoundButton sw, boolean on,
+                                   android.widget.CompoundButton.OnCheckedChangeListener l) {
+        if (sw == null || sw.isChecked() == on) return;
+        sw.setOnCheckedChangeListener(null);
+        sw.setChecked(on);
+        sw.setOnCheckedChangeListener(l);
     }
 
     /**
-     * Menú del engranaje: comprobación de requisitos, ajustes de imagen, listas de TV y radio (solo
+     * Menú del engranaje: ajustes, comprobación de requisitos, listas de TV y radio (solo
      * Auto extendido), datos del coche (cuenta Leapmotor), idioma, añadir el widget (y, con Android 13+, el botón de los
      * ajustes rápidos) y diagnóstico.
      * (Sin «Tema»: la app va siempre en oscuro, estilo «Eléctrico».)
@@ -548,7 +514,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     private static final java.util.Set<Integer> openGroups = new java.util.HashSet<>();
 
     /**
-     * Menú ⚙: panel inferior con el coche virtual arriba, los ajustes en grupos que se despliegan (Coche, Contenido del modo
+     * Menú ⚙: panel inferior con Ajustes (SettingsActivity) y el coche virtual arriba, el resto en grupos que se despliegan (Coche, Contenido del modo
      * extendido, Juegos, App) y Diagnóstico abajo. Así crece sin hacerse una lista interminable (más emuladores, más
      * listas…).
      */
@@ -638,8 +604,10 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         com.google.android.material.bottomsheet.BottomSheetDragHandleView handle =
                 new com.google.android.material.bottomsheet.BottomSheetDragHandleView(this);
         col.addView(handle, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        // Ajustes (SettingsActivity): todo lo que se elige, en una pantalla por secciones.
+        col.addView(menuRow(sheet, 19, Str.get(R.string.hql_settings), R.drawable.hql_ln_gear));
         col.addView(menuRow(sheet, 11, Str.get(R.string.hql_sim_menu), R.drawable.hql_ic_aa));
-        int[][] coche = {{7, R.string.hql_req_title}, {1, R.string.hql_image_settings}, {10, R.string.hql_cloud_menu},
+        int[][] coche = {{7, R.string.hql_req_title}, {10, R.string.hql_cloud_menu},
                 {15, MapsNavListener.granted(this) ? R.string.hql_maps_read_on : R.string.hql_maps_read}};
         menuGroup(sheet, col, 1, Str.get(R.string.hql_menu_car), R.drawable.hql_ic_gauges, coche);
         if (ext) {
@@ -767,8 +735,8 @@ public class HomeActivity extends Activity implements LinkState.Listener {
 
     private void onMenuItem(int id) {
         switch (id) {
-            case 1:
-                showVideoSettings();
+            case 19:
+                startActivity(new Intent(this, SettingsActivity.class));
                 break;
             case 2:
                 showList(false);
@@ -1182,207 +1150,6 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
-    }
-
-    /**
-     * Ajustes de imagen: perfil (Alto / Medio / Básico, o el recomendado para este móvil, marcado
-     * como «Recomendado») y, plegado, lo avanzado. Cambiar de perfil reconecta coche y AA solos.
-     */
-    private void showVideoSettings() {
-        View v = LayoutInflater.from(this).inflate(R.layout.hql_dialog_video, null);
-        EditText fps = v.findViewById(R.id.hql_v_fps);
-        EditText kbps = v.findViewById(R.id.hql_v_kbps);
-        EditText w = v.findViewById(R.id.hql_v_w);
-        EditText h = v.findViewById(R.id.hql_v_h);
-        RadioGroup profile = v.findViewById(R.id.hql_v_profile);
-        RadioGroup profiles = v.findViewById(R.id.hql_v_profiles);
-        android.widget.CheckBox brake = v.findViewById(R.id.hql_v_brake);
-        android.widget.CheckBox lowLat = v.findViewById(R.id.hql_v_lowlatency);
-        android.widget.CheckBox autoHide = v.findViewById(R.id.hql_v_autohide);
-        android.widget.CheckBox keepScreen = v.findViewById(R.id.hql_v_keep_screen);
-        android.widget.CheckBox carMode = v.findViewById(R.id.hql_v_car_mode);
-        boolean carModeBefore = cfg.getBool(PhoneScreen.ANDROID_CAR_MODE);
-        carMode.setChecked(carModeBefore);
-        View advanced = v.findViewById(R.id.hql_v_advanced);
-        TextView advToggle = v.findViewById(R.id.hql_v_adv_toggle);
-        advToggle.setOnClickListener(x -> {
-            boolean show = advanced.getVisibility() != View.VISIBLE;
-            advanced.setVisibility(show ? View.VISIBLE : View.GONE);
-            advToggle.setText(show ? Str.get(R.string.hql_advanced) + " ▴" : Str.get(R.string.hql_advanced) + " ▾");
-        });
-
-        // Perfiles: "Automático" sigue al recomendado; el recomendado lleva la marca aunque se elija otro.
-        String rec = VideoProfile.recommended(this);
-        String chosen = cfg.videoProfileChoice();
-        String[] ids = new String[VideoProfile.ALL.length + 1];
-        ids[0] = "";
-        System.arraycopy(VideoProfile.ALL, 0, ids, 1, VideoProfile.ALL.length);
-        for (int i = 0; i < ids.length; i++) {
-            android.widget.RadioButton rb = new com.google.android.material.radiobutton.MaterialRadioButton(this);
-            rb.setId(View.generateViewId());
-            rb.setTag(ids[i]);
-            String title = ids[i].isEmpty() ? Str.get(R.string.hql_profile_auto_named, VideoProfile.title(rec)) : VideoProfile.title(ids[i]);
-            String tag = rec.equals(ids[i]) ? "  · " + Str.get(R.string.hql_recommended) : "";
-            String detail = ids[i].isEmpty() ? Str.get(R.string.hql_profile_auto_detail) : VideoProfile.detail(ids[i]);
-            android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder(title + tag + "\n" + detail);
-            if (!tag.isEmpty()) {
-                sb.setSpan(new android.text.style.ForegroundColorSpan(getColor(R.color.hql_ok)), title.length(), title.length() + tag.length(), 0);
-            }
-            sb.setSpan(new android.text.style.RelativeSizeSpan(0.82f), title.length() + tag.length() + 1, sb.length(), 0);
-            rb.setText(sb);
-            rb.setPadding(rb.getPaddingLeft(), 8, 0, 8);
-            profiles.addView(rb);
-            if (ids[i].equals(chosen)) rb.setChecked(true);
-        }
-        ((TextView) v.findViewById(R.id.hql_v_reason)).setText(Str.get(R.string.hql_this_phone, VideoProfile.reason()));
-        // Fluidez: 30 fps (lo que pide el coche, menos calor) o 60 fps; cuenta con Coche y con Automático si es Coche.
-        RadioGroup fluidity = v.findViewById(R.id.hql_v_fluidity);
-        int fluidBefore = cfg.fluidity();
-        fluidity.check(fluidBefore == VideoProfile.FLUID_60 ? R.id.hql_v_fluid_60 : R.id.hql_v_fluid_30);
-
-        boolean lowLatBefore = cfg.lowLatency();
-        lowLat.setChecked(lowLatBefore);
-        autoHide.setChecked(cfg.panelAutoHide());
-        boolean keepScreenBefore = cfg.keepScreenOn();
-        keepScreen.setChecked(keepScreenBefore);
-        // Protección térmica: Normal, Suave o Apagada (ThermalPolicy); se aplica al vídeo vivo al guardar.
-        RadioGroup thermal = v.findViewById(R.id.hql_v_thermal);
-        String thermalBefore = cfg.thermalMode();
-        thermal.check(ThermalPolicy.MODE_SOFT.equals(thermalBefore) ? R.id.hql_v_thermal_soft
-                : ThermalPolicy.MODE_OFF.equals(thermalBefore) ? R.id.hql_v_thermal_off : R.id.hql_v_thermal_normal);
-        EditText window = v.findViewById(R.id.hql_v_window);
-        brake.setChecked(cfg.aaBrake());
-        fill(window, Config.AA_WINDOW);
-        fill(fps, Config.FPS);
-        fill(kbps, Config.KBPS);
-        fill(w, Config.WIDTH);
-        fill(h, Config.HEIGHT);
-        String h264Before = cfg.profile();
-        profile.check("main".equals(cfg.profile()) ? R.id.hql_v_main
-                : "high".equals(cfg.profile()) ? R.id.hql_v_high : R.id.hql_v_baseline);
-        RadioGroup engine = v.findViewById(R.id.hql_v_engine);
-        String engineBefore = cfg.linkEngine();
-        engine.check(Config.ENGINE_QDAUTO.equals(engineBefore) ? R.id.hql_v_engine_qdauto : R.id.hql_v_engine_original);
-        // «Esperar al coche»: una opción por minuto de Config.CAR_WAIT_CHOICES; la de por defecto, marcada.
-        RadioGroup carWait = v.findViewById(R.id.hql_v_car_wait);
-        int waitBefore = cfg.carWaitMin();
-        for (int min : Config.CAR_WAIT_CHOICES) {
-            android.widget.RadioButton rb = new com.google.android.material.radiobutton.MaterialRadioButton(this);
-            rb.setId(View.generateViewId());
-            rb.setTag(min);
-            rb.setText(min == Config.DEFAULT_CAR_WAIT_MIN
-                    ? Str.get(R.string.hql_car_wait_option_default, min) : Str.get(R.string.hql_car_wait_option, min));
-            carWait.addView(rb);
-            if (min == waitBefore) rb.setChecked(true);
-        }
-        // «Arranque del servidor de Android Auto» (solo en los modos con Android Auto).
-        v.findViewById(R.id.hql_v_aa_server_box).setVisibility(Config.isAa(cfg.mode()) ? View.VISIBLE : View.GONE);
-        RadioGroup aaServer = v.findViewById(R.id.hql_v_aa_server);
-        boolean manualBefore = cfg.aaServerManual();
-        aaServer.check(manualBefore ? R.id.hql_v_aa_server_manual : R.id.hql_v_aa_server_auto);
-        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
-        scroll.addView(v);
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(Str.get(R.string.hql_image_settings))
-                .setView(scroll)
-                .setPositiveButton(Str.get(R.string.hql_save), (d, which) -> {
-                    VideoProfile before = cfg.videoProfile();
-                    View sel = profiles.findViewById(profiles.getCheckedRadioButtonId());
-                    String pick = sel != null ? (String) sel.getTag() : chosen;
-                    boolean profileChanged = !pick.equals(chosen);
-                    // Elegir perfil quita los ajustes manuales viejos (fps, tamaño, recodificar).
-                    if (profileChanged) cfg.setVideoProfile(pick);
-                    int fluidAfter = fluidity.getCheckedRadioButtonId() == R.id.hql_v_fluid_60 ? VideoProfile.FLUID_60 : VideoProfile.FLUID_30;
-                    if (fluidAfter != fluidBefore) {
-                        cfg.setFluidity(fluidAfter);
-                        L.i("fluidez: " + fluidAfter + " fps (perfil " + cfg.videoProfile().id + "; "
-                                + (LinkState.running ? "reconecta ahora" : "se aplica en la próxima sesión") + ")");
-                    }
-                    // Un valor fuera de rango (o un número de 11 cifras, que cerraba la app) se ignora con un aviso.
-                    boolean ok = save(fps, Config.FPS, 120)
-                            & save(kbps, Config.KBPS, 100_000)
-                            & save(w, Config.WIDTH, 4096)
-                            & save(h, Config.HEIGHT, 4096)
-                            & save(window, Config.AA_WINDOW, 64);
-                    if (!ok) android.widget.Toast.makeText(this, Str.get(R.string.hql_v_invalid), android.widget.Toast.LENGTH_LONG).show();
-                    cfg.putBool(Config.AA_BRAKE, brake.isChecked());
-                    // Ajuste manual solo si el usuario lo ha tocado; si no, manda el perfil.
-                    if (lowLat.isChecked() != lowLatBefore) cfg.putBool(Config.LOW_LATENCY, lowLat.isChecked());
-                    cfg.putBool(Config.PANEL_AUTOHIDE, autoHide.isChecked());
-                    if (carMode.isChecked() != carModeBefore) {
-                        // Se aplica en la próxima sesión de Android Auto (el modo coche se activa al crearse su servicio).
-                        cfg.putBool(PhoneScreen.ANDROID_CAR_MODE, carMode.isChecked());
-                        L.i("pantalla: «Modo coche de Android al proyectar» " + (carMode.isChecked() ? "sí" : "no") + " (próxima sesión)");
-                    }
-                    if (keepScreen.isChecked() != keepScreenBefore) {
-                        // Se aplica ya si Android Auto está en marcha (modo coche con o sin ALLOW_SLEEP).
-                        cfg.putBool(Config.KEEP_SCREEN_ON, keepScreen.isChecked());
-                        L.i("pantalla: «Mantener la pantalla del móvil encendida» " + (keepScreen.isChecked() ? "sí" : "no"));
-                        com.andrerinas.openheadunit.aap.AapService.refreshCarModeFlags();
-                    }
-                    int thermalId = thermal.getCheckedRadioButtonId();
-                    String thermalAfter = thermalId == R.id.hql_v_thermal_soft ? ThermalPolicy.MODE_SOFT
-                            : thermalId == R.id.hql_v_thermal_off ? ThermalPolicy.MODE_OFF : ThermalPolicy.MODE_NORMAL;
-                    if (!thermalAfter.equals(thermalBefore)) {
-                        cfg.setThermalMode(thermalAfter);
-                        L.i("protección térmica: " + ThermalPolicy.modeName(thermalAfter) + " (se aplica en el acto)");
-                        ThermalGuard.onModeChanged();
-                    }
-                    int id = profile.getCheckedRadioButtonId();
-                    String h264 = id == R.id.hql_v_main ? "main" : id == R.id.hql_v_high ? "high" : "baseline";
-                    // Solo si se ha tocado: con Máximo (High de serie) se guarda aparte, para no cambiar el de los demás.
-                    if (!h264.equals(h264Before)) cfg.setProfileFor(cfg.videoProfile(), h264);
-                    View waitSel = carWait.findViewById(carWait.getCheckedRadioButtonId());
-                    if (waitSel != null && (int) waitSel.getTag() != waitBefore) {
-                        // Se lee al perder al coche: vale ya para la próxima espera, sin reconectar.
-                        cfg.setCarWaitMin((int) waitSel.getTag());
-                        L.life("«Esperar al coche»: " + cfg.carWaitMin() + " min (vale para la próxima espera)");
-                    }
-                    boolean manualAfter = aaServer.getCheckedRadioButtonId() == R.id.hql_v_aa_server_manual;
-                    if (manualAfter != manualBefore) {
-                        // Se lee en cada decisión: vale para lo siguiente que necesite el servidor, sin reconectar.
-                        cfg.setAaServerManual(manualAfter);
-                        AaServerManual.onModeChanged(this, manualAfter, "Ajustes de imagen");
-                    }
-                    String engineAfter = engine.getCheckedRadioButtonId() == R.id.hql_v_engine_qdauto
-                            ? Config.ENGINE_QDAUTO : Config.ENGINE_ORIGINAL;
-                    if (!engineAfter.equals(engineBefore)) {
-                        cfg.setLinkEngine(engineAfter);
-                        L.i("motor de protocolo: " + engineAfter + " (se aplica al volver a conectar)");
-                        if (LinkState.running) {
-                            android.widget.Toast.makeText(this, Str.get(R.string.hql_applies_on_reconnect), android.widget.Toast.LENGTH_LONG).show();
-                        }
-                    }
-                    // Las barras de «En directo» se recalculan con el perfil (y la fluidez) nuevos.
-                    fpsMax = 0;
-                    mbpsMax = 0;
-                    if (LinkState.running) {
-                        // Sesión nueva con los ajustes; con otro perfil o fluidez, también AA (resolución y fps se
-                        // negocian al conectar).
-                        VideoProfile after = cfg.videoProfile();
-                        boolean renegotiate = !before.id.equals(after.id) || before.fps != after.fps;
-                        startForegroundService(LinkService.fromApp(new Intent(this, LinkService.class).setAction(LinkService.ACTION_APPLY)
-                                .putExtra(LinkService.EXTRA_AA_RENEGOTIATE, renegotiate)));
-                    }
-                })
-                .setNegativeButton(Str.get(R.string.hql_cancel), null)
-                .show();
-    }
-
-    private void fill(EditText e, String key) {
-        int v = cfg.getInt(key);
-        if (v > 0) e.setText(String.valueOf(v));
-    }
-
-    /** Guarda el campo si es un número de 0 a max (vacío = 0, automático); si no, deja el valor que había. */
-    private boolean save(EditText e, String key, int max) {
-        int v = parseSetting(e.getText().toString(), max);
-        if (v < 0) {
-            L.w("ajustes avanzados: «" + e.getText() + "» no vale para " + key + " (de 0 a " + max + "): se queda " + cfg.getInt(key));
-            return false;
-        }
-        cfg.putInt(key, v);
-        return true;
     }
 
     /** Puro: el número de un campo de ajustes (vacío = 0); -1 si no es un número entre 0 y max. */
