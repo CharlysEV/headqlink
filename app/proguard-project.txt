@@ -1,5 +1,10 @@
 # Add project specific ProGuard rules here.
 
+# headqlink: números de línea en los informes de cierre (crash/crash-*.txt, logcat). Con el mapping.txt de cada versión
+# (release-mappings/, lo guarda la tarea archiveGithubReleaseMapping) se traducen con el retrace del SDK de Android.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
 # --- Protobuf Rules ---
 -keep class com.google.protobuf.** { *; }
 -dontwarn com.google.protobuf.**

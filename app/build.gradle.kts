@@ -74,6 +74,18 @@ android {
 
     println("Building from commit: $gitDescription")
 
+    // headqlink: el mapping.txt de R8 (para traducir los informes de cierre de la versión publicada) se sobrescribe en
+    // cada compilación. Al compilar la versión de GitHub se guarda comprimido en release-mappings/ (fuera de git), con
+    // la versión y el commit en el nombre.
+    val archiveMapping = tasks.register<Zip>("archiveGithubReleaseMapping") {
+        from(layout.buildDirectory.file("outputs/mapping/githubRelease/mapping.txt"))
+        destinationDirectory.set(rootProject.layout.projectDirectory.dir("release-mappings"))
+        archiveFileName.set(provider {
+            "mapping-${defaultConfig.versionName}-${defaultConfig.versionCode}-$gitDescription.zip"
+        })
+    }
+    tasks.matching { it.name == "assembleGithubRelease" }.configureEach { finalizedBy(archiveMapping) }
+
     sourceSets {
         getByName("main") {
             assets.srcDirs("${project.layout.buildDirectory.get().asFile}/generated/assets/root")

@@ -89,5 +89,8 @@ key.properties
 # headqlink: notas locales (referencias a QDLink, textos originales), no se publican
 local/
 
+# headqlink: mapping.txt de R8 de cada versión publicada (37 MB cada uno; se suben a la release, no a git)
+/release-mappings/
+
 # Investigación iOS local, fuera de los cambios Android por ahora.
 /ios/
