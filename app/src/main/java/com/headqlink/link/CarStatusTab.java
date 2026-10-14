@@ -44,6 +44,8 @@ final class CarStatusTab implements CarScreen {
     private final CarKit.Para note = new CarKit.Para(21, CarKit.FAINT, CarKit.REGULAR);
     private final CarKit.Para alert = new CarKit.Para(22, CarKit.AMBER, CarKit.MEDIUM);
     private Bitmap carTop;
+    /** Color con el que se pintó carTop (el T03 cambia de color al tocar la tarjeta). */
+    private int carTopPaint;
     private Bitmap carFront;
     /** El C10 en 3D (null: el dibujo visto desde arriba) y si ya está listo para recibir datos. */
     private android.webkit.WebView car3d;
@@ -262,6 +264,17 @@ final class CarStatusTab implements CarScreen {
     /** Pone el C10 en 3D en la tarjeta (menos en las pruebas del PC, donde no hay WebGL). */
     @android.annotation.SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     private void setup3d(CarKit.Card card) {
+        if (CarSpec.current().isT03()) {
+            // El T03 va como dibujo visto desde arriba (CarArt.topT03), sin 3D: un toque en la tarjeta cambia el color.
+            card.setOnClickListener(v -> {
+                Config c = new Config(ctx);
+                String next = CarArt.hex(CarArt.t03NextPaint(c.carColor()));
+                c.setCarColor(next);
+                L.i("estado: color del T03 " + next);
+                card.invalidate();
+            });
+            return;
+        }
         if ("robolectric".equals(android.os.Build.FINGERPRINT)) return;
         try {
             android.webkit.WebView w = new android.webkit.WebView(ctx);
@@ -360,12 +373,17 @@ final class CarStatusTab implements CarScreen {
     // ------------------------------------------------------------------ neumáticos y puertas
 
     private Bitmap carTop(int w, int h) {
-        if (carTop == null || carTop.getWidth() != w || carTop.getHeight() != h) {
+        boolean t03 = CarSpec.current().isT03();
+        int paint = t03 ? CarArt.t03Paint(new Config(ctx).carColor()) : 0;
+        if (carTop == null || carTop.getWidth() != w || carTop.getHeight() != h || carTopPaint != paint) {
             if (carTop != null) carTop.recycle();
             carTop = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            carTopPaint = paint;
             Canvas c = new Canvas(carTop);
             float pad = w * 0.1f;
-            CarArt.top(c, new RectF(pad, 4, w - pad, h - 4), new Paint(Paint.ANTI_ALIAS_FLAG));
+            RectF r = new RectF(pad, 4, w - pad, h - 4);
+            if (t03) CarArt.topT03(c, r, paint, new Paint(Paint.ANTI_ALIAS_FLAG));
+            else CarArt.top(c, r, new Paint(Paint.ANTI_ALIAS_FLAG));
         }
         return carTop;
     }

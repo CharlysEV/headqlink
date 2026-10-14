@@ -19,7 +19,138 @@ final class CarArt {
     static final int TAIL = 0xFFFF5A5F;
     static final int TYRE = 0xFF17191C;
 
+    /** Colores oficiales del T03 (Leapmotor España): Blanco Lunar, Azul Caribe y Gris Oscuro. */
+    static final int[] T03_PAINTS = {0xFFE9EBEA, 0xFF2E76BE, 0xFF4C5056};
+    private static final int T03_LAMP = 0xFFD2E4F0;
+    private static final int T03_LAMP_RING = 0xFF5A6E7D;
+    private static final int T03_LAMP_EYE = 0xFF7896AA;
+    private static final int T03_GLASS_HI = 0xFF3E4A58;
+    private static final int T03_PANO = 0xFF1E242C;
+
     private CarArt() {
+    }
+
+    /** Puro: el color multiplicado por k (sombras y nervaduras de la carrocería). */
+    static int shade(int color, float k) {
+        int r = Math.min(255, Math.round(((color >> 16) & 0xFF) * k));
+        int g = Math.min(255, Math.round(((color >> 8) & 0xFF) * k));
+        int b = Math.min(255, Math.round((color & 0xFF) * k));
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+
+    /** Puro: el color guardado si es uno de los del T03; si no, el Blanco Lunar. */
+    static int t03Paint(String hex) {
+        if (hex != null && hex.matches("#[0-9a-fA-F]{6}")) {
+            int c = 0xFF000000 | Integer.parseInt(hex.substring(1), 16);
+            for (int p : T03_PAINTS) if (p == c) return c;
+        }
+        return T03_PAINTS[0];
+    }
+
+    /** Puro: el siguiente color del T03 tras el guardado (o el primero). */
+    static int t03NextPaint(String hex) {
+        int c = t03Paint(hex);
+        for (int i = 0; i < T03_PAINTS.length; i++) if (T03_PAINTS[i] == c) return T03_PAINTS[(i + 1) % T03_PAINTS.length];
+        return T03_PAINTS[0];
+    }
+
+    static String hex(int color) {
+        return String.format(java.util.Locale.ROOT, "#%06x", color & 0xFFFFFF);
+    }
+
+    /**
+     * El T03 visto desde arriba, morro hacia arriba, ocupando r, del color paint: un cubo con las esquinas suaves, los
+     * faros redondos, el techo negro con el panel panorámico y la barra de luz roja detrás. Las ruedas asoman por los
+     * lados a las mismas alturas que en top() (15 % y 70 %): las presiones de la pestaña Estado van a su lado.
+     */
+    static void topT03(Canvas cv, RectF r, int paint, Paint p) {
+        float w = r.width();
+        float h = r.height();
+        float x0 = r.left;
+        float y0 = r.top;
+        p.setStyle(Paint.Style.FILL);
+        // Ruedas.
+        p.setColor(TYRE);
+        float tw = 0.10f * w;
+        float th = 0.16f * h;
+        for (float ty : new float[]{0.15f, 0.70f}) {
+            cv.drawRoundRect(new RectF(x0 - tw * 0.2f, y0 + ty * h, x0 + tw * 0.8f, y0 + ty * h + th), tw / 3, tw / 3, p);
+            cv.drawRoundRect(new RectF(x0 + w - tw * 0.8f, y0 + ty * h, x0 + w + tw * 0.2f, y0 + ty * h + th), tw / 3, tw / 3, p);
+        }
+        // Carrocería con una sombra suave debajo (el lienzo del bitmap es por software: la sombra sí se pinta).
+        p.setColor(paint);
+        p.setShadowLayer(0.04f * w, 0, 0.012f * h, 0x66000000);
+        RectF body = new RectF(x0 + 0.02f * w, y0, x0 + 0.98f * w, y0 + h);
+        cv.drawRoundRect(body, 0.22f * w, 0.22f * w, p);
+        p.clearShadowLayer();
+        p.setStyle(Paint.Style.STROKE);
+        p.setStrokeWidth(Math.max(1.5f, 0.006f * w));
+        p.setColor(shade(paint, 0.72f));
+        cv.drawRoundRect(body, 0.22f * w, 0.22f * w, p);
+        p.setStyle(Paint.Style.FILL);
+        // Capó algo más claro con la nervadura central.
+        p.setColor(shade(paint, 1.04f));
+        cv.drawRoundRect(new RectF(x0 + 0.08f * w, y0 + 0.05f * h, x0 + 0.92f * w, y0 + 0.27f * h), 0.10f * w, 0.10f * w, p);
+        p.setColor(shade(paint, 0.85f));
+        p.setStrokeWidth(Math.max(1f, 0.004f * w));
+        cv.drawLine(x0 + w / 2, y0 + 0.07f * h, x0 + w / 2, y0 + 0.26f * h, p);
+        // Faros redondos, lo más característico del T03.
+        float rr = 0.075f * w;
+        for (float cx : new float[]{x0 + 0.19f * w, x0 + 0.81f * w}) {
+            float cy = y0 + 0.075f * h;
+            p.setColor(T03_LAMP_RING);
+            cv.drawOval(new RectF(cx - rr, cy - rr * 0.8f, cx + rr, cy + rr * 0.8f), p);
+            p.setColor(T03_LAMP);
+            cv.drawOval(new RectF(cx - rr * 0.78f, cy - rr * 0.6f, cx + rr * 0.78f, cy + rr * 0.6f), p);
+            p.setColor(T03_LAMP_EYE);
+            cv.drawOval(new RectF(cx - rr * 0.35f, cy - rr * 0.28f, cx + rr * 0.35f, cy + rr * 0.28f), p);
+        }
+        // Logo delante.
+        p.setColor(shade(paint, 0.8f));
+        cv.drawOval(new RectF(x0 + 0.48f * w, y0 + 0.015f * h, x0 + 0.52f * w, y0 + 0.045f * h), p);
+        // Parabrisas (trapecio con su reflejo), techo negro con el panel panorámico y luneta.
+        Path ws = new Path();
+        ws.moveTo(x0 + 0.15f * w, y0 + 0.40f * h);
+        ws.lineTo(x0 + 0.85f * w, y0 + 0.40f * h);
+        ws.lineTo(x0 + 0.81f * w, y0 + 0.28f * h);
+        ws.lineTo(x0 + 0.19f * w, y0 + 0.28f * h);
+        ws.close();
+        p.setColor(GLASS);
+        cv.drawPath(ws, p);
+        Path hi = new Path();
+        hi.moveTo(x0 + 0.18f * w, y0 + 0.31f * h);
+        hi.lineTo(x0 + 0.82f * w, y0 + 0.31f * h);
+        hi.lineTo(x0 + 0.83f * w, y0 + 0.345f * h);
+        hi.lineTo(x0 + 0.17f * w, y0 + 0.345f * h);
+        hi.close();
+        p.setColor(T03_GLASS_HI);
+        cv.drawPath(hi, p);
+        p.setColor(ROOF);
+        cv.drawRoundRect(new RectF(x0 + 0.14f * w, y0 + 0.38f * h, x0 + 0.86f * w, y0 + 0.86f * h), 0.08f * w, 0.08f * w, p);
+        p.setColor(T03_PANO);
+        cv.drawRoundRect(new RectF(x0 + 0.22f * w, y0 + 0.44f * h, x0 + 0.78f * w, y0 + 0.70f * h), 0.05f * w, 0.05f * w, p);
+        Path rw = new Path();
+        rw.moveTo(x0 + 0.17f * w, y0 + 0.76f * h);
+        rw.lineTo(x0 + 0.83f * w, y0 + 0.76f * h);
+        rw.lineTo(x0 + 0.85f * w, y0 + 0.87f * h);
+        rw.lineTo(x0 + 0.15f * w, y0 + 0.87f * h);
+        rw.close();
+        p.setColor(GLASS);
+        cv.drawPath(rw, p);
+        // Barra de luz roja del portón.
+        p.setColor(TAIL);
+        cv.drawRoundRect(new RectF(x0 + 0.12f * w, y0 + 0.905f * h, x0 + 0.88f * w, y0 + 0.925f * h), 0.01f * w, 0.01f * w, p);
+        // Juntas de las puertas.
+        p.setColor(shade(paint, 0.7f));
+        p.setStrokeWidth(Math.max(1f, 0.004f * w));
+        for (float yy : new float[]{0.42f, 0.63f}) {
+            cv.drawLine(x0 + 0.02f * w, y0 + yy * h, x0 + 0.08f * w, y0 + yy * h, p);
+            cv.drawLine(x0 + 0.92f * w, y0 + yy * h, x0 + 0.98f * w, y0 + yy * h, p);
+        }
+        // Retrovisores.
+        p.setColor(ROOF);
+        cv.drawRoundRect(new RectF(x0 - 0.09f * w, y0 + 0.335f * h, x0 + 0.04f * w, y0 + 0.375f * h), 0.02f * w, 0.02f * w, p);
+        cv.drawRoundRect(new RectF(x0 + 0.96f * w, y0 + 0.335f * h, x0 + 1.09f * w, y0 + 0.375f * h), 0.02f * w, 0.02f * w, p);
     }
 
     /** Tira de luz delantera de front() para el mismo r (la animación de carga la recorre). */
