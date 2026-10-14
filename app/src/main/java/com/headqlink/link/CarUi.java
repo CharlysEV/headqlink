@@ -93,6 +93,9 @@ final class CarUi {
     /** El gris del panel elegido en Ajustes (el de noche; de día el panel es claro: CarTheme.panelColor). */
     private int panelGray;
     private TextView battery;
+    /** Batería del móvil (ACTION_BATTERY_CHANGED), para la barra de iconos: -1 si aún no se sabe. */
+    private int phoneLevel = -1;
+    private boolean phoneCharging;
     private final List<LinearLayout> navButtons = new ArrayList<>();
     /** Ancho del panel reducido (solo iconos) mientras algo ocupa la pantalla grande. */
     private static final int COMPACT_W = 96;
@@ -1285,7 +1288,8 @@ final class CarUi {
 
     /**
      * Datos en la barra de iconos (cuando el panel está reducido): hora, temperatura exterior (del tiempo, si los sensores
-     * la tienen) y batería del coche (de la cuenta de Leapmotor, si hay dato). Se refresca cada 30 s.
+     * la tienen) y batería del MÓVIL, con su icono (la del coche ya sale en muchos sitios: el coche, la sección Coche y
+     * el planificador). Se refresca cada 30 s y al cambiar la batería.
      */
     private View buildRailInfo(Context c) {
         LinearLayout l = new LinearLayout(c);
@@ -1299,6 +1303,16 @@ final class CarUi {
         railTemp.setGravity(Gravity.CENTER);
         railSoc = CarStyle.text(c, "", 18, CarTheme.navTextDim());
         railSoc.setGravity(Gravity.CENTER);
+        // Un móvil pequeño delante: que se vea que es la batería del móvil, no la del coche.
+        android.graphics.drawable.Drawable phone = c.getDrawable(R.drawable.hql_ic_phone_small);
+        if (phone != null) {
+            phone = phone.mutate();
+            phone.setTint(CarTheme.navTextDim());
+            phone.setBounds(0, 0, 16, 22);
+            railSoc.setCompoundDrawables(phone, null, null, null);
+            railSoc.setCompoundDrawablePadding(4);
+        }
+        railSoc.setContentDescription(Str.get(R.string.hql_phone_battery, 0));
         l.addView(railTime);
         l.addView(railTemp);
         l.addView(railSoc);
@@ -1316,10 +1330,8 @@ final class CarUi {
         double t = CarSensors.outsideTempC();
         railTemp.setText(Double.isNaN(t) ? "" : Math.round(t) + "\u00b0");
         railTemp.setVisibility(Double.isNaN(t) ? View.GONE : View.VISIBLE);
-        CarCloud.Snapshot cs = CarCloud.snapshot();
-        double soc = cs.hasData() ? cs.status.socBest() : Double.NaN;
-        railSoc.setText(Double.isNaN(soc) ? "" : Math.round(soc) + " %");
-        railSoc.setVisibility(Double.isNaN(soc) ? View.GONE : View.VISIBLE);
+        railSoc.setText(phoneLevel < 0 ? "" : phoneLevel + " %" + (phoneCharging ? " \u26A1" : ""));
+        railSoc.setVisibility(phoneLevel < 0 ? View.GONE : View.VISIBLE);
         main.postDelayed(railTick, 30_000);
         return oldTempVisibility != railTemp.getVisibility() || oldSocVisibility != railSoc.getVisibility();
     }
@@ -1572,6 +1584,13 @@ final class CarUi {
         boolean charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL;
         if (level >= 0) {
             battery.setText(Str.get(R.string.hql_phone_battery, level * 100 / scale) + (charging ? " · " + Str.get(R.string.hql_charging) : ""));
+            int pct = level * 100 / Math.max(1, scale);
+            if (pct != phoneLevel || charging != phoneCharging) {
+                phoneLevel = pct;
+                phoneCharging = charging;
+                if (railSoc != null) railSoc.setContentDescription(Str.get(R.string.hql_phone_battery, pct));
+                if (railInfo != null && railInfo.getVisibility() == View.VISIBLE) renderRailInfo();
+            }
         }
     }
 }
