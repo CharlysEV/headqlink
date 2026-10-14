@@ -311,7 +311,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             // Primero en primer plano: si llega con startForegroundService y el servicio estaba
             // parado, sin esto Android cierra la app (y con ella el apagado del servidor a medias).
             goForeground(Str.get(R.string.hql_disconnect));
-            L.life("Desconectar pulsado: cierro todo");
+            String from = intent.getStringExtra(EXTRA_FROM);
+            L.life("Desconectar pulsado" + (from != null ? " (" + from + ")" : "") + ": cierro todo");
             shutdownAll(true);
             return START_NOT_STICKY;
         }
@@ -1063,12 +1064,18 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         }
         android.app.PendingIntent pi = android.app.PendingIntent.getActivity(this, hotspotOff ? 2 : 1, open,
                 android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
+        // Desconectar desde la propia notificación, sin abrir la app (como el botón de la pantalla principal).
+        android.app.PendingIntent stop = android.app.PendingIntent.getForegroundService(this, 3,
+                new Intent(this, LinkService.class).setAction(ACTION_STOP).putExtra(EXTRA_FROM, "notificación"),
+                android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
         return new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.hql_ic_notif)
                 .setColor(getColor(R.color.hql_accent))
                 .setContentTitle(title)
                 .setContentText(connected ? null : text)
                 .setContentIntent(pi)
+                .addAction(new Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(this, R.drawable.hql_ic_notif),
+                        Str.get(R.string.hql_disconnect), stop).build())
                 .setOngoing(true)
                 .build();
     }
