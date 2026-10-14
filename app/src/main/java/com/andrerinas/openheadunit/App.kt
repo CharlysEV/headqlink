@@ -44,11 +44,11 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
 
     override fun onCreate() {
         super.onCreate()
-        // headqlink: logcat continuo del proceso y registro de fallos, siempre activos.
+        // headqlink: los textos, siempre (no leen ajustes). El resto (logs, coche del perfil, salidas anteriores) lee
+        // los ajustes, que tras reiniciar el móvil siguen cifrados hasta el primer desbloqueo: va en initUnlockedOnce.
+        // Antes iba aquí y la app se caía en cada reinicio (Android la arranca bloqueado para el arranque automático):
+        // «SharedPreferences in credential encrypted storage are not available until after user is unlocked».
         com.headqlink.link.Str.init(this)
-        com.headqlink.link.CarSpec.load(this)  // headqlink: el coche del perfil (C10 o T03)
-        com.headqlink.link.LogcatCapture.start(this)
-        com.headqlink.link.QdTrace.init(this)
         instance = this
         registerActivityLifecycleCallbacks(this)
 
@@ -136,6 +136,13 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
     private fun initUnlockedOnce() {
         if (unlockedInitDone) return
         unlockedInitDone = true
+
+        // headqlink: logcat continuo del proceso y registro de fallos, el coche del perfil (C10 o T03) y por qué terminó
+        // la app la vez anterior (bloqueo, memoria, fallo nativo, cierre forzado). Leen ajustes: con el móvil desbloqueado.
+        com.headqlink.link.CarSpec.load(this)
+        com.headqlink.link.LogcatCapture.start(this)
+        com.headqlink.link.QdTrace.init(this)
+        com.headqlink.link.ExitReasons.start(this)
 
         // Root support
         component.suExecutor.register()
