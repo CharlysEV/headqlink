@@ -2,19 +2,19 @@
 
 ## `android-ci.yml` — Android CI
 
-Runs on every pull request and on pushes to `main`. Two parallel jobs:
+Runs on every pull request, on pushes to `main` (releases) and to `publico` (the working branch), and on demand
+(`workflow_dispatch`). One job, **Tests y versión publicada**:
 
-| Check                         | What it does                                                                                                                                         | Intended to block? |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------: |
-| **Build (github debug)**      | `./gradlew :app:assembleGithubDebug` — compiles the app (including native code and the `:contract` module) and uploads the debug APK as an artifact. |        Yes         |
-| **Unit tests (github debug)** | `./gradlew :app:testGithubDebugUnitTest` — runs the JVM unit tests and uploads the HTML/XML report.                                                  |        Yes         |
+1. `./gradlew :qdcore:test :qdsim:test :app:testGithubDebugUnitTest` — protocol library, car simulator and app unit
+   tests; the HTML/XML reports are uploaded as the `test-reports` artifact.
+2. `./gradlew :app:assembleGithubRelease` — the real release build (R8, ARM-only native code, 8 locales), **unsigned**:
+   the signing key never leaves the maintainer's PC, so the APK it produces cannot be installed and is not uploaded.
+3. A job summary with the APK size and the test counts.
 
-"Intended to block" reflects the design; a failing check only actually
-prevents merge once the [branch-protection rule](#branch-protection) below is
-configured.
+The NDK version is read from `ndkVersion` in `app/build.gradle.kts`, so the two cannot drift apart again.
 
-The build is **debug, unsigned, and uses no repository secrets**, so it runs
-unchanged on pull requests opened from forks.
+**This repository is a fork:** GitHub keeps push-triggered workflows off in forks until they are enabled once from
+the Actions tab («I understand my workflows, go ahead and enable them»). Manual runs work regardless.
 
 ### Branch protection
 
