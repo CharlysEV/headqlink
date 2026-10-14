@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: «Tu curva de carga» (curva aprendida de las cargas rápidas, ChargeCurveModel). -->
+<resources>
+    <string name="hql_curva_title">La tua curva di ricarica</string>
+    <string name="hql_curva_from">Costruita con %1$d ricariche rapide. Linea piena: quella usata dal piano di viaggio (quanto appreso, combinato con quella di fabbrica); tratteggiata: quella di fabbrica; punti: quanto visto in ogni fascia del 5 %%.</string>
+    <string name="hql_curva_waiting">Si completerà con le tue ricariche rapide (finora %1$d): ogni fascia del 5 %% richiede almeno 3 ricariche in cui l\'auto, e non la colonnina, ha determinato la potenza. Nel frattempo il piano di viaggio usa quella di fabbrica (tratteggiata).</string>
+    <string name="hql_curva_low_volts">Sulle colonnine da 400–500 V: ricarichi al %1$s %% della potenza (%2$d ricariche; il piano presupponeva il 50 %%).</string>
+    <string name="hql_curva_low_volts_used">Il piano di viaggio usa già questo valore invece della metà.</string>
+    <string name="hql_curva_fast">Colonnine da 150 kW o più: picco medio di %1$s kW (%2$s %% di quanto potevano darti: la potenza dichiarata o quella che accetta la tua auto, la minore; %3$d ricariche).</string>
+    <string name="hql_curva_net">%1$s: picco %2$s kW, %3$s %% (%4$d ricariche)</string>
+    <string name="hql_curva_rules_wait">Con almeno 3 ricariche su colonnine da 150 kW o più (o, sulla C10 a 800 V, su quelle da 400–500 V) vedrai qui quanto rendono davvero.</string>
+    <string name="hql_curva_use">Usa la mia curva nel piano di viaggio</string>
+</resources>

@@ -74,6 +74,12 @@ final class ChargeLog {
         }
     }
 
+    /** Cambia cada vez que cambia el historial (para no releerlo si no hace falta); 0 si aún no hay. */
+    static long stamp(Context ctx) {
+        File f = new File(ctx.getFilesDir(), FILE);
+        return f.exists() ? f.lastModified() * 31 + f.length() : 0;
+    }
+
     static synchronized List<ChargeSession> load(Context ctx) {
         File f = new File(ctx.getFilesDir(), FILE);
         if (!f.exists()) return new ArrayList<>();

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: «Tu curva de carga» (curva aprendida de las cargas rápidas, ChargeCurveModel). -->
+<resources>
+    <string name="hql_curva_title">Sua curva de recarga</string>
+    <string name="hql_curva_from">Formada com %1$d recargas rápidas. Linha cheia: a que o plano de rota usa (o aprendido, misturado com a de fábrica); tracejada: a de fábrica; pontos: o que foi visto em cada faixa de 5 %%.</string>
+    <string name="hql_curva_waiting">Vai se completando com suas recargas rápidas (até agora %1$d): cada faixa de 5 %% precisa de pelo menos 3 recargas em que o carro, e não o carregador, definiu a potência. Enquanto isso, o plano de rota usa a de fábrica (tracejada).</string>
+    <string name="hql_curva_low_volts">Em carregadores de 400–500 V: você carrega a %1$s %% da potência (%2$d recargas; o plano supunha 50 %%).</string>
+    <string name="hql_curva_low_volts_used">O plano de rota já usa este valor em vez da metade.</string>
+    <string name="hql_curva_fast">Carregadores de 150 kW ou mais: pico médio de %1$s kW (%2$s %% do que podiam te dar: o anunciado ou o que seu carro aceita, o que for menor; %3$d recargas).</string>
+    <string name="hql_curva_net">%1$s: pico %2$s kW, %3$s %% (%4$d recargas)</string>
+    <string name="hql_curva_rules_wait">Com pelo menos 3 recargas em carregadores de 150 kW ou mais (ou, no C10 de 800 V, nos de 400–500 V) você verá aqui quanto eles rendem de verdade.</string>
+    <string name="hql_curva_use">Usar minha curva no plano de rota</string>
+</resources>
