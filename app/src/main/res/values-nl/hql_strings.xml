@@ -953,9 +953,9 @@
     <string name="hql_setup_car_help">Kies je Leapmotor en de versie: accu, laden en verbruik hangen ervan af. Later te wijzigen via ⚙ › Auto › Autogegevens.</string>
     <string name="hql_setup_car_missing">Kies je auto om verder te gaan</string>
     <string name="hql_setup_car_c10_detail">De gewone elektrische: 84 kW snelladen, 420 km WLTP.</string>
-    <string name="hql_setup_car_promax_detail">Grote accu van 81,9 kWh en 800 V: snelladen tot ~130 kW.</string>
+    <string name="hql_setup_car_promax_detail">Grote accu van 81,9 kWh en 800 V: snelladen tot 180 kW.</string>
     <string name="hql_setup_car_reev_detail">Range extender: kleine accu en benzinegenerator.</string>
-    <string name="hql_setup_car_t03_detail">De stadsauto: 48 kW snelladen, 265 km WLTP en 10,1\"-scherm (het autoscherm past zich aan).</string>
+    <string name="hql_setup_car_t03_detail">De stadsauto: 45 kW snelladen, 265 km WLTP en 10,1\"-scherm (het autoscherm past zich aan).</string>
     <string name="hql_tips_channel">Tips</string>
     <string name="hql_charge_heat_title">De telefoon wordt warm tijdens het laden</string>
     <string name="hql_charge_heat_text">Hij laadt op %1$d %% met de accu op %2$s °C. Zet „Accu beschermen” aan (laadt tot 80 %%) zodat hij in de auto minder warm wordt.</string>

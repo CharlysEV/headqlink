@@ -954,9 +954,9 @@
     <string name="hql_setup_car_help">Escolha o seu Leapmotor e a versão: a bateria, o carregamento e o consumo dependem disso. Pode mudar depois em ⚙ › Carro › Dados do carro.</string>
     <string name="hql_setup_car_missing">Escolha o seu carro para continuar</string>
     <string name="hql_setup_car_c10_detail">O elétrico normal: carregamento rápido de 84 kW, 420 km WLTP.</string>
-    <string name="hql_setup_car_promax_detail">Bateria grande de 81,9 kWh e 800 V: carregamento rápido até ~130 kW.</string>
+    <string name="hql_setup_car_promax_detail">Bateria grande de 81,9 kWh e 800 V: carregamento rápido até 180 kW.</string>
     <string name="hql_setup_car_reev_detail">Autonomia alargada: bateria pequena e gerador a gasolina.</string>
-    <string name="hql_setup_car_t03_detail">O citadino: carregamento rápido de 48 kW, 265 km WLTP e ecrã de 10,1\" (o do carro adapta-se).</string>
+    <string name="hql_setup_car_t03_detail">O citadino: carregamento rápido de 45 kW, 265 km WLTP e ecrã de 10,1\" (o do carro adapta-se).</string>
     <string name="hql_tips_channel">Sugestões</string>
     <string name="hql_charge_heat_title">O telemóvel está a aquecer a carregar</string>
     <string name="hql_charge_heat_text">Está a carregar a %1$d %% com a bateria a %2$s °C. Ative «Proteger bateria» (carrega até 80 %%) para aquecer menos no carro.</string>

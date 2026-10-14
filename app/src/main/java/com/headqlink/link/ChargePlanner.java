@@ -214,15 +214,25 @@ final class ChargePlanner {
     private ChargePlanner() {
     }
 
-    /** Hasta este pico (kW), un coche pequeño de carga lenta (el T03, 48 kW) con su curva (SMALL_CAR_*). */
+    /** Hasta este pico (kW), un coche pequeño de carga lenta (el T03, 45 kW) con su curva (SMALL_CAR_*). */
     static final double SMALL_CAR_PEAK_KW = 60;
+    /** Desde este pico (kW), la batería de 800 V del C10 ProMax (180 kW), con su curva. */
+    static final double HIGH_PEAK_KW = 120;
 
     /**
-     * Potencia que admite el coche a ese % (kW). El C10: la máxima hasta el 50 %, luego baja hasta ~55 % al 80 % y ~25 %
-     * al 100 %. El T03 (pico ≤ SMALL_CAR_PEAK_KW): la máxima solo hasta el 20 %, ~70 % al 50 %, ~50 % al 80 % y ~20 % al
-     * 100 %, lo que da los ~36 min del 30 al 80 % de su ficha.
+     * Potencia que admite el coche a ese % (kW), con la forma ajustada a los tiempos del 30 al 80 % de las fichas de
+     * Leapmotor. El C10 de 69,9 kWh (84 kW): la máxima hasta el 50 %, luego baja hasta ~55 % al 80 % y ~25 % al 100 %
+     * (~29 min; ficha: 30). El ProMax de 800 V (pico ≥ HIGH_PEAK_KW, 180 kW): la máxima solo hasta el 30 %, ~69 % al 50 %,
+     * ~39 % al 80 % y ~17 % al 100 % (~22 min, los de la ficha; con la del C10 saldrían 16). El T03 (pico ≤
+     * SMALL_CAR_PEAK_KW): la máxima solo hasta el 20 %, ~70 % al 50 %, ~50 % al 80 % y ~20 % al 100 % (~37 min; ficha: 36).
      */
     static double carPowerKw(double pct, double peakKw) {
+        if (peakKw >= HIGH_PEAK_KW) {
+            if (pct <= 30) return peakKw;
+            if (pct <= 50) return peakKw * (1 - 0.31 * (pct - 30) / 20);
+            if (pct <= 80) return peakKw * (0.69 - 0.30 * (pct - 50) / 30);
+            return peakKw * (0.39 - 0.22 * Math.min(20, pct - 80) / 20);
+        }
         if (peakKw <= SMALL_CAR_PEAK_KW) {
             if (pct <= 20) return peakKw;
             if (pct <= 50) return peakKw * (1 - 0.30 * (pct - 20) / 30);

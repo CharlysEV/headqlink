@@ -867,14 +867,14 @@ final class RoutePlanner {
     }
 
     /**
-     * Pico de carga rápida del coche (kW): la batería grande (81,9 kWh) carga más rápido que la de 69,9 (84 kW), ~130 kW
-     * de pico, lo que da los 28 min del 19 al 81 % de ABRP en un cargador de 400 kW.
+     * Pico de carga rápida del coche (kW): la batería grande (81,9 kWh, 800 V) carga más rápido que la de 69,9 (84 kW):
+     * 180 kW según la ficha de Leapmotor, del 30 al 80 % en 22 min (ChargePlanner.carPowerKw).
      */
     static double carPeakKw(double capKwh) {
-        // El coche elegido manda (el T03, 48 kW; el REEV, ~65): por la capacidad se confundirían (37,3 y 28,4 kWh).
+        // El coche elegido manda (el T03, 45 kW; el REEV, 64): por la capacidad se confundirían (37,3 y 28,4 kWh).
         CarSpec car = CarSpec.current();
         if (car.isT03() || car.reev) return car.peakDcKw;
-        return capKwh >= 80 ? 130 : 84;
+        return capKwh >= 80 ? CarSpec.C10_PROMAX.peakDcKw : CarSpec.C10.peakDcKw;
     }
 
     // ------------------------------------------------------------------ carga en directo

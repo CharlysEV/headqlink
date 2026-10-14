@@ -954,9 +954,9 @@
     <string name="hql_setup_car_help">Escolha seu Leapmotor e a versão: a bateria, a recarga e o consumo dependem disso. Dá para mudar depois em ⚙ › Carro › Dados do carro.</string>
     <string name="hql_setup_car_missing">Escolha seu carro para continuar</string>
     <string name="hql_setup_car_c10_detail">O elétrico normal: recarga rápida de 84 kW, 420 km WLTP.</string>
-    <string name="hql_setup_car_promax_detail">Bateria grande de 81,9 kWh e 800 V: recarga rápida de até ~130 kW.</string>
+    <string name="hql_setup_car_promax_detail">Bateria grande de 81,9 kWh e 800 V: recarga rápida de até 180 kW.</string>
     <string name="hql_setup_car_reev_detail">Autonomia estendida: bateria pequena e gerador a gasolina.</string>
-    <string name="hql_setup_car_t03_detail">O urbano: recarga rápida de 48 kW, 265 km WLTP e tela de 10,1\" (a do carro se adapta).</string>
+    <string name="hql_setup_car_t03_detail">O urbano: recarga rápida de 45 kW, 265 km WLTP e tela de 10,1\" (a do carro se adapta).</string>
     <string name="hql_tips_channel">Dicas</string>
     <string name="hql_charge_heat_title">O celular está esquentando ao carregar</string>
     <string name="hql_charge_heat_text">Está carregando em %1$d %% com a bateria a %2$s °C. Ative «Proteger bateria» (carrega até 80 %%) para esquentar menos no carro.</string>

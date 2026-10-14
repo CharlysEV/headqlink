@@ -959,9 +959,9 @@
     <string name="hql_setup_car_help">Elige tu Leapmotor y su versión: la batería, la carga y el consumo dependen de ello. Lo puedes cambiar luego en ⚙ › Coche › Datos del coche.</string>
     <string name="hql_setup_car_missing">Elige tu coche para continuar</string>
     <string name="hql_setup_car_c10_detail">El eléctrico normal: carga rápida de 84 kW, 420 km WLTP.</string>
-    <string name="hql_setup_car_promax_detail">Batería grande de 81,9 kWh y 800 V: carga rápida de hasta ~130 kW.</string>
+    <string name="hql_setup_car_promax_detail">Batería grande de 81,9 kWh y 800 V: carga rápida de hasta 180 kW.</string>
     <string name="hql_setup_car_reev_detail">Autonomía extendida: batería pequeña y generador de gasolina.</string>
-    <string name="hql_setup_car_t03_detail">El urbano: carga rápida de 48 kW, 265 km WLTP y pantalla de 10,1\" (la del coche se adapta).</string>
+    <string name="hql_setup_car_t03_detail">El urbano: carga rápida de 45 kW, 265 km WLTP y pantalla de 10,1\" (la del coche se adapta).</string>
     <string name="hql_tips_channel">Consejos</string>
     <string name="hql_charge_heat_title">El móvil se calienta cargando</string>
     <string name="hql_charge_heat_text">Está cargando al %1$d %% con la batería a %2$s °C. Activa «Proteger batería» (carga hasta el 80 %%) para que se caliente menos en el coche.</string>

@@ -27,8 +27,8 @@ class ChargeSessionTest {
         lon = -1.24
     }
 
-    /** C10 de 81,9 kWh (800 V, ~130 kW de pico) en un cargador. */
-    private fun session(c: RoutePlanner.Charger?, soc0: Double = 30.0) = ChargeSession(0, soc0, true, c, 81.9, 130.0, 800.0)
+    /** C10 ProMax de 81,9 kWh (800 V, 180 kW de pico) en un cargador. */
+    private fun session(c: RoutePlanner.Charger?, soc0: Double = 30.0) = ChargeSession(0, soc0, true, c, 81.9, 180.0, 800.0)
 
     @Test
     fun readyFiresOnceWhenTheTargetIsReached() {
@@ -48,11 +48,11 @@ class ChargeSessionTest {
         s.setTarget(60.0, 12.0, "Lleida")
         s.observe(0, 30.0, 100.0, true, false, Double.NaN, 0)
         s.observe(5 * min, 40.0, 100.0, true, false, Double.NaN, 5 * min)
-        // 2 %/min ≈ 98 kW de verdad frente a los 130 de la curva: tarda 130/98 veces lo que diría el modelo.
+        // 2 %/min ≈ 98 kW de verdad frente a los ~152 de la curva al 40 %: tarda 152/98 veces lo que diría el modelo.
         val rate = s.rateKw()
         assertEquals(2 * 81.9 / 100 * 60, rate, 0.01)
-        val model = ChargePlanner.minutes(40.0, 62.0, 250.0, 130.0, 81.9)
-        assertEquals(model * 130 / rate, s.minutesTo(62.0), 0.01)
+        val model = ChargePlanner.minutes(40.0, 62.0, 250.0, 180.0, 81.9)
+        assertEquals(model * ChargePlanner.carPowerKw(40.0, 180.0) / rate, s.minutesTo(62.0), 0.01)
         assertEquals(5 * min + s.minutesTo(62.0) * 60_000, s.readyAtMs(), 1.0)
         // Sin objetivo (sin ruta): lo que dice el coche.
         val home = session(null)
@@ -62,18 +62,18 @@ class ChargeSessionTest {
 
     @Test
     fun slowChargingIsDetectedButNotTheExpectedHalfOfA500VoltCharger() {
-        // Supercharger (470 V) con el coche de 800 V: se esperan ~65 kW (la mitad); 60 kW no es lento.
-        val sc = session(charger("tesla", 250.0, 470.0))
+        // Supercharger (470 V) con el coche de 800 V: se esperan ~90 kW (la mitad); 60 kW no es lento.
+        val sc = session(charger("tesla", 250.0, 470.0), 20.0)
         assertTrue(sc.lowVolts())
-        assertEquals(65.0, sc.expectedKw(40.0), 1e-9)
-        for (m in 0..6) assertFalse(sc.observe(m * min, 30.0 + m, 60.0, true, false, Double.NaN, m * min).contains(ChargeSession.Event.SLOW))
-        // En uno de 920 V se esperan 130: 45 kW dos veces seguidas (pasados 3 min) sí es lento, y avisa una vez.
-        val hpc = session(charger("zunder", 250.0, 920.0))
+        assertEquals(90.0, sc.expectedKw(25.0), 1e-9)
+        for (m in 0..6) assertFalse(sc.observe(m * min, 20.0 + m, 60.0, true, false, Double.NaN, m * min).contains(ChargeSession.Event.SLOW))
+        // En uno de 920 V se esperan 180: 45 kW dos veces seguidas (pasados 3 min) sí es lento, y avisa una vez.
+        val hpc = session(charger("zunder", 250.0, 920.0), 20.0)
         val events = mutableListOf<ChargeSession.Event>()
-        for (m in 0..8) events += hpc.observe(m * min, 30.0 + m * 0.5, 45.0, true, false, Double.NaN, m * min)
+        for (m in 0..8) events += hpc.observe(m * min, 20.0 + m * 0.5, 45.0, true, false, Double.NaN, m * min)
         assertEquals(1, events.count { it == ChargeSession.Event.SLOW })
         assertEquals(45.0, hpc.slowKw, 1e-9)
-        assertEquals(130.0, hpc.slowExpectedKw, 1e-9)
+        assertEquals(180.0, hpc.slowExpectedKw, 1e-9)
     }
 
     @Test

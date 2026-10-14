@@ -194,7 +194,7 @@ class ChargeCurveModelTest {
         assertEquals(proMaxPeak * 0.75, ChargePlanner.effKw(tesla(), s), 1e-9)
         // La forma de la curva sigue siendo la del C10 (no la de un coche pequeño) aunque el pico quede por debajo de 60 kW.
         s.lowVoltsFactor = 0.4
-        assertEquals(proMaxPeak * 0.4, ChargePlanner.carPowerKw(40.0, proMaxPeak, 0.4, null), 1e-9)
+        assertEquals(proMaxPeak * 0.4, ChargePlanner.carPowerKw(25.0, proMaxPeak, 0.4, null), 1e-9)
     }
 
     @Test
