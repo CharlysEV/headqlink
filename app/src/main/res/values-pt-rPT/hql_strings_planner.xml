@@ -63,4 +63,12 @@
     <string name="hql_pl_here_ok">Movido para onde está: %1$s</string>
     <string name="hql_pl_here_set">Aqui, onde estou agora</string>
     <string name="hql_pl_here_name">Localização do GPS</string>
+    <string name="hql_guess_title">Rota para %1$s</string>
+    <string name="hql_guess_text">Deduzido do Google Maps (faltam %1$s). O plano de carregamento acompanha.</string>
+    <string name="hql_guess_ok">OK</string>
+    <string name="hql_guess_not">Não é</string>
+    <string name="hql_guess_ask_title">Para onde vai?</string>
+    <string name="hql_guess_ask_text">O Google Maps está a navegar (%1$s). Escolha o destino para o plano de carregamento:</string>
+    <string name="hql_guess_search">Procurar</string>
+    <string name="hql_guess_close">Fechar</string>
 </resources>

@@ -193,6 +193,19 @@ final class RoutePlanner {
     /** Paradas intermedias del viaje elegido aquí (como mucho SavedPlaces.MAX_VIA) y si vuelve a la salida. */
     private static volatile List<Place> vias = new ArrayList<>();
     private static volatile boolean roundTrip;
+    /**
+     * El destino lo ha deducido la app de la navegación de Google Maps (DestGuess), no lo ha elegido nadie: se quita si
+     * Maps deja de navegar y se comprueba con los km de Maps en cuanto hay plan.
+     */
+    private static volatile boolean guessed;
+    private static volatile boolean guessChecked;
+    /** Para el próximo setTrip: es la suposición (y si ya está comprobada). */
+    private static volatile boolean nextGuess;
+    private static volatile boolean nextGuessChecked;
+    /** Ya se ha deducido o preguntado en esta navegación de Maps (no se vuelve a preguntar hasta que acabe). */
+    private static volatile boolean guessAsked;
+    /** Lo que se descartó en esta navegación (el plan no cuadró, o «No es»): no se vuelve a proponer. */
+    private static final java.util.Set<String> guessRejected = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
 
     static List<Place> vias() {
         return DemoMode.active() ? new ArrayList<>() : new ArrayList<>(vias);
@@ -233,6 +246,11 @@ final class RoutePlanner {
         if (pl != null && via != null) for (Place x : via) if (x != null && v.size() < SavedPlaces.MAX_VIA) v.add(x);
         vias = v;
         roundTrip = pl != null && round;
+        // Antes de calcular (el cálculo va en otro hilo): si es el destino deducido de Maps o uno elegido a mano.
+        guessed = pl != null && nextGuess;
+        guessChecked = nextGuessChecked;
+        nextGuess = false;
+        nextGuessChecked = false;
         if (pl != null && (!v.isEmpty() || round)) L.i("ruta: viaje con " + v.size() + " paradas" + (round ? ", ida y vuelta" : ""));
         manual = pl;
         RoutePlanner r = instance;
@@ -425,6 +443,15 @@ final class RoutePlanner {
         boolean useManual = dest != null && m != null && dest.equals(m.name);
         if (dest == null) {
             if (p == null) status = noRoute();
+            if (!demo && origin == null) guessFromMaps(s);
+            return;
+        }
+        // Destino deducido y Maps ya no navega (llegada, o la ruta cancelada): fuera, sin preguntar nada.
+        if (guessed && !demo && MapsNavListener.current() == null) {
+            L.i("ruta: Google Maps ha dejado de navegar: quito el destino que había deducido");
+            guessAsked = false;
+            guessRejected.clear();
+            setManualDestination(null);
             return;
         }
         boolean replan = false;
@@ -470,6 +497,22 @@ final class RoutePlanner {
                     : useManual ? build(dest, oLat, oLon, m.lat, m.lon, null, null) : build(dest, oLat, oLon, Double.NaN, Double.NaN, null, null);
             np.builtAtMs = System.currentTimeMillis();
             if (np.multi() || wps != null) np.roundTrip = replan ? p.roundTrip : roundTrip;
+            if (guessed && !guessChecked && !replan) {
+                guessChecked = true;
+                MapsNavListener.Info mi = MapsNavListener.current();
+                if (mi != null && mi.remainingM > 0 && !DestGuess.planMatches(np.totalKm, mi.remainingM / 1000.0)) {
+                    L.i(String.format(Locale.US, "ruta: el destino deducido no cuadra con Google Maps (%.1f km frente a %.1f): pregunto",
+                            np.totalKm, mi.remainingM / 1000.0));
+                    if (m != null) guessRejected.add(guessKey(m));
+                    manual = null;
+                    guessed = false;
+                    plan = null;
+                    status = noRoute();
+                    guessAsked = false;
+                    guessFromMaps(s);
+                    return;
+                }
+            }
             plan = np;
             failedDestination = null;
             status = "";
@@ -640,6 +683,93 @@ final class RoutePlanner {
         double best = Double.MAX_VALUE;
         for (int i = Math.max(1, from); i <= to; i++) best = Math.min(best, distToRouteKm(p.lat, p.lon, i, lat, lon));
         return best;
+    }
+
+    // ------------------------------------------------------------------ destino deducido de Google Maps
+
+    /** El panel del coche se apunta para enseñar el destino deducido o preguntar por él. */
+    interface DestGuessListener {
+        /** chosen: el deducido (null si se pregunta); options: los que encajan (o los de siempre si no encaja ninguno). */
+        void onDestGuess(DestGuess.Candidate chosen, List<DestGuess.Candidate> options, double mapsKm);
+    }
+
+    static volatile DestGuessListener destGuesses;
+
+    private static String guessKey(Place p) {
+        return String.format(Locale.US, "%.4f,%.4f", p.lat, p.lon);
+    }
+
+    /** Casa, Trabajo, los guardados (solo destinos, no viajes) y los recientes, sin repetir. */
+    private List<DestGuess.Candidate> knownPlaces() {
+        Config c = new Config(ctx);
+        List<DestGuess.Candidate> saved = new ArrayList<>();
+        for (SavedPlaces.Saved sv : SavedPlaces.parse(c.savedPlaces())) {
+            if (sv.isTrip()) continue;
+            String label = SavedPlaces.HOME.equals(sv.tag) ? Str.get(R.string.hql_pl_home)
+                    : SavedPlaces.WORK.equals(sv.tag) ? Str.get(R.string.hql_pl_work) : sv.name;
+            String kind = SavedPlaces.HOME.equals(sv.tag) ? "casa" : SavedPlaces.WORK.equals(sv.tag) ? "trabajo" : "guardado";
+            saved.add(new DestGuess.Candidate(label, kind, sv.place()));
+        }
+        List<DestGuess.Candidate> recent = new ArrayList<>();
+        for (Place pl : PlaceSearch.recents(c.recentPlaces())) recent.add(new DestGuess.Candidate(pl.name, "reciente", pl));
+        List<DestGuess.Candidate> all = DestGuess.merge(saved, recent);
+        List<DestGuess.Candidate> out = new ArrayList<>();
+        for (DestGuess.Candidate x : all) if (!guessRejected.contains(guessKey(x.place))) out.add(x);
+        return out;
+    }
+
+    /**
+     * Google Maps navega y aquí no hay destino: de los sitios conocidos, el que cuadra con lo que falta según Maps. Uno
+     * solo: es el destino, sin preguntar (el panel lo enseña con «No es»). Varios o ninguno: el panel pregunta. Una vez
+     * por navegación; al acabar Maps, se vuelve a poder.
+     */
+    private void guessFromMaps(CarSensors.Snapshot s) {
+        MapsNavListener.Info mi = MapsNavListener.current();
+        if (mi == null) {
+            if (guessAsked) {
+                guessAsked = false;
+                guessRejected.clear();
+            }
+            return;
+        }
+        if (guessAsked || mi.remainingM <= 0 || Double.isNaN(s.lat)) return;
+        guessAsked = true;
+        double km = mi.remainingM / 1000.0;
+        List<DestGuess.Candidate> known = knownPlaces();
+        List<DestGuess.Candidate> fit = DestGuess.fits(known, s.lat, s.lon, km);
+        DestGuess.Candidate one = DestGuess.unique(fit);
+        DestGuessListener l = destGuesses;
+        if (one != null) {
+            // Sin el sitio en el log: solo de dónde viene.
+            L.i(String.format(Locale.US, "ruta: destino deducido de Google Maps (%s, %.1f km por carretera, %d conocidos)", one.kind, km, known.size()));
+            nextGuess = true;
+            setManualDestination(one.place);
+            List<DestGuess.Candidate> others = new ArrayList<>(known);
+            others.remove(one);
+            others = DestGuess.closest(others, s.lat, s.lon, km, 3);
+            if (l != null) l.onDestGuess(one, others, km);
+            return;
+        }
+        L.i(String.format(Locale.US, "ruta: Google Maps navega %.1f km sin destino aquí: encajan %d de %d conocidos; pregunto en el coche",
+                km, fit.size(), known.size()));
+        if (l != null) l.onDestGuess(null, fit.isEmpty() ? DestGuess.closest(known, s.lat, s.lon, km, 3) : fit, km);
+    }
+
+    /** El panel del coche: el usuario ha elegido uno de la tarjeta (sigue la navegación de Maps). */
+    static void chooseGuess(DestGuess.Candidate c) {
+        L.i("ruta: destino elegido en la tarjeta de Google Maps (" + c.kind + ")");
+        nextGuess = true;
+        nextGuessChecked = true;
+        setManualDestination(c.place);
+    }
+
+    /** El panel del coche: «No es» sobre el deducido. Se quita y no se vuelve a proponer en esta navegación. */
+    static void rejectGuess() {
+        Place m = manual;
+        if (m != null) guessRejected.add(guessKey(m));
+        L.i("ruta: el destino deducido de Google Maps no era: lo quito");
+        setManualDestination(null);
+        guessAsked = true;
     }
 
     // ------------------------------------------------------------------ plan de carga vivo

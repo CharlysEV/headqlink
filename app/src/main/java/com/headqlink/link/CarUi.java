@@ -127,6 +127,14 @@ final class CarUi {
     private static final long ALERT_KEEP_MS = 10 * 60_000L;
     private final Runnable alertExpire = this::clearAlert;
     private final RoutePlanner.ChargeAlertListener chargeAlert = (title, text, kind) -> main.post(() -> showAlert(title, text, kind));
+    // Destino deducido de Google Maps (o la pregunta, si no se sabe cuál): tarjeta abajo en el panel, como el aviso.
+    private LinearLayout guessCard;
+    private TextView guessTitle;
+    private TextView guessText;
+    private LinearLayout guessBtns;
+    private boolean guessPending;
+    private final Runnable guessExpire = this::clearGuess;
+    private final RoutePlanner.DestGuessListener destGuess = (chosen, options, km) -> main.post(() -> showGuess(chosen, options, km));
     private final Runnable hideTask = () -> setHidden(true);
     /** AA ya ha dado imagen; antes, en su zona se ve la animación de carga. */
     private boolean aaReady;
@@ -726,6 +734,7 @@ final class CarUi {
             if (!RoutePlanner.testMode()) TripLog.start(ctx);
             RoutePlanner.start(ctx);
             RoutePlanner.chargeAlerts = chargeAlert;
+            RoutePlanner.destGuesses = destGuess;
             RoadInfo.start(ctx);
             open("aa");
             if (autoHide) setHidden(true);
@@ -749,10 +758,12 @@ final class CarUi {
             if (current == this) current = null;
             main.removeCallbacks(hideTask);
             main.removeCallbacks(alertExpire);
+            main.removeCallbacks(guessExpire);
             main.removeCallbacks(railTick);
             main.removeCallbacks(floatTick);
             setFloatRect(null);
             if (RoutePlanner.chargeAlerts == chargeAlert) RoutePlanner.chargeAlerts = null;
+            if (RoutePlanner.destGuesses == destGuess) RoutePlanner.destGuesses = null;
             SspSession.setDrivingUi(true);
             try {
                 ctx.unregisterReceiver(batteryReceiver);
@@ -909,6 +920,7 @@ final class CarUi {
         TripLog.start(ctx);
         RoutePlanner.start(ctx);
         RoutePlanner.chargeAlerts = chargeAlert;
+        RoutePlanner.destGuesses = destGuess;
         RoadInfo.start(ctx);
         open("aa");
         return r;
@@ -965,6 +977,12 @@ final class CarUi {
         alp.rightMargin = 12;
         alp.bottomMargin = 12;
         root.addView(buildAlert(c), alp);
+        FrameLayout.LayoutParams glp2 = new FrameLayout.LayoutParams(panelW - 24, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM | side);
+        glp2.leftMargin = 12;
+        glp2.rightMargin = 12;
+        glp2.bottomMargin = 12;
+        root.addView(buildGuess(c), glp2);
         floatCard = new FloatCard(c, new FloatCard.Listener() {
             @Override
             public void onTap() {
@@ -1142,7 +1160,95 @@ final class CarUi {
 
     /** La tarjeta solo con el panel completo (en la barra de iconos no cabe: queda el botón Coche en ámbar). */
     private void renderAlert() {
-        if (alertCard != null) alertCard.setVisibility(alertPending && !rail() ? View.VISIBLE : View.GONE);
+        // El destino de Maps va delante del aviso del plan (el aviso vuelve al quitarse la tarjeta).
+        if (alertCard != null) alertCard.setVisibility(alertPending && !guessPending && !rail() ? View.VISIBLE : View.GONE);
+        if (guessCard != null) guessCard.setVisibility(guessPending && !rail() ? View.VISIBLE : View.GONE);
+    }
+
+    /** Tarjeta del destino de Google Maps: «Ruta a Casa · según Google Maps» con «No es», o «¿A dónde vas?» con opciones. */
+    private View buildGuess(Context c) {
+        LinearLayout card = new LinearLayout(c);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(18, 16, 18, 16);
+        card.setBackground(CarStyle.round(CarTheme.alertBg(true), 24));
+        card.setClickable(true);
+        guessTitle = CarStyle.text(c, "", 22, CarKit.GREEN);
+        guessTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        guessTitle.setMaxLines(2);
+        card.addView(guessTitle);
+        guessText = CarStyle.text(c, "", 20, CarStyle.TEXT);
+        guessText.setMaxLines(4);
+        guessText.setPadding(0, 8, 0, 12);
+        card.addView(guessText);
+        guessBtns = new LinearLayout(c);
+        guessBtns.setOrientation(LinearLayout.VERTICAL);
+        card.addView(guessBtns);
+        card.setVisibility(View.GONE);
+        guessCard = card;
+        return card;
+    }
+
+    private TextView guessPill(String text, boolean primary, Runnable onTap) {
+        TextView b = CarKit.pill(guessCard.getContext(), text, primary);
+        b.setSingleLine(true);
+        b.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        b.setOnClickListener(v -> onTap.run());
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = 8;
+        guessBtns.addView(b, lp);
+        return b;
+    }
+
+    /**
+     * Google Maps navega y el planificador ha deducido el destino (chosen) o no sabe cuál es (chosen null): se despliega
+     * el panel con la tarjeta, como el aviso del plan. Todo con un toque en la pantalla del coche.
+     */
+    private void showGuess(DestGuess.Candidate chosen, java.util.List<DestGuess.Candidate> options, double km) {
+        if (guessCard == null) return;
+        guessBtns.removeAllViews();
+        String dist = String.format(java.util.Locale.getDefault(), "%.0f km", km);
+        boolean ok = chosen != null;
+        guessCard.setBackground(CarStyle.round(CarTheme.alertBg(ok), 24));
+        guessTitle.setTextColor(ok ? CarKit.GREEN : CarKit.AMBER);
+        if (ok) {
+            guessTitle.setText(Str.get(R.string.hql_guess_title, chosen.label));
+            guessText.setText(Str.get(R.string.hql_guess_text, dist));
+            guessPill(Str.get(R.string.hql_guess_ok), true, this::clearGuess);
+            guessPill(Str.get(R.string.hql_guess_not), false, () -> {
+                RoutePlanner.rejectGuess();
+                showGuess(null, options, km);
+            });
+        } else {
+            guessTitle.setText(Str.get(R.string.hql_guess_ask_title));
+            guessText.setText(Str.get(R.string.hql_guess_ask_text, dist));
+            int n = 0;
+            for (DestGuess.Candidate o : options) {
+                if (n++ >= 3) break;
+                guessPill(o.label, n == 1, () -> {
+                    clearGuess();
+                    RoutePlanner.chooseGuess(o);
+                });
+            }
+            guessPill(Str.get(R.string.hql_guess_search), false, () -> {
+                clearGuess();
+                CarHubScreen.selectTab(0);
+                open("car");
+            });
+            guessPill(Str.get(R.string.hql_guess_close), false, this::clearGuess);
+        }
+        guessPending = true;
+        main.removeCallbacks(guessExpire);
+        main.postDelayed(guessExpire, ok ? ALERT_SHOW_MS : 2 * 60_000L);
+        if (hidden) setHidden(false);
+        renderAlert();
+        main.removeCallbacks(hideTask);
+        if (autoHide && aaShown) main.postDelayed(hideTask, ok ? ALERT_SHOW_MS : 2 * 60_000L);
+    }
+
+    private void clearGuess() {
+        guessPending = false;
+        main.removeCallbacks(guessExpire);
+        renderAlert();
     }
 
     /** Rayo en un círculo (icono del aviso): ámbar, o verde si ya puedes seguir. */

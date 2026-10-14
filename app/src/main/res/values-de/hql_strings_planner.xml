@@ -63,4 +63,12 @@
     <string name="hql_pl_here_ok">Hierher verschoben: %1$s</string>
     <string name="hql_pl_here_set">Hier, wo ich gerade bin</string>
     <string name="hql_pl_here_name">GPS-Standort</string>
+    <string name="hql_guess_title">Route nach %1$s</string>
+    <string name="hql_guess_text">Aus Google Maps abgeleitet (noch %1$s). Der Ladeplan folgt.</string>
+    <string name="hql_guess_ok">OK</string>
+    <string name="hql_guess_not">Stimmt nicht</string>
+    <string name="hql_guess_ask_title">Wohin geht\'s?</string>
+    <string name="hql_guess_ask_text">Google Maps navigiert (%1$s). Ziel für den Ladeplan wählen:</string>
+    <string name="hql_guess_search">Suchen</string>
+    <string name="hql_guess_close">Schließen</string>
 </resources>

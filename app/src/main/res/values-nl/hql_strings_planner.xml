@@ -63,4 +63,12 @@
     <string name="hql_pl_here_ok">Verplaatst naar waar je bent: %1$s</string>
     <string name="hql_pl_here_set">Hier, waar ik nu ben</string>
     <string name="hql_pl_here_name">GPS-locatie</string>
+    <string name="hql_guess_title">Route naar %1$s</string>
+    <string name="hql_guess_text">Afgeleid uit Google Maps (nog %1$s). Het laadplan volgt.</string>
+    <string name="hql_guess_ok">OK</string>
+    <string name="hql_guess_not">Klopt niet</string>
+    <string name="hql_guess_ask_title">Waar ga je heen?</string>
+    <string name="hql_guess_ask_text">Google Maps navigeert (%1$s). Kies de bestemming voor het laadplan:</string>
+    <string name="hql_guess_search">Zoeken</string>
+    <string name="hql_guess_close">Sluiten</string>
 </resources>
