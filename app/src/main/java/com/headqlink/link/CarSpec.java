@@ -50,9 +50,9 @@ public final class CarSpec {
     static final CarSpec C10 = new CarSpec("C10", 1985, 0.27 * 2.65, 69.9, 67.0, 84, 400, 11, 420, true);
     /**
      * C10 ProMax de 81,9 kWh (800 V): 180 kW de carga rápida según la ficha de Leapmotor España (también el AWD, del 30 al
-     * 80 % en 22 min). Su autonomía WLTP no está confirmada: la del C10 (420, la del juego).
+     * 80 % en 22 min) y 510 km WLTP.
      */
-    static final CarSpec C10_PROMAX = new CarSpec("C10", 2045, 0.27 * 2.65, 81.9, 79.0, 180, 800, 11, 420, true);
+    static final CarSpec C10_PROMAX = new CarSpec("C10", 2045, 0.27 * 2.65, 81.9, 79.0, 180, 800, 11, 510, true);
     /** C10 de autonomía extendida: 28,4 kWh de batería, 64 kW en carga rápida (ficha) y generador de gasolina. */
     static final CarSpec C10_REEV = new CarSpec("C10", 1990, 0.27 * 2.65, 28.4, 26.5, 64, 400, 6.6, 420, true, true);
     /**
