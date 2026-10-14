@@ -22,6 +22,13 @@ import com.andrerinas.openheadunit.R;
  */
 @SuppressLint("MissingPermission")
 final class P2pLink {
+    /**
+     * Frecuencia del grupo Wi-Fi Direct del coche (MHz), o 0 si no se sabe. A diferencia de la zona Wi-Fi (que pide un
+     * permiso de sistema), la del grupo P2P se puede leer (WifiP2pGroup.getFrequency, Android 10+): banda en el resumen
+     * de la sesión y en sessions.csv.
+     */
+    static volatile int groupFreqMhz;
+
     private static final String UPNP_MARK = "QDLink_UPnP_Device";
     private static final String NAME_PREFIX = "LeapMotor";
     private static final long RETRY_MS = 15_000;
@@ -126,11 +133,37 @@ final class P2pLink {
             // El descubrimiento P2P saca la radio del canal y provoca picos de 100-350 ms.
             mgr.stopPeerDiscovery(ch, null);
             mgr.clearServiceRequests(ch, null);
+            readGroupBand();
         } else if (!inGroup && was) {
+            groupFreqMhz = 0;
             L.w("P2P fuera del grupo");
             publish(LinkState.Level.BUSY, Str.get(R.string.hql_p2p_searching));
         } else if (info != null && info.groupFormed && info.isGroupOwner) {
             L.w("P2P: el móvil es GO de otro grupo; el protocolo espera que el coche sea GO");
+        }
+    }
+
+    /** Banda y canal del grupo del coche (los elige el coche, que es el dueño del grupo). */
+    @SuppressLint("MissingPermission")
+    private void readGroupBand() {
+        if (android.os.Build.VERSION.SDK_INT < 29) return;
+        try {
+            mgr.requestGroupInfo(ch, g -> {
+                if (g == null) return;
+                int mhz = g.getFrequency();
+                groupFreqMhz = mhz;
+                String band = HotspotRadio.Companion.bandOf(mhz);
+                if (band == null) {
+                    L.i("P2P: grupo del coche sin frecuencia conocida (" + mhz + " MHz)");
+                    return;
+                }
+                L.i("P2P: grupo del coche en " + band + " · canal " + HotspotRadio.Companion.channelOf(mhz) + " (" + mhz + " MHz)");
+                if (HotspotRadio.BAND_24.equals(band)) {
+                    L.w("P2P: el grupo del coche va en 2,4 GHz: más lento y con más cortes que en 5 GHz (lo elige el coche)");
+                }
+            });
+        } catch (RuntimeException e) {
+            L.w("P2P: no se pudo leer la banda del grupo: " + e.getMessage());
         }
     }
 

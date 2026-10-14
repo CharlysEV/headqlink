@@ -514,6 +514,11 @@ internal class QdSessionBridge(
     /** Sesión por la zona Wi-Fi del móvil (no por Wi-Fi Direct ni por el cable). */
     private fun isHotspotLink(): Boolean = !host.isUsb && host.linkMode == Config.LINK_HOTSPOT
 
+    private fun isP2pLink(): Boolean = !host.isUsb && host.linkMode == Config.LINK_P2P
+
+    /** Banda del grupo Wi-Fi Direct (P2pLink la lee al entrar en el grupo), o «desconocida». */
+    private fun p2pBand(): String = HotspotRadio.bandOf(P2pLink.groupFreqMhz) ?: HotspotRadio.UNKNOWN
+
     private fun stallContext(): String {
         val sb = StringBuilder()
         sb.append(host.linkLabel).append(" ").append(localIface)
@@ -598,7 +603,7 @@ internal class QdSessionBridge(
                 pFrameMaxBytes = if (s.frames > 0) hub.pFrameMaxBytes(port).toLong() else 0,
                 pFrameOverCap = if (s.frames > 0) hub.pFrameOverCap(port) else 0,
                 writeStalls = st.writeStalls,
-                wifiBand = if (isHotspotLink()) HotspotRadio.summaryBand() else "",
+                wifiBand = if (isHotspotLink()) HotspotRadio.summaryBand() else if (isP2pLink()) p2pBand() else "",
                 wifiDetail = if (isHotspotLink()) HotspotRadio.summaryDetail() else "",
                 aaVersion = if (Config.isAa(cfg.mode())) AaVersions.csvValue(AaVersions.lastName() ?: AaVersions.read(ctx)) else "",
             )
