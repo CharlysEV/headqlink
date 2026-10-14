@@ -178,6 +178,12 @@ android {
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
+            // headqlink: la versión publicada solo para móviles ARM (todos los de los usuarios). Las librerías nativas
+            // x86/x86_64 eran 21 MB del APK de 54 MB y solo sirven en emuladores del PC; las de prueba (debug) las
+            // siguen llevando para el emulador.
+            ndk {
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android.txt"),
                 "proguard-project.txt"
@@ -197,6 +203,12 @@ android {
                 signingConfig = relConfig
             }
         }
+    }
+
+    // headqlink: solo los 8 idiomas de la app (res/xml/hql_locales_config.xml). Las librerías traían textos de
+    // unos 25 idiomas que la app no usa (~5 MB de resources.arsc).
+    androidResources {
+        localeFilters += listOf("en", "es", "pt-rPT", "pt-rBR", "it", "fr", "de", "nl")
     }
 
     packaging {
