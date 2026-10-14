@@ -133,7 +133,7 @@
     <string name="hql_fluidity">Smoothness</string>
     <string name="hql_fluidity_30">30 fps · less heat (60 in the emulators)</string>
     <string name="hql_fluidity_60">60 fps · maximum smoothness</string>
-    <string name="hql_fluidity_help">Only with the "Car" and "Automatic" profiles. At 60 fps the car gets 8–12 Mbit/s like the original HeadQLink, and the phone runs hotter: if it reaches the moderate thermal state, it drops to 30 fps on its own.</string>
+    <string name="hql_fluidity_help">Only with the "Car" and "Automatic" profiles. At 60 fps the car gets 8–12 Mbit/s like the original app, and the phone runs hotter: if it reaches the moderate thermal state, it drops to 30 fps on its own.</string>
     <string name="hql_follows_recommended">Follows the recommended one: %1$s</string>
     <string name="hql_found_connecting">Found, connecting…</string>
     <string name="hql_gallery_no_photos">There are no photos on the phone.</string>
@@ -404,7 +404,7 @@
     <string name="hql_udp_busy">Port 18463 is busy (is QDLink open?). Close it; retrying every 5 s.</string>
     <string name="hql_engine_title">Protocol engine</string>
     <string name="hql_engine_qdauto">QDAuto (recommended)</string>
-    <string name="hql_engine_original">Original headqlink</string>
+    <string name="hql_engine_original">Legacy engine (previous)</string>
     <string name="hql_applies_on_reconnect">Applies on next connection.</string>
     <string name="hql_link_pending">%1$s (on next connection: %2$s)</string>
     <string name="hql_settings_connection">Connection</string>
@@ -546,7 +546,7 @@
     <string name="hql_req_acc_manual">Only for the automatic mode</string>
     <string name="hql_req_dev_manual">Can\'t be checked without accessibility: if Android Auto › ⋮ doesn\'t show \"Start head unit server\", turn it on (guide below).</string>
     <string name="hql_manual_confirm_title">Manual start of the Android Auto server</string>
-    <string name="hql_manual_confirm_msg">Without accessibility, Qonecta+ neither starts nor stops the Android Auto server:\n\n•  Start it yourself (Android Auto › ⋮ › Start head unit server) after every phone restart or Android Auto update.\n•  Qonecta+ always closes Android Auto in an orderly way, so the server keeps answering: it works for the following trips without a restart, even with the phone locked. If it ever does not answer (off, or blocked by a connection that was cut halfway), Qonecta+ tells you and retries by itself: stop it and start it again.\n•  It stays on until you stop it. On a public Wi-Fi, any device on that network could try to connect: stop it when you are not in the car (⋮ › Stop head unit server).\n\nAutomatic start is still the recommended mode. You can go back to it in Picture settings › Advanced.</string>
+    <string name="hql_manual_confirm_msg">Without accessibility, Qonecta+ neither starts nor stops the Android Auto server:\n\n•  Start it yourself (Android Auto › ⋮ › Start head unit server) after every phone restart or Android Auto update.\n•  Qonecta+ always closes Android Auto in an orderly way, so the server keeps answering: it works for the following trips without a restart, even with the phone locked. If it ever does not answer (off, or blocked by a connection that was cut halfway), Qonecta+ tells you and retries by itself: stop it and start it again.\n•  It stays on until you stop it. On a public Wi-Fi, any device on that network could try to connect: stop it when you are not in the car (⋮ › Stop head unit server).\n\nAutomatic start is still the recommended mode. You can go back to it in Settings › Connection.</string>
     <string name="hql_setup_guide_manual_title">How to start the Android Auto server</string>
     <string name="hql_setup_guide_manual">1.  Tap \"Open AA\".\n2.  Tap ⋮ (top right) › \"Start head unit server\".\n3.  If that option is missing: scroll to the bottom, tap \"Version\" 10 times, accept the warning and repeat step 2.\n4.  Come back to Qonecta+ and connect. Qonecta+ does not check it beforehand (a test connection would block it): if Android Auto does not answer with the car, it tells you and retries every 5 s.\nDo it after every phone restart or Android Auto update: between trips it stays on and works without a restart. If Qonecta+ says it does not answer: ⋮ › \"Stop head unit server\" and ⋮ › \"Start head unit server\".</string>
     <!-- Vista previa del modo extendido (PreviewActivity, modo demostración) -->

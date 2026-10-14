@@ -133,7 +133,7 @@
     <string name="hql_fluidity">Bildrate</string>
     <string name="hql_fluidity_30">30 fps · weniger Hitze (60 in den Emulatoren)</string>
     <string name="hql_fluidity_60">60 fps · maximal flüssig</string>
-    <string name="hql_fluidity_help">Nur mit den Profilen „Fahrzeug“ und „Automatisch“. Bei 60 fps bekommt das Fahrzeug 8–12 Mbit/s wie beim originalen HeadQLink, und das Handy wird wärmer: Erreicht es den Wärmestatus „mäßig“, geht es von selbst auf 30 fps zurück.</string>
+    <string name="hql_fluidity_help">Nur mit den Profilen „Fahrzeug“ und „Automatisch“. Bei 60 fps bekommt das Fahrzeug 8–12 Mbit/s wie bei der ursprünglichen App, und das Handy wird wärmer: Erreicht es den Wärmestatus „mäßig“, geht es von selbst auf 30 fps zurück.</string>
     <string name="hql_follows_recommended">Folgt der Empfehlung: %1$s</string>
     <string name="hql_found_connecting">Gefunden, verbinde…</string>
     <string name="hql_gallery_no_photos">Keine Fotos auf dem Handy.</string>
@@ -404,7 +404,7 @@
     <string name="hql_udp_busy">Port 18463 ist belegt (ist QDLink offen?). Schließe es; neuer Versuch alle 5 s.</string>
     <string name="hql_engine_title">Protokoll-Engine</string>
     <string name="hql_engine_qdauto">QDAuto (empfohlen)</string>
-    <string name="hql_engine_original">headqlink (Original)</string>
+    <string name="hql_engine_original">Älterer Motor (übernommen)</string>
     <string name="hql_applies_on_reconnect">Gilt ab der nächsten Verbindung.</string>
     <string name="hql_link_pending">%1$s (ab nächster Verbindung: %2$s)</string>
     <string name="hql_settings_connection">Verbindung</string>
@@ -546,7 +546,7 @@
     <string name="hql_req_acc_manual">Nur für den automatischen Modus</string>
     <string name="hql_req_dev_manual">Ohne Bedienungshilfe nicht prüfbar: Fehlt in Android Auto › ⋮ der Eintrag „Server für Infotainmentsystem starten“, aktiviere den Entwicklermodus (Anleitung unten).</string>
     <string name="hql_manual_confirm_title">Manueller Start des Android Auto-Servers</string>
-    <string name="hql_manual_confirm_msg">Ohne Bedienungshilfe startet und stoppt Qonecta+ den Android Auto-Server nicht:\n\n•  Starte ihn selbst (Android Auto › ⋮ › „Server für Infotainmentsystem starten“) nach jedem Neustart des Handys oder Update von Android Auto.\n•  Qonecta+ schließt Android Auto immer sauber, sodass der Server weiter antwortet: Er funktioniert für die folgenden Fahrten ohne Neustart, auch bei gesperrtem Handy. Antwortet er einmal nicht (aus oder durch eine halb abgebrochene Verbindung blockiert), sagt Qonecta+ Bescheid und versucht es selbst erneut: Beende ihn und starte ihn neu.\n•  Er bleibt an, bis du ihn beendest. In einem öffentlichen Wi-Fi könnte jedes Gerät in diesem Netz versuchen, sich zu verbinden: Beende ihn, wenn du nicht im Fahrzeug bist (⋮ › „Server für Infotainmentsystem beenden“).\n\nEmpfohlen bleibt der automatische Start. Du kannst unter Bildeinstellungen › Erweitert zurückwechseln.</string>
+    <string name="hql_manual_confirm_msg">Ohne Bedienungshilfe startet und stoppt Qonecta+ den Android Auto-Server nicht:\n\n•  Starte ihn selbst (Android Auto › ⋮ › „Server für Infotainmentsystem starten“) nach jedem Neustart des Handys oder Update von Android Auto.\n•  Qonecta+ schließt Android Auto immer sauber, sodass der Server weiter antwortet: Er funktioniert für die folgenden Fahrten ohne Neustart, auch bei gesperrtem Handy. Antwortet er einmal nicht (aus oder durch eine halb abgebrochene Verbindung blockiert), sagt Qonecta+ Bescheid und versucht es selbst erneut: Beende ihn und starte ihn neu.\n•  Er bleibt an, bis du ihn beendest. In einem öffentlichen Wi-Fi könnte jedes Gerät in diesem Netz versuchen, sich zu verbinden: Beende ihn, wenn du nicht im Fahrzeug bist (⋮ › „Server für Infotainmentsystem beenden“).\n\nEmpfohlen bleibt der automatische Start. Du kannst unter Einstellungen › Verbindung zurückwechseln.</string>
     <string name="hql_setup_guide_manual_title">So startest du den Android Auto-Server</string>
     <string name="hql_setup_guide_manual">1.  Tippe auf „AA öffnen“.\n2.  Tippe auf ⋮ (oben rechts) › „Server für Infotainmentsystem starten“.\n3.  Fehlt diese Option: Scrolle ganz nach unten, tippe 10-mal auf „Version“, bestätige die Warnung und wiederhole Schritt 2.\n4.  Kehre zu Qonecta+ zurück und verbinde. Qonecta+ prüft ihn nicht vorher (eine Testverbindung würde ihn blockieren): Antwortet Android Auto mit dem Fahrzeug nicht, sagt es Bescheid und versucht es alle 5 s erneut.\nMach das nach jedem Neustart des Handys oder Update von Android Auto: Zwischen den Fahrten bleibt er an und funktioniert ohne Neustart. Meldet Qonecta+, dass er nicht antwortet: ⋮ › „Server für Infotainmentsystem beenden“ und ⋮ › „Server für Infotainmentsystem starten“.</string>
     <!-- Vista previa del modo extendido (PreviewActivity, modo demostración) -->

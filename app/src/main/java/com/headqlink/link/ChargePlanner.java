@@ -34,6 +34,10 @@ final class ChargePlanner {
         java.util.Set<RoutePlanner.Charger> favorites = Collections.emptySet();
         /** Con «preferir paradas con sitio para comer»: los que lo tienen cerca (FoodNearby; FOOD_BONUS_KW). */
         java.util.Set<RoutePlanner.Charger> food = Collections.emptySet();
+        /** La curva aprendida de las cargas de este coche (ChargeCurveModel), o null: la de fábrica. */
+        ChargeCurveModel.Curve curve;
+        /** Parte del pico que admite un coche de 800 V en un cargador de 400–500 V: la mitad, o la aprendida. */
+        double lowVoltsFactor = LOW_VOLTS_FACTOR;
     }
 
     /**
@@ -230,25 +234,40 @@ final class ChargePlanner {
         return peakKw * (0.55 - 0.30 * Math.min(20, pct - 80) / 20);
     }
 
-    /** Minutos para cargar de fromPct a toPct en un cargador de chargerKw (sin la parada fija). */
-    static double chargeMinutes(double fromPct, double toPct, double chargerKw, Settings s) {
-        return minutes(fromPct, toPct, chargerKw, s.carPeakKw, s.capacityKwh);
+    /**
+     * Potencia que admite el coche a ese % (kW) con la curva aprendida (curve; null: la de fábrica) y la parte del pico
+     * que admite en ese cargador (factor: 1, o la de los 400–500 V).
+     */
+    static double carPowerKw(double pct, double peakKw, double factor, ChargeCurveModel.Curve curve) {
+        if (curve != null) return curve.powerKw(pct, factor);
+        // La forma, la del coche (con su pico entero); luego la parte que admite.
+        return carPowerKw(pct, peakKw) * factor;
     }
 
-    /** Minutos en ese cargador: en uno de 400–500 V, un coche de 800 V admite la mitad (LOW_VOLTS_FACTOR). */
+    /** Minutos para cargar de fromPct a toPct en un cargador de chargerKw (sin la parada fija). */
+    static double chargeMinutes(double fromPct, double toPct, double chargerKw, Settings s) {
+        return minutes(fromPct, toPct, chargerKw, s.carPeakKw, s.capacityKwh, 1, s.curve);
+    }
+
+    /** Minutos en ese cargador: en uno de 400–500 V, un coche de 800 V admite la mitad (o lo aprendido: lowVoltsFactor). */
     static double chargeMinutes(double fromPct, double toPct, RoutePlanner.Charger c, Settings s) {
-        double peak = s.carPeakKw * (lowVolts(c, s.carVolts) ? LOW_VOLTS_FACTOR : 1);
-        return minutes(fromPct, toPct, c.maxKw, peak, s.capacityKwh);
+        double factor = lowVolts(c, s.carVolts) ? s.lowVoltsFactor : 1;
+        return minutes(fromPct, toPct, c.maxKw, s.carPeakKw, s.capacityKwh, factor, s.curve);
     }
 
     static double minutes(double fromPct, double toPct, double chargerKw, double peakKw, double capKwh) {
+        return minutes(fromPct, toPct, chargerKw, peakKw, capKwh, 1, null);
+    }
+
+    static double minutes(double fromPct, double toPct, double chargerKw, double peakKw, double capKwh, double factor,
+                          ChargeCurveModel.Curve curve) {
         if (toPct <= fromPct) return 0;
         double kw = chargerKw > 0 ? chargerKw : UNKNOWN_KW;
         double minutes = 0;
         double step = 0.5;
         for (double p = fromPct; p < toPct; p += step) {
             double d = Math.min(step, toPct - p);
-            double power = Math.min(kw * CHARGE_EFF, carPowerKw(p + d / 2, peakKw));
+            double power = Math.min(kw * CHARGE_EFF, carPowerKw(p + d / 2, peakKw, factor, curve));
             minutes += capKwh * d / 100 / power * 60;
         }
         return minutes;
@@ -442,7 +461,7 @@ final class ChargePlanner {
     /** Lo que da el cargador a este coche (kW): lo menos de los dos, a la mitad si es de 400–500 V y el coche de 800 V. */
     static double effKw(RoutePlanner.Charger c, Settings s) {
         double kw = Math.min(c.maxKw > 0 ? c.maxKw : UNKNOWN_KW, s.carPeakKw);
-        return lowVolts(c, s.carVolts) ? kw * LOW_VOLTS_FACTOR : kw;
+        return lowVolts(c, s.carVolts) ? kw * s.lowVoltsFactor : kw;
     }
 
     /**

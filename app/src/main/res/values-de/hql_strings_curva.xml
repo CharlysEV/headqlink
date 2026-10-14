@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: «Tu curva de carga» (curva aprendida de las cargas rápidas, ChargeCurveModel). -->
+<resources>
+    <string name="hql_curva_title">Deine Ladekurve</string>
+    <string name="hql_curva_from">Aus %1$d Schnellladungen. Durchgezogen: die Kurve, die die Routenplanung nutzt (das Gelernte, gemischt mit der Werkskurve); gestrichelt: die Werkskurve; Punkte: das in jedem 5-%%-Abschnitt Gesehene.</string>
+    <string name="hql_curva_waiting">Sie füllt sich mit deinen Schnellladungen (bisher %1$d): Jeder 5-%%-Abschnitt braucht mindestens 3 Ladungen, bei denen das Auto und nicht die Ladesäule die Leistung bestimmt hat. Bis dahin nutzt die Routenplanung die Werkskurve (gestrichelt).</string>
+    <string name="hql_curva_low_volts">An 400–500-V-Ladesäulen: du lädst mit %1$s %% der Leistung (%2$d Ladungen; die Planung ging von 50 %% aus).</string>
+    <string name="hql_curva_low_volts_used">Die Routenplanung nutzt diesen Wert schon statt der Hälfte.</string>
+    <string name="hql_curva_fast">Ladesäulen ab 150 kW: mittlere Spitze %1$s kW (%2$s %% dessen, was sie dir geben konnten: die angegebene Leistung oder was dein Auto aufnimmt, je nachdem, was kleiner ist; %3$d Ladungen).</string>
+    <string name="hql_curva_net">%1$s: Spitze %2$s kW, %3$s %% (%4$d Ladungen)</string>
+    <string name="hql_curva_rules_wait">Mit mindestens 3 Ladungen an Säulen ab 150 kW (oder, beim C10 mit 800 V, an 400–500-V-Säulen) siehst du hier, was sie wirklich leisten.</string>
+    <string name="hql_curva_use">Meine Kurve in der Routenplanung nutzen</string>
+</resources>

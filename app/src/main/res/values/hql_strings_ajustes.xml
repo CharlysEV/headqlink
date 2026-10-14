@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla de Ajustes del móvil (SettingsActivity). -->
+<resources>
+    <string name="hql_aj_sec_car_screen">Car screen</string>
+    <string name="hql_aj_sec_phone_screen">Phone screen</string>
+    <string name="hql_aj_mode">Mode and connection</string>
+    <string name="hql_aj_off">Off</string>
+    <string name="hql_aj_bt_auto_sum">When connecting to a Bluetooth device whose name contains “%1$s”</string>
+    <string name="hql_aj_usb_auto_sum">Starts by itself when plugged in</string>
+    <string name="hql_aj_usb_auto_off_sum">Only when you tap Connect</string>
+    <string name="hql_aj_ui_scale">Car interface size</string>
+    <string name="hql_aj_ui_scale_auto">Automatic (%1$d %% on the T03)</string>
+    <string name="hql_aj_percent">%1$d %%</string>
+    <string name="hql_aj_ui_scale_help">Size of the Qonecta+ interface (panel and its own screens) on the car screen, Auto extended only. Automatic: as is on the C10 and smaller on small screens like the T03\'s. Applies on reconnect.</string>
+    <string name="hql_aj_ext_only">Auto extended only</string>
+    <string name="hql_aj_panel_help">The panel colour, transparency and buttons are chosen in Settings on the car screen.</string>
+    <string name="hql_aj_keep_screen">Keep the screen on</string>
+    <string name="hql_aj_keep_screen_sum">More heat and battery. Otherwise it turns off as usual and projection continues.</string>
+    <string name="hql_aj_car_mode">Android car mode</string>
+    <string name="hql_aj_car_mode_sum">While projecting. Not needed; leaving it makes the phone reload every app (like a soft reset). Applies to the next session.</string>
+    <string name="hql_aj_price_home">Home electricity price</string>
+    <string name="hql_aj_price_invalid">Enter a price from 0 to %1$s €/kWh</string>
+    <string name="hql_aj_adv_warning">For testing. A value here overrides the profile; empty = automatic (the profile\'s or what the car asks for).</string>
+    <string name="hql_aj_low_latency">Latency optimizations</string>
+    <string name="hql_aj_low_latency_sum">Set by the profile; use more battery</string>
+    <string name="hql_aj_fps">Frames per second (fps)</string>
+    <string name="hql_aj_kbps">Bitrate (kbps)</string>
+    <string name="hql_aj_width">Width (px)</string>
+    <string name="hql_aj_height">Height (px)</string>
+    <string name="hql_aj_brake">Android Auto throttle</string>
+    <string name="hql_aj_window">Frames in flight with the throttle</string>
+    <string name="hql_aj_window_auto">Automatic (2)</string>
+    <string name="hql_aj_range">From 0 to %1$d. Empty = automatic.</string>
+    <string name="hql_aj_range_invalid">Enter a number from 0 to %1$d (empty = automatic)</string>
+    <string name="hql_aj_diag_trace">Detailed trace</string>
+    <string name="hql_aj_diag_trace_sum">One log line per frame, touches, performance and the full logcat: more heat and very large logs. Applies when you reconnect.</string>
+    <string name="hql_aj_reconnect_msg">Some changes apply when reconnecting</string>
+    <string name="hql_aj_reconnect_now">Reconnect now</string>
+</resources>

@@ -230,8 +230,10 @@ final class IptvScreen implements CarScreen {
         col.addView(hs);
 
         RecyclerView rv = new RecyclerView(c);
-        rv.setLayoutManager(new GridLayoutManager(c, COLUMNS));
-        int cellW = host.width() / COLUMNS;
+        // En una pantalla pequeña (T03), 3 columnas: celdas más anchas para el texto más grande.
+        int cols = CarStyle.gridColumns(COLUMNS, host.width(), CarStyle.MIN_CELL_SCREEN_PX);
+        rv.setLayoutManager(new GridLayoutManager(c, cols));
+        int cellW = host.width() / cols;
         adapter = new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             @Override
             public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int type) {

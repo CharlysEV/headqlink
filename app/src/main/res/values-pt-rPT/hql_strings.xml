@@ -133,7 +133,7 @@
     <string name="hql_fluidity">Fluidez</string>
     <string name="hql_fluidity_30">30 fps · menos calor (60 nos emuladores)</string>
     <string name="hql_fluidity_60">60 fps · fluidez máxima</string>
-    <string name="hql_fluidity_help">Só com os perfis «Carro» e «Automático». A 60 fps o carro recebe 8-12 Mbit/s como com o HeadQLink original e o telemóvel aquece mais: se chegar ao estado térmico moderado, desce sozinho para 30 fps.</string>
+    <string name="hql_fluidity_help">Só com os perfis «Carro» e «Automático». A 60 fps o carro recebe 8-12 Mbit/s como com a app original e o telemóvel aquece mais: se chegar ao estado térmico moderado, desce sozinho para 30 fps.</string>
     <string name="hql_follows_recommended">Segue o recomendado: %1$s</string>
     <string name="hql_found_connecting">Encontrado, a ligar…</string>
     <string name="hql_gallery_no_photos">Não há fotos no telemóvel.</string>
@@ -404,7 +404,7 @@
     <string name="hql_udp_busy">A porta 18463 está ocupada (o QDLink está aberto?). Feche-o; nova tentativa a cada 5 s.</string>
     <string name="hql_engine_title">Motor do protocolo</string>
     <string name="hql_engine_qdauto">QDAuto (recomendado)</string>
-    <string name="hql_engine_original">headqlink original</string>
+    <string name="hql_engine_original">Motor herdado (o anterior)</string>
     <string name="hql_applies_on_reconnect">Aplica-se na próxima ligação.</string>
     <string name="hql_link_pending">%1$s (na próxima ligação: %2$s)</string>
     <string name="hql_settings_connection">Ligação</string>
@@ -547,7 +547,7 @@
     <string name="hql_req_acc_manual">Só para o modo automático</string>
     <string name="hql_req_dev_manual">Sem a acessibilidade não é possível verificar: se em Android Auto › ⋮ não vir «Iniciar servidor da unidade principal», ative-o (guia abaixo).</string>
     <string name="hql_manual_confirm_title">Arranque manual do servidor do Android Auto</string>
-    <string name="hql_manual_confirm_msg">Sem a acessibilidade, o Qonecta+ não inicia nem para o servidor do Android Auto:\n\n•  Inicie-o (Android Auto › ⋮ › Iniciar servidor da unidade principal) após cada reinício do telemóvel ou atualização do Android Auto.\n•  O Qonecta+ fecha sempre o Android Auto de forma ordenada, por isso o servidor continua a atender: serve para as viagens seguintes sem o reiniciar, também com o telemóvel bloqueado. Se alguma vez não atender (desligado, ou bloqueado por uma ligação que se cortou a meio), o Qonecta+ avisa e volta a tentar sozinho: pare-o e volte a iniciá-lo.\n•  Fica ligado até o parar. Numa Wi-Fi pública, qualquer aparelho dessa rede poderia tentar ligar-se: pare-o quando não estiver no carro (⋮ › Parar servidor).\n\nO arranque automático continua a ser o recomendado. Pode voltar a ele em Definições de imagem › Avançado.</string>
+    <string name="hql_manual_confirm_msg">Sem a acessibilidade, o Qonecta+ não inicia nem para o servidor do Android Auto:\n\n•  Inicie-o (Android Auto › ⋮ › Iniciar servidor da unidade principal) após cada reinício do telemóvel ou atualização do Android Auto.\n•  O Qonecta+ fecha sempre o Android Auto de forma ordenada, por isso o servidor continua a atender: serve para as viagens seguintes sem o reiniciar, também com o telemóvel bloqueado. Se alguma vez não atender (desligado, ou bloqueado por uma ligação que se cortou a meio), o Qonecta+ avisa e volta a tentar sozinho: pare-o e volte a iniciá-lo.\n•  Fica ligado até o parar. Numa Wi-Fi pública, qualquer aparelho dessa rede poderia tentar ligar-se: pare-o quando não estiver no carro (⋮ › Parar servidor).\n\nO arranque automático continua a ser o recomendado. Pode voltar a ele em Definições › Ligação.</string>
     <string name="hql_setup_guide_manual_title">Como iniciar o servidor do Android Auto</string>
     <string name="hql_setup_guide_manual">1.  Toque em «Abrir AA».\n2.  Toque em ⋮ (em cima à direita) › «Iniciar servidor da unidade principal».\n3.  Se essa opção não existir: desloque-se até ao fim, toque 10 vezes em «Versão», aceite o aviso e repita o passo 2.\n4.  Volte ao Qonecta+ e ligue. O Qonecta+ não o verifica antes (uma ligação de teste bloqueá-lo-ia): se com o carro o Android Auto não atender, avisa e volta a tentar a cada 5 s.\nFaça-o após cada reinício do telemóvel ou atualização do Android Auto: entre viagens fica ligado e serve sem o reiniciar. Se o Qonecta+ avisar que não atende: ⋮ › «Parar servidor da unidade principal» e ⋮ › «Iniciar servidor da unidade principal».</string>
     <!-- Vista previa del modo extendido (PreviewActivity, modo demostración) -->

@@ -600,7 +600,7 @@ final class AaPassthroughSource implements VideoSource {
         }
         if (extended) {
             GlFrameRelay r = relay;
-            carUi = new CarUi(ctx, uiW, uiH, PANEL_W, dpi, new CarUi.Listener() {
+            carUi = new CarUi(ctx, uiW, uiH, PANEL_W, dpi, uiScale, new CarUi.Listener() {
                 @Override
                 public void onAaVisible(boolean visible) {
                     r.setAaVisible(visible);

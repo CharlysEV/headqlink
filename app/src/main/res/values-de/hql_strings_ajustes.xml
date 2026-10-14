@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla de Ajustes del móvil (SettingsActivity). -->
+<resources>
+    <string name="hql_aj_sec_car_screen">Fahrzeugbildschirm</string>
+    <string name="hql_aj_sec_phone_screen">Handybildschirm</string>
+    <string name="hql_aj_mode">Modus und Verbindung</string>
+    <string name="hql_aj_off">Aus</string>
+    <string name="hql_aj_bt_auto_sum">Beim Verbinden mit einem Bluetooth-Gerät, dessen Name „%1$s“ enthält</string>
+    <string name="hql_aj_usb_auto_sum">Startet von selbst beim Einstecken</string>
+    <string name="hql_aj_usb_auto_off_sum">Nur beim Tippen auf Verbinden</string>
+    <string name="hql_aj_ui_scale">Größe der Oberfläche im Fahrzeug</string>
+    <string name="hql_aj_ui_scale_auto">Automatisch (%1$d %% im T03)</string>
+    <string name="hql_aj_percent">%1$d %%</string>
+    <string name="hql_aj_ui_scale_help">Größe der Qonecta+-Oberfläche (Leiste und eigene Bildschirme) auf dem Fahrzeugbildschirm, nur bei Auto erweitert. Automatisch: unverändert im C10 und kleiner auf kleinen Bildschirmen wie dem des T03. Gilt nach dem erneuten Verbinden.</string>
+    <string name="hql_aj_ext_only">Nur bei Auto erweitert</string>
+    <string name="hql_aj_panel_help">Farbe, Transparenz und Tasten der Leiste wählst du in den Einstellungen auf dem Fahrzeugbildschirm.</string>
+    <string name="hql_aj_keep_screen">Bildschirm anlassen</string>
+    <string name="hql_aj_keep_screen_sum">Mehr Hitze und Akkuverbrauch. Sonst geht er wie gewohnt aus und die Übertragung läuft weiter.</string>
+    <string name="hql_aj_car_mode">Android-Automodus</string>
+    <string name="hql_aj_car_mode_sum">Beim Projizieren. Nicht nötig; beim Verlassen lädt das Handy alle Apps neu (wie ein Soft-Reset). Gilt ab der nächsten Sitzung.</string>
+    <string name="hql_aj_price_home">Strompreis zu Hause</string>
+    <string name="hql_aj_price_invalid">Gib einen Preis von 0 bis %1$s €/kWh ein</string>
+    <string name="hql_aj_adv_warning">Zum Testen. Ein Wert hier hat Vorrang vor dem Profil; leer = automatisch (der des Profils oder was das Fahrzeug verlangt).</string>
+    <string name="hql_aj_low_latency">Latenzoptimierungen</string>
+    <string name="hql_aj_low_latency_sum">Vom Profil gesetzt; brauchen mehr Akku</string>
+    <string name="hql_aj_fps">Bilder pro Sekunde (fps)</string>
+    <string name="hql_aj_kbps">Bitrate (kbps)</string>
+    <string name="hql_aj_width">Breite (px)</string>
+    <string name="hql_aj_height">Höhe (px)</string>
+    <string name="hql_aj_brake">Android-Auto-Bremse</string>
+    <string name="hql_aj_window">Bilder unterwegs mit der Bremse</string>
+    <string name="hql_aj_window_auto">Automatisch (2)</string>
+    <string name="hql_aj_range">Von 0 bis %1$d. Leer = automatisch.</string>
+    <string name="hql_aj_range_invalid">Gib eine Zahl von 0 bis %1$d ein (leer = automatisch)</string>
+    <string name="hql_aj_diag_trace">Detaillierte Ablaufverfolgung</string>
+    <string name="hql_aj_diag_trace_sum">Eine Logzeile pro Bild, Berührungen, Leistung und vollständiges Logcat: mehr Wärme und sehr große Logs. Gilt nach dem erneuten Verbinden.</string>
+    <string name="hql_aj_reconnect_msg">Einige Änderungen gelten nach dem erneuten Verbinden</string>
+    <string name="hql_aj_reconnect_now">Jetzt neu verbinden</string>
+</resources>

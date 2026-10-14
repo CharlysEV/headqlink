@@ -767,7 +767,7 @@ final class RoutePlanner {
             String marks = c.chargerMarks();
             boolean food = c.planPreferFood();
             String settings = minKw + "/" + nets + "/" + c.chargerIncludeUnknown() + "/" + c.planArrivePct() + "/" + c.planMaxPct() + "/" + Math.round(capKwh * 10)
-                    + (realSoc ? "/real" : "/indicado") + "/c" + pl.chargerVersion + "/m" + marks.hashCode() + (food ? "/f" + FoodNearby.version : "");
+                    + (realSoc ? "/real" : "/indicado") + "/c" + pl.chargerVersion + "/curva" + c.learnedChargeCurve() + "/m" + marks.hashCode() + (food ? "/f" + FoodNearby.version : "");
             int prog = Math.min(pl.progress, pl.n - 1);
             double f = demo ? DemoMode.planTrend() : trend.factor();
             String key = settings + "/" + prog + "/" + Math.round(soc * 2) + "/" + Math.round(f * 100) + "/" + charging;
@@ -798,9 +798,9 @@ final class RoutePlanner {
             int sig = r.outcome.ordinal() * 100 + r.stops.size();
             if (sig != chargeLogged || change != ChargePlanner.Change.NONE) {
                 chargeLogged = sig;
-                L.i(String.format(Locale.US, "ruta: plan de carga%s: %s, %d paradas, %.0f min cargando, llegada %.0f %%, gasto ×%.2f",
+                L.i(String.format(Locale.US, "ruta: plan de carga%s: %s, %d paradas, %.0f min cargando, llegada %.0f %%, gasto ×%.2f, %s",
                         change == ChargePlanner.Change.NONE ? "" : " recalculado (" + change.name().toLowerCase(Locale.ROOT) + ")",
-                        r.outcome.name().toLowerCase(Locale.ROOT), r.stops.size(), r.chargeMinutes, r.arrivalPct, f));
+                        r.outcome.name().toLowerCase(Locale.ROOT), r.stops.size(), r.chargeMinutes, r.arrivalPct, f, curveNote(s)));
             }
             if (change != ChargePlanner.Change.NONE) alert(change, before, r);
             return r;
@@ -820,8 +820,15 @@ final class RoutePlanner {
                 -a.gainMin(), a.rescue ? ", y así se llega" : ""));
     }
 
-    /** Los márgenes del plan y lo que se sabe del coche. */
-    private static ChargePlanner.Settings planSettings(Config c, double capKwh) {
+    /** Para el registro: con qué curva de carga se hizo el plan (sin lugares). */
+    private static String curveNote(ChargePlanner.Settings s) {
+        String out = s.curve != null ? String.format(Locale.US, "curva aprendida (%d cargas)", s.curve.totalSessions) : "curva de fábrica";
+        if (s.lowVoltsFactor != ChargePlanner.LOW_VOLTS_FACTOR) out += String.format(Locale.US, ", 400–500 V al %.0f %%", s.lowVoltsFactor * 100);
+        return out;
+    }
+
+    /** Los márgenes del plan y lo que se sabe del coche (con lo aprendido de sus cargas, si está activo). */
+    private ChargePlanner.Settings planSettings(Config c, double capKwh) {
         ChargePlanner.Settings s = new ChargePlanner.Settings();
         s.arriveMinPct = c.planArrivePct();
         s.maxChargePct = c.planMaxPct();
@@ -829,6 +836,16 @@ final class RoutePlanner {
         s.carPeakKw = carPeakKw(capKwh);
         // La de 81,9 kWh es de 800 V: en los cargadores de 400–500 V (Supercharger, los de 50 kW de antes) carga a la mitad.
         s.carVolts = carVolts(capKwh);
+        // Lo aprendido de las cargas de este coche (no en la demostración: ahí se carga con la curva de fábrica).
+        if (!demo && c.learnedChargeCurve()) {
+            try {
+                ChargeCurveModel.Summary m = ChargeCurveModel.forCar(ctx, s.carPeakKw);
+                if (m.curve.learned()) s.curve = m.curve;
+                s.lowVoltsFactor = m.lowVolts.planFactor();
+            } catch (RuntimeException e) {
+                L.w("ruta: no se pudo leer la curva aprendida (" + e.getClass().getSimpleName() + ")");
+            }
+        }
         return s;
     }
 

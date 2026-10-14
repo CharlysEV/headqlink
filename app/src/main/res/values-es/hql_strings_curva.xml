@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: «Tu curva de carga» (curva aprendida de las cargas rápidas, ChargeCurveModel). -->
+<resources>
+    <string name="hql_curva_title">Tu curva de carga</string>
+    <string name="hql_curva_from">Formada con %1$d cargas rápidas. Línea llena: la que usa el plan de ruta (lo aprendido, mezclado con la de fábrica); discontinua: la de fábrica; puntos: lo visto en cada tramo de 5 %%.</string>
+    <string name="hql_curva_waiting">Se irá completando con tus cargas rápidas (llevas %1$d): en cada tramo de 5 %% hacen falta al menos 3 cargas en las que el coche, y no el cargador, marque la potencia. Mientras, el plan de ruta usa la de fábrica (discontinua).</string>
+    <string name="hql_curva_low_volts">En cargadores de 400–500 V: cargas al %1$s %% de la potencia (%2$d cargas; el plan suponía el 50 %%).</string>
+    <string name="hql_curva_low_volts_used">El plan de ruta ya usa este valor en vez de la mitad.</string>
+    <string name="hql_curva_fast">Cargadores de 150 kW o más: pico medio %1$s kW (%2$s %% de lo que podían darte: lo anunciado o lo que admite tu coche, lo que sea menos; %3$d cargas).</string>
+    <string name="hql_curva_net">%1$s: pico %2$s kW, %3$s %% (%4$d cargas)</string>
+    <string name="hql_curva_rules_wait">Con al menos 3 cargas en cargadores de 150 kW o más (o, en el C10 de 800 V, en los de 400–500 V) verás aquí cuánto rinden de verdad.</string>
+    <string name="hql_curva_use">Usar mi curva en el plan de ruta</string>
+</resources>

@@ -586,6 +586,14 @@
             android:label="@string/hql_req_title"
             android:theme="@style/Theme.HeadQLink" />
 
+        <!-- headqlink: Ajustes del móvil (menú ⚙ › Ajustes). -->
+        <activity
+            android:name="com.headqlink.link.SettingsActivity"
+            android:exported="false"
+            android:label="@string/hql_settings"
+            android:theme="@style/Theme.HeadQLink"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
         <activity
             android:name="com.headqlink.link.LatencyActivity"
             android:exported="false"

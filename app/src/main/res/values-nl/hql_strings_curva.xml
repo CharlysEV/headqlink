@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: «Tu curva de carga» (curva aprendida de las cargas rápidas, ChargeCurveModel). -->
+<resources>
+    <string name="hql_curva_title">Jouw laadcurve</string>
+    <string name="hql_curva_from">Opgebouwd uit %1$d snelle laadbeurten. Doorgetrokken lijn: die de routeplanning gebruikt (het geleerde, gemengd met de fabriekscurve); gestippeld: de fabriekscurve; punten: wat in elk stuk van 5 %% gezien is.</string>
+    <string name="hql_curva_waiting">Hij vult zich aan met je snelle laadbeurten (tot nu toe %1$d): elk stuk van 5 %% heeft minstens 3 laadbeurten nodig waarin de auto, en niet de lader, het vermogen bepaalde. Tot die tijd gebruikt de routeplanning de fabriekscurve (gestippeld).</string>
+    <string name="hql_curva_low_volts">Bij laders van 400–500 V: je laadt met %1$s %% van het vermogen (%2$d laadbeurten; de planning ging uit van 50 %%).</string>
+    <string name="hql_curva_low_volts_used">De routeplanning gebruikt deze waarde al in plaats van de helft.</string>
+    <string name="hql_curva_fast">Laders van 150 kW of meer: gemiddelde piek %1$s kW (%2$s %% van wat ze je konden geven: het opgegeven vermogen of wat je auto aankan, wat lager is; %3$d laadbeurten).</string>
+    <string name="hql_curva_net">%1$s: piek %2$s kW, %3$s %% (%4$d laadbeurten)</string>
+    <string name="hql_curva_rules_wait">Met minstens 3 laadbeurten bij laders van 150 kW of meer (of, bij de C10 van 800 V, bij die van 400–500 V) zie je hier wat ze echt leveren.</string>
+    <string name="hql_curva_use">Mijn curve gebruiken in de routeplanning</string>
+</resources>

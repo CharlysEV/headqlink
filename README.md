@@ -6,7 +6,7 @@
 
 > **Qonecta+** es el nuevo nombre de **HeadQLink** desde la versión 0.2.52: la misma app, con el mismo paquete (`com.headqlink.app`), que se instala encima y conserva los ajustes.
 
-> **Este fork (CharlysEV/headqlink) — rama `main`.** Sobre el HeadQLink original añade:
+> **Este fork (CharlysEV/qonecta) — rama `main`.** Sobre el HeadQLink original añade:
 >
 > - **Motor de protocolo QDAuto** ([CharlysEV/qdauto](https://github.com/CharlysEV/qdauto)): implementación propia de
 >   QDLink/SSPLink, probada en un C10 real. Es el motor por defecto; el original de headqlink sigue disponible.

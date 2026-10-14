@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hql_carui_size">Taille de l\'interface</string>
+    <string name="hql_carui_size_note" formatted="false">Automatique : ce qui tient sur cet écran. Avec un % plus élevé, tout est plus grand, mais moins de choses tiennent. S\'applique à la reconnexion.</string>
+</resources>
