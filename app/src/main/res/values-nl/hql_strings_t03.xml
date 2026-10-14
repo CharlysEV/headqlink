@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hql_carui_size">Grootte van de interface</string>
+    <string name="hql_carui_size_note" formatted="false">Automatisch: wat op dit scherm past. Met een hoger % wordt alles groter, maar past er minder op. Geldt bij opnieuw verbinden.</string>
+</resources>

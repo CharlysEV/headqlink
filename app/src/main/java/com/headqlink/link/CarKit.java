@@ -21,8 +21,10 @@ import android.widget.TextView;
  * negro, tarjetas redondeadas con un filo de 2 px (1 dp en el coche), acento cian → verde para lo importante, ámbar y
  * rojo para avisos, etiquetas pequeñas en mayúsculas espaciadas y cifras grandes con la unidad pequeña.
  *
- * Medidas en píxeles de la pantalla del coche (1920x882, ~200 ppp). Pensado para el codificador de vídeo: colores
- * planos, sin sombras ni desenfoques, y los objetos de dibujo se reutilizan (nada se crea en cada fotograma).
+ * Medidas en píxeles de la pantalla del C10 (1920x882, ~150 ppp); en una más pequeña (T03) la interfaz se reduce y los
+ * títulos de las tarjetas, las fichas y las píldoras no bajan de un mínimo (CarStyle.textPx, CarStyle.touch). Pensado
+ * para el codificador de vídeo: colores planos, sin sombras ni desenfoques, y los objetos de dibujo se reutilizan (nada
+ * se crea en cada fotograma).
  */
 /** Colores: los pone CarTheme (día o noche); no son constantes. */
 final class CarKit {
@@ -83,14 +85,29 @@ final class CarKit {
 
     /** Etiqueta que se estrecha (menos espacio entre letras y luego menos tamaño) si no cabe en maxW. */
     static float label(Canvas cv, String s, float x, float y, int color, Paint p, Paint.Align align, float maxW) {
+        return label(cv, s, x, y, color, p, align, maxW, 19f);
+    }
+
+    /**
+     * Etiqueta del título de una tarjeta o de una ficha: con la interfaz reducida (T03), del tamaño mínimo legible
+     * (CarStyle.textPx); tienen sitio para ello. Las de dentro de los paneles se quedan en 19: van a posiciones fijas.
+     */
+    static float titleLabel(Canvas cv, String s, float x, float y, int color, Paint p, Paint.Align align, float maxW) {
+        return label(cv, s, x, y, color, p, align, maxW, CarStyle.textPx(19f));
+    }
+
+    private static float label(Canvas cv, String s, float x, float y, int color, Paint p, Paint.Align align, float maxW,
+                               float size) {
         p.setShader(null);
         p.setStyle(Paint.Style.FILL);
         p.setTypeface(MEDIUM);
-        p.setTextSize(19);
+        // Agrandada (T03): si no cabe, se estrecha menos que la normal, que baja hasta 14.
+        float min = size > 19f ? size * 0.85f : 14;
+        p.setTextSize(size);
         p.setLetterSpacing(0.12f);
         String up = s.toUpperCase(java.util.Locale.getDefault());
         if (p.measureText(up) > maxW) p.setLetterSpacing(0.04f);
-        if (p.measureText(up) > maxW) p.setTextSize(Math.max(14, 19 * maxW / p.measureText(up)));
+        if (p.measureText(up) > maxW) p.setTextSize(Math.max(min, size * maxW / p.measureText(up)));
         p.setColor(color);
         p.setTextAlign(align);
         // Si ni así cabe (títulos largos en alemán u holandés), acaba en «…».
@@ -155,7 +172,7 @@ final class CarKit {
         p.setStyle(Paint.Style.FILL);
         p.setColor(SURFACE_HI);
         cv.drawRoundRect(r, 18, 18, p);
-        label(cv, label, r.left + 18, r.top + 32, FAINT, p, Paint.Align.LEFT, r.width() - 30);
+        titleLabel(cv, label, r.left + 18, r.top + 32, FAINT, p, Paint.Align.LEFT, r.width() - 30);
         number(cv, value, unit, r.left + 18, r.bottom - 18, Math.min(38, r.height() * 0.42f), color, MEDIUM, p, Paint.Align.LEFT);
     }
 
@@ -294,7 +311,7 @@ final class CarKit {
         protected void onDraw(Canvas cv) {
             r.set(BORDER / 2, BORDER / 2, getWidth() - BORDER / 2, getHeight() - BORDER / 2);
             card(cv, r, p);
-            if (title != null) label(cv, title, PAD, PAD + 20, FAINT, p, Paint.Align.LEFT, getWidth() - 2 * PAD);
+            if (title != null) titleLabel(cv, title, PAD, PAD + 20, FAINT, p, Paint.Align.LEFT, getWidth() - 2 * PAD);
             inner.set(getPaddingLeft(), getPaddingTop(), getWidth() - getPaddingRight(), getHeight() - getPaddingBottom());
             if (painter != null) painter.paint(cv, inner, p);
         }
@@ -340,11 +357,12 @@ final class CarKit {
     static TextView pill(Context c, String s, boolean primary) {
         TextView t = new TextView(c);
         t.setText(s);
-        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 23);
+        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, CarStyle.textPx(23));
         t.setTypeface(MEDIUM);
         t.setGravity(Gravity.CENTER);
         t.setSingleLine(true);
         t.setPadding(26, 13, 26, 13);
+        CarStyle.minTouch(t);
         t.setTextColor(primary ? ON_ACCENT : TEXT);
         t.setBackground(primary ? CarStyle.accent(30) : outlined(SURFACE_TOP, EDGE, 30));
         return t;

@@ -47,6 +47,11 @@ final class SettingsScreen implements CarScreen {
     /** «Tamaño de Android Auto» pendiente de aplicar (AaSize.CHOICES). */
     private int pendingAaSize;
     private final java.util.List<TextView> sizePills = new java.util.ArrayList<>();
+    /** «Tamaño de la interfaz» pendiente de aplicar (Config.uiScalePercent: 0 automático, UI_SCALE_CHOICES). */
+    private int pendingUiScale;
+    private final java.util.List<TextView> uiScalePills = new java.util.ArrayList<>();
+    /** Lo que se puede elegir en «Tamaño de la interfaz»: automático y del 60 al 100 %. */
+    static final int[] UI_SCALE_CHOICES = {0, 60, 70, 80, 90, 100};
     private LinearLayout nav;
     private ScrollView pane;
 
@@ -58,6 +63,7 @@ final class SettingsScreen implements CarScreen {
         pending = cfg.videoProfileChoice();
         pendingFluid = cfg.fluidity();
         pendingAaSize = cfg.aaSizePercent();
+        pendingUiScale = cfg.uiScalePercent();
 
         LinearLayout root = new LinearLayout(c);
         root.setOrientation(LinearLayout.HORIZONTAL);
@@ -174,6 +180,8 @@ final class SettingsScreen implements CarScreen {
         Context c = host.context();
         profilePills.clear();
         fluidPills.clear();
+        sizePills.clear();
+        uiScalePills.clear();
         apply = null;
         detail = null;
         LinearLayout col = new LinearLayout(c);
@@ -226,7 +234,7 @@ final class SettingsScreen implements CarScreen {
             TextView p = CarStyle.pill(c, name);
             p.setTag(id);
             p.setPadding(20, 22, 20, 22);
-            p.setSingleLine(true);
+            twoLinesIfScaled(p);
             p.setOnClickListener(v -> select(id));
             GridLayout.LayoutParams glp = new GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED),
                     GridLayout.spec(GridLayout.UNDEFINED, 1f));
@@ -274,7 +282,7 @@ final class SettingsScreen implements CarScreen {
             TextView p = CarStyle.pill(c, Str.get(labels[i]));
             p.setTag(pct);
             p.setPadding(16, 22, 16, 22);
-            p.setSingleLine(true);
+            twoLinesIfScaled(p);
             p.setOnClickListener(v -> {
                 pendingAaSize = pct;
                 refresh();
@@ -289,6 +297,9 @@ final class SettingsScreen implements CarScreen {
         sizeNote.setPadding(4, 4, 0, 0);
         size.addView(sizeNote);
         col.addView(size, cardLp());
+
+        // Tamaño de nuestra interfaz (UiScale): solo en una pantalla pequeña (T03) o si ya se eligió uno a mano.
+        if (showUiScale(CarStyle.smallScreen(), cfg.uiScalePercent())) col.addView(uiScaleCard(c), cardLp());
 
         apply = CarStyle.pill(c, Str.get(R.string.hql_apply_reconnect));
         apply.setBackground(CarStyle.accent(32));
@@ -311,6 +322,59 @@ final class SettingsScreen implements CarScreen {
         info.setPadding(8, 0, 8, 0);
         col.addView(info);
         refresh();
+    }
+
+    /** Píldora de una línea; con la interfaz reducida (texto más grande), hasta dos para que no se corte. */
+    private static void twoLinesIfScaled(TextView p) {
+        if (CarStyle.scaled()) {
+            p.setMaxLines(2);
+            p.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        } else {
+            p.setSingleLine(true);
+        }
+    }
+
+    /** Puro: la fila «Tamaño de la interfaz» se ve en una pantalla pequeña o si hay un tamaño elegido a mano. */
+    static boolean showUiScale(boolean smallScreen, int percent) {
+        return smallScreen || percent != 0;
+    }
+
+    /** Puro: el texto de cada opción de «Tamaño de la interfaz» (0: «Automático»; si no, «70 %»). */
+    static String uiScaleLabel(int percent, String auto) {
+        return percent == 0 ? auto : percent + " %";
+    }
+
+    /**
+     * «Tamaño de la interfaz»: a qué escala se dibuja nuestra interfaz en la pantalla del coche (Automático: la que cabe;
+     * más %: todo más grande y cabe menos). Se guarda con «Aplicar y reconectar».
+     */
+    private View uiScaleCard(Context c) {
+        LinearLayout card = card(c, Str.get(R.string.hql_carui_size));
+        GridLayout grid = new GridLayout(c);
+        // Seis opciones: en la pantalla pequeña no caben en una fila con el texto más grande, en dos de tres.
+        grid.setColumnCount(CarStyle.scaled() ? 3 : UI_SCALE_CHOICES.length);
+        grid.setPadding(0, 14, 0, 4);
+        for (int pct : UI_SCALE_CHOICES) {
+            TextView p = CarStyle.pill(c, uiScaleLabel(pct, Str.get(R.string.hql_profile_auto)));
+            p.setTag(pct);
+            p.setPadding(16, 22, 16, 22);
+            p.setSingleLine(true);
+            p.setOnClickListener(v -> {
+                pendingUiScale = pct;
+                refresh();
+            });
+            GridLayout.LayoutParams glp = new GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED),
+                    GridLayout.spec(GridLayout.UNDEFINED, 1f));
+            glp.width = 0;
+            glp.setMargins(0, 0, 14, 14);
+            uiScalePills.add(p);
+            grid.addView(p, glp);
+        }
+        card.addView(grid);
+        TextView note = CarStyle.text(c, Str.get(R.string.hql_carui_size_note), 20, CarStyle.TEXT_DIM);
+        note.setPadding(4, 4, 0, 0);
+        card.addView(note);
+        return card;
     }
 
     // ------------------------------------------------------------------ Panel lateral
@@ -467,7 +531,7 @@ final class SettingsScreen implements CarScreen {
             d.setStroke(sel ? 7 : 2, sel ? CarStyle.ACCENT : CarKit.EDGE);
             sw.setBackground(d);
             sw.setOnClickListener(v -> setPanelColor(pc));
-            LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(60, 60);
+            LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(CarStyle.touch(60), CarStyle.touch(60));
             slp.rightMargin = 12;
             row.addView(sw, slp);
         }
@@ -568,7 +632,7 @@ final class SettingsScreen implements CarScreen {
                 }
             }
         };
-        row.addView(bar, new LinearLayout.LayoutParams(0, 60, 1f));
+        row.addView(bar, new LinearLayout.LayoutParams(0, CarStyle.touch(60), 1f));
         return row;
     }
 
@@ -606,7 +670,9 @@ final class SettingsScreen implements CarScreen {
             LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             dlp.rightMargin = 26;
             r.addView(down, dlp);
-            View sw = switchView(c, on);
+            // El interruptor, en una caja del alto táctil mínimo (con la interfaz reducida, más alta que él).
+            android.widget.FrameLayout sw = new android.widget.FrameLayout(c);
+            sw.addView(switchView(c, on), new android.widget.FrameLayout.LayoutParams(96, 56, Gravity.CENTER));
             sw.setOnClickListener(v -> {
                 java.util.List<String> ids = cfg.panelButtons();
                 if (ids.contains(id)) ids.remove(id);
@@ -614,7 +680,7 @@ final class SettingsScreen implements CarScreen {
                 cfg.setPanelButtons(ids);
                 CarUi.applyPanelButtons();
             });
-            r.addView(sw, new LinearLayout.LayoutParams(96, 56));
+            r.addView(sw, new LinearLayout.LayoutParams(96, CarStyle.touch(56)));
             if (i > 0) box.addView(divider(c));
             box.addView(r);
         }
@@ -738,8 +804,13 @@ final class SettingsScreen implements CarScreen {
             p.setBackground(sel ? CarKit.outlined(CarStyle.ACCENT_BG, CarStyle.ACCENT, 28) : CarStyle.round(CarStyle.PILL_BG, 28));
             p.setTextColor(sel ? CarStyle.ACCENT : CarStyle.TEXT);
         }
+        for (TextView p : uiScalePills) {
+            boolean sel = pendingUiScale == (int) p.getTag();
+            p.setBackground(sel ? CarKit.outlined(CarStyle.ACCENT_BG, CarStyle.ACCENT, 28) : CarStyle.round(CarStyle.PILL_BG, 28));
+            p.setTextColor(sel ? CarStyle.ACCENT : CarStyle.TEXT);
+        }
         boolean changed = !pending.equals(cfg.videoProfileChoice()) || pendingFluid != cfg.fluidity()
-                || pendingAaSize != cfg.aaSizePercent();
+                || pendingAaSize != cfg.aaSizePercent() || pendingUiScale != cfg.uiScalePercent();
         apply.setVisibility(changed ? View.VISIBLE : View.GONE);
     }
 
@@ -755,6 +826,12 @@ final class SettingsScreen implements CarScreen {
         if (sizeChanged) {
             cfg.setAaSizePercent(pendingAaSize);
             L.i("tamaño de Android Auto: " + pendingAaSize + " % (desde el coche; reconecta ahora)");
+        }
+        // El tamaño de nuestra interfaz se toma al arrancar el vídeo (AaPassthroughSource.start): basta con reconectar; AA
+        // recibe los márgenes nuevos del panel sin volver a negociar.
+        if (pendingUiScale != cfg.uiScalePercent()) {
+            cfg.setUiScalePercent(pendingUiScale);
+            L.i("tamaño de la interfaz: " + (pendingUiScale == 0 ? "automático" : pendingUiScale + " %") + " (desde el coche; reconecta ahora)");
         }
         VideoProfile after = cfg.videoProfile();
         // Otro perfil, u otros fps (fluidez con Coche), u otro tamaño: AA vuelve a negociar resolución, fps y densidad.

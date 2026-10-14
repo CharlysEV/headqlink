@@ -63,6 +63,8 @@ final class RouteTab implements CarScreen {
     private TextView search;
     /** Los botones de arriba a la derecha (buscar, Google Maps, quitar): su ancho real recorta el nombre del destino. */
     private LinearLayout actionsRow;
+    /** La fila de botones, o el desplazable que la lleva (interfaz reducida). */
+    private View actionsHost;
     private TextView goMaps;
     /** Mapa con el trazado del plan (para compararlo con el de Google Maps). */
     private TextView mapPill;
@@ -131,7 +133,15 @@ final class RouteTab implements CarScreen {
         actions.addView(mapPill, spaced());
         actions.addView(goMaps, spaced());
         actions.addView(clear, spaced());
-        routeCard.addView(actions, CarKit.at(Gravity.TOP | Gravity.END, 0, 0, 0, 0));
+        // Con la interfaz reducida (T03) los botones, más grandes, pueden no caber en la tarjeta: la fila se desplaza.
+        actionsHost = actions;
+        if (CarStyle.scaled()) {
+            android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(ctx);
+            hs.setHorizontalScrollBarEnabled(false);
+            hs.addView(actions);
+            actionsHost = hs;
+        }
+        routeCard.addView(actionsHost, CarKit.at(Gravity.TOP | Gravity.END, 0, 0, 0, 0));
         search.setOnClickListener(v -> openSearch(false));
         goMaps.setOnClickListener(v -> {
             RoutePlanner.Place m = RoutePlanner.manualDestination();
@@ -160,7 +170,7 @@ final class RouteTab implements CarScreen {
             tick();
         });
         actions.addView(liveShow, 0);
-        actionsRow.bringToFront();
+        actionsHost.bringToFront();
 
         LinearLayout right = CarKit.add(row, CarKit.col(ctx), 1f, 0);
         batteryCard = CarKit.add(right, new CarKit.Card(ctx, Str.get(R.string.hql_battery_arrival), this::paintBattery), 0, 290);
@@ -1631,11 +1641,16 @@ final class RouteTab implements CarScreen {
             paintEmpty(cv, r, p, dest);
             return;
         }
-        // Destino.
-        CarIcons.pin(cv, x0 + 16, y0 + 30, 40, CarKit.ACCENT, CarKit.SURFACE, p);
         // El hueco de los botones, medido (en otros idiomas son más anchos que en español).
         float pillsW = actionsRow.getWidth() > 0 ? actionsRow.getWidth() + 20
                 : goMaps.getVisibility() == View.VISIBLE ? 620 : clear.getVisibility() == View.VISIBLE ? 360 : 240;
+        if (CarStyle.scaled() && r.width() - pillsW - 60 < r.width() * 0.3f) {
+            // Interfaz reducida (T03): con los botones más grandes no queda sitio para el destino a su lado; va debajo.
+            y0 += (actionsHost.getHeight() > 0 ? actionsHost.getHeight() : CarStyle.touch(56)) + 4;
+            pillsW = 0;
+        }
+        // Destino.
+        CarIcons.pin(cv, x0 + 16, y0 + 30, 40, CarKit.ACCENT, CarKit.SURFACE, p);
         CarKit.label(cv, Str.get(R.string.hql_destination), x0 + 48, y0 + 14, CarKit.FAINT, p, Paint.Align.LEFT, r.width() - pillsW - 60);
         p.setTypeface(CarKit.MEDIUM);
         p.setTextSize(40);
@@ -1682,7 +1697,11 @@ final class RouteTab implements CarScreen {
         // Perfil, viento, tramos y leyenda.
         float gx0 = x0 + 74;
         RectF chart = chartRect;
-        chart.set(gx0, y0 + 222, r.right, y0 + 530);
+        float chartBottom = y0 + 530;
+        // Interfaz reducida (T03): la tarjeta es más baja; el perfil se encoge para que el viento, los tramos y la leyenda
+        // quepan debajo (como en el C10, 190 px).
+        if (CarStyle.scaled()) chartBottom = Math.max(y0 + 302, Math.min(chartBottom, r.bottom - 190));
+        chart.set(gx0, y0 + 222, r.right, chartBottom);
         profile(cv, chart, pl, prog, p);
         float wy = chart.bottom + 36;
         for (int i = 1; i < pl.n; i++) {
