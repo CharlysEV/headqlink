@@ -2430,8 +2430,9 @@ final class RouteTab implements CarScreen {
         // El hueco de los botones, medido (en otros idiomas son más anchos que en español).
         float pillsW = actionsRow.getWidth() > 0 ? actionsRow.getWidth() + 20
                 : goMaps.getVisibility() == View.VISIBLE ? 620 : clear.getVisibility() == View.VISIBLE ? 360 : 240;
-        if (CarStyle.scaled() && r.width() - pillsW - 60 < r.width() * 0.3f) {
-            // Interfaz reducida (T03): con los botones más grandes no queda sitio para el destino a su lado; va debajo.
+        if (r.width() - pillsW - 60 < r.width() * 0.3f) {
+            // Sin sitio para el destino al lado de los botones (T03 con los botones más grandes; C10 con «Viaje» y,
+            // en el coche virtual, «Desde»: quedaba en «A…»): va debajo.
             y0 += (actionsHost.getHeight() > 0 ? actionsHost.getHeight() : CarStyle.touch(56)) + 4;
             pillsW = 0;
         }
