@@ -31,6 +31,8 @@ import java.util.Locale;
  */
 final class RoutePlanner {
     static final class Charger {
+        /** Id estable de su fuente («dgt:…», «osm:node…»), o "" si no tiene (ChargerMarks.key usa entonces la posición). */
+        String id = "";
         String name;
         String detail;
         double lat;
@@ -115,6 +117,18 @@ final class RoutePlanner {
         volatile double arrivalPredictedKwh = Double.NaN;
         volatile double arrivalRealKwh = Double.NaN;
         boolean arrivalDone;
+        // Viaje con paradas intermedias o de ida y vuelta: los puntos tras la salida, en orden (las paradas, el destino y,
+        // de ida y vuelta, la vuelta a la salida), el km de la ruta en el que está cada uno y cuál es el destino (-1 si ya
+        // se ha pasado). Con un solo destino, vacío.
+        List<Place> waypoints = new ArrayList<>();
+        double[] waypointKm = new double[0];
+        int destIndex = -1;
+        boolean roundTrip;
+
+        /** Es un viaje de varios tramos (paradas o ida y vuelta). */
+        boolean multi() {
+            return waypoints.size() > 1;
+        }
     }
 
     private static RoutePlanner instance;
@@ -176,6 +190,17 @@ final class RoutePlanner {
      * ni el destino ni la distancia total.
      */
     private static volatile Place manual;
+    /** Paradas intermedias del viaje elegido aquí (como mucho SavedPlaces.MAX_VIA) y si vuelve a la salida. */
+    private static volatile List<Place> vias = new ArrayList<>();
+    private static volatile boolean roundTrip;
+
+    static List<Place> vias() {
+        return DemoMode.active() ? new ArrayList<>() : new ArrayList<>(vias);
+    }
+
+    static boolean roundTrip() {
+        return !DemoMode.active() && roundTrip;
+    }
 
     /** Un lugar buscado (Nominatim). */
     static final class Place {
@@ -190,12 +215,25 @@ final class RoutePlanner {
         return manual;
     }
 
-    /** Fija (o quita, con null) el destino elegido en el coche; la ruta se calcula enseguida. */
+    /** Fija (o quita, con null) el destino elegido en el coche, sin paradas; la ruta se calcula enseguida. */
     static void setManualDestination(Place pl) {
+        setTrip(pl, null, false);
+    }
+
+    /**
+     * Fija el viaje elegido en el coche: el destino (null: ninguno), las paradas intermedias por el camino (como mucho
+     * SavedPlaces.MAX_VIA) y si vuelve a la salida. La ruta se calcula enseguida.
+     */
+    static void setTrip(Place pl, List<Place> via, boolean round) {
         if (DemoMode.active()) {
             DemoMode.setPlace(pl);
             return;
         }
+        List<Place> v = new ArrayList<>();
+        if (pl != null && via != null) for (Place x : via) if (x != null && v.size() < SavedPlaces.MAX_VIA) v.add(x);
+        vias = v;
+        roundTrip = pl != null && round;
+        if (pl != null && (!v.isEmpty() || round)) L.i("ruta: viaje con " + v.size() + " paradas" + (round ? ", ida y vuelta" : ""));
         manual = pl;
         RoutePlanner r = instance;
         if (r != null) {
@@ -361,6 +399,7 @@ final class RoutePlanner {
         CarSensors.Snapshot s = sensors.snapshot();
         if (!testMode) trackEnergy(s);
         Place origin = testOrigin();
+        HomeReach.notePosition(s.lat, s.lon);
         NavTap.Info nav = NavTap.getInfo();
         Plan p = plan;
         if (p != null && origin == null && !Double.isNaN(s.lat)) p.progress = nearest(p, s.lat, s.lon, p.progress);
@@ -410,17 +449,37 @@ final class RoutePlanner {
         lastAttemptMs = now;
         if (!replan) status = Str.get(R.string.hql_route_calculating, dest);
         try {
+            // Viaje con paradas o de ida y vuelta: los puntos que quedan (al recalcular, los que no se han pasado).
+            List<Place> wps = null;
+            Place destPlace = null;
+            if (replan && !p.waypoints.isEmpty()) {
+                wps = remaining(p.waypoints, p.waypointKm, p.km[Math.min(p.progress, p.n - 1)]);
+                destPlace = p.destIndex >= 0 ? p.waypoints.get(p.destIndex) : null;
+            } else if (!replan && useManual && (!vias.isEmpty() || roundTrip)) {
+                Place o = new Place();
+                o.name = Str.get(R.string.hql_pl_back);
+                o.detail = "";
+                o.lat = oLat;
+                o.lon = oLon;
+                wps = tripPoints(o, vias, m, roundTrip);
+                destPlace = m;
+            }
             // Al recalcular, el destino ya está situado: no se vuelve a buscar.
-            Plan np = replan ? build(dest, oLat, oLon, p.destLat, p.destLon)
-                    : useManual ? build(dest, oLat, oLon, m.lat, m.lon) : build(dest, oLat, oLon, Double.NaN, Double.NaN);
+            Plan np = wps != null && !wps.isEmpty() ? build(dest, oLat, oLon, Double.NaN, Double.NaN, wps, destPlace)
+                    : replan ? build(dest, oLat, oLon, p.destLat, p.destLon, null, null)
+                    : useManual ? build(dest, oLat, oLon, m.lat, m.lon, null, null) : build(dest, oLat, oLon, Double.NaN, Double.NaN, null, null);
             np.builtAtMs = System.currentTimeMillis();
+            if (np.multi() || wps != null) np.roundTrip = replan ? p.roundTrip : roundTrip;
             plan = np;
             failedDestination = null;
             status = "";
             // Sin el nombre del destino: el log se exporta y no lleva ubicaciones (qdauto §7.5).
             L.i(String.format(Locale.US, "ruta: %.1f km · %.1f kWh estimados (%.1f por las cuestas; extra del coche %.1f kW y %.1f kWh al salir; "
-                    + "corrección ×%.2f) · %d cargadores", np.totalKm, np.kwhCum[np.n - 1], np.gravCum[np.n - 1], np.overheadKw,
-                    np.overheadTripKwh, np.factor, np.chargers.size()));
+                    + "corrección ×%.2f) · %d cargadores%s", np.totalKm, np.kwhCum[np.n - 1], np.gravCum[np.n - 1], np.overheadKw,
+                    np.overheadTripKwh, np.factor, np.chargers.size(), np.multi() || np.roundTrip
+                            ? String.format(Locale.US, " · %d tramos%s", np.waypoints.size(), np.roundTrip ? ", ida y vuelta" : "") : ""));
+            // Para el widget («¿llego a Casa?»): la distancia por carretera si la ruta va a Casa desde donde está el móvil.
+            if (origin == null && !np.multi()) HomeReach.rememberRoute(ctx, oLat, oLon, np.destLat, np.destLon, np.totalKm, np.kwhCum[np.n - 1]);
         } catch (Exception e) {
             failedDestination = dest;
             // Sin red (sin cobertura un momento) se reintenta a los 30 s; si el servicio falla, a los 2 min.
@@ -705,8 +764,10 @@ final class RoutePlanner {
             Config c = new Config(ctx);
             int minKw = c.chargerMinKw();
             String nets = c.chargerNetworks();
+            String marks = c.chargerMarks();
+            boolean food = c.planPreferFood();
             String settings = minKw + "/" + nets + "/" + c.chargerIncludeUnknown() + "/" + c.planArrivePct() + "/" + c.planMaxPct() + "/" + Math.round(capKwh * 10)
-                    + (realSoc ? "/real" : "/indicado") + "/c" + pl.chargerVersion;
+                    + (realSoc ? "/real" : "/indicado") + "/c" + pl.chargerVersion + "/m" + marks.hashCode() + (food ? "/f" + FoodNearby.version : "");
             int prog = Math.min(pl.progress, pl.n - 1);
             double f = demo ? DemoMode.planTrend() : trend.factor();
             String key = settings + "/" + prog + "/" + Math.round(soc * 2) + "/" + Math.round(f * 100) + "/" + charging;
@@ -715,6 +776,9 @@ final class RoutePlanner {
             ChargePlanner.Settings s = planSettings(c, capKwh);
             lastCarVolts = s.carVolts;
             List<Charger> list = wantedChargers(pl, c);
+            // Favoritos (y, si se prefiere, los que tienen dónde comer cerca): suman al elegir parada.
+            s.favorites = ChargerMarks.favorites(list, ChargerMarks.parse(marks));
+            if (food) s.food = withFood(list);
             // Con los mismos ajustes, las paradas elegidas se mantienen mientras se lleguen (que el plan no baile).
             boolean same = settings.equals(chargeSettings) && charge != null;
             List<Charger> keep = new ArrayList<>();
@@ -768,14 +832,21 @@ final class RoutePlanner {
         return s;
     }
 
-    /** Los cargadores de la ruta que pasan el filtro. */
+    /** Los cargadores de la ruta que pasan el filtro, sin los vetados (ChargerMarks). */
     private static List<Charger> wantedChargers(Plan pl, Config c) {
         java.util.Set<String> want = ChargerFilter.parseNetworks(c.chargerNetworks());
         List<Charger> list = new ArrayList<>();
         for (Charger ch : pl.chargers) {
             if (ChargerFilter.accepts(ch, c.chargerMinKw(), want, c.chargerIncludeUnknown())) list.add(ch);
         }
-        return list;
+        return ChargerMarks.withoutBanned(list, ChargerMarks.parse(c.chargerMarks()));
+    }
+
+    /** Los de la lista con sitio para comer cerca, de lo ya sabido (FoodNearby: sin consultar nada aquí). */
+    private static java.util.Set<Charger> withFood(List<Charger> list) {
+        java.util.Set<Charger> out = new java.util.HashSet<>();
+        for (Charger ch : list) if (FoodNearby.hasFood(ch)) out.add(ch);
+        return out;
     }
 
     /**
@@ -879,11 +950,12 @@ final class RoutePlanner {
         if (before != null) for (ChargePlanner.Stop st : before.stops) if (st.km > here + ChargePlanner.HERE_KM) ahead++;
         String key = System.identityHashCode(p) + "/" + p.chargerVersion + "/" + c.chargerMinKw() + "/" + c.chargerNetworks() + "/"
                 + c.chargerIncludeUnknown() + "/" + c.planArrivePct() + "/" + c.planMaxPct() + "/" + Math.round(f * 100) + "/" + prog + "/"
-                + ahead;
+                + ahead + "/" + c.chargerMarks().hashCode();
         if (key.equals(sessionKey)) return;
         sessionKey = key;
         ChargePlanner.Settings set = planSettings(c, s.capacityKwh);
         List<Charger> all = wantedChargers(p, c);
+        set.favorites = ChargerMarks.favorites(all, ChargerMarks.parse(c.chargerMarks()));
         List<Charger> list = new ArrayList<>();
         for (Charger ch : all) if (Math.abs(ch.kmAlong - here) > ChargePlanner.HERE_KM) list.add(ch);
         double[] kwh = ChargePlanner.scaled(p.km, p.kwhCum, here, f);
@@ -1081,7 +1153,13 @@ final class RoutePlanner {
 
     // ------------------------------------------------------------------ construcción
 
-    private Plan build(String destination, double lat0, double lon0, double dLat, double dLon) throws Exception {
+    /**
+     * La ruta a destination desde (lat0, lon0). wps: viaje de varios tramos (paradas, destino y, de ida y vuelta, la
+     * vuelta), con destPlace el destino entre ellos (o null si ya se pasó); null: un solo destino (dLat, dLon, o NaN para
+     * buscarlo por el nombre).
+     */
+    private Plan build(String destination, double lat0, double lon0, double dLat, double dLon, List<Place> wps, Place destPlace)
+            throws Exception {
         Plan p = new Plan();
         p.destination = destination;
 
@@ -1093,11 +1171,31 @@ final class RoutePlanner {
 
         // 2. Ruta (OSRM) con alternativas, y la que encaja con la de Google: lo que falta según Google (Android Auto lo
         // manda) y las carreteras que anuncia. Si el destino no está claro (el texto puede valer para varios sitios), se
-        // prueban hasta tres y se queda el que da una ruta como la de Google.
-        Google gl = google(destination);
+        // prueban hasta tres y se queda el que da una ruta como la de Google. Un viaje de varios tramos, de una vez y sin
+        // comparar con Google (Google Maps va a su siguiente parada, no al final).
+        boolean trip = wps != null && !wps.isEmpty();
+        Google gl = trip ? null : google(destination);
         double googleM = gl != null ? gl.remainingM : -1;
         List<double[]> places = new ArrayList<>();
-        if (!Double.isNaN(dLat)) {
+        JSONObject route = null;
+        double bestScore = Double.MAX_VALUE;
+        if (trip) {
+            String r = Http.get("https://router.project-osrm.org/route/v1/driving/" + osrmCoords(lat0, lon0, wps)
+                    + "?overview=full&geometries=geojson&annotations=distance,duration&steps=false&alternatives=false");
+            JSONArray routes = new JSONObject(r).getJSONArray("routes");
+            if (routes.length() == 0) throw new IllegalStateException("sin ruta");
+            route = routes.getJSONObject(0);
+            Place d = destPlace != null ? destPlace : wps.get(wps.size() - 1);
+            p.destLat = d.lat;
+            p.destLon = d.lon;
+            p.googleMismatch = true;
+            p.waypoints = new ArrayList<>(wps);
+            p.destIndex = destPlace == null ? -1 : wps.indexOf(destPlace);
+            JSONArray legs = route.getJSONArray("legs");
+            double[] legM = new double[legs.length()];
+            for (int i = 0; i < legM.length; i++) legM[i] = legs.getJSONObject(i).optDouble("distance", 0);
+            p.waypointKm = legEndsKm(legM);
+        } else if (!Double.isNaN(dLat)) {
             places.add(new double[]{dLat, dLon});
         } else {
             String geo = Http.get("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=" + (googleM > 0 ? 3 : 1) + "&q="
@@ -1109,8 +1207,6 @@ final class RoutePlanner {
         }
         java.util.Set<String> googleRoads = new java.util.HashSet<>();
         if (gl != null) googleRoads.addAll(gl.roads);
-        JSONObject route = null;
-        double bestScore = Double.MAX_VALUE;
         int bestAlt = 0;
         int alts = 0;
         for (int c = 0; c < places.size(); c++) {
@@ -1142,9 +1238,10 @@ final class RoutePlanner {
             p.googleMismatch = bestScore > 0.25;
         }
         JSONArray coords = route.getJSONObject("geometry").getJSONArray("coordinates");
-        JSONObject ann = route.getJSONArray("legs").getJSONObject(0).getJSONObject("annotation");
-        JSONArray dist = ann.getJSONArray("distance");
-        JSONArray dur = ann.getJSONArray("duration");
+        // Metros y segundos de cada tramo entre puntos: los de todos los tramos del viaje, seguidos.
+        double[][] ann = annotations(route, coords);
+        double[] dist = ann[0];
+        double[] dur = ann[1];
         double totalM = route.getDouble("distance");
         p.totalSeconds = Math.round(route.getDouble("duration"));
         double stepM = Math.max(200, totalM / 400);
@@ -1156,8 +1253,8 @@ final class RoutePlanner {
         double accS = 0;
         double km = 0;
         for (int i = 1; i < coords.length(); i++) {
-            accM += dist.optDouble(i - 1, 0);
-            accS += dur.optDouble(i - 1, 0);
+            accM += dist[i - 1];
+            accS += dur[i - 1];
             if (accM >= stepM || i == coords.length() - 1) {
                 km += accM / 1000;
                 JSONArray ci = coords.getJSONArray(i);
@@ -1180,6 +1277,8 @@ final class RoutePlanner {
             segS[i] = q[3];
         }
         p.totalKm = p.km[n - 1];
+        for (int i = 0; i < p.waypointKm.length; i++) p.waypointKm[i] = Math.min(p.totalKm, p.waypointKm[i]);
+        if (p.waypointKm.length > 0) p.waypointKm[p.waypointKm.length - 1] = p.totalKm;
         // Los tiempos, los de Google (con el tráfico de ahora) si la ruta encaja con la suya: se reparte su hora de llegada
         // entre los tramos. Así la hora de cada parada y la velocidad de cada tramo (y su gasto) son las de hoy.
         if (gl != null && gl.remainingSec > 0 && googleM > 0 && bestScore < 0.15 && p.totalSeconds > 0) {
@@ -1254,6 +1353,86 @@ final class RoutePlanner {
         findChargers(p);
         p.progress = nearest(p, lat0, lon0, -1);
         return p;
+    }
+
+    // ------------------------------------------------------------------ viaje de varios tramos
+
+    /**
+     * Puro: los puntos del viaje tras la salida, en orden: las paradas intermedias, el destino y, de ida y vuelta, la
+     * vuelta a la salida (origin).
+     */
+    static List<Place> tripPoints(Place origin, List<Place> via, Place dest, boolean round) {
+        List<Place> out = new ArrayList<>();
+        if (via != null) for (Place v : via) if (v != null) out.add(v);
+        out.add(dest);
+        if (round && origin != null) out.add(origin);
+        return out;
+    }
+
+    /** Puro: los puntos del viaje que quedan por delante del km hereKm (los ya pasados, fuera; el último, siempre). */
+    static List<Place> remaining(List<Place> wps, double[] wpKm, double hereKm) {
+        List<Place> out = new ArrayList<>();
+        for (int i = 0; i < wps.size(); i++) {
+            boolean last = i == wps.size() - 1;
+            if (last || (i < wpKm.length && wpKm[i] > hereKm + ARRIVED_KM)) out.add(wps.get(i));
+        }
+        return out;
+    }
+
+    /** Puro: el km de la ruta al final de cada tramo (las distancias de los tramos de OSRM, en m). */
+    static double[] legEndsKm(double[] legM) {
+        double[] out = new double[legM.length];
+        double acc = 0;
+        for (int i = 0; i < legM.length; i++) {
+            acc += legM[i] / 1000;
+            out[i] = acc;
+        }
+        return out;
+    }
+
+    /** Puro: las coordenadas para OSRM: la salida y los puntos del viaje («lon,lat;lon,lat…»). */
+    static String osrmCoords(double lat0, double lon0, List<Place> wps) {
+        StringBuilder b = new StringBuilder(String.format(Locale.US, "%.6f,%.6f", lon0, lat0));
+        for (Place w : wps) b.append(String.format(Locale.US, ";%.6f,%.6f", w.lon, w.lat));
+        return b.toString();
+    }
+
+    /**
+     * Puro: metros y segundos de cada tramo entre los puntos del trazado ({distancias, duraciones}, uno menos que
+     * puntos), seguidos los de todos los tramos del viaje. Si no cuadran con el trazado, las distancias en línea recta
+     * entre sus puntos y el tiempo total repartido por ellas.
+     */
+    static double[][] annotations(JSONObject route, JSONArray coords) {
+        int segs = Math.max(0, coords.length() - 1);
+        double[] dist = new double[segs];
+        double[] dur = new double[segs];
+        JSONArray legs = route.optJSONArray("legs");
+        int k = 0;
+        boolean ok = legs != null;
+        for (int l = 0; ok && l < legs.length(); l++) {
+            JSONObject a = legs.optJSONObject(l) == null ? null : legs.optJSONObject(l).optJSONObject("annotation");
+            JSONArray d = a == null ? null : a.optJSONArray("distance");
+            JSONArray t = a == null ? null : a.optJSONArray("duration");
+            if (d == null || t == null || k + d.length() > segs) {
+                ok = false;
+                break;
+            }
+            for (int i = 0; i < d.length(); i++, k++) {
+                dist[k] = d.optDouble(i, 0);
+                dur[k] = t.optDouble(i, 0);
+            }
+        }
+        if (ok && k == segs) return new double[][]{dist, dur};
+        double total = 0;
+        for (int i = 0; i < segs; i++) {
+            JSONArray a = coords.optJSONArray(i);
+            JSONArray b = coords.optJSONArray(i + 1);
+            dist[i] = a == null || b == null ? 0 : RoadInfo.dist(a.optDouble(1), a.optDouble(0), b.optDouble(1), b.optDouble(0));
+            total += dist[i];
+        }
+        double sec = route.optDouble("duration", 0);
+        for (int i = 0; i < segs; i++) dur[i] = total > 0 ? sec * dist[i] / total : 0;
+        return new double[][]{dist, dur};
     }
 
     /** Puntos de la ruta a los que se piden alturas, como mucho (el resto, interpolados por km). */

@@ -624,6 +624,54 @@ final class Config {
         sp.edit().putString("recent_places", json).apply();
     }
 
+    /** Destinos guardados de la Ruta: Casa, Trabajo y los de nombre (SavedPlaces, JSON). Solo en el móvil. */
+    static final String SAVED_PLACES = "saved_places";
+    /** La última ruta calculada a Casa (HomeReach: distancia por carretera para el widget). Solo en el móvil. */
+    static final String HOME_ROUTE = "home_route";
+
+    String savedPlaces() {
+        return sp.getString(SAVED_PLACES, "");
+    }
+
+    void setSavedPlaces(String json) {
+        sp.edit().putString(SAVED_PLACES, json).apply();
+    }
+
+    String homeRoute() {
+        return sp.getString(HOME_ROUTE, "");
+    }
+
+    void setHomeRoute(String json) {
+        sp.edit().putString(HOME_ROUTE, json).apply();
+    }
+
+    /** Cargadores favoritos y vetados (ChargerMarks, JSON). */
+    String chargerMarks() {
+        return sp.getString("charger_marks", "");
+    }
+
+    void setChargerMarks(String json) {
+        sp.edit().putString("charger_marks", json).apply();
+    }
+
+    /** Sugerir cargadores en el destino si se llega con menos de este % (0: solo si hace falta para volver). */
+    int destChargePct() {
+        return Math.max(0, Math.min(50, sp.getInt("dest_charge_pct", 20)));
+    }
+
+    void setDestChargePct(int pct) {
+        sp.edit().putInt("dest_charge_pct", pct).apply();
+    }
+
+    /** Preferir paradas de carga con sitio para comer cerca (FoodNearby). */
+    boolean planPreferFood() {
+        return sp.getBoolean("plan_prefer_food", false);
+    }
+
+    void setPlanPreferFood(boolean on) {
+        sp.edit().putBoolean("plan_prefer_food", on).apply();
+    }
+
     /** Marcadores de la pantalla Web del coche: {nombre, url}; los de serie si no se han cambiado. */
     static final String WEB_SHORTCUTS = "web_shortcuts";
 

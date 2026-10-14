@@ -131,6 +131,8 @@ final class LinkGlance {
         String mode = Config.MODE_AA;
         /** Idioma de la app (etiqueta BCP 47): formato de las cifras; si cambia, se repinta. */
         String locale = "";
+        /** «Casa: llegas con ~34 %» (HomeReach), ya en el idioma de la app; "" si nada. */
+        String home = "";
     }
 
     final Look look;
@@ -148,6 +150,8 @@ final class LinkGlance {
     final String transport;
     final String mode;
     final String locale;
+    /** La línea «¿llego a Casa?» (HomeReach), o "". */
+    final String home;
 
     private LinkGlance(Look look, Action action, Status status, Detail detail, String text, float fps, float mbps,
                        Input in) {
@@ -163,6 +167,7 @@ final class LinkGlance {
         this.transport = in.running && !active.isEmpty() ? active : this.linkMode;
         this.mode = in.mode == null ? Config.MODE_AA : in.mode;
         this.locale = in.locale == null ? "" : in.locale;
+        this.home = in.home == null ? "" : in.home;
     }
 
     private static LinkGlance make(Look look, Action action, Status status, Detail detail, String text, Input in) {
@@ -253,7 +258,7 @@ final class LinkGlance {
     /** Lo que se ve salvo las cifras del vídeo (cambia con el estado, la conexión, el modo o el idioma). */
     String stateKey() {
         return look + "|" + action + "|" + status + "|" + detail + "|" + text + "|" + linkMode + "|" + transport + "|"
-                + mode + "|" + locale;
+                + mode + "|" + locale + "|" + home;
     }
 
     /**

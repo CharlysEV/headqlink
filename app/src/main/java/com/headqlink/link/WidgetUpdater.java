@@ -74,7 +74,9 @@ public final class WidgetUpdater implements LinkState.Listener, SharedPreference
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sp, String key) {
-        if (Config.MODE.equals(key) || Config.LINK_MODE.equals(key)) schedule(COALESCE_MS);
+        if (Config.MODE.equals(key) || Config.LINK_MODE.equals(key) || Config.SAVED_PLACES.equals(key) || Config.HOME_ROUTE.equals(key)) {
+            schedule(COALESCE_MS);
+        }
     }
 
     /** Hilo principal: repintar dentro de delayMs (si ya hay uno antes, ese vale). */
@@ -166,6 +168,8 @@ public final class WidgetUpdater implements LinkState.Listener, SharedPreference
         in.activeLinkMode = LinkState.activeLinkMode;
         in.usbOverride = LinkState.usbOverride;
         in.locale = locale(c);
+        // «¿Llego a Casa?»: cuentas con lo que ya hay en el móvil (sin red); se rehace solo si cambia el % o la posición.
+        in.home = HomeReach.line(c);
         return LinkGlance.of(in);
     }
 

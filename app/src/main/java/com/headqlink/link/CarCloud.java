@@ -363,6 +363,7 @@ final class CarCloud {
             long wall = System.currentTimeMillis();
             Snapshot snap = new Snapshot(State.OK, s, wall, lat, st.capacityKwh(), st.carType(), 0, false);
             current = snap;
+            WidgetUpdater.poke(); // el widget: «¿llego a Casa?» con el % nuevo
             long dataTime = snap.dataTimeMs();
             staleReads = dataTime > 0 && dataTime == lastDataTime ? staleReads + 1 : 0;
             lastDataTime = dataTime;
@@ -492,6 +493,7 @@ final class CarCloud {
     static void publish(Context ctx, LeapStatus s, long latencyMs) {
         CarCloudStore st = new CarCloudStore(ctx);
         current = new Snapshot(State.OK, s, System.currentTimeMillis(), latencyMs, st.capacityKwh(), st.carType(), 0, false);
+        WidgetUpdater.poke();
     }
 
     /** Cuenta una lectura del día; false si ya se llegó al tope (se registra una vez). */

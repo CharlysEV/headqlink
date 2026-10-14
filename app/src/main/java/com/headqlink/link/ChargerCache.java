@@ -43,6 +43,7 @@ final class ChargerCache {
         /** Con la potencia de OpenStreetMap o, si falta, la estimada por la red o los enchufes. */
         RoutePlanner.Charger toCharger() {
             RoutePlanner.Charger c = new RoutePlanner.Charger();
+            c.id = id == null || id.isEmpty() ? "" : "osm:" + id;
             c.name = name;
             c.detail = detail;
             c.lat = lat;
