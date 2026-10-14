@@ -38,7 +38,7 @@ Rutas relativas a `hql\`. `[hql]` = `app/src/main/java/com/headqlink/link/`.
   - Log unificado rotativo `logs/qd-*.log`.
   - Detector de cortes de radio.
   - Resumen por sesión y del viaje, y `logs/sessions.csv`.
-  - **Exportar log**: ZIP en `Descargas/HeadQLink` y hoja de compartir, sin adb.
+  - **Exportar log**: ZIP en `Descargas/Qonecta` y hoja de compartir, sin adb.
 - **`:qdsim`.** Es el coche simulado con los 6 escenarios del plan de pruebas. Con `--local-phone` lleva su propio
   móvil de prueba y funciona solo en el PC.
 
@@ -260,7 +260,7 @@ PASS` y código 0. `qdsim.bat --help` lista todas las opciones.
    - **`silent`:** cierre de S1 con `SUPERSEDED`.
 3. **Regresión del motor original:** cambiar a «Original de headqlink», desconectar y conectar, y repetir el punto
    1. Tiene que dar el mismo `PASS`.
-4. **Exportar log:** Diagnóstico › «Exportar log» deja `HeadQLink-log-AAAAMMDD-HHMMSS.zip` en `Descargas/HeadQLink`.
+4. **Exportar log:** Diagnóstico › «Exportar log» deja `Qonecta-log-AAAAMMDD-HHMMSS.zip` en `Descargas/Qonecta`.
    Compartirlo al PC y revisar `resumen.txt`, `logs/sessions.csv` y `logs/qd-*.log`.
 
 ### 5.4 Android Auto en el móvil, sin coche (diseño §9.4)
@@ -376,7 +376,7 @@ propuesta (P1 y A7, ver la tabla).
 | A6 | Menor | **Corregido** (`895cd1da`) | El ZIP se presentaba sin GPS, pero los registros que exporta podían llevar la ubicación: el error del viento (con la URL de Open-Meteo, latitud y longitud), el destino de la ruta y, además de lo señalado, el error de abrir Google Maps (el Intent con las coordenadas) y `NavTap` en el logcat (la dirección del destino). Ahora el código HTTP se mira antes, `Http.safeError` deja de cada URL solo el host (y de un JSON inesperado, solo el tipo), y no se registran destinos. Tests (`HttpSafeErrorTest`). El resumen del ZIP lo dice y avisa de que los registros de versiones anteriores sí podían llevar alguno. |
 | A7 | Menor | **Corregido, con ajuste** (`15919a8f`) | `sessions.csv` admitía fórmulas (el nombre del coche llega del broadcast UDP). Las celdas que empiezan por `= + - @`, tabulador o retorno llevan `'` delante. Ajuste: los números negativos se quedan igual, porque la regla tal cual estropearía las columnas con `-1` («no pasó»). Test. |
 | A8 | Menor | **Corregido** (`b0936014`) | La conexión (o el motor) cambiados en marcha se aplican al volver a conectar, pero puentes, `sessions.csv`, contexto de los cortes, ZIP, Diagnóstico, tarjeta del coche e inicio leían lo configurado. Ahora `LinkService` lee los dos una vez al arrancar el transporte y los publica en `LinkState` (`activeLinkMode`, `activeEngine`); `QdLinkHost` los pasa a los puentes. Inicio, Diagnóstico y el ZIP enseñan aparte lo configurado si es distinto, y la configuración avisa con «Se aplica al volver a conectar». |
-| A9 | Menor | **Corregido** (`b0936014`) | En Android 9 o menos el ZIP va a `exports/` de la carpeta de la app, pero el aviso y el log decían Descargas/HeadQLink. `Exported.where` dice dónde quedó y el aviso lo usa («Guardado en …»). |
+| A9 | Menor | **Corregido** (`b0936014`) | En Android 9 o menos el ZIP va a `exports/` de la carpeta de la app, pero el aviso y el log decían Descargas/Qonecta. `Exported.where` dice dónde quedó y el aviso lo usa («Guardado en …»). |
 
 **Resultados en el PC tras las correcciones:**
 

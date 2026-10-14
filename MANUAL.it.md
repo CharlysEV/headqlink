@@ -925,13 +925,13 @@ Se qualcosa va storto, il log aiuta molto a trovarne la causa. **Esportalo subit
 l'ora in cui è successo.
 
 1. Menu ⚙ › «Diagnostica».
-2. Tocca **«Esporta log»**. Vedrai «Esportazione del log…» e poi «Salvato in Download/HeadQLink/…».
+2. Tocca **«Esporta log»**. Vedrai «Esportazione del log…» e poi «Salvato in Download/Qonecta/…».
 3. Si apre «Condividi il log di Qonecta+»: invialo per email, Telegram, Drive o con l'app che preferisci, oppure tienilo
    e basta.
 
 <!-- schermata: Diagnostica con «Esporta log» -->
 
-**Dove finisce:** `Download/HeadQLink/Qonecta-log-AAAAMMGG-HHMMSS.zip`. Su Android 9 o precedente resta nella cartella
+**Dove finisce:** `Download/Qonecta/Qonecta-log-AAAAMMGG-HHMMSS.zip`. Su Android 9 o precedente resta nella cartella
 dell'app (`Android/data/com.headqlink.app/files/exports/`) e il messaggio mostra il percorso esatto.
 
 **Cosa c'è nello ZIP**

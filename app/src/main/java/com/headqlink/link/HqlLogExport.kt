@@ -22,15 +22,15 @@ import java.util.zip.ZipOutputStream
 /**
  * «Exportar log» de Diagnóstico (qdauto §7.5): vuelca a disco los registros, elige los ficheros (los más nuevos, con un
  * tope de [MAX_TOTAL_BYTES] sin comprimir; sin `trips/`, que lleva GPS, ni capturas) y escribe
- * `HeadQLink-log-AAAAMMDD-HHMMSS.zip` con `resumen.txt` delante: en Android 10+, en Descargas/HeadQLink (MediaStore, sin
+ * `Qonecta-log-AAAAMMDD-HHMMSS.zip` con `resumen.txt` delante: en Android 10+, en Descargas/Qonecta (MediaStore, sin
  * permisos); antes, en `exports/` de la carpeta de la app ([Exported.where] dice dónde). Nada se envía solo: la hoja de
  * compartir la abre el usuario.
  */
 internal object HqlLogExport {
-    const val RELATIVE_DIR = "HeadQLink"
+    const val RELATIVE_DIR = "Qonecta"
     const val MAX_TOTAL_BYTES = 200L * 1024 * 1024
 
-    /** [where]: dónde quedó, para el aviso (Descargas/HeadQLink/… o la ruta en la carpeta de la app). */
+    /** [where]: dónde quedó, para el aviso (Descargas/Qonecta/… o la ruta en la carpeta de la app). */
     class Exported(val uri: Uri, val displayName: String, val bytes: Long, val files: Int, val where: String)
 
     /** Qué entra en el ZIP (nombre dentro del ZIP → fichero) y qué se omite (con el motivo). */

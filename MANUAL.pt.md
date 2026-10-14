@@ -921,13 +921,13 @@ Se algo falhar, o registo ajuda muito a encontrar a causa. **Exporte-o logo a se
 hora em que aconteceu.
 
 1. Menu ⚙ › «Diagnóstico».
-2. Toque em **«Exportar registo»**. Verá «A exportar o registo…» e depois «Guardado em Transferências/HeadQLink/…».
+2. Toque em **«Exportar registo»**. Verá «A exportar o registo…» e depois «Guardado em Transferências/Qonecta/…».
 3. Abre-se «Partilhar registo do Qonecta+»: envie-o por e-mail, Telegram, Drive ou a aplicação que quiser, ou deixe-o
    guardado.
 
 <!-- captura: ecrã Diagnóstico com «Exportar registo» -->
 
-**Onde fica:** `Transferências/HeadQLink/Qonecta-log-AAAAMMDD-HHMMSS.zip`. No Android 9 ou anterior fica na pasta da
+**Onde fica:** `Transferências/Qonecta/Qonecta-log-AAAAMMDD-HHMMSS.zip`. No Android 9 ou anterior fica na pasta da
 aplicação (`Android/data/com.headqlink.app/files/exports/`) e o aviso indica o caminho exato.
 
 **O que tem o ZIP**

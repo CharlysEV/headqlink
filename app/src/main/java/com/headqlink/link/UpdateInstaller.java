@@ -42,7 +42,7 @@ final class UpdateInstaller {
             File[] old = dir.listFiles();
             if (old != null) for (File f : old) f.delete();
             dir.mkdirs();
-            File out = new File(dir, "HeadQLink-" + r.version + ".apk");
+            File out = new File(dir, "Qonecta-" + r.version + ".apk");
             try {
                 HttpURLConnection con = (HttpURLConnection) new URL(r.apkUrl).openConnection();
                 con.setConnectTimeout(15_000);

@@ -53,7 +53,7 @@ Los números de línea son los de hoy: `312e8ee5` y `qdauto/core` sin tocar.
 | D4 | Propiedad del vídeo | La fuente de vídeo pasa de `SspSession` a `LinkService`, a través de `VideoHub`. Incluye `VideoSource`, encoder, relay GL, `CarUi` y el freno a AA. Se **engancha** a cada sesión TCP y se **desengancha** al caer, sin destruirse. |
 | D5 | Modos de conexión | Ajuste **«Conexión con el coche»**: *Wi-Fi Direct* (actual y por defecto) o *Punto de acceso del móvil*. En el segundo modo: `P2pLink` no arranca; UDP sigue en `0.0.0.0:18463`; el `ServerSocket` se ata a la IP local de la interfaz por la que llegó el coche; solo se acepta TCP de la IP que se anunció; se rechaza loopback. |
 | D6 | Reconexión | Cuando cae la sesión, AA, el decodificador, el relay, el encoder y `CarUi` siguen vivos **30 s** (ajustable). La reconexión sale con el **primer broadcast**: espera 0 ms, re-ACK cada ≥ 400 ms y relevo si el coche se reanuncia con una sesión «viva». En la sesión nueva van SPS/PPS + **IDR real**: en ≤ 1 frame con encoder propio, o con un ciclo de foco (~0,8 s) en el reenvío directo. |
-| D7 | Registro | Log unificado y rotativo en `getExternalFilesDir("logs")`. Lleva la traza completa del núcleo, las líneas de `L`, el detector de cortes de radio y los resúmenes por sesión, más `sessions.csv`. Botón **«Exportar log»**: ZIP en `Descargas/HeadQLink` vía MediaStore + hoja de compartir. |
+| D7 | Registro | Log unificado y rotativo en `getExternalFilesDir("logs")`. Lleva la traza completa del núcleo, las líneas de `L`, el detector de cortes de radio y los resúmenes por sesión, más `sessions.csv`. Botón **«Exportar log»**: ZIP en `Descargas/Qonecta` vía MediaStore + hoja de compartir. |
 | D8 | Activación | Motor por defecto **«original»** hasta superar las pruebas LAN y con AA (§9). Después pasa a **«QDAuto»**, en un commit propio. La reconexión sin cortes tiene además un interruptor oculto (`qd_keep_video`) para apagarla en el coche sin recompilar. |
 | D9 | Identidad ante el coche | Se mantienen los valores del fork, que también funcionan en un C10: ACK y `PHONE_INFO` con `DeviceName`/`PhoneName` = `Build.MODEL`, el UUID persistente y las dimensiones `cfg.videoSize(...)`. La variante de QDLink (vacíos y geometría de QDLink) queda como opción oculta. |
 | D10 | Hilos | Los callbacks del núcleo llegan en el hilo de eventos de cada sesión. El ciclo de vida del vídeo se serializa en un hilo propio (`hql-video`). El camino caliente usa referencias `volatile` sin candados: AA → coche, encoder → coche y puerta GL. |
@@ -1435,7 +1435,7 @@ reconexion_ms,video_reutilizado,ciclos_foco_aa
    - `headqlink-*.log` (10 más nuevos).
 
    **Se excluyen** `trips/` (contiene GPS) y las capturas `ui-preview-*`. Lo omitido se anota en `resumen.txt`.
-3. Escribir el ZIP `HeadQLink-log-AAAAMMDD-HHMMSS.zip`. `resumen.txt` va primero y contiene:
+3. Escribir el ZIP `Qonecta-log-AAAAMMDD-HHMMSS.zip`. `resumen.txt` va primero y contiene:
    - versión y `GIT_SHA`, modelo y Android;
    - `Config.summary()`, conexión y motor;
    - estado actual de `LinkState`;
@@ -1444,9 +1444,9 @@ reconexion_ms,video_reutilizado,ciclos_foco_aa
    - lista de ficheros incluidos y omitidos.
 
    Destino:
-   - **API ≥ 29:** `MediaStore.Downloads` con `RELATIVE_PATH = Download/HeadQLink`, `IS_PENDING = 1` mientras se escribe, `ZipOutputStream` sobre `openOutputStream(uri)`, y `IS_PENDING = 0` al acabar; si hay error, se borra el `uri`. Es la misma pauta que `qdauto/app/log/LogExport.kt:27-62`.
+   - **API ≥ 29:** `MediaStore.Downloads` con `RELATIVE_PATH = Download/Qonecta`, `IS_PENDING = 1` mientras se escribe, `ZipOutputStream` sobre `openOutputStream(uri)`, y `IS_PENDING = 0` al acabar; si hay error, se borra el `uri`. Es la misma pauta que `qdauto/app/log/LogExport.kt:27-62`.
    - **API < 29:** `getExternalFilesDir("exports")` + `FileProvider` (`${applicationId}.fileprovider`; `provider_paths.xml` ya cubre `external-files-path`).
-4. Hoja de compartir: `ACTION_SEND`, `application/zip`, `EXTRA_STREAM`, `ClipData` y `FLAG_GRANT_READ_URI_PERMISSION`, más `Toast` «Guardado en Descargas/HeadQLink».
+4. Hoja de compartir: `ACTION_SEND`, `application/zip`, `EXTRA_STREAM`, `ClipData` y `FLAG_GRANT_READ_URI_PERMISSION`, más `Toast` «Guardado en Descargas/Qonecta».
 
 **Privacidad.** Los logs contienen identificadores del coche (`CarUUID`, `ProjectID`), IP y nombres de red. Se comparten solo si el usuario lo decide; nada se envía solo.
 
@@ -1547,7 +1547,7 @@ En el PC (Windows) hay que permitir a `java.exe` recibir UDP 18464 y TCP en la r
    | `rack` | Ignora el primer ACK | Segundo ACK ≥ 400 ms después; conexión. |
 
 3. **Motor original:** repetir el punto 1 con «Original de headqlink» → mismo `PASS`. Es la prueba de regresión del fallback.
-4. **Exportar log:** pulsar «Exportar log» → ZIP en `Descargas/HeadQLink`, compartirlo al PC y comprobar `resumen.txt`, `sessions.csv` y el log unificado.
+4. **Exportar log:** pulsar «Exportar log» → ZIP en `Descargas/Qonecta`, compartirlo al PC y comprobar `resumen.txt`, `sessions.csv` y el log unificado.
 
 ### 9.4 Android Auto en el móvil, sin coche
 
@@ -1651,7 +1651,7 @@ Nombre (`hql_…`) → español (`values-es`) / inglés (`values`). Los apóstro
 | `engine_original` | Original de headqlink | Original headqlink |
 | `applies_on_reconnect` | Se aplica al volver a conectar. | Applies on next connection. |
 | `export_log` | Exportar log | Export log |
-| `export_done` | Guardado en Descargas/HeadQLink | Saved to Downloads/HeadQLink |
+| `export_done` | Guardado en Descargas/Qonecta | Saved to Downloads/Qonecta |
 | `export_failed` | No se pudo exportar: %1$s | Could not export: %1$s |
 | `export_share` | Compartir log de HeadQLink | Share HeadQLink log |
 | `pattern_test` | Prueba sin Android Auto (patrón) | Test without Android Auto (pattern) |

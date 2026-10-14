@@ -896,12 +896,12 @@ If something goes wrong, the log helps a lot to find the cause. **Export it righ
 note the time it happened.
 
 1. ⚙ menu › "Diagnostics".
-2. Tap **"Export log"**. You'll see "Exporting the log…" and then "Saved to Downloads/HeadQLink/…".
+2. Tap **"Export log"**. You'll see "Exporting the log…" and then "Saved to Downloads/Qonecta/…".
 3. The "Share Qonecta+ log" sheet opens: send it by email, Telegram, Drive or any app you like, or just keep it.
 
 <!-- screenshot: Diagnostics screen with "Export log" -->
 
-**Where it goes:** `Downloads/HeadQLink/Qonecta-log-YYYYMMDD-HHMMSS.zip`. On Android 9 or earlier it stays in the app's
+**Where it goes:** `Downloads/Qonecta/Qonecta-log-YYYYMMDD-HHMMSS.zip`. On Android 9 or earlier it stays in the app's
 folder (`Android/data/com.headqlink.app/files/exports/`) and the message shows the exact path.
 
 **What's in the ZIP**

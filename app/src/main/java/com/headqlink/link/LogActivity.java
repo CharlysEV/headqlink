@@ -18,7 +18,7 @@ import java.util.List;
 
 /**
  * Diagnóstico: el log de HeadQLink en vivo, con la ruta de los registros, un botón para copiarlo, «Exportar log» (ZIP en
- * Descargas/HeadQLink, o en la carpeta de la app en Android 9 o menos, con todos los registros, qdauto §7.5), la prueba
+ * Descargas/Qonecta, o en la carpeta de la app en Android 9 o menos, con todos los registros, qdauto §7.5), la prueba
  * sin Android Auto (patrón), para probar el enlace con un coche simulado sin adb, y la vista previa del modo extendido
  * con datos de demostración (PreviewActivity).
  */

@@ -63,7 +63,7 @@ final class SplashView extends View {
         p.setTextSize(h * 0.07f);
         p.setTypeface(Typeface.create("sans-serif-condensed", Typeface.BOLD));
         p.setLetterSpacing(0.14f);
-        String name = "HEADQLINK";
+        String name = "QONECTA+";
         float tw = p.measureText(name);
         float ls = h * 0.095f;
         float gap = ls * 0.32f;
