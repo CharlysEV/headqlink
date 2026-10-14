@@ -133,7 +133,7 @@
     <string name="hql_fluidity">Vloeiendheid</string>
     <string name="hql_fluidity_30">30 fps · minder warmte (60 in de emulators)</string>
     <string name="hql_fluidity_60">60 fps · maximaal vloeiend</string>
-    <string name="hql_fluidity_help">Alleen met de profielen ‘Volgens de auto’ en ‘Automatisch’. Op 60 fps krijgt de auto 8–12 Mbit/s, zoals met de originele HeadQLink, en wordt de telefoon warmer: bereikt die de warmtestatus ‘matig’, dan zakt hij vanzelf naar 30 fps.</string>
+    <string name="hql_fluidity_help">Alleen met de profielen ‘Volgens de auto’ en ‘Automatisch’. Op 60 fps krijgt de auto 8–12 Mbit/s, zoals met de originele app, en wordt de telefoon warmer: bereikt die de warmtestatus ‘matig’, dan zakt hij vanzelf naar 30 fps.</string>
     <string name="hql_follows_recommended">Volgt het aanbevolen profiel: %1$s</string>
     <string name="hql_found_connecting">Gevonden, verbinden…</string>
     <string name="hql_gallery_no_photos">Er staan geen foto\'s op de telefoon.</string>
@@ -404,7 +404,7 @@
     <string name="hql_udp_busy">Poort 18463 is bezet (is QDLink open?). Sluit het; elke 5 s volgt een nieuwe poging.</string>
     <string name="hql_engine_title">Protocolengine</string>
     <string name="hql_engine_qdauto">QDAuto (aanbevolen)</string>
-    <string name="hql_engine_original">Originele headqlink</string>
+    <string name="hql_engine_original">Oude engine (overgenomen)</string>
     <string name="hql_applies_on_reconnect">Geldt bij de volgende verbinding.</string>
     <string name="hql_link_pending">%1$s (bij de volgende verbinding: %2$s)</string>
     <string name="hql_settings_connection">Verbinding</string>

@@ -2,7 +2,7 @@
 
 **Languages:** [Español](MANUAL.md) · [Português](MANUAL.pt.md) · **English** · [Italiano](MANUAL.it.md)
 
-Driver's manual for Qonecta+ version **0.2** (fork [CharlysEV/headqlink](https://github.com/CharlysEV/headqlink)).
+Driver's manual for Qonecta+ version **0.2** (fork [CharlysEV/qonecta](https://github.com/CharlysEV/qonecta)).
 Qonecta+ is the new name of HeadQLink since version 0.2.52 (the same app; it installs over the old one and keeps your settings).
 Button and menu names are shown in "quotes", exactly as the app shows them in English.
 
@@ -12,7 +12,7 @@ Button and menu names are shown in "quotes", exactly as the app shows them in En
 
 **Quick summary**
 
-1. Install the APK from [GitHub Releases](https://github.com/CharlysEV/headqlink/releases).
+1. Install the APK from [GitHub Releases](https://github.com/CharlysEV/qonecta/releases).
 2. Open Qonecta+ and follow the 3-step wizard until the "Requirements check" says "All set".
 3. In the car: turn on the phone's hotspot, open the mirroring app on the car's screen and tap "Connect".
 4. When Android Auto appears, lock the phone and put it away.
@@ -69,7 +69,7 @@ Qonecta+ isn't on Google Play: you install it from an APK file.
 
 ### Install
 
-1. On the phone, open [github.com/CharlysEV/headqlink/releases](https://github.com/CharlysEV/headqlink/releases).
+1. On the phone, open [github.com/CharlysEV/qonecta/releases](https://github.com/CharlysEV/qonecta/releases).
 2. In the latest release, expand **Assets** and tap the `.apk` file (something like `com.headqlink.app_0.2….apk`).
 3. Open the downloaded file (from the notification, or from your file manager's Downloads folder).
 4. Android will say it can't install unknown apps from that source. Tap **Settings**, turn on **Allow from this
@@ -920,7 +920,7 @@ folder (`Android/data/com.headqlink.app/files/exports/`) and the message shows t
   written by earlier versions could contain some location.
 - **Nothing is sent automatically:** you choose who to share it with. Better privately, not posted in public.
 
-You can ask for help on the project's GitHub page: [CharlysEV/headqlink](https://github.com/CharlysEV/headqlink).
+You can ask for help on the project's GitHub page: [CharlysEV/qonecta](https://github.com/CharlysEV/qonecta).
 
 ---
 
@@ -982,7 +982,7 @@ You can ask for help on the project's GitHub page: [CharlysEV/headqlink](https:/
 ### Licence and credits
 
 - Licensed under the **[GNU AGPL-3.0](LICENSE)**. You're entitled to the source code: it's at
-  [github.com/CharlysEV/headqlink](https://github.com/CharlysEV/headqlink). Sections 15 and 16 of the licence (no
+  [github.com/CharlysEV/qonecta](https://github.com/CharlysEV/qonecta). Sections 15 and 16 of the licence (no
   warranty and limitation of liability) also apply.
 - Based on **[headqlink](https://github.com/ryazrm/headqlink)** by **ryazrm**, which in turn builds on
   **[Open Headunit](https://github.com/andreknieriem/open-headunit)** by **André Rinas (andreknieriem)**, and on the

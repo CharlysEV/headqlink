@@ -113,7 +113,7 @@ android {
         targetSdk = 36
         versionCode = 45
         versionName = "0.2.63-qdauto"
-        setProperty("archivesBaseName", "${applicationId}_${versionName}")
+        setProperty("archivesBaseName", "Qonecta_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
         vectorDrawables.useSupportLibrary = true
@@ -275,9 +275,9 @@ android {
         variant.outputs
             .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
             .forEach { output ->
-                var outputFileName = "${variant.applicationId}_${variant.versionName}_debug.apk"
+                var outputFileName = "Qonecta_${variant.versionName}_debug.apk"
                 if(variant.buildType.name == "release") {
-                    outputFileName = "${variant.applicationId}_${variant.versionName}.apk"
+                    outputFileName = "Qonecta_${variant.versionName}.apk"
                     output.outputFileName = outputFileName
                 }
                 output.outputFileName = outputFileName

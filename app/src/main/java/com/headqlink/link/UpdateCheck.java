@@ -14,7 +14,7 @@ import java.util.function.Consumer;
  * la primera vez que arranca una versión recién instalada, las notas de esa versión.
  */
 final class UpdateCheck {
-    static final String REPO = "CharlysEV/headqlink";
+    static final String REPO = "CharlysEV/qonecta";
     static final String RELEASES_WEB = "https://github.com/" + REPO + "/releases";
     private static final String API = "https://api.github.com/repos/" + REPO + "/releases";
     private static final long EVERY_MS = 6 * 3600_000L;

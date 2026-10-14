@@ -133,7 +133,7 @@
     <string name="hql_fluidity">Fluidez</string>
     <string name="hql_fluidity_30">30 fps · menos calor (60 nos emuladores)</string>
     <string name="hql_fluidity_60">60 fps · fluidez máxima</string>
-    <string name="hql_fluidity_help">Só com os perfis «Carro» e «Automático». A 60 fps o carro recebe 8-12 Mbit/s como com o HeadQLink original e o telemóvel aquece mais: se chegar ao estado térmico moderado, desce sozinho para 30 fps.</string>
+    <string name="hql_fluidity_help">Só com os perfis «Carro» e «Automático». A 60 fps o carro recebe 8-12 Mbit/s como com a app original e o telemóvel aquece mais: se chegar ao estado térmico moderado, desce sozinho para 30 fps.</string>
     <string name="hql_follows_recommended">Segue o recomendado: %1$s</string>
     <string name="hql_found_connecting">Encontrado, a ligar…</string>
     <string name="hql_gallery_no_photos">Não há fotos no telemóvel.</string>
@@ -404,7 +404,7 @@
     <string name="hql_udp_busy">A porta 18463 está ocupada (o QDLink está aberto?). Feche-o; nova tentativa a cada 5 s.</string>
     <string name="hql_engine_title">Motor do protocolo</string>
     <string name="hql_engine_qdauto">QDAuto (recomendado)</string>
-    <string name="hql_engine_original">headqlink original</string>
+    <string name="hql_engine_original">Motor herdado (o anterior)</string>
     <string name="hql_applies_on_reconnect">Aplica-se na próxima ligação.</string>
     <string name="hql_link_pending">%1$s (na próxima ligação: %2$s)</string>
     <string name="hql_settings_connection">Ligação</string>

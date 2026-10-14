@@ -133,7 +133,7 @@
     <string name="hql_fluidity">Bildrate</string>
     <string name="hql_fluidity_30">30 fps · weniger Hitze (60 in den Emulatoren)</string>
     <string name="hql_fluidity_60">60 fps · maximal flüssig</string>
-    <string name="hql_fluidity_help">Nur mit den Profilen „Fahrzeug“ und „Automatisch“. Bei 60 fps bekommt das Fahrzeug 8–12 Mbit/s wie beim originalen HeadQLink, und das Handy wird wärmer: Erreicht es den Wärmestatus „mäßig“, geht es von selbst auf 30 fps zurück.</string>
+    <string name="hql_fluidity_help">Nur mit den Profilen „Fahrzeug“ und „Automatisch“. Bei 60 fps bekommt das Fahrzeug 8–12 Mbit/s wie bei der ursprünglichen App, und das Handy wird wärmer: Erreicht es den Wärmestatus „mäßig“, geht es von selbst auf 30 fps zurück.</string>
     <string name="hql_follows_recommended">Folgt der Empfehlung: %1$s</string>
     <string name="hql_found_connecting">Gefunden, verbinde…</string>
     <string name="hql_gallery_no_photos">Keine Fotos auf dem Handy.</string>
@@ -404,7 +404,7 @@
     <string name="hql_udp_busy">Port 18463 ist belegt (ist QDLink offen?). Schließe es; neuer Versuch alle 5 s.</string>
     <string name="hql_engine_title">Protokoll-Engine</string>
     <string name="hql_engine_qdauto">QDAuto (empfohlen)</string>
-    <string name="hql_engine_original">headqlink (Original)</string>
+    <string name="hql_engine_original">Älterer Motor (übernommen)</string>
     <string name="hql_applies_on_reconnect">Gilt ab der nächsten Verbindung.</string>
     <string name="hql_link_pending">%1$s (ab nächster Verbindung: %2$s)</string>
     <string name="hql_settings_connection">Verbindung</string>
