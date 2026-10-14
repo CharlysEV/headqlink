@@ -112,6 +112,24 @@ class QdLogFileTest {
     }
 
     @Test
+    fun aLoneLineReachesTheDiskWithoutAskingForAFlush() {
+        // Las últimas líneas antes de un rato sin actividad no se quedan en memoria (vaciado como mucho cada segundo).
+        val dir = tmp.newFolder("logs")
+        val f = logFile(dir)
+        f.start()
+        f.write("primera")
+        f.write("última")
+        val deadline = System.currentTimeMillis() + 5_000
+        var text = ""
+        while (System.currentTimeMillis() < deadline) {
+            text = f.currentFile?.takeIf { it.exists() }?.readText() ?: ""
+            if (text.contains("última")) break
+            Thread.sleep(50)
+        }
+        assertTrue(text, text.contains("última"))
+    }
+
+    @Test
     fun postedTasksRunInOrderWithTheLines() {
         val dir = tmp.newFolder("logs")
         val f = logFile(dir)

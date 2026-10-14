@@ -52,14 +52,27 @@ final class LowLatency {
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
             // Vaciado al disco como mucho una vez por segundo (exportar el log vacía aparte).
             long lastFlush = 0;
+            // Con algo escrito sin vaciar, se espera como mucho un segundo: si no llega nada, se vacía igual (las
+            // últimas líneas antes de un rato sin actividad no se quedan en memoria).
+            boolean dirty = false;
             while (true) {
                 try {
-                    QUEUE.take().run();
+                    Runnable r = dirty ? QUEUE.poll(1, java.util.concurrent.TimeUnit.SECONDS) : QUEUE.take();
                     long t = android.os.SystemClock.elapsedRealtime();
+                    if (r == null) {
+                        L.flush();
+                        CarTrace.flush();
+                        lastFlush = t;
+                        dirty = false;
+                        continue;
+                    }
+                    r.run();
+                    dirty = true;
                     if (QUEUE.isEmpty() && t - lastFlush >= 1000) {
                         L.flush();
                         CarTrace.flush();
                         lastFlush = t;
+                        dirty = false;
                     }
                 } catch (InterruptedException e) {
                     return;

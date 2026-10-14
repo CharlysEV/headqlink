@@ -99,9 +99,19 @@ internal class QdLogFile(
         }
         open()
         val batch = ArrayList<Any>(1024)
+        // Hay líneas escritas sin vaciar al disco: se vacían como mucho un segundo después aunque no llegue nada más
+        // (si no, las últimas antes de un rato sin actividad se perdían si Android mataba la app).
+        var dirty = false
         while (true) {
             try {
-                batch.add(queue.take())
+                val first = if (dirty) queue.poll(1, TimeUnit.SECONDS) else queue.take()
+                if (first == null) {
+                    flushOut()
+                    lastFlushNs = System.nanoTime()
+                    dirty = false
+                    continue
+                }
+                batch.add(first)
                 queue.drainTo(batch, 4096)
                 for (item in batch) {
                     when (item) {
@@ -112,19 +122,22 @@ internal class QdLogFile(
                             onError("tarea del log", t)
                         }
                         is Flush -> {
+                            // Lo perdido antes de pedir el volcado entra en él (si no, el aviso quedaba fuera).
+                            appendLost()
                             flushOut()
                             item.latch.countDown()
                         }
                     }
                 }
                 batch.clear()
-                val lost = dropped.getAndSet(0)
-                if (lost > 0) append("${now()} W/HQL/Log: $lost líneas perdidas (cola del log llena)")
+                appendLost()
+                dirty = true
                 if (queue.isEmpty()) {
                     val t = System.nanoTime()
                     if (t - lastFlushNs >= 1_000_000_000L) {
                         flushOut()
                         lastFlushNs = t
+                        dirty = false
                     }
                 }
             } catch (_: InterruptedException) {
@@ -152,6 +165,11 @@ internal class QdLogFile(
             onError("no se pudo escribir el log", e)
             open()
         }
+    }
+
+    private fun appendLost() {
+        val lost = dropped.getAndSet(0)
+        if (lost > 0) append("${now()} W/HQL/Log: $lost líneas perdidas (cola del log llena)")
     }
 
     private fun flushOut() {
