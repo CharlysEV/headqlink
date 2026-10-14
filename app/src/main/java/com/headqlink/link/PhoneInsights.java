@@ -108,6 +108,8 @@ final class PhoneInsights {
         List<CloudHistory.Trip> history = new ArrayList<>();
         List<TripLog.Trip> trips = new ArrayList<>();
         List<ChargeSession> charges = new ArrayList<>();
+        /** Lo aprendido de las cargas rápidas del coche (curva, 400–500 V, los de 150 kW o más). */
+        ChargeCurveModel.Summary curve;
         double price;
 
         static Data load(Activity a) {
@@ -120,6 +122,12 @@ final class PhoneInsights {
                 d.charges = ChargeLog.load(a);
             } catch (RuntimeException e) {
                 d.charges = new ArrayList<>();
+            }
+            // El coche, por el pico con el que se guardó la última carga rápida (o el del perfil si aún no hay).
+            try {
+                d.curve = ChargeCurveModel.analyze(d.charges, ChargeCurveModel.latestPeak(d.charges, CarSpec.current().peakDcKw));
+            } catch (RuntimeException e) {
+                d.curve = null;
             }
             d.price = new Config(a).electricityPrice();
             return d;
@@ -134,6 +142,7 @@ final class PhoneInsights {
         monthCard(d);
         howCard(d);
         chargesCard(d);
+        curveCard(d);
         drivesCard(d);
     }
 
@@ -368,6 +377,74 @@ final class PhoneInsights {
             row.setOnClickListener(v -> openCurve(day(s.startMs) + " · " + where, soc, kw));
             c.addView(row);
         }
+        addCard(c);
+    }
+
+    /**
+     * «Tu curva de carga»: la aprendida de las cargas rápidas frente a la de fábrica, cuánto se carga de verdad en los de
+     * 400–500 V y en los de 150 kW o más, y el interruptor para que el plan de ruta la use (o vuelva a la de fábrica).
+     */
+    private void curveCard(Data d) {
+        ChargeCurveModel.Summary m = d.curve;
+        if (m == null) return;
+        LinearLayout c = card(Str.get(R.string.hql_curva_title));
+        ChargeCurveModel.Curve cu = m.curve;
+        boolean learned = cu.learned();
+        double[] factory = new double[101];
+        double[] mixed = learned ? new double[101] : null;
+        for (int i = 0; i <= 100; i++) {
+            factory[i] = ChargePlanner.carPowerKw(i, cu.peakKw);
+            if (mixed != null) mixed[i] = cu.powerKw(i, 1);
+        }
+        double[] binPct = new double[ChargeCurveModel.BINS];
+        double[] binKw = new double[ChargeCurveModel.BINS];
+        for (int b = 0; b < ChargeCurveModel.BINS; b++) {
+            binPct[b] = ChargeCurveModel.center(b);
+            binKw[b] = cu.learnedKw(b);
+        }
+        PhoneCharts.CurveCompare chart = new PhoneCharts.CurveCompare(act);
+        chart.set(factory, mixed, binPct, binKw);
+        c.addView(chart, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(170)));
+        TextView how = small(learned ? Str.get(R.string.hql_curva_from, cu.totalSessions)
+                : Str.get(R.string.hql_curva_waiting, m.dcSessions));
+        how.setPadding(0, dp(8), 0, 0);
+        c.addView(how);
+        ChargeCurveModel.LowVolts lv = m.lowVolts;
+        if (lv.enough()) {
+            String t = Str.get(R.string.hql_curva_low_volts, fmt0(lv.factor * 100), lv.sessions);
+            if (lv.planFactor() != ChargePlanner.LOW_VOLTS_FACTOR) t += " " + Str.get(R.string.hql_curva_low_volts_used);
+            TextView v = note(t);
+            v.setPadding(0, dp(10), 0, 0);
+            c.addView(v);
+        }
+        ChargeCurveModel.Fast fast = m.fastTotal();
+        if (fast != null) {
+            TextView v = note(Str.get(R.string.hql_curva_fast, fmt0(fast.peakKw), fmt0(fast.ratio * 100), fast.sessions));
+            v.setPadding(0, dp(10), 0, 0);
+            c.addView(v);
+            for (int i = 1; i < m.fast.size(); i++) {
+                ChargeCurveModel.Fast f = m.fast.get(i);
+                TextView n = small(Str.get(R.string.hql_curva_net, ChargerFilter.label(f.network), fmt0(f.peakKw), fmt0(f.ratio * 100),
+                        f.sessions));
+                n.setTextColor(f.ratio < 0.8 ? PhoneCharts.WARN : PhoneCharts.DIM);
+                n.setPadding(dp(8), dp(4), 0, 0);
+                c.addView(n);
+            }
+        }
+        if (fast == null) {
+            TextView v = small(Str.get(R.string.hql_curva_rules_wait));
+            v.setPadding(0, dp(10), 0, 0);
+            c.addView(v);
+        }
+        com.google.android.material.materialswitch.MaterialSwitch use = new com.google.android.material.materialswitch.MaterialSwitch(act);
+        use.setText(Str.get(R.string.hql_curva_use));
+        use.setTextColor(PhoneCharts.TEXT);
+        Config cfg = new Config(act);
+        use.setChecked(cfg.learnedChargeCurve());
+        use.setOnCheckedChangeListener((v, on) -> cfg.setLearnedChargeCurve(on));
+        LinearLayout.LayoutParams ulp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        ulp.topMargin = dp(10);
+        c.addView(use, ulp);
         addCard(c);
     }
 

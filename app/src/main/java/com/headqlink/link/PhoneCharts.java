@@ -358,6 +358,105 @@ final class PhoneCharts {
         }
     }
 
+    /**
+     * Curva de carga del coche (kW frente al %, del 0 al 100): la de fábrica en discontinua, la que usa el plan (la
+     * aprendida mezclada con la de fábrica) en línea llena y lo visto en cada tramo aprendido como puntos.
+     */
+    static final class CurveCompare extends View {
+        private double[] factory = new double[0];
+        private double[] mixed;
+        private double[] binPct = new double[0];
+        private double[] binKw = new double[0];
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path path = new Path();
+
+        CurveCompare(Context c) {
+            super(c);
+        }
+
+        /** factory y mixed: kW en cada % (0..100, uno por %); mixed null si no hay curva aprendida. */
+        void set(double[] factory, double[] mixed, double[] binPct, double[] binKw) {
+            this.factory = factory;
+            this.mixed = mixed;
+            this.binPct = binPct;
+            this.binKw = binKw;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas cv) {
+            int n = factory.length;
+            if (n < 2) return;
+            float w = getWidth();
+            float h = getHeight();
+            float left = dp(this, 30);
+            float right = w - dp(this, 4);
+            float top = dp(this, 10);
+            float bottom = h - dp(this, 18);
+            double kmax = 10;
+            for (double v : factory) if (!Double.isNaN(v)) kmax = Math.max(kmax, v);
+            if (mixed != null) for (double v : mixed) if (!Double.isNaN(v)) kmax = Math.max(kmax, v);
+            for (double v : binKw) if (!Double.isNaN(v)) kmax = Math.max(kmax, v);
+            kmax = Math.ceil(kmax * 1.1 / 10) * 10;
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(dp(this, 1));
+            p.setColor(GRID);
+            for (int g = 0; g <= 2; g++) {
+                float y = bottom - (bottom - top) * g / 2f;
+                cv.drawLine(left, y, right, y, p);
+            }
+            // La de fábrica, discontinua.
+            line(cv, factory, left, right, top, bottom, kmax);
+            p.setStrokeWidth(dp(this, 2));
+            p.setColor(DIM);
+            p.setPathEffect(new DashPathEffect(new float[]{dp(this, 6), dp(this, 5)}, 0));
+            cv.drawPath(path, p);
+            p.setPathEffect(null);
+            if (mixed != null) {
+                line(cv, mixed, left, right, top, bottom, kmax);
+                p.setStrokeWidth(dp(this, 2.5f));
+                p.setColor(ACCENT);
+                cv.drawPath(path, p);
+            }
+            p.setStyle(Paint.Style.FILL);
+            p.setColor(ACCENT_2);
+            for (int i = 0; i < binPct.length && i < binKw.length; i++) {
+                if (Double.isNaN(binKw[i])) continue;
+                float x = (float) (left + (right - left) * binPct[i] / 100);
+                float y = (float) (bottom - (bottom - top) * binKw[i] / kmax);
+                cv.drawCircle(x, y, dp(this, 3), p);
+            }
+            p.setTypeface(Typeface.DEFAULT);
+            p.setColor(FAINT);
+            p.setTextSize(dp(this, 10));
+            p.setTextAlign(Paint.Align.RIGHT);
+            cv.drawText(String.format(Locale.getDefault(), "%.0f", kmax), left - dp(this, 4), top + dp(this, 8), p);
+            cv.drawText("0", left - dp(this, 4), bottom, p);
+            cv.drawText("kW", left - dp(this, 4), (top + bottom) / 2 + dp(this, 4), p);
+            p.setTextAlign(Paint.Align.LEFT);
+            cv.drawText("0 %", left, h - dp(this, 3), p);
+            p.setTextAlign(Paint.Align.CENTER);
+            cv.drawText("50 %", (left + right) / 2, h - dp(this, 3), p);
+            p.setTextAlign(Paint.Align.RIGHT);
+            cv.drawText("100 %", right, h - dp(this, 3), p);
+        }
+
+        /** El trazo de una serie (kW por %) en path, listo para pintar con p. */
+        private void line(Canvas cv, double[] v, float left, float right, float top, float bottom, double kmax) {
+            path.reset();
+            boolean started = false;
+            for (int i = 0; i < v.length; i++) {
+                if (Double.isNaN(v[i])) continue;
+                float x = left + (right - left) * i / (float) (v.length - 1);
+                float y = (float) (bottom - (bottom - top) * Math.max(0, v[i]) / kmax);
+                if (!started) path.moveTo(x, y);
+                else path.lineTo(x, y);
+                started = true;
+            }
+            p.setStyle(Paint.Style.STROKE);
+        }
+    }
+
     /** Silueta de un recorrido (lat, lon), encajada en la vista, con la salida y la llegada. */
     static final class TrackThumb extends View {
         private double[][] track = new double[0][];

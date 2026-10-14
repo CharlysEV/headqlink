@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: «Tu curva de carga» (curva aprendida de las cargas rápidas, ChargeCurveModel). -->
+<resources>
+    <string name="hql_curva_title">Your charging curve</string>
+    <string name="hql_curva_from">Built from %1$d fast charges. Solid line: the one the route plan uses (what was learned, blended with the factory curve); dashed: the factory curve; dots: what was seen in each 5 %% band.</string>
+    <string name="hql_curva_waiting">It will fill in with your fast charges (%1$d so far): each 5 %% band needs at least 3 charges where the car, not the charger, set the power. Meanwhile the route plan uses the factory curve (dashed).</string>
+    <string name="hql_curva_low_volts">On 400–500 V chargers: you charge at %1$s %% of the power (%2$d charges; the plan assumed 50 %%).</string>
+    <string name="hql_curva_low_volts_used">The route plan already uses this instead of half.</string>
+    <string name="hql_curva_fast">Chargers of 150 kW or more: average peak %1$s kW (%2$s %% of what they could give you: the advertised power or what your car takes, whichever is lower; %3$d charges).</string>
+    <string name="hql_curva_net">%1$s: peak %2$s kW, %3$s %% (%4$d charges)</string>
+    <string name="hql_curva_rules_wait">With at least 3 charges on chargers of 150 kW or more (or, on the 800 V C10, on 400–500 V ones) you will see here how they really perform.</string>
+    <string name="hql_curva_use">Use my curve in the route plan</string>
+</resources>

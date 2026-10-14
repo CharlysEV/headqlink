@@ -594,6 +594,15 @@ final class Config {
         sp.edit().putInt("plan_max_pct", pct).apply();
     }
 
+    /** Plan de carga con la curva aprendida de las cargas del coche (ChargeCurveModel); sin ella, la de fábrica. */
+    boolean learnedChargeCurve() {
+        return sp.getBoolean("learned_charge_curve", true);
+    }
+
+    void setLearnedChargeCurve(boolean on) {
+        sp.edit().putBoolean("learned_charge_curve", on).apply();
+    }
+
     static final String NAV_MAPS = "maps";
     static final String NAV_WAZE = "waze";
 

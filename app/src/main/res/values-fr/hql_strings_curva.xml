@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: «Tu curva de carga» (curva aprendida de las cargas rápidas, ChargeCurveModel). -->
+<resources>
+    <string name="hql_curva_title">Votre courbe de recharge</string>
+    <string name="hql_curva_from">Établie à partir de %1$d recharges rapides. Trait plein : celle qu\'utilise le plan d\'itinéraire (l\'apprise, mêlée à celle d\'usine) ; pointillés : celle d\'usine ; points : ce qui a été vu dans chaque tranche de 5 %%.</string>
+    <string name="hql_curva_waiting">Elle se complétera avec vos recharges rapides (%1$d pour l\'instant) : chaque tranche de 5 %% demande au moins 3 recharges où la voiture, et non la borne, a fixé la puissance. En attendant, le plan d\'itinéraire utilise celle d\'usine (pointillés).</string>
+    <string name="hql_curva_low_volts">Sur les bornes de 400–500 V : vous rechargez à %1$s %% de la puissance (%2$d recharges ; le plan supposait 50 %%).</string>
+    <string name="hql_curva_low_volts_used">Le plan d\'itinéraire utilise déjà cette valeur au lieu de la moitié.</string>
+    <string name="hql_curva_fast">Bornes de 150 kW ou plus : pic moyen de %1$s kW (%2$s %% de ce qu\'elles pouvaient vous donner : la puissance annoncée ou ce qu\'accepte votre voiture, la plus faible ; %3$d recharges).</string>
+    <string name="hql_curva_net">%1$s : pic %2$s kW, %3$s %% (%4$d recharges)</string>
+    <string name="hql_curva_rules_wait">Avec au moins 3 recharges sur des bornes de 150 kW ou plus (ou, sur la C10 800 V, sur celles de 400–500 V), vous verrez ici ce qu\'elles donnent vraiment.</string>
+    <string name="hql_curva_use">Utiliser ma courbe dans le plan d\'itinéraire</string>
+</resources>
