@@ -58,4 +58,9 @@
     <string name="hql_pl_food_note">For stops of %1$d min or more, the app checks for a restaurant or café within %2$d m (OpenStreetMap).</string>
     <string name="hql_pl_w_home_arrive">%1$s: you arrive with %2$s%3$.0f %%</string>
     <string name="hql_pl_w_home_charge">%1$s: you need to charge</string>
+    <string name="hql_pl_here">Here</string>
+    <string name="hql_pl_here_confirm">Here?</string>
+    <string name="hql_pl_here_ok">Moved to where you are: %1$s</string>
+    <string name="hql_pl_here_set">Here, where I am now</string>
+    <string name="hql_pl_here_name">Location from GPS</string>
 </resources>

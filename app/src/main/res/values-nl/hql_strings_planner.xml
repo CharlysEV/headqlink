@@ -58,4 +58,9 @@
     <string name="hql_pl_food_note">Bij stops van %1$d min of langer wordt gekeken of er binnen %2$d m een restaurant of café is (OpenStreetMap).</string>
     <string name="hql_pl_w_home_arrive">%1$s: je komt aan met %2$s%3$.0f %%</string>
     <string name="hql_pl_w_home_charge">%1$s: je moet laden</string>
+    <string name="hql_pl_here">Hier</string>
+    <string name="hql_pl_here_confirm">Hier?</string>
+    <string name="hql_pl_here_ok">Verplaatst naar waar je bent: %1$s</string>
+    <string name="hql_pl_here_set">Hier, waar ik nu ben</string>
+    <string name="hql_pl_here_name">GPS-locatie</string>
 </resources>

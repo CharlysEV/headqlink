@@ -472,6 +472,7 @@ final class RouteTab implements CarScreen {
             }
             results.addView(sub(Str.get(rec.isEmpty() ? R.string.hql_search_tip : R.string.hql_search_recent)));
             if (origin) results.addView(gpsItem(this), itemParams());
+            if (mode == S_HOME || mode == S_WORK) results.addView(hereItem(this), itemParams());
             for (RoutePlanner.Place pl : rec) results.addView(item(this, pl, pos), itemParams());
         }
 
@@ -687,6 +688,37 @@ final class RouteTab implements CarScreen {
     }
 
     /** Buscando la salida: «Mi ubicación (GPS)», para volver a salir de donde está el móvil. */
+    /** Fijar Casa o Trabajo donde está el coche ahora (el punto exacto, sin depender del buscador). */
+    private View hereItem(SearchState st) {
+        LinearLayout item = new LinearLayout(ctx);
+        item.setOrientation(LinearLayout.HORIZONTAL);
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setPadding(22, 18, 22, 18);
+        item.setBackground(CarKit.outlined(CarKit.SURFACE, CarKit.ACCENT, 18));
+        item.addView(CarStyle.text(ctx, "📍 " + Str.get(R.string.hql_pl_here_set), 27, CarKit.ACCENT));
+        item.setOnClickListener(v -> {
+            double[] pos = planner.position();
+            if (Double.isNaN(pos[0])) {
+                flash(Str.get(R.string.hql_waiting_gps));
+                return;
+            }
+            RoutePlanner.Place pl = new RoutePlanner.Place();
+            pl.name = Str.get(R.string.hql_pl_here_name);
+            pl.detail = "";
+            pl.lat = pos[0];
+            pl.lon = pos[1];
+            String tag = st.mode == S_HOME ? SavedPlaces.HOME : SavedPlaces.WORK;
+            Config c = new Config(ctx);
+            c.setSavedPlaces(SavedPlaces.setTagged(c.savedPlaces(), pl, tag));
+            L.i("ruta: " + (st.mode == S_HOME ? "Casa" : "Trabajo") + " fijado con el GPS en el coche"); // sin el sitio
+            st.close();
+            if (savedRefresh != null) savedRefresh.run();
+            flash(Str.get(R.string.hql_pl_saved_ok, tagLabel(tag)));
+            tick();
+        });
+        return item;
+    }
+
     private View gpsItem(SearchState st) {
         LinearLayout item = new LinearLayout(ctx);
         item.setOrientation(LinearLayout.HORIZONTAL);
@@ -1015,6 +1047,29 @@ final class RouteTab implements CarScreen {
         });
         TextView ren = CarKit.pill(ctx, Str.get(R.string.hql_pl_rename), false);
         ren.setOnClickListener(v -> openRename(index, s.name, rebuild));
+        // «Aquí»: el sitio pasa a donde está el coche ahora (Casa mal situada por el buscador). Dos toques.
+        TextView here = CarKit.pill(ctx, "📍 " + Str.get(R.string.hql_pl_here), false);
+        here.setOnClickListener(v -> {
+            double[] pos = planner.position();
+            if (Double.isNaN(pos[0])) {
+                flash(Str.get(R.string.hql_waiting_gps));
+                return;
+            }
+            if (!Boolean.TRUE.equals(here.getTag())) {
+                here.setTag(Boolean.TRUE);
+                here.setText(Str.get(R.string.hql_pl_here_confirm));
+                here.setTextColor(CarKit.AMBER);
+                return;
+            }
+            Config c = new Config(ctx);
+            c.setSavedPlaces(SavedPlaces.move(c.savedPlaces(), index, pos[0], pos[1]));
+            // Sin el sitio: el log se exporta. A cuánto estaba sí (lo mal que lo situó el buscador).
+            L.i(String.format(Locale.US, "ruta: guardado movido a la posición actual (estaba a %.0f m)",
+                    RoadInfo.dist(s.lat, s.lon, pos[0], pos[1])));
+            flash(Str.get(R.string.hql_pl_here_ok, savedTitle(s)));
+            rebuild.run();
+            tick();
+        });
         TextView del = CarKit.pill(ctx, Str.get(R.string.hql_pl_delete), false);
         del.setOnClickListener(v -> {
             if (!Boolean.TRUE.equals(del.getTag())) {
@@ -1031,6 +1086,7 @@ final class RouteTab implements CarScreen {
             tick();
         });
         item.addView(go);
+        item.addView(here, spaced());
         item.addView(ren, spaced());
         item.addView(del, spaced());
         return item;

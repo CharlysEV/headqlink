@@ -68,6 +68,19 @@ class SavedPlacesTest {
     }
 
     @Test
+    fun homeCanBeMovedToWhereTheCarIs() {
+        // El buscador dio el punto del pueblo; estando en casa, «Aquí» lo lleva a la posición del GPS.
+        var json = SavedPlaces.setTagged("", place("Calle Mayor 27", 40.0, -3.0), SavedPlaces.HOME)
+        json = SavedPlaces.move(json, 0, 40.004, -3.006)
+        val home = SavedPlaces.tagged(SavedPlaces.parse(json), SavedPlaces.HOME)!!
+        assertEquals("Calle Mayor 27", home.name)
+        assertEquals(40.004, home.lat, 1e-9)
+        assertEquals(-3.006, home.lon, 1e-9)
+        assertEquals(json, SavedPlaces.move(json, 0, Double.NaN, Double.NaN)) // sin GPS: igual
+        assertEquals(json, SavedPlaces.move(json, 5, 41.0, -4.0)) // fuera de rango: igual
+    }
+
+    @Test
     fun renameAndRemove() {
         var json = SavedPlaces.add("", place("A", 40.0, -3.0), null, false, null)
         json = SavedPlaces.add(json, place("B", 41.0, -4.0), null, false, null)

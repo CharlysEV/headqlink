@@ -58,4 +58,9 @@
     <string name="hql_pl_food_note">Nas paragens de %1$d min ou mais, verifica-se se há restaurante ou café a %2$d m ou menos (OpenStreetMap).</string>
     <string name="hql_pl_w_home_arrive">%1$s: chega com %2$s%3$.0f %%</string>
     <string name="hql_pl_w_home_charge">%1$s: precisa de carregar</string>
+    <string name="hql_pl_here">Aqui</string>
+    <string name="hql_pl_here_confirm">Aqui?</string>
+    <string name="hql_pl_here_ok">Movido para onde está: %1$s</string>
+    <string name="hql_pl_here_set">Aqui, onde estou agora</string>
+    <string name="hql_pl_here_name">Localização do GPS</string>
 </resources>

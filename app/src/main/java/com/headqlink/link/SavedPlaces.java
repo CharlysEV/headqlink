@@ -149,6 +149,19 @@ final class SavedPlaces {
         return toJson(list);
     }
 
+    /**
+     * Puro: lleva el de la posición index a (lat, lon), conservando su nombre y su etiqueta. Para Casa o Trabajo fijados
+     * con el GPS estando allí: el buscador a veces da el punto de la calle o del pueblo aunque el nombre lleve el número
+     * (pasa en calles de pueblo sin portales en el mapa), y Google Maps navegaba a ese punto. Sin posición: igual.
+     */
+    static String move(String json, int index, double lat, double lon) {
+        List<Saved> list = parse(json);
+        if (index < 0 || index >= list.size() || Double.isNaN(lat) || Double.isNaN(lon)) return toJson(list);
+        list.get(index).lat = lat;
+        list.get(index).lon = lon;
+        return toJson(list);
+    }
+
     /** Puro: cambia el nombre del de la posición index (vacío: igual). */
     static String rename(String json, int index, String name) {
         List<Saved> list = parse(json);
