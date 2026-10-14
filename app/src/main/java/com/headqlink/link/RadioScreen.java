@@ -128,7 +128,7 @@ final class RadioScreen implements CarScreen {
         b.setImageTintList(android.content.res.ColorStateList.valueOf(CarStyle.TEXT));
         b.setBackground(CarStyle.round(CarStyle.PILL_BG, 30));
         b.setPadding(20, 20, 20, 20);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(84, 72);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(CarStyle.touch(84), CarStyle.touch(72));
         lp.leftMargin = 10;
         b.setLayoutParams(lp);
         return b;
@@ -262,8 +262,10 @@ final class RadioScreen implements CarScreen {
     private void showGrid(Context c) {
         RecyclerView rv = new RecyclerView(c);
         rv.setPadding(18, 6, 18, 6);
-        rv.setLayoutManager(new GridLayoutManager(c, COLUMNS));
-        int cellW = (host.width() - 36) / COLUMNS;
+        // En una pantalla pequeña (T03), menos columnas: celdas más anchas para el texto más grande.
+        int cols = CarStyle.gridColumns(COLUMNS, host.width() - 36, CarStyle.MIN_CELL_SCREEN_PX);
+        rv.setLayoutManager(new GridLayoutManager(c, cols));
+        int cellW = (host.width() - 36) / cols;
         adapter = new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             @Override
             public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int type) {

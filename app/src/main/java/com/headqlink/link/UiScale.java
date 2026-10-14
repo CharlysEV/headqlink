@@ -10,7 +10,11 @@ final class UiScale {
     /** Lienzo mínimo en el que cabe todo: el ancho y el alto a los que se reduce la interfaz como mucho. */
     static final int MIN_W = 1600;
     static final int MIN_H = 860;
-    /** Por debajo de esto el texto ya no se lee en el coche: no se reduce más. */
+    /**
+     * Por debajo de esto el texto ya no se lee en el coche: no se reduce más. En el T03 (1024x498) da un lienzo de
+     * 1707x830, ya justo para la sección Coche (tarjetas a posiciones fijas); al 70 % (1463x711) no cabría. Lo pequeño se
+     * agranda aparte (CarStyle.touch, textPx), y quien lo quiera todo más grande lo elige en Ajustes (Tamaño de la interfaz).
+     */
     static final float MIN_SCALE = 0.6f;
 
     private UiScale() {

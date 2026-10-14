@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hql_carui_size">Größe der Oberfläche</string>
+    <string name="hql_carui_size_note" formatted="false">Automatisch: was auf diesen Bildschirm passt. Mit mehr % wird alles größer, aber es passt weniger darauf. Gilt beim Neuverbinden.</string>
+</resources>

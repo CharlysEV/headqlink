@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: Extended mode on small car screens (T03): interface size. Kept apart from hql_strings.xml. -->
+<resources>
+    <string name="hql_carui_size">Interface size</string>
+    <string name="hql_carui_size_note" formatted="false">Automatic: what fits this screen. With a higher %, everything is bigger, but less fits. Applies when reconnecting.</string>
+</resources>
