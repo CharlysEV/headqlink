@@ -76,6 +76,16 @@ final class PhoneOffRenderer {
         return state == Display.STATE_OFF || state == Display.STATE_DOZE_SUSPEND;
     }
 
+    /**
+     * Con el dibujo propio ya en marcha, ¿se sigue? (puro). También en DOZE: cargando por el cable del coche, el S25 con
+     * la pantalla apagada (AOD de la carga) salta entre DOZE y DOZE_SUSPEND varias veces por segundo (viaje del
+     * 2026-10-14: 824 cambios en 43 min), y cada salto pasaba la interfaz del coche de un dibujo a otro. Solo se vuelve a
+     * la composición de Android con la pantalla del móvil encendida de verdad.
+     */
+    static boolean stayOff(int state) {
+        return phoneOff(state) || state == Display.STATE_DOZE;
+    }
+
     private final DisplayManager.DisplayListener listener = new DisplayManager.DisplayListener() {
         @Override
         public void onDisplayAdded(int id) {
@@ -140,7 +150,8 @@ final class PhoneOffRenderer {
     private void update() {
         if (stopped || dm == null) return;
         Display d = dm.getDisplay(Display.DEFAULT_DISPLAY);
-        boolean off = forced || d != null && phoneOff(d.getState());
+        int state = d != null ? d.getState() : Display.STATE_UNKNOWN;
+        boolean off = forced || (active ? stayOff(state) : phoneOff(state));
         if (off && !active) {
             enter();
         } else if (!off && active) {

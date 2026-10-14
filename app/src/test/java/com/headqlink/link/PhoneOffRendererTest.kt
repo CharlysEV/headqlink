@@ -19,6 +19,16 @@ class PhoneOffRendererTest {
     }
 
     @Test
+    fun theDozeFlappingWhileChargingDoesNotSwitchBackToAndroid() {
+        // Ya dibujando a mano: el AOD de la carga (DOZE ↔ DOZE_SUSPEND) no lo corta; solo la pantalla encendida.
+        assertTrue(PhoneOffRenderer.stayOff(Display.STATE_DOZE))
+        assertTrue(PhoneOffRenderer.stayOff(Display.STATE_DOZE_SUSPEND))
+        assertTrue(PhoneOffRenderer.stayOff(Display.STATE_OFF))
+        assertFalse(PhoneOffRenderer.stayOff(Display.STATE_ON))
+        assertFalse(PhoneOffRenderer.stayOff(Display.STATE_UNKNOWN))
+    }
+
+    @Test
     fun theRecommendedConnectionDependsOnTheMode() {
         assertEquals(Config.LINK_USB, Config.recommendedLink(Config.MODE_AA_EXT))
         assertEquals(Config.LINK_HOTSPOT, Config.recommendedLink(Config.MODE_AA))
