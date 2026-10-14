@@ -1298,11 +1298,13 @@ public class HomeActivity extends Activity implements LinkState.Listener {
                         L.i("fluidez: " + fluidAfter + " fps (perfil " + cfg.videoProfile().id + "; "
                                 + (LinkState.running ? "reconecta ahora" : "se aplica en la próxima sesión") + ")");
                     }
-                    save(fps, Config.FPS);
-                    save(kbps, Config.KBPS);
-                    save(w, Config.WIDTH);
-                    save(h, Config.HEIGHT);
-                    save(window, Config.AA_WINDOW);
+                    // Un valor fuera de rango (o un número de 11 cifras, que cerraba la app) se ignora con un aviso.
+                    boolean ok = save(fps, Config.FPS, 120)
+                            & save(kbps, Config.KBPS, 100_000)
+                            & save(w, Config.WIDTH, 4096)
+                            & save(h, Config.HEIGHT, 4096)
+                            & save(window, Config.AA_WINDOW, 64);
+                    if (!ok) android.widget.Toast.makeText(this, Str.get(R.string.hql_v_invalid), android.widget.Toast.LENGTH_LONG).show();
                     cfg.putBool(Config.AA_BRAKE, brake.isChecked());
                     // Ajuste manual solo si el usuario lo ha tocado; si no, manda el perfil.
                     if (lowLat.isChecked() != lowLatBefore) cfg.putBool(Config.LOW_LATENCY, lowLat.isChecked());
@@ -1372,8 +1374,23 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         if (v > 0) e.setText(String.valueOf(v));
     }
 
-    private void save(EditText e, String key) {
-        String s = e.getText().toString().trim();
-        cfg.putInt(key, s.isEmpty() ? 0 : Integer.parseInt(s));
+    /** Guarda el campo si es un número de 0 a max (vacío = 0, automático); si no, deja el valor que había. */
+    private boolean save(EditText e, String key, int max) {
+        int v = parseSetting(e.getText().toString(), max);
+        if (v < 0) {
+            L.w("ajustes avanzados: «" + e.getText() + "» no vale para " + key + " (de 0 a " + max + "): se queda " + cfg.getInt(key));
+            return false;
+        }
+        cfg.putInt(key, v);
+        return true;
+    }
+
+    /** Puro: el número de un campo de ajustes (vacío = 0); -1 si no es un número entre 0 y max. */
+    static int parseSetting(String text, int max) {
+        String s = text == null ? "" : text.trim();
+        if (s.isEmpty()) return 0;
+        if (!s.matches("[0-9]{1,9}")) return -1;
+        int v = Integer.parseInt(s);
+        return v <= max ? v : -1;
     }
 }

@@ -1033,4 +1033,5 @@
     <string name="hql_usb_auto_switch">Connect when the car cable is plugged in</string>
     <string name="hql_usb_auto_off">Plugging in the cable will do nothing: tap Connect when you want it. If Android always opens Qonecta+ with the cable and you want to use QDLink, remove "Open by default" in the app settings.</string>
     <string name="hql_qd_diag_trace">Detailed trace (one log line per frame, touch dumps, performance trace, full logcat; more heat and very large logs)</string>
+    <string name="hql_v_invalid">Advanced: a value out of range was ignored (fps 0-120, kbps 0-100000, width and height 0-4096, window 0-64; empty = automatic)</string>
 </resources>

@@ -1034,4 +1034,5 @@
     <string name="hql_usb_auto_switch">Conectar al enchufar el cable del coche</string>
     <string name="hql_usb_auto_off">Al enchufar el cable no hará nada: pulsa Conectar cuando quieras. Si Android abre siempre Qonecta+ con el cable y quieres usar QDLink, quita «Abrir de forma predeterminada» en los ajustes de la app.</string>
     <string name="hql_qd_diag_trace">Traza detallada (una línea del log por fotograma, volcado de los toques, traza de rendimiento y logcat completo; más calor y logs muy grandes)</string>
+    <string name="hql_v_invalid">Avanzado: se ha ignorado un valor fuera de rango (fps de 0 a 120, kbps de 0 a 100000, ancho y alto de 0 a 4096, ventana de 0 a 64; vacío = automático)</string>
 </resources>

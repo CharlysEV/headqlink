@@ -1028,4 +1028,5 @@
     <string name="hql_usb_auto_switch">Verbinden, wenn das Autokabel eingesteckt wird</string>
     <string name="hql_usb_auto_off">Beim Einstecken passiert nichts: tippe auf Verbinden, wenn du willst. Öffnet Android mit dem Kabel immer Qonecta+ und du willst QDLink nutzen, entferne „Standardmäßig öffnen“ in den App-Einstellungen.</string>
     <string name="hql_qd_diag_trace">Detaillierte Ablaufverfolgung (eine Logzeile pro Bild, Berührungen, Leistungstrace und vollständiges Logcat; mehr Wärme und sehr große Logs)</string>
+    <string name="hql_v_invalid">Erweitert: ein Wert außerhalb des Bereichs wurde ignoriert (fps 0-120, kbps 0-100000, Breite und Höhe 0-4096, Fenster 0-64; leer = automatisch)</string>
 </resources>

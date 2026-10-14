@@ -1029,4 +1029,5 @@
     <string name="hql_usb_auto_switch">Connetti quando colleghi il cavo dell\'auto</string>
     <string name="hql_usb_auto_off">Collegando il cavo non succede nulla: tocca Connetti quando vuoi. Se Android apre sempre Qonecta+ con il cavo e vuoi usare QDLink, togli «Apri per impostazione predefinita» nelle impostazioni dell\'app.</string>
     <string name="hql_qd_diag_trace">Traccia dettagliata (una riga di log per fotogramma, tocchi, traccia delle prestazioni e logcat completo; più calore e log molto grandi)</string>
+    <string name="hql_v_invalid">Avanzate: un valore fuori intervallo è stato ignorato (fps da 0 a 120, kbps da 0 a 100000, larghezza e altezza da 0 a 4096, finestra da 0 a 64; vuoto = automatico)</string>
 </resources>

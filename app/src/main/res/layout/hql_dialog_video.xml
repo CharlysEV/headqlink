@@ -164,7 +164,8 @@
                 android:id="@+id/hql_v_fps"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number" />
+                android:inputType="number"
+                android:maxLength="6" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -179,7 +180,8 @@
                 android:id="@+id/hql_v_kbps"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number" />
+                android:inputType="number"
+                android:maxLength="6" />
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
@@ -199,7 +201,8 @@
                 android:id="@+id/hql_v_w"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number" />
+                android:inputType="number"
+                android:maxLength="6" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -214,7 +217,8 @@
                 android:id="@+id/hql_v_h"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number" />
+                android:inputType="number"
+                android:maxLength="6" />
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
@@ -279,7 +283,8 @@
             android:id="@+id/hql_v_window"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="number" />
+            android:inputType="number"
+            android:maxLength="6" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <TextView
