@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: partidas a dos con dos mandos (NesInput, PadSlots): indicador y avisos de la pantalla del juego. -->
+<resources>
+    <string name="hql_games_pad">Manette %1$d</string>
+    <string name="hql_games_pad_off">Manette %1$d (déconnectée)</string>
+    <string name="hql_games_pad_joined">Manette %1$d : joueur %1$d</string>
+    <string name="hql_games_pad_lost">Manette %1$d déconnectée</string>
+    <string name="hql_games_pad_back">Manette %1$d de retour</string>
+    <string name="hql_games_pads_help">Deux joueurs : la première manette qui appuie sur un bouton est le joueur 1, la deuxième le joueur 2.</string>
+</resources>

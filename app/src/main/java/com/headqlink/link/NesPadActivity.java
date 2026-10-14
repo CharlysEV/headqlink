@@ -17,6 +17,9 @@ import com.andrerinas.openheadunit.R;
  */
 public class NesPadActivity extends Activity {
     static volatile NesPadActivity instance;
+    /** «Mando 1 · Mando 2»: los mandos con jugador en la partida. */
+    private TextView pads;
+    private final NesInput.PadsListener padsListener = notice -> runOnUiThread(this::showPads);
 
     @Override
     protected void onCreate(Bundle b) {
@@ -42,11 +45,33 @@ public class NesPadActivity extends Activity {
         text.setGravity(Gravity.CENTER);
         text.setPadding(0, pad / 2, 0, 0);
         col.addView(text);
+        TextView two = new TextView(this);
+        two.setText(Str.get(R.string.hql_games_pads_help));
+        two.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium);
+        two.setTextColor(getColor(R.color.hql_text_dim));
+        two.setGravity(Gravity.CENTER);
+        two.setPadding(0, pad / 2, 0, 0);
+        col.addView(two);
+        pads = new TextView(this);
+        pads.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium);
+        pads.setTextColor(getColor(R.color.hql_text));
+        pads.setGravity(Gravity.CENTER);
+        pads.setPadding(0, pad / 2, 0, 0);
+        col.addView(pads);
         setContentView(col);
+        NesInput.addListener(padsListener);
+        showPads();
+    }
+
+    private void showPads() {
+        String l = NesInput.padsLabel();
+        pads.setText(l);
+        pads.setVisibility(l.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
     }
 
     @Override
     protected void onDestroy() {
+        NesInput.removeListener(padsListener);
         if (instance == this) instance = null;
         super.onDestroy();
     }
@@ -55,7 +80,7 @@ public class NesPadActivity extends Activity {
     public boolean dispatchKeyEvent(KeyEvent e) {
         // Atrás en el móvil cierra esta pantalla (el juego sigue en el coche); el resto va al mando.
         if (e.getKeyCode() == KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(e);
-        if (NesInput.key(e.getKeyCode(), e.getAction())) return true;
+        if (NesInput.key(e)) return true;
         return super.dispatchKeyEvent(e);
     }
 

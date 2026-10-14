@@ -3,7 +3,7 @@ package com.headqlink.link;
 import com.grapeshot.halfnes.ui.PuppetController;
 
 /**
- * Mando del jugador 1 de cualquier consola: cruceta, los botones de la Mega Drive de seis botones (A, B, C, X, Y, Z,
+ * Mando de un jugador (el 1 o el 2) de cualquier consola: cruceta, los botones de la Mega Drive de seis botones (A, B, C, X, Y, Z,
  * Start y Mode, que en la NES y la Super Nintendo es Select) y L y R de la Super Nintendo. Lo mueven NesInput (mando Bluetooth) y los botones táctiles; cada núcleo lo lee
  * una vez por fotograma. El orden de los bits es el de ClownMDEmu, así la Mega Drive los usa tal cual.
  */

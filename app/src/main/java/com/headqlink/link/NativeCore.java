@@ -26,6 +26,7 @@ abstract class NativeCore implements GameCore {
     private final String name;
     private final int channels;
     private final RetroPad pad = new RetroPad();
+    private final RetroPad pad2 = new RetroPad();
     private final int[] argb = new int[MAX_PX];
     private final int[] prev = new int[MAX_PX];
     /** El último fotograma par tal cual salió (sin mezclar), para saber qué parpadea. */
@@ -74,7 +75,10 @@ abstract class NativeCore implements GameCore {
         return "sin carga por ruta";
     }
 
-    /** Un fotograma: imagen en argb, sonido en samples; devuelve las muestras escritas, o < 0 si no hay juego. */
+    /**
+     * Un fotograma: imagen en argb, sonido en samples; devuelve las muestras escritas, o < 0 si no hay juego. padBits trae
+     * los dos mandos (twoPads): el jugador 1 en los 16 bits de abajo y el 2 en los de arriba.
+     */
     abstract int nativeFrame(int[] argb, short[] samples, int padBits);
 
     /** Tamaño del último fotograma: (ancho << 16) | alto. */
@@ -199,6 +203,19 @@ abstract class NativeCore implements GameCore {
     }
 
     @Override
+    public RetroPad pad2() {
+        return pad2;
+    }
+
+    /**
+     * Puro: los dos mandos (ya en el formato del núcleo, 16 bits como mucho: la PlayStation usa 14) en un solo int para
+     * el puente JNI, que no cambia de firma: el jugador 1 abajo, el 2 arriba. Los núcleos leen cada mitad en su puerto.
+     */
+    static int twoPads(int p1, int p2) {
+        return (p1 & 0xFFFF) | ((p2 & 0xFFFF) << 16);
+    }
+
+    @Override
     public synchronized String load(String path) {
         try {
             if (loadsByPath()) {
@@ -264,7 +281,7 @@ abstract class NativeCore implements GameCore {
                 L.i(name + ": mando → " + Integer.toBinaryString(bits) + " (al núcleo " + Integer.toBinaryString(padBits(bits)) + ")");
             }
             lastBits = bits;
-            int n = nativeFrame(argb, samples, padBits(bits));
+            int n = nativeFrame(argb, samples, twoPads(padBits(bits), padBits(pad2.read())));
             if (n < 0) break;
             int size = nativeSize();
             deliver(size >>> 16, size & 0xFFFF);

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: partidas a dos con dos mandos (NesInput, PadSlots): indicador y avisos de la pantalla del juego. -->
+<resources>
+    <string name="hql_games_pad">Comando %1$d</string>
+    <string name="hql_games_pad_off">Comando %1$d (desligado)</string>
+    <string name="hql_games_pad_joined">Comando %1$d: jogador %1$d</string>
+    <string name="hql_games_pad_lost">Comando %1$d desligado</string>
+    <string name="hql_games_pad_back">Comando %1$d de volta</string>
+    <string name="hql_games_pads_help">Dois jogadores: o primeiro comando a carregar num botão é o jogador 1 e o segundo, o jogador 2.</string>
+</resources>

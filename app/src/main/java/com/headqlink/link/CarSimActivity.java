@@ -293,7 +293,7 @@ public class CarSimActivity extends Activity {
     @Override
     public boolean dispatchKeyEvent(android.view.KeyEvent e) {
         if (NesInput.pad != null && e.getKeyCode() != android.view.KeyEvent.KEYCODE_BACK
-                && NesInput.key(e.getKeyCode(), e.getAction())) return true;
+                && NesInput.key(e)) return true;
         return super.dispatchKeyEvent(e);
     }
 

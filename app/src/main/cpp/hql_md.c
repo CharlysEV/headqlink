@@ -33,6 +33,7 @@ static cc_u16l *rom;
 static uint32_t colours[16 * 4 * 3];
 static uint32_t frame[MAX_W * MAX_H];
 static unsigned frameW = 320, frameH = 224;
+/* Los dos mandos: el jugador 1 en los 16 bits de abajo y el 2 en los de arriba (NativeCore.twoPads). */
 static int buttons;
 
 /* Sonido del fotograma: lo que sale del mezclador (estéreo, a la frecuencia del PSG) y lo ya pasado a 44,1 kHz. */
@@ -66,8 +67,8 @@ static void ScanlineRendered(void *user_data, cc_u16f scanline, const cc_u8l *pi
 
 static cc_bool InputRequested(void *user_data, cc_u8f player, ClownMDEmu_Button b) {
     (void)user_data;
-    if (player != 0) return cc_false;
-    return (buttons >> b) & 1 ? cc_true : cc_false;
+    if (player > 1) return cc_false;
+    return ((unsigned)buttons >> (player * 16 + b)) & 1 ? cc_true : cc_false;
 }
 
 static void FmAudio(void *u, ClownMDEmu *e, size_t n, void (*gen)(ClownMDEmu *, cc_s16l *, size_t)) {

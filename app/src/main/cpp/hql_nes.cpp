@@ -1,6 +1,6 @@
 // HeadQLink: puente JNI propio con el núcleo de Nestopia (source/core, GPL v2 o posterior), sin el frontend de libretro.
 // Un juego a la vez, todo desde el hilo del emulador (NestopiaEngine.java): cargar, un fotograma por llamada con el
-// mando del jugador 1, reiniciar y descargar (devolviendo la partida guardada de la pila del cartucho, si la tiene).
+// mando de los jugadores 1 y 2, reiniciar y descargar (devolviendo la partida guardada de la pila del cartucho, si la tiene).
 
 #include <jni.h>
 #include <android/log.h>
@@ -168,7 +168,10 @@ Java_com_headqlink_link_NestopiaEngine_nLoad(JNIEnv* env, jclass, jbyteArray rom
 JNIEXPORT jint JNICALL
 Java_com_headqlink_link_NestopiaEngine_nFrame(JNIEnv* env, jclass, jintArray argb, jshortArray audio, jint buttons) {
     if (!loaded || !video) return -1;
+    // Jugador 1 en los 16 bits de abajo y el 2 en los de arriba (NativeCore.twoPads); el puerto 2 es el mando 2 que
+    // pone AutoSelectControllers en casi todos los juegos.
     input->pad[0].buttons = static_cast<unsigned>(buttons) & 0xFF;
+    input->pad[1].buttons = (static_cast<unsigned>(buttons) >> 16) & 0xFF;
     // Se repone cada fotograma: el núcleo deja en length lo que escribió y, si no, la petición iría menguando.
     sound->length[0] = samplesPerFrame;
     sound->samples[0] = samples.data();

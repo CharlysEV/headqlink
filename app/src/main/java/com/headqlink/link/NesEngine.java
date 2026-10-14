@@ -16,7 +16,7 @@ import com.grapeshot.halfnes.video.NesColors;
 /**
  * Emulador NES de reserva (núcleo halfNES, módulo :nescore; el principal es NestopiaEngine) dentro de HeadQLink: corre en su hilo a 60 fps, dibuja cada fotograma en
  * un Bitmap de 256x224 (sin las 8 líneas de arriba y abajo, como halfNES) y saca el sonido por un AudioTrack. Los mandos
- * son PuppetController: NesInput los mueve con las teclas del mando Bluetooth o los botones táctiles.
+ * son PuppetController (puertos 1 y 2): NesInput los mueve con las teclas del mando Bluetooth o los botones táctiles.
  */
 final class NesEngine implements GUIInterface, GameCore {
     static final int W = 256;
@@ -27,6 +27,7 @@ final class NesEngine implements GUIInterface, GameCore {
     private final PuppetController pad1 = new PuppetController();
     private final PuppetController pad2 = new PuppetController();
     private final RetroPad pad = new RetroPad(pad1);
+    private final RetroPad padTwo = new RetroPad(pad2);
     /** Tres búferes: el que se escribe nunca es el que la pantalla puede estar dibujando. */
     private final Bitmap[] frames = {Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888), Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888),
             Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)};
@@ -67,6 +68,11 @@ final class NesEngine implements GUIInterface, GameCore {
     @Override
     public RetroPad pad() {
         return pad;
+    }
+
+    @Override
+    public RetroPad pad2() {
+        return padTwo;
     }
 
     /** Carga la ROM (ruta real; la copia de la carpeta elegida). Devuelve el error, o null si arranca. */

@@ -20,6 +20,11 @@ interface GameCore {
     /** El mando del jugador 1 (NesInput lo mueve). */
     RetroPad pad();
 
+    /** El mando del jugador 2 (el segundo mando Bluetooth), o null si el núcleo solo tiene un jugador. */
+    default RetroPad pad2() {
+        return null;
+    }
+
     /** Carga la ROM (ruta real). Devuelve el error, o null si arranca. */
     String load(String path);
 

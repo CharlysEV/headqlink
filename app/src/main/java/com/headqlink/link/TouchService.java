@@ -152,7 +152,7 @@ public class TouchService extends AccessibilityService {
         if (NesInput.pad == null) return false;
         // El mando se ha conectado con el juego ya abierto (o la capa no se puso): con su primer botón.
         if (gameOn && gameCover == null && !gameCoverDismissed && fromGamepad(e.getDevice())) main.post(this::showGameCover);
-        return NesInput.key(e.getKeyCode(), e.getAction());
+        return NesInput.key(e);
     }
 
     // ------------------------------------------------------------------ capa negra durante los juegos
@@ -191,7 +191,7 @@ public class TouchService extends AccessibilityService {
         return false;
     }
 
-    private static boolean fromGamepad(android.view.InputDevice d) {
+    static boolean fromGamepad(android.view.InputDevice d) {
         if (d == null || d.isVirtual()) return false;
         if (android.os.Build.VERSION.SDK_INT >= 29 && !d.isExternal()) return false;
         int s = d.getSources();

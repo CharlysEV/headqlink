@@ -43,6 +43,7 @@ int frameW = 256;
 int frameH = 224;
 int16_t audio[AUDIO_CAP];
 int audioN = 0;  // muestras sueltas (L y R cuentan por separado)
+// Los dos mandos: el jugador 1 en los 16 bits de abajo (puerto 0) y el 2 en los de arriba (puerto 1); NativeCore.twoPads.
 int buttons = 0;
 double fps = 60.0;
 
@@ -152,9 +153,10 @@ void inputPoll() {}
 
 int16_t inputState(unsigned port, unsigned device, unsigned index, unsigned id) {
     (void)index;
-    if (port != 0 || (device & RETRO_DEVICE_MASK) != RETRO_DEVICE_JOYPAD) return 0;
-    if (id == RETRO_DEVICE_ID_JOYPAD_MASK) return (int16_t)(buttons & 0xFFF);
-    return id < 16 ? (int16_t)((buttons >> id) & 1) : 0;
+    if (port > 1 || (device & RETRO_DEVICE_MASK) != RETRO_DEVICE_JOYPAD) return 0;
+    unsigned pad = (static_cast<unsigned>(buttons) >> (port * 16)) & 0xFFFF;
+    if (id == RETRO_DEVICE_ID_JOYPAD_MASK) return (int16_t)(pad & 0xFFF);
+    return id < 16 ? (int16_t)((pad >> id) & 1) : 0;
 }
 
 }  // namespace
@@ -188,6 +190,7 @@ Java_com_headqlink_link_SnesEngine_nLoad(JNIEnv *env, jclass, jstring jpath, jst
     game.path = romPath.c_str();
     if (!retro_load_game(&game)) return env->NewStringUTF("bsnes no abre la ROM");
     retro_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
+    retro_set_controller_port_device(1, RETRO_DEVICE_JOYPAD);
     retro_system_av_info av{};
     retro_get_system_av_info(&av);
     fps = av.timing.fps > 1 ? av.timing.fps : 60.0;

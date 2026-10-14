@@ -51,6 +51,8 @@ final class NesScreen {
     private GameCore engine;
     private NesView view;
     private boolean touchPad = true;
+    /** Indicador «Mando 1 · Mando 2» y avisos de los mandos de la partida en marcha. */
+    private NesInput.PadsListener padsListener;
     /** Consola de cada .zip ya mirado (por documento), para no abrirlo cada vez que se lista la carpeta. */
     private static final Map<String, String> zipKind = new ConcurrentHashMap<>();
 
@@ -508,7 +510,8 @@ final class NesScreen {
         autoState = new File(states, base + ".auto.state");
         boolean resume = engine.supportsStates() && autoState.isFile();
         if (engine.supportsStates()) engine.setAutoState(autoState.getAbsolutePath());
-        NesInput.newGame(engine.pad(), console);
+        NesInput.newGame(engine.pad(), engine.pad2(), console);
+        NesInput.watch(c);
         CarUi.gameDrawing(true);
         host.setContent(game(GameConsole.title(e.name), resume));
         engine.start();
@@ -546,6 +549,11 @@ final class NesScreen {
         title.setMaxLines(3);
         // Ancho fijo: con «wrap_content» la columna tomaba el de la píldora y el título se cortaba en la primera palabra.
         left.addView(title, new LinearLayout.LayoutParams(260, ViewGroup.LayoutParams.WRAP_CONTENT));
+        // «Mando 1 · Mando 2»: los mandos Bluetooth con jugador en esta partida (nada con solo los botones táctiles).
+        TextView pads = CarStyle.text(c, NesInput.padsLabel(), 20, CarStyle.TEXT_DIM);
+        pads.setPadding(6, 8, 0, 0);
+        pads.setVisibility(pads.getText().length() > 0 ? View.VISIBLE : View.GONE);
+        left.addView(pads, new LinearLayout.LayoutParams(260, ViewGroup.LayoutParams.WRAP_CONTENT));
         stage.addView(left, place(Gravity.TOP | Gravity.LEFT, 24, 18, 0, 0, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         LinearLayout right = new LinearLayout(c);
@@ -575,6 +583,14 @@ final class NesScreen {
             toast.removeCallbacks(hideToast);
             toast.postDelayed(hideToast, 2500);
         };
+        NesInput.removeListener(padsListener);
+        padsListener = notice -> host.post(() -> {
+            String l = NesInput.padsLabel();
+            pads.setText(l);
+            pads.setVisibility(l.isEmpty() ? View.GONE : View.VISIBLE);
+            if (notice != null) say.say(notice);
+        });
+        NesInput.addListener(padsListener);
         if (engine.supportsStates()) {
             TextView save = CarStyle.pill(c, Str.get(R.string.hql_nes_save));
             save.setOnClickListener(v -> {
@@ -759,6 +775,8 @@ final class NesScreen {
 
     void stopEngine() {
         CarUi.gameDrawing(false);
+        NesInput.removeListener(padsListener);
+        padsListener = null;
         NesInput.endGame();
         NesPadActivity.close();
         NesPadActivity.cancelNotification(host.context());
