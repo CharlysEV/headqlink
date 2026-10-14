@@ -55,7 +55,7 @@ final class P2pLink {
                 if (!inGroup && !connecting) mgr.requestPeers(ch, list -> {
                     for (WifiP2pDevice d : list.getDeviceList()) {
                         if (d.deviceName != null && d.deviceName.startsWith(NAME_PREFIX)) {
-                            L.i("P2P peer coche: " + d.deviceName + " " + d.deviceAddress + " status=" + d.status);
+                            L.i("P2P peer coche: " + d.deviceName + " " + HotspotRadio.Companion.maskMac(d.deviceAddress) + " status=" + d.status);
                             connect(d);
                             return;
                         }
@@ -109,7 +109,7 @@ final class P2pLink {
         mgr.setUpnpServiceResponseListener(ch, (services, device) -> {
             for (String s : services) {
                 if (s.contains(UPNP_MARK)) {
-                    L.i("UPnP del coche " + device.deviceName + " " + device.deviceAddress + ": " + s);
+                    L.i("UPnP del coche " + device.deviceName + " " + HotspotRadio.Companion.maskMac(device.deviceAddress) + ": " + s);
                     if (!inGroup) connect(device);
                     return;
                 }
@@ -182,7 +182,7 @@ final class P2pLink {
         WifiP2pConfig cfg = new WifiP2pConfig();
         cfg.deviceAddress = d.deviceAddress;
         cfg.groupOwnerIntent = 0;
-        L.i("P2P connect -> " + d.deviceName + " " + d.deviceAddress);
+        L.i("P2P connect -> " + d.deviceName + " " + HotspotRadio.Companion.maskMac(d.deviceAddress));
         mgr.connect(ch, cfg, listener("connect"));
     }
 
