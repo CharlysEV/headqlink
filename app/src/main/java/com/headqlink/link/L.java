@@ -85,11 +85,13 @@ final class L {
     }
 
     static void i(String msg) {
+        msg = Redact.line(msg);
         Log.i(TAG, msg);
         write("I", msg, true);
     }
 
     static void w(String msg) {
+        msg = Redact.line(msg);
         Log.w(TAG, msg);
         write("W", msg, true);
         CarTrace.problem("AVISO", msg);
@@ -108,6 +110,7 @@ final class L {
     }
 
     static void e(String msg, Throwable t) {
+        msg = Redact.line(msg);
         Log.e(TAG, msg, t);
         write("E", msg + (t != null ? " :: " + t : ""), true);
         CarTrace.problem("ERROR", msg + (t != null ? " :: " + Log.getStackTraceString(t) : ""));
@@ -118,6 +121,7 @@ final class L {
      * log unificado (ya están en él con su etiqueta e hilo). Se llama en el hilo del log unificado.
      */
     static void fromCore(boolean error, String msg, Throwable t) {
+        msg = Redact.line(msg);
         if (error) Log.e(TAG, msg, t);
         else Log.w(TAG, msg, t);
         write(error ? "E" : "W", msg + (t != null ? " :: " + t : ""), false);
@@ -129,6 +133,7 @@ final class L {
      * copiarla otra vez al unificado ni al diario del coche.
      */
     static void quiet(String level, String msg) {
+        msg = Redact.line(msg);
         if ("W".equals(level)) Log.w(TAG, msg);
         else Log.i(TAG, msg);
         write(level, msg, false);
@@ -139,6 +144,7 @@ final class L {
      * fichero, para que también se vea en Diagnóstico.
      */
     static void fileOnly(String level, String msg) {
+        msg = Redact.line(msg);
         write(level, msg, false);
     }
 

@@ -144,8 +144,9 @@ final class CarTrace {
         line("RX " + what, L.hex(data, 0, Math.min(data.length, MAX_HEX)));
     }
 
-    private static void line(String tag, String msg) {
+    private static void line(String tag, String rawMsg) {
         if (out == null) return;
+        String msg = Redact.line(rawMsg);
         String ts = TS.format(new Date());
         // Con "Optimizaciones de latencia", la escritura sale del hilo que lee del coche (LowLatency).
         LowLatency.log(() -> {

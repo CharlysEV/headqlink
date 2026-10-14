@@ -62,7 +62,7 @@ public final class LogcatCapture {
                 long written = 0;
                 String line;
                 while ((line = in.readLine()) != null) {
-                    out.write(line);
+                    out.write(Redact.line(line));
                     out.write('\n');
                     written += line.length() + 1;
                     if (written > MAX_FILE) {

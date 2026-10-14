@@ -134,7 +134,8 @@ object QdTrace {
         val arrow = if (e.direction == Direction.IN) "<-" else "->"
         val head = "${stamp(e.timeMillis)} T/S$sid $arrow ${e.kind} (${e.size} B) ${e.summary}"
         val bytes = e.bytes
-        if (e.isVideo || bytes == null || e.kind == "HEARTBEAT" || e.kind == "Mirror/WhitelistAppOn" ||
+        // CAR_INFO, sin volcado: sus bytes llevan el CarUUID y el ProjectID enteros (la línea JSON ya va enmascarada).
+        if (e.isVideo || bytes == null || e.kind == "HEARTBEAT" || e.kind == "Mirror/WhitelistAppOn" || e.kind == "CAR_INFO" ||
             (!verbose && e.kind == "TOUCH")
         ) {
             f.write(head)

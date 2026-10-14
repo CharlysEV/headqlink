@@ -142,7 +142,7 @@ internal object HqlLogExport {
     private fun writeZip(out: OutputStream, sel: Selection, summary: String): Long {
         var total = 0L
         ZipOutputStream(out.buffered(64 * 1024)).use { zip ->
-            val s = summary.toByteArray(Charsets.UTF_8)
+            val s = Redact.line(summary).toByteArray(Charsets.UTF_8)
             zip.putNextEntry(ZipEntry("resumen.txt"))
             zip.write(s)
             zip.closeEntry()

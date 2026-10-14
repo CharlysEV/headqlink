@@ -67,7 +67,8 @@ internal class QdLogFile(
 
     /** Encola una línea (o varias separadas por `\n`). No bloquea; `false` si se perdió. */
     fun write(line: String): Boolean {
-        if (queue.offer(line)) return true
+        // Sin el CarUUID, el ProjectID ni las IP enteras (Redact): los logs se comparten.
+        if (queue.offer(Redact.line(line))) return true
         dropped.incrementAndGet()
         droppedTotal.incrementAndGet()
         return false

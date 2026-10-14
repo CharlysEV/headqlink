@@ -184,7 +184,7 @@ internal object SessionSummary {
         kb(r.maxMessageBytes).toString(), r.oversizedDrops.toString(), r.bitrateMinKbps.toString(), r.congestionEvents.toString(),
         r.writeStalls.toString(), r.wifiBand.replace(',', '.'), kb(r.pFrameMaxBytes).toString(), r.pFrameOverCap.toString(),
         r.aaVersion,
-    ).joinToString(",") { csv(it) }
+    ).joinToString(",") { csv(it) }.let { Redact.line(it) } // sin la IP entera del coche
 
     private val NUMBER = Regex("-?[0-9]+(\\.[0-9]+)?")
 
