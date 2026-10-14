@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: textos con cantidad (Deutsch): «1 viaje», «2 viajes». Str.plural(R.plurals.x, n, …). -->
+<resources>
+    <plurals name="hql_2048_over">
+        <item quantity="one">Spiel vorbei · %1$d Punkt · tippen für neue Runde</item>
+        <item quantity="other">Spiel vorbei · %1$d Punkte · tippen für neue Runde</item>
+    </plurals>
+    <plurals name="hql_sessions_cuts">
+        <item quantity="one">%1$d Aussetzer</item>
+        <item quantity="other">%1$d Aussetzer</item>
+    </plurals>
+    <plurals name="hql_fly_over">
+        <item quantity="one">%1$d Pfosten · tippen für neue Runde</item>
+        <item quantity="other">%1$d Pfosten · tippen für neue Runde</item>
+    </plurals>
+    <plurals name="hql_fly_posts">
+        <item quantity="one">%1$d Pfosten</item>
+        <item quantity="other">%1$d Pfosten</item>
+    </plurals>
+    <plurals name="hql_trips_total">
+        <item quantity="one">%1$d Fahrt · %2$.0f km · ~%3$s</item>
+        <item quantity="other">%1$d Fahrten · %2$.0f km · ~%3$s</item>
+    </plurals>
+    <plurals name="hql_plan_summary">
+        <item quantity="one">%1$d Stopp · %2$s laden · Ankunft mit %3$.0f %%</item>
+        <item quantity="other">%1$d Stopps · %2$s laden · Ankunft mit %3$.0f %%</item>
+    </plurals>
+    <plurals name="hql_chargers_list_count">
+        <item quantity="one">%1$d voraus · %2$d passt zum Filter</item>
+        <item quantity="other">%1$d voraus · %2$d passen zum Filter</item>
+    </plurals>
+    <plurals name="hql_plan_low_volts">
+        <item quantity="one">Unterwegs gibt es außerdem eine Ladestation mit 400–500 V (bei km %2$.0f): Sie funktioniert, aber dein 800-V-Auto lädt dort nur mit halber Leistung, deshalb hält der Plan an 800-V-Stationen. Tippen, um sie zu sehen.</item>
+        <item quantity="other">Unterwegs gibt es außerdem %1$d Ladestationen mit 400–500 V (die erste bei km %2$.0f): Sie funktionieren, aber dein 800-V-Auto lädt dort nur mit halber Leistung, deshalb hält der Plan an 800-V-Stationen. Tippen, um sie zu sehen.</item>
+    </plurals>
+    <plurals name="hql_ins_n_trips">
+        <item quantity="one">%1$d Fahrt</item>
+        <item quantity="other">%1$d Fahrten</item>
+    </plurals>
+    <plurals name="hql_ins_trips">
+        <item quantity="one">Fahrt</item>
+        <item quantity="other">Fahrten</item>
+    </plurals>
+    <plurals name="hql_ins_stops">
+        <item quantity="one">%1$d Stopp</item>
+        <item quantity="other">%1$d Stopps</item>
+    </plurals>
+    <plurals name="hql_web_adblock_count">
+        <item quantity="one">%1$d hier blockiert</item>
+        <item quantity="other">%1$d hier blockiert</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops">
+        <item quantity="one">Tipp: Mit %1$d km/h %2$d statt %3$d Stopps (%4$s länger fahren, %5$s kürzer laden).</item>
+        <item quantity="other">Tipp: Mit %1$d km/h %2$d statt %3$d Stopps (%4$s länger fahren, %5$s kürzer laden).</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops_total">
+        <item quantity="one">Tipp: Mit %1$d km/h %2$d statt %3$d Stopps (insgesamt %4$s länger).</item>
+        <item quantity="other">Tipp: Mit %1$d km/h %2$d statt %3$d Stopps (insgesamt %4$s länger).</item>
+    </plurals>
+    <plurals name="hql_trip_notice_reconnects">
+        <item quantity="one">%1$d Neuverbindung</item>
+        <item quantity="other">%1$d Neuverbindungen</item>
+    </plurals>
+    <plurals name="hql_trip_notice_cuts">
+        <item quantity="one">%1$d Aussetzer</item>
+        <item quantity="other">%1$d Aussetzer</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_real_total">
+        <item quantity="one">Real (%1$d Fahrt · %2$.0f km): %3$.1f kWh/100 km</item>
+        <item quantity="other">Real (%1$d Fahrten · %2$.0f km): %3$.1f kWh/100 km</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total">
+        <item quantity="one">Fahrzeugdaten: %1$d Fahrt · %2$.0f km · %3$.1f kWh/100</item>
+        <item quantity="other">Fahrzeugdaten: %1$d Fahrten · %2$.0f km · %3$.1f kWh/100</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total_fuel">
+        <item quantity="one">Fahrzeugdaten: %1$d Fahrt · %3$.1f kWh/100 · %4$.1f L/100</item>
+        <item quantity="other">Fahrzeugdaten: %1$d Fahrten · %3$.1f kWh/100 · %4$.1f L/100</item>
+    </plurals>
+</resources>

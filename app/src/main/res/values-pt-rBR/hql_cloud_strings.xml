@@ -75,7 +75,6 @@
     <string name="hql_cloud_unit_charged">kWh/100 km · real: carregou no caminho</string>
     <string name="hql_cloud_power_real">carro: %1$s kW · %2$s</string>
     <string name="hql_cloud_real_tag">real</string>
-    <string name="hql_cloud_trips_real_total">Real (%1$d viagens · %2$.0f km): %3$.1f kWh/100 km</string>
 
     <!-- Celular: ⚙ › Dados do carro (conta Leapmotor) -->
     <string name="hql_cloud_menu">Dados do carro (conta Leapmotor)</string>
@@ -154,8 +153,6 @@
     <string name="hql_cloud_fuel_range">%1$s km com gasolina</string>
     <string name="hql_cloud_total_range">Autonomia total: %1$s km</string>
     <string name="hql_cloud_profile_reev">C10 REEV · 28,4 kWh + gasolina</string>
-    <string name="hql_cloud_trips_car_total">Segundo o carro: %1$d viagens · %2$.0f km · %3$.1f kWh/100</string>
-    <string name="hql_cloud_trips_car_total_fuel">Segundo o carro: %1$d viagens · %3$.1f kWh/100 · %4$.1f L/100</string>
     <string name="hql_cloud_3d_hint">Gire com o dedo</string>
     <string name="hql_cloud_step_sentry">5 · Modo sentinela</string>
     <string name="hql_cloud_sentry_note">Opcional. É o único comando que o Qonecta+ envia ao carro, e só se você salvar aqui o PIN do carro (criptografado no celular). Sem PIN, tudo continua só de leitura.</string>

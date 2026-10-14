@@ -404,7 +404,7 @@ final class GamesScreen implements CarScreen {
                 } else if (Math.max(Math.abs(dx), Math.abs(dy)) > 60) {
                     int dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 0 : 1) : (dy < 0 ? 2 : 3);
                     if (move(dir)) spawn();
-                    status = canMove() ? Str.get(R.string.hql_points, score) : Str.get(R.string.hql_2048_over, score);
+                    status = canMove() ? Str.get(R.string.hql_points, score) : Str.plural(R.plurals.hql_2048_over, score);
                 }
                 invalidate();
             }
@@ -955,7 +955,7 @@ final class GamesScreen implements CarScreen {
                 finish();
                 return;
             }
-            status = Str.get(R.string.hql_fly_posts, score) + (best > 0 ? " · " + Str.get(R.string.hql_record, best) : "");
+            status = Str.plural(R.plurals.hql_fly_posts, score) + (best > 0 ? " · " + Str.get(R.string.hql_record, best) : "");
         }
 
         private void say(String s) {
@@ -967,7 +967,7 @@ final class GamesScreen implements CarScreen {
             over = true;
             boolean record = score > best;
             best = Math.max(best, score);
-            status = (record && score > 0 ? Str.get(R.string.hql_new_record) + " " : Str.get(R.string.hql_game_over) + " · ") + Str.get(R.string.hql_fly_over, score);
+            status = (record && score > 0 ? Str.get(R.string.hql_new_record) + " " : Str.get(R.string.hql_game_over) + " · ") + Str.plural(R.plurals.hql_fly_over, score);
         }
 
         @SuppressLint("ClickableViewAccessibility")

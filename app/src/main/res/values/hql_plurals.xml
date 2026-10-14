@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: textos con cantidad (English): «1 viaje», «2 viajes». Str.plural(R.plurals.x, n, …). -->
+<resources>
+    <plurals name="hql_2048_over">
+        <item quantity="one">Game over · %1$d point · tap for another</item>
+        <item quantity="other">Game over · %1$d points · tap for another</item>
+    </plurals>
+    <plurals name="hql_sessions_cuts">
+        <item quantity="one">%1$d dropout</item>
+        <item quantity="other">%1$d dropouts</item>
+    </plurals>
+    <plurals name="hql_fly_over">
+        <item quantity="one">%1$d post · tap for another</item>
+        <item quantity="other">%1$d posts · tap for another</item>
+    </plurals>
+    <plurals name="hql_fly_posts">
+        <item quantity="one">%1$d post</item>
+        <item quantity="other">%1$d posts</item>
+    </plurals>
+    <plurals name="hql_trips_total">
+        <item quantity="one">%1$d trip · %2$.0f km · ~%3$s</item>
+        <item quantity="other">%1$d trips · %2$.0f km · ~%3$s</item>
+    </plurals>
+    <plurals name="hql_plan_summary">
+        <item quantity="one">%1$d stop · %2$s charging · arrive with %3$.0f %%</item>
+        <item quantity="other">%1$d stops · %2$s charging · arrive with %3$.0f %%</item>
+    </plurals>
+    <plurals name="hql_chargers_list_count">
+        <item quantity="one">%1$d ahead · %2$d matches the filter</item>
+        <item quantity="other">%1$d ahead · %2$d match the filter</item>
+    </plurals>
+    <plurals name="hql_plan_low_volts">
+        <item quantity="one">Along the way there is also a 400–500 V charger (at km %2$.0f): it works, but your 800 V car charges at half power on it, so the plan stops at 800 V ones. Tap to see it.</item>
+        <item quantity="other">Along the way there are also %1$d 400–500 V chargers (the first at km %2$.0f): they work, but your 800 V car charges at half power on them, so the plan stops at 800 V ones. Tap to see them.</item>
+    </plurals>
+    <plurals name="hql_ins_n_trips">
+        <item quantity="one">%1$d trip</item>
+        <item quantity="other">%1$d trips</item>
+    </plurals>
+    <plurals name="hql_ins_trips">
+        <item quantity="one">trip</item>
+        <item quantity="other">trips</item>
+    </plurals>
+    <plurals name="hql_ins_stops">
+        <item quantity="one">%1$d stop</item>
+        <item quantity="other">%1$d stops</item>
+    </plurals>
+    <plurals name="hql_web_adblock_count">
+        <item quantity="one">%1$d blocked here</item>
+        <item quantity="other">%1$d blocked here</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops">
+        <item quantity="one">Tip: at %1$d km/h, %2$d stop instead of %3$d (%4$s more driving, %5$s less charging).</item>
+        <item quantity="other">Tip: at %1$d km/h, %2$d stops instead of %3$d (%4$s more driving, %5$s less charging).</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops_total">
+        <item quantity="one">Tip: at %1$d km/h, %2$d stop instead of %3$d (%4$s more in total).</item>
+        <item quantity="other">Tip: at %1$d km/h, %2$d stops instead of %3$d (%4$s more in total).</item>
+    </plurals>
+    <plurals name="hql_trip_notice_reconnects">
+        <item quantity="one">%1$d reconnection</item>
+        <item quantity="other">%1$d reconnections</item>
+    </plurals>
+    <plurals name="hql_trip_notice_cuts">
+        <item quantity="one">%1$d cut</item>
+        <item quantity="other">%1$d cuts</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_real_total">
+        <item quantity="one">Real (%1$d trip · %2$.0f km): %3$.1f kWh/100 km</item>
+        <item quantity="other">Real (%1$d trips · %2$.0f km): %3$.1f kWh/100 km</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total">
+        <item quantity="one">Car data: %1$d trip · %2$.0f km · %3$.1f kWh/100</item>
+        <item quantity="other">Car data: %1$d trips · %2$.0f km · %3$.1f kWh/100</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total_fuel">
+        <item quantity="one">Car data: %1$d trip · %3$.1f kWh/100 · %4$.1f L/100</item>
+        <item quantity="other">Car data: %1$d trips · %3$.1f kWh/100 · %4$.1f L/100</item>
+    </plurals>
+</resources>

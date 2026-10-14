@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: textos con cantidad (italiano): «1 viaje», «2 viajes». Str.plural(R.plurals.x, n, …). -->
+<resources>
+    <plurals name="hql_2048_over">
+        <item quantity="one">Partita finita · %1$d punto · tocca per un\'altra</item>
+        <item quantity="many">Partita finita · %1$d punti · tocca per un\'altra</item>
+        <item quantity="other">Partita finita · %1$d punti · tocca per un\'altra</item>
+    </plurals>
+    <plurals name="hql_sessions_cuts">
+        <item quantity="one">%1$d interruzione</item>
+        <item quantity="many">%1$d interruzioni</item>
+        <item quantity="other">%1$d interruzioni</item>
+    </plurals>
+    <plurals name="hql_fly_over">
+        <item quantity="one">%1$d palo · tocca per un\'altra</item>
+        <item quantity="many">%1$d pali · tocca per un\'altra</item>
+        <item quantity="other">%1$d pali · tocca per un\'altra</item>
+    </plurals>
+    <plurals name="hql_fly_posts">
+        <item quantity="one">%1$d palo</item>
+        <item quantity="many">%1$d pali</item>
+        <item quantity="other">%1$d pali</item>
+    </plurals>
+    <plurals name="hql_trips_total">
+        <item quantity="one">%1$d viaggio · %2$.0f km · ~%3$s</item>
+        <item quantity="many">%1$d viaggi · %2$.0f km · ~%3$s</item>
+        <item quantity="other">%1$d viaggi · %2$.0f km · ~%3$s</item>
+    </plurals>
+    <plurals name="hql_plan_summary">
+        <item quantity="one">%1$d sosta · %2$s di ricarica · arrivi con %3$.0f %%</item>
+        <item quantity="many">%1$d soste · %2$s di ricarica · arrivi con %3$.0f %%</item>
+        <item quantity="other">%1$d soste · %2$s di ricarica · arrivi con %3$.0f %%</item>
+    </plurals>
+    <plurals name="hql_chargers_list_count">
+        <item quantity="one">%1$d più avanti · %2$d passa il filtro</item>
+        <item quantity="many">%1$d più avanti · %2$d passano il filtro</item>
+        <item quantity="other">%1$d più avanti · %2$d passano il filtro</item>
+    </plurals>
+    <plurals name="hql_plan_low_volts">
+        <item quantity="one">Lungo il percorso c\'è anche una colonnina a 400–500 V (al km %2$.0f): funziona, ma la tua auto a 800 V vi carica a metà potenza, quindi il piano si ferma a quelle a 800 V. Tocca per vederla.</item>
+        <item quantity="many">Lungo il percorso ci sono anche %1$d colonnine a 400–500 V (la prima al km %2$.0f): funzionano, ma la tua auto a 800 V vi carica a metà potenza, quindi il piano si ferma a quelle a 800 V. Tocca per vederle.</item>
+        <item quantity="other">Lungo il percorso ci sono anche %1$d colonnine a 400–500 V (la prima al km %2$.0f): funzionano, ma la tua auto a 800 V vi carica a metà potenza, quindi il piano si ferma a quelle a 800 V. Tocca per vederle.</item>
+    </plurals>
+    <plurals name="hql_ins_n_trips">
+        <item quantity="one">%1$d viaggio</item>
+        <item quantity="many">%1$d viaggi</item>
+        <item quantity="other">%1$d viaggi</item>
+    </plurals>
+    <plurals name="hql_ins_trips">
+        <item quantity="one">viaggio</item>
+        <item quantity="many">viaggi</item>
+        <item quantity="other">viaggi</item>
+    </plurals>
+    <plurals name="hql_ins_stops">
+        <item quantity="one">%1$d sosta</item>
+        <item quantity="many">%1$d soste</item>
+        <item quantity="other">%1$d soste</item>
+    </plurals>
+    <plurals name="hql_web_adblock_count">
+        <item quantity="one">%1$d bloccato qui</item>
+        <item quantity="many">%1$d bloccati qui</item>
+        <item quantity="other">%1$d bloccati qui</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops">
+        <item quantity="one">Consiglio: a %1$d km/h, %2$d sosta invece di %3$d (%4$s in più di guida, %5$s in meno di ricarica).</item>
+        <item quantity="many">Consiglio: a %1$d km/h, %2$d soste invece di %3$d (%4$s in più di guida, %5$s in meno di ricarica).</item>
+        <item quantity="other">Consiglio: a %1$d km/h, %2$d soste invece di %3$d (%4$s in più di guida, %5$s in meno di ricarica).</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops_total">
+        <item quantity="one">Consiglio: a %1$d km/h, %2$d sosta invece di %3$d (%4$s in più in totale).</item>
+        <item quantity="many">Consiglio: a %1$d km/h, %2$d soste invece di %3$d (%4$s in più in totale).</item>
+        <item quantity="other">Consiglio: a %1$d km/h, %2$d soste invece di %3$d (%4$s in più in totale).</item>
+    </plurals>
+    <plurals name="hql_trip_notice_reconnects">
+        <item quantity="one">%1$d riconnessione</item>
+        <item quantity="many">%1$d riconnessioni</item>
+        <item quantity="other">%1$d riconnessioni</item>
+    </plurals>
+    <plurals name="hql_trip_notice_cuts">
+        <item quantity="one">%1$d interruzione</item>
+        <item quantity="many">%1$d interruzioni</item>
+        <item quantity="other">%1$d interruzioni</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_real_total">
+        <item quantity="one">Reale (%1$d viaggio · %2$.0f km): %3$.1f kWh/100 km</item>
+        <item quantity="many">Reale (%1$d viaggi · %2$.0f km): %3$.1f kWh/100 km</item>
+        <item quantity="other">Reale (%1$d viaggi · %2$.0f km): %3$.1f kWh/100 km</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total">
+        <item quantity="one">Dati dell\'auto: %1$d viaggio · %2$.0f km · %3$.1f kWh/100</item>
+        <item quantity="many">Dati dell\'auto: %1$d viaggi · %2$.0f km · %3$.1f kWh/100</item>
+        <item quantity="other">Dati dell\'auto: %1$d viaggi · %2$.0f km · %3$.1f kWh/100</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total_fuel">
+        <item quantity="one">Dati dell\'auto: %1$d viaggio · %3$.1f kWh/100 · %4$.1f L/100</item>
+        <item quantity="many">Dati dell\'auto: %1$d viaggi · %3$.1f kWh/100 · %4$.1f L/100</item>
+        <item quantity="other">Dati dell\'auto: %1$d viaggi · %3$.1f kWh/100 · %4$.1f L/100</item>
+    </plurals>
+</resources>

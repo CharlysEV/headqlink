@@ -219,9 +219,9 @@ final class PhoneInsights {
         double per100 = km >= 1 ? kwh / km * 100 : Double.NaN;
         LinearLayout big = new LinearLayout(act);
         big.addView(stat(fmt0(km), "km"), weight());
-        big.addView(stat(String.valueOf(n), Str.get(R.string.hql_ins_trips)), weight());
+        big.addView(stat(String.valueOf(n), Str.plural(R.plurals.hql_ins_trips, n)), weight());
         big.addView(stat(Double.isNaN(per100) ? "—" : fmt1(per100), "kWh/100"), weight());
-        big.addView(stat(kwh > 0 ? fmt0(kwh * d.price) + " €" : "—", fmt0(kwh) + " kWh"), weight());
+        big.addView(stat(kwh > 0 ? Money.format(kwh * d.price, 0) : "—", fmt0(kwh) + " kWh"), weight());
         c.addView(big);
         PhoneCharts.DailyBars bars = new PhoneCharts.DailyBars(act);
         double[] line = new double[30];
@@ -293,7 +293,7 @@ final class PhoneInsights {
                 bn++;
             }
             per[b] = bk >= 1 ? be / bk * 100 : Double.NaN;
-            notes[b] = bn > 0 ? Str.get(R.string.hql_ins_n_trips, bn) : "";
+            notes[b] = bn > 0 ? Str.plural(R.plurals.hql_ins_n_trips, bn) : "";
         }
         TextView sub = small(Str.get(R.string.hql_ins_by_length));
         sub.setPadding(0, dp(16), 0, dp(6));
@@ -416,7 +416,7 @@ final class PhoneInsights {
             double cost = TripStats.cost(t, d.history, d.price, new Config(act).fuelPrice());
             String line = Str.get(R.string.hql_ins_drive_line, fmt1(t.km), duration(t.minutes),
                     Double.isNaN(per100) ? "—" : fmt1(per100) + " kWh/100");
-            if (!Double.isNaN(cost) && cost > 0) line += String.format(Locale.getDefault(), " · %.2f €", cost);
+            if (!Double.isNaN(cost) && cost > 0) line += " · " + Money.format(cost);
             txt.addView(small(line));
             row.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             android.widget.ImageView go = new android.widget.ImageView(act);

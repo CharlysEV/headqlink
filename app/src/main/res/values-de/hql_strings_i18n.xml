@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: textos de la tarea de traducciones (Deutsch). -->
+<resources>
+    <string name="hql_trip_notice_fps">%1$.0f fps im Mittel</string>
+</resources>

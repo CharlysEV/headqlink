@@ -27,7 +27,9 @@ final class TripNotice {
     static String text(SessionSummary.TripStats s, double peakC, double routePredictedKwh, double routeRealKwh) {
         if (s == null || s.getVideoMinutes() < MIN_MINUTES) return null;
         StringBuilder b = new StringBuilder();
-        b.append(Str.get(R.string.hql_trip_notice_video, s.getFps(), s.getReconnects(), s.getStalls()));
+        b.append(Str.get(R.string.hql_trip_notice_fps, s.getFps())).append(" · ")
+                .append(Str.plural(R.plurals.hql_trip_notice_reconnects, s.getReconnects())).append(" · ")
+                .append(Str.plural(R.plurals.hql_trip_notice_cuts, s.getStalls()));
         if (s.getThermalMax() >= 0 || !Double.isNaN(peakC)) {
             b.append('\n').append(Str.get(R.string.hql_trip_notice_heat, Math.max(0, s.getThermalMax()), Double.isNaN(peakC) ? 0.0 : peakC));
         }

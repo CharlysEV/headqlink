@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: textos con cantidad (português de Portugal): «1 viaje», «2 viajes». Str.plural(R.plurals.x, n, …). -->
+<resources>
+    <plurals name="hql_2048_over">
+        <item quantity="one">Fim do jogo · %1$d ponto · toque para outra</item>
+        <item quantity="many">Fim do jogo · %1$d pontos · toque para outra</item>
+        <item quantity="other">Fim do jogo · %1$d pontos · toque para outra</item>
+    </plurals>
+    <plurals name="hql_sessions_cuts">
+        <item quantity="one">%1$d corte</item>
+        <item quantity="many">%1$d cortes</item>
+        <item quantity="other">%1$d cortes</item>
+    </plurals>
+    <plurals name="hql_fly_over">
+        <item quantity="one">%1$d poste · toque para outra</item>
+        <item quantity="many">%1$d postes · toque para outra</item>
+        <item quantity="other">%1$d postes · toque para outra</item>
+    </plurals>
+    <plurals name="hql_fly_posts">
+        <item quantity="one">%1$d poste</item>
+        <item quantity="many">%1$d postes</item>
+        <item quantity="other">%1$d postes</item>
+    </plurals>
+    <plurals name="hql_trips_total">
+        <item quantity="one">%1$d viagem · %2$.0f km · ~%3$s</item>
+        <item quantity="many">%1$d viagens · %2$.0f km · ~%3$s</item>
+        <item quantity="other">%1$d viagens · %2$.0f km · ~%3$s</item>
+    </plurals>
+    <plurals name="hql_plan_summary">
+        <item quantity="one">%1$d paragem · %2$s a carregar · chega com %3$.0f %%</item>
+        <item quantity="many">%1$d paragens · %2$s a carregar · chega com %3$.0f %%</item>
+        <item quantity="other">%1$d paragens · %2$s a carregar · chega com %3$.0f %%</item>
+    </plurals>
+    <plurals name="hql_chargers_list_count">
+        <item quantity="one">%1$d à frente · %2$d passa no filtro</item>
+        <item quantity="many">%1$d à frente · %2$d passam no filtro</item>
+        <item quantity="other">%1$d à frente · %2$d passam no filtro</item>
+    </plurals>
+    <plurals name="hql_plan_low_volts">
+        <item quantity="one">Pelo caminho há também um carregador de 400–500 V (ao km %2$.0f): serve, mas o seu carro de 800 V carrega nele a metade da potência, por isso o plano para nos de 800 V. Toque para o ver.</item>
+        <item quantity="many">Pelo caminho há também %1$d carregadores de 400–500 V (o primeiro ao km %2$.0f): servem, mas o seu carro de 800 V carrega neles a metade da potência, por isso o plano para nos de 800 V. Toque para os ver.</item>
+        <item quantity="other">Pelo caminho há também %1$d carregadores de 400–500 V (o primeiro ao km %2$.0f): servem, mas o seu carro de 800 V carrega neles a metade da potência, por isso o plano para nos de 800 V. Toque para os ver.</item>
+    </plurals>
+    <plurals name="hql_ins_n_trips">
+        <item quantity="one">%1$d viagem</item>
+        <item quantity="many">%1$d viagens</item>
+        <item quantity="other">%1$d viagens</item>
+    </plurals>
+    <plurals name="hql_ins_trips">
+        <item quantity="one">viagem</item>
+        <item quantity="many">viagens</item>
+        <item quantity="other">viagens</item>
+    </plurals>
+    <plurals name="hql_ins_stops">
+        <item quantity="one">%1$d paragem</item>
+        <item quantity="many">%1$d paragens</item>
+        <item quantity="other">%1$d paragens</item>
+    </plurals>
+    <plurals name="hql_web_adblock_count">
+        <item quantity="one">%1$d bloqueado aqui</item>
+        <item quantity="many">%1$d bloqueados aqui</item>
+        <item quantity="other">%1$d bloqueados aqui</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops">
+        <item quantity="one">Conselho: a %1$d km/h, %2$d paragem em vez de %3$d (%4$s a mais a conduzir, %5$s a menos a carregar).</item>
+        <item quantity="many">Conselho: a %1$d km/h, %2$d paragens em vez de %3$d (%4$s a mais a conduzir, %5$s a menos a carregar).</item>
+        <item quantity="other">Conselho: a %1$d km/h, %2$d paragens em vez de %3$d (%4$s a mais a conduzir, %5$s a menos a carregar).</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops_total">
+        <item quantity="one">Conselho: a %1$d km/h, %2$d paragem em vez de %3$d (%4$s a mais no total).</item>
+        <item quantity="many">Conselho: a %1$d km/h, %2$d paragens em vez de %3$d (%4$s a mais no total).</item>
+        <item quantity="other">Conselho: a %1$d km/h, %2$d paragens em vez de %3$d (%4$s a mais no total).</item>
+    </plurals>
+    <plurals name="hql_trip_notice_reconnects">
+        <item quantity="one">%1$d religação</item>
+        <item quantity="many">%1$d religações</item>
+        <item quantity="other">%1$d religações</item>
+    </plurals>
+    <plurals name="hql_trip_notice_cuts">
+        <item quantity="one">%1$d corte</item>
+        <item quantity="many">%1$d cortes</item>
+        <item quantity="other">%1$d cortes</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_real_total">
+        <item quantity="one">Real (%1$d viagem · %2$.0f km): %3$.1f kWh/100 km</item>
+        <item quantity="many">Real (%1$d viagens · %2$.0f km): %3$.1f kWh/100 km</item>
+        <item quantity="other">Real (%1$d viagens · %2$.0f km): %3$.1f kWh/100 km</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total">
+        <item quantity="one">Segundo o carro: %1$d viagem · %2$.0f km · %3$.1f kWh/100</item>
+        <item quantity="many">Segundo o carro: %1$d viagens · %2$.0f km · %3$.1f kWh/100</item>
+        <item quantity="other">Segundo o carro: %1$d viagens · %2$.0f km · %3$.1f kWh/100</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total_fuel">
+        <item quantity="one">Segundo o carro: %1$d viagem · %3$.1f kWh/100 · %4$.1f L/100</item>
+        <item quantity="many">Segundo o carro: %1$d viagens · %3$.1f kWh/100 · %4$.1f L/100</item>
+        <item quantity="other">Segundo o carro: %1$d viagens · %3$.1f kWh/100 · %4$.1f L/100</item>
+    </plurals>
+</resources>

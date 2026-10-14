@@ -75,7 +75,6 @@
     <string name="hql_cloud_unit_charged">kWh/100 km · real: cargó por el camino</string>
     <string name="hql_cloud_power_real">coche: %1$s kW · %2$s</string>
     <string name="hql_cloud_real_tag">real</string>
-    <string name="hql_cloud_trips_real_total">Real (%1$d viajes · %2$.0f km): %3$.1f kWh/100 km</string>
 
     <!-- Móvil: ⚙ › Datos del coche (cuenta Leapmotor) -->
     <string name="hql_cloud_menu">Datos del coche (cuenta Leapmotor)</string>
@@ -154,8 +153,6 @@
     <string name="hql_cloud_fuel_range">%1$s km con gasolina</string>
     <string name="hql_cloud_total_range">Autonomía total: %1$s km</string>
     <string name="hql_cloud_profile_reev">C10 REEV · 28,4 kWh + gasolina</string>
-    <string name="hql_cloud_trips_car_total">Según el coche: %1$d viajes · %2$.0f km · %3$.1f kWh/100</string>
-    <string name="hql_cloud_trips_car_total_fuel">Según el coche: %1$d viajes · %3$.1f kWh/100 · %4$.1f L/100</string>
     <string name="hql_cloud_3d_hint">Gíralo con el dedo</string>
     <string name="hql_cloud_step_sentry">5 · Modo centinela</string>
     <string name="hql_cloud_sentry_note">Opcional. Es la única orden que Qonecta+ manda al coche, y solo si guardas aquí el PIN del coche (cifrado en el móvil). Sin PIN, todo sigue siendo de solo lectura.</string>

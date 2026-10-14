@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- headqlink: teksten van de interface (Nederlands). -->
 <resources>
-    <string name="hql_2048_over">Game over · %1$d punten · tik voor nog een potje</string>
     <string name="hql_aa_devmode_missing">de ontwikkelaarsmodus van Android Auto staat uit</string>
     <string name="hql_aa_no_start_why">Start niet: %1$s</string>
     <string name="hql_aa_server_failed">De Android Auto-server kon niet worden gestart</string>
@@ -24,8 +23,8 @@
     <string name="hql_autohide_panel">Zijpaneel na een paar seconden verbergen</string>
     <string name="hql_nes">NES</string>
     <string name="hql_nes_sub">Nestopia · je spellen, controller of aanraken</string>
-    <string name="hql_nes_folder">Spellenmap (NES, Mega Drive)</string>
-    <string name="hql_nes_folder_set">Spellenmap opgeslagen. In de auto: Spellen › NES of Mega Drive.</string>
+    <string name="hql_nes_folder">Spellenmap (NES, Mega Drive, SNES, PlayStation)</string>
+    <string name="hql_nes_folder_set">Spellenmap opgeslagen. In de auto: Spellen › NES, Mega Drive, Super Nintendo of PlayStation.</string>
     <string name="hql_nes_no_folder">Kies de spellenmap op de telefoon: menu ⚙ › Spellen › \"Spellenmap\". .zip-bestanden werken ook.</string>
     <string name="hql_nes_empty">Geen %1$s-spellen in deze map (.zip-bestanden werken ook).</string>
     <string name="hql_nes_pad_title">Gamepad verbonden met de auto</string>
@@ -56,7 +55,6 @@
     <string name="hql_sessions_title">Laatste sessies</string>
     <string name="hql_sessions_none">Nog geen sessies.</string>
     <string name="hql_sessions_no_video">geen video</string>
-    <string name="hql_sessions_cuts">%1$d onderbrekingen</string>
     <string name="hql_sessions_max_cut">max. %1$d s</string>
     <string name="hql_panel_right">Zijpaneel rechts</string>
     <string name="hql_panel_buttons">Knoppen van het zijpaneel</string>
@@ -127,8 +125,6 @@
     <string name="hql_finish_anyway">Toch afronden</string>
     <string name="hql_fly_10">10 palen, net als de C10!</string>
     <string name="hql_fly_70">70 palen: zoveel kWh als zijn accu!</string>
-    <string name="hql_fly_over">%1$d palen · tik voor nog een potje</string>
-    <string name="hql_fly_posts">%1$d palen</string>
     <string name="hql_fly_start">Tik om op te stijgen</string>
     <string name="hql_fluidity">Vloeiendheid</string>
     <string name="hql_fluidity_30">30 fps · minder warmte (60 in de emulators)</string>
@@ -257,7 +253,7 @@
     <string name="hql_radio_none">Geen zenders.</string>
     <string name="hql_radio_pick">Kies een zender</string>
     <string name="hql_radio_popular">Populair</string>
-    <string name="hql_radio_setup_list">Stel je radiolijst in op de telefoon (URL of M3U-bestand): hoofdscherm → Radiolijst.</string>
+    <string name="hql_radio_setup_list">Stel je radiolijst in op de telefoon (URL of M3U-bestand): menu ⚙ › Inhoud van de uitgebreide modus › Radiolijst.</string>
     <string name="hql_range_charge">+18 % · snelladen</string>
     <string name="hql_range_cone">Pion geraakt</string>
     <string name="hql_range_crash">Botsing</string>
@@ -341,7 +337,7 @@
     <string name="hql_touch_label">Qonecta+-aanraking</string>
     <string name="hql_touch_service_desc">Stuurt aanrakingen op het autoscherm door naar de geprojecteerde app en start de Android Auto-server als dat nodig is.</string>
     <string name="hql_trips_none">Ze worden vanzelf opgeslagen na elke rit van meer dan 300 m in Android Auto uitgebreid, met de route, het geschatte verbruik en de hoogtemeters.</string>
-    <string name="hql_trips_note">Energie geschat met het C10-model (zonder autogegevens). Prijzen: %1$.2f €/kWh; benzine %2$.1f l/100 km à %3$.2f €/l.</string>
+    <string name="hql_trips_note">Energie geschat met het C10-model (zonder autogegevens). Prijzen: %1$s; benzine %2$.1f l/100 km à %3$s.</string>
     <string name="hql_ttt_draw">Gelijkspel. Tik voor nog een potje</string>
     <string name="hql_ttt_lose">De C10 wint. Tik voor nog een potje</string>
     <string name="hql_ttt_start">Jij speelt X, de C10 speelt O</string>
@@ -351,7 +347,7 @@
     <string name="hql_tv_list">Tv-lijst</string>
     <string name="hql_tv_loading">Zenderlijst ophalen…</string>
     <string name="hql_tv_read_failed">Kon de lijst niet lezen: %1$s</string>
-    <string name="hql_tv_setup_list">Stel de tv-lijst in op de telefoon (URL of M3U-bestand): hoofdscherm → Tv-lijst.</string>
+    <string name="hql_tv_setup_list">Stel de tv-lijst in op de telefoon (URL of M3U-bestand): menu ⚙ › Inhoud van de uitgebreide modus › Tv-lijst.</string>
     <string name="hql_type2">Type 2</string>
     <string name="hql_video_status">Auto verbonden · video %1$d×%2$d</string>
     <string name="hql_videos">Video\'s</string>
@@ -364,7 +360,7 @@
     <string name="hql_welcome_parked">Stel alles in terwijl de auto geparkeerd staat</string>
     <string name="hql_welcome_mirror">Spiegelapp zichtbaar op het autoscherm</string>
     <string name="hql_welcome_title">Je telefoon op het scherm van de C10</string>
-    <string name="hql_welcome_wifi">De telefoon en de auto verbinden via Wi-Fi (Wi-Fi Direct of de hotspot van de telefoon); er is geen kabel nodig.</string>
+    <string name="hql_welcome_wifi">De telefoon en de auto verbinden via Wi-Fi (Wi-Fi Direct of de hotspot van de telefoon), zonder kabel, of met een USB-datakabel als je dat liever hebt.</string>
     <string name="hql_width">breedte</string>
     <string name="hql_wind">Wind</string>
     <string name="hql_wx_clear">Helder</string>
@@ -611,8 +607,8 @@
     <string name="hql_recovered">Teruggewonnen</string>
     <string name="hql_net_kwh">netto %1$.2f kWh</string>
     <string name="hql_estimated_model">Geschat met het C10-model</string>
-    <string name="hql_cost_rate">à %1$.2f €/kWh · %2$.2f kWh</string>
-    <string name="hql_cost_petrol">Met een benzineauto ~€ %1$.2f</string>
+    <string name="hql_cost_rate">à %1$s · %2$.2f kWh</string>
+    <string name="hql_cost_petrol">Met een benzineauto ~%1$s</string>
     <string name="hql_co2_note">Vergeleken met een benzineauto die %1$.1f l/100 km verbruikt (%2$.2f kg CO₂ per liter, alleen uitlaat).</string>
     <string name="hql_tip_slower">10 km/h langzamer bespaart ~%1$.0f %% energie.</string>
     <string name="hql_tip_gentler">Optrekken kost %1$.0f %% van de energie: trek rustiger op.</string>
@@ -649,7 +645,6 @@
     <string name="hql_record_efficient">Zuinigste</string>
     <string name="hql_record_climb">Meeste hoogtemeters</string>
     <string name="hql_no_records">Nog geen records.</string>
-    <string name="hql_trips_total">%1$d ritten · %2$.0f km · ~€ %3$.2f</string>
     <string name="hql_trips_empty_title">Je ritten verschijnen hier</string>
     <!-- Ajustes del coche: precio de la electricidad -->
     <string name="hql_settings_energy">Energie</string>
@@ -739,8 +734,6 @@
     <string name="hql_charger_clear_filters">Filters wissen</string>
     <string name="hql_key_space">spatie</string>
     <string name="hql_plan_title">Laadplan</string>
-    <string name="hql_plan_summary_one">1 stop · %1$s laden · aankomst met %2$.0f %%</string>
-    <string name="hql_plan_summary_many">%1$d stops · %2$s laden · aankomst met %3$.0f %%</string>
     <string name="hql_plan_none">Geen stops nodig: aankomst met %1$.0f %%</string>
     <string name="hql_plan_impossible">Geen bereikbare laadpaal met deze filters: probeer er een paar weg te halen.</string>
     <string name="hql_plan_stop_line">km %1$.0f · aankomst %2$.0f %% · laden tot %3$.0f %% · %4$s</string>
@@ -778,14 +771,12 @@
     <string name="hql_charger_unknown_exclude">Alleen bevestigd vermogen</string>
     <string name="hql_charger_unknown_note">In Spanje komen de laadpalen uit het officiële register van de DGT, met het vermogen en de spanning van elke laadpaal. Elders uit OpenStreetMap, waar de meeste hun vermogen niet vermelden: Tesla, Ionity, Zunder, Fastned, Electra en Atlante tellen met hun gebruikelijke vermogen (≈); de rest alleen als je ze meeneemt, en het plan geeft de voorkeur aan bevestigde.</string>
     <string name="hql_chargers_list_title">Laadpalen langs de route</string>
-    <string name="hql_chargers_list_count">%1$d verderop · %2$d passen bij het filter</string>
     <string name="hql_chargers_list_filtered">Gefilterd</string>
     <string name="hql_chargers_list_all">Alle</string>
     <string name="hql_chargers_list_stop">Stop %1$d</string>
     <string name="hql_chargers_list_none">Geen laadpalen verderop met dit filter.</string>
     <string name="hql_charger_points">%1$d laadpunten</string>
     <string name="hql_charger_low_volts">%1$.0f V: je 800V-auto laadt hier op half vermogen</string>
-    <string name="hql_plan_low_volts">Onderweg zijn er ook %1$d laadpalen van 400–500 V (de eerste bij km %2$.0f): ze werken, maar je 800V-auto laadt er op half vermogen, dus het plan stopt bij 800V-laadpalen. Tik om ze te zien.</string>
     <string name="hql_chargers_source_dgt">Gegevens: in Spanje het officiële register van laadpunten (Ministerie voor de Ecologische Transitie, gepubliceerd door de DGT op nap.dgt.es, CC BY); elders © OpenStreetMap-bijdragers (ODbL).</string>
     <string name="hql_chargers_source_osm">Gegevens: © OpenStreetMap-bijdragers (ODbL).</string>
     <string name="hql_live_block_title">Live laden</string>
@@ -846,14 +837,12 @@
     <string name="hql_ins_no_cloud">Koppel je Leapmotor-account (⚙ › Auto › Autogegevens) om de accu en de rittengeschiedenis te zien.</string>
     <string name="hql_ins_cloud_wait">Autogegevens lezen…</string>
     <string name="hql_ins_30d">Laatste 30 dagen</string>
-    <string name="hql_ins_trips">ritten</string>
     <string name="hql_ins_daily_legend">Balken: km per dag · lijn: verbruik</string>
     <string name="hql_ins_from_car">volgens de auto</string>
     <string name="hql_ins_from_app">ritten met Qonecta+</string>
     <string name="hql_ins_how">Hoe je verbruikt</string>
     <string name="hql_ins_per_trip">Verbruik van de laatste ritten (kWh/100 km)</string>
     <string name="hql_ins_by_length">Naar ritlengte</string>
-    <string name="hql_ins_n_trips">%1$d ritten</string>
     <string name="hql_ins_cold_tip">Korte ritten verbruiken %1$s %% meer: de accu en het interieur opwarmen weegt zwaarder op een korte rit.</string>
     <string name="hql_ins_best">Je beste rit: %1$s kWh/100 km over %2$s km (%3$s)</string>
     <string name="hql_ins_charges">Laadbeurten</string>
@@ -866,7 +855,6 @@
     <string name="hql_ins_no_drives">Nog geen routes: ritten met Qonecta+ worden hier bewaard.</string>
     <string name="hql_ins_drive_line">%1$s km · %2$s · %3$s</string>
     <string name="hql_ins_max">max.</string>
-    <string name="hql_ins_stops">%1$d stops</string>
     <string name="hql_ha_title">Thuis</string>
     <string name="hql_ha_menu">Home Assistant</string>
     <string name="hql_ha_label">Thuis in de auto</string>
@@ -949,8 +937,7 @@
     <string name="hql_web_text_size">Tekst: %1$d %%</string>
     <string name="hql_web_desktop">Desktopversie (deze site)</string>
     <string name="hql_web_adblock">Advertenties blokkeren</string>
-    <string name="hql_web_adblock_count">%1$d hier geblokkeerd</string>
-    <string name="hql_psx_sub">PCSX ReARMed · .chd, .cue, .pbp</string>
+    <string name="hql_psx_sub">PCSX ReARMed · .cue, .chd, .pbp, .iso, .m3u</string>
     <string name="hql_psx_copying">Disc wordt naar de telefoon gekopieerd… %1$d MB\nAlleen de eerste keer: daarna start het meteen.</string>
     <string name="hql_nes_save">Opslaan</string>
     <string name="hql_nes_load">Laden</string>
@@ -986,16 +973,14 @@
     <string name="hql_tv_formats">M3U-lijsten of de JSON-lijst van TDTChannels (…/lists/tv.json), met ook de YouTube- en webzenders.</string>
     <string name="hql_tv_backup">reservebron</string>
     <string name="hql_tv_other_source">Andere bron</string>
-    <string name="hql_plan_cost">\u0020· ≈ %1$.0f € aan laden</string>
+    <string name="hql_plan_cost">\u0020· ≈ %1$s aan laden</string>
     <string name="hql_speed_advice">Tip: met %1$d km/u bespaar je in totaal %2$s (%3$s langer rijden, %4$s korter laden).</string>
-    <string name="hql_speed_advice_stops">Tip: met %1$d km/u %2$d stops in plaats van %3$d (%4$s langer rijden, %5$s korter laden).</string>
     <string name="hql_speed_advice_nostop">Tip: met %1$d km/u kom je zonder te stoppen aan (%2$s langer rijden, %3$s korter laden).</string>
     <string name="hql_speed_advice_rescue">Met het plan haal je het niet: met %1$d km/u wel (%2$s langer rijden).</string>
     <string name="hql_settings_price_fast">Prijs bij snelladen</string>
     <string name="hql_settings_price_fast_help">Voor de kosten van het laadplan van de route (de stops bij snelladers).</string>
     <string name="hql_profile_best">Maximaal (kabel)</string>
     <string name="hql_profile_best_detail">Voor de kabel: 60 fps, volledige resolutie, 12-16 Mbit/s, H.264 High en encoder met lage latentie. De telefoon wordt warmer. Blijft het autoscherm zwart, ga dan terug naar Volgens de auto.</string>
-    <string name="hql_speed_advice_stops_total">Tip: met %1$d km/u %2$d stops in plaats van %3$d (in totaal %4$s langer).</string>
     <string name="hql_route_flat">Nu geen hoogtegegevens: de schatting houdt geen rekening met hellingen.</string>
     <string name="hql_usb_cut_title">De auto heeft de USB-stroom afgesloten</string>
     <string name="hql_usb_cut_text">%1$d s lang had de kabel geen stroom; dat deed de auto, en Qonecta+ heeft zichzelf opnieuw verbonden. Gebeurt het vaak, probeer dan een kortere datakabel zonder adapters.</string>
@@ -1008,7 +993,6 @@
     <string name="hql_trip_notice_help">Een melding op de telefoon met fps, herverbindingen, warmte en hoe goed de route klopte.</string>
     <string name="hql_trip_notice_channel">Ritsamenvatting</string>
     <string name="hql_trip_notice_title">Rit voorbij · %1$s</string>
-    <string name="hql_trip_notice_video">%1$.0f fps gemiddeld · %2$d herverbindingen · %3$d onderbrekingen</string>
     <string name="hql_trip_notice_heat">warmte: niveau %1$d max. · %2$.0f °C</string>
     <string name="hql_trip_notice_route">route: %1$.1f kWh geschat, %2$.1f echt</string>
     <string name="hql_android_car_mode">Android-automodus tijdens projecteren (niet nodig; bij het verlaten laadt de telefoon alle apps opnieuw, als een zachte herstart)</string>
@@ -1023,7 +1007,7 @@
     <string name="hql_backup_saved">Instellingen in het bestand opgeslagen</string>
     <string name="hql_backup_failed">Kon het bestand niet opslaan: %1$s</string>
     <string name="hql_backup_invalid">Dat bestand is geen back-up van Qonecta+-instellingen</string>
-    <string name="hql_backup_confirm">Het bestand bevat %1$d instellingen: %2$d tv-lijsten, %3$d radiolijsten, %4$d favorieten en %5$d webbladwijzers. Ze vervangen die op deze telefoon; de rest blijft zoals het is.</string>
+    <string name="hql_backup_confirm">Inhoud van het bestand: instellingen %1$d · tv-lijsten %2$d · radiolijsten %3$d · favorieten %4$d · webbladwijzers %5$d. Ze vervangen die op deze telefoon; de rest blijft zoals het is.</string>
     <string name="hql_backup_done">Instellingen geïmporteerd. Beeld- en verbindingsinstellingen gelden bij de volgende verbinding.</string>
     <string name="hql_usb_auto_switch">Verbinden bij het insteken van de autokabel</string>
     <string name="hql_usb_auto_off">Bij het insteken gebeurt er niets: tik op Verbinden wanneer je wilt. Opent Android met de kabel altijd Qonecta+ en wil je QDLink gebruiken, verwijder dan „Standaard openen” in de app-instellingen.</string>
