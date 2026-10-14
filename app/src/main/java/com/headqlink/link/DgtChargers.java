@@ -62,6 +62,7 @@ final class DgtChargers {
         /** Como cargador de la ruta (sin el km). */
         RoutePlanner.Charger toCharger() {
             RoutePlanner.Charger c = new RoutePlanner.Charger();
+            c.id = id == null || id.isEmpty() ? "" : "dgt:" + id;
             c.lat = lat;
             c.lon = lon;
             c.name = name.isEmpty() ? operator : name;

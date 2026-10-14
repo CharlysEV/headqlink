@@ -14,8 +14,10 @@ import android.widget.TextView;
 import com.andrerinas.openheadunit.R;
 
 /**
- * Estilo de la interfaz propia en la pantalla del coche. Las medidas son píxeles de esa pantalla
- * (1920x882, ~150 ppp): se diseña directamente para ella.
+ * Estilo de la interfaz propia en la pantalla del coche. Las medidas son píxeles de la pantalla del C10
+ * (1920x882, ~150 ppp): se diseña directamente para ella. En una pantalla más pequeña (la del T03, 1024x498, ~118 ppp)
+ * se dibuja en un lienzo mayor y se reduce (UiScale); para que ahí se siga leyendo y tocando, lo que se toca y el texto
+ * no bajan de un mínimo en px DE LA PANTALLA (touch, textPx). Con escala 1 (el C10) no cambian nada.
  */
 /** Colores: los pone CarTheme (día o noche); no son constantes. */
 final class CarStyle {
@@ -40,11 +42,113 @@ final class CarStyle {
     private CarStyle() {
     }
 
+    // ------------------------------------------------------------------ escala de la interfaz
+
+    /** Lado mínimo de lo que se toca, en px de la pantalla del coche (unos 10 mm en la del T03). */
+    static final int MIN_TOUCH_PX = 48;
+    /** Texto más pequeño que se lee conduciendo, en px de la pantalla del coche. */
+    static final int MIN_TEXT_PX = 16;
+    /** Lienzo → pantalla del coche (UiScale): 1 en el C10. La pone CarUi al arrancar. */
+    private static volatile float uiScale = 1f;
+    /** La pantalla del coche es pequeña (con la escala automática la interfaz se reduce): el T03. */
+    private static volatile boolean smallScreen;
+
+    /** La escala de la interfaz que se dibuja ahora y si la pantalla del coche es pequeña (CarUi, al arrancar). */
+    static void setUiScale(float scale, boolean small) {
+        uiScale = scale > 0f && scale < 1f ? scale : 1f;
+        smallScreen = small;
+    }
+
+    static float uiScale() {
+        return uiScale;
+    }
+
+    /** La interfaz se reduce al pasar a la pantalla (escala < 1): los mínimos de tamaño cuentan. */
+    static boolean scaled() {
+        return uiScale < 1f;
+    }
+
+    static boolean smallScreen() {
+        return smallScreen;
+    }
+
+    /**
+     * Puro: un objetivo táctil de px del lienzo, agrandado para que en la pantalla mida al menos MIN_TOUCH_PX. Con
+     * escala 1 (o mayor), el mismo px.
+     */
+    static int touch(float scale, int px) {
+        return atLeast(scale, px, MIN_TOUCH_PX);
+    }
+
+    /** Puro: un tamaño de texto del lienzo, agrandado para que en la pantalla no baje de MIN_TEXT_PX. */
+    static int textPx(float scale, int px) {
+        return atLeast(scale, px, MIN_TEXT_PX);
+    }
+
+    /** Puro: como textPx, para tamaños con decimales (texto dibujado en un Canvas). */
+    static float textPx(float scale, float px) {
+        if (scale >= 1f || scale <= 0f) return px;
+        return Math.max(px, (float) Math.ceil(MIN_TEXT_PX / scale - 1e-3));
+    }
+
+    private static int atLeast(float scale, int px, int screenMin) {
+        if (scale >= 1f || scale <= 0f) return px;
+        // El - 1e-3: 48 / 0,6f da 80,000003 en float y no debe subir a 81.
+        return Math.max(px, (int) Math.ceil(screenMin / scale - 1e-3));
+    }
+
+    /** touch con la escala de ahora. */
+    static int touch(int px) {
+        return touch(uiScale, px);
+    }
+
+    /** textPx con la escala de ahora. */
+    static int textPx(int px) {
+        return textPx(uiScale, px);
+    }
+
+    static float textPx(float px) {
+        return textPx(uiScale, px);
+    }
+
+    /** Con la interfaz reducida, v (un botón) mide al menos MIN_TOUCH_PX de la pantalla de alto y de ancho; si no, nada. */
+    static <T extends View> T minTouch(T v) {
+        if (scaled()) {
+            v.setMinimumHeight(touch(0));
+            v.setMinimumWidth(touch(0));
+        }
+        return v;
+    }
+
+    /**
+     * Puro: columnas de una rejilla (TV, radio) para un ancho de lienzo widthPx: las de siempre (preferred), o menos si
+     * con la interfaz reducida cada celda mediría menos de minCellScreenPx en la pantalla del coche. Con escala 1, siempre
+     * preferred (en el C10 no cambia nada, tampoco con la pantalla partida).
+     */
+    static int gridColumns(int preferred, int widthPx, float scale, int minCellScreenPx) {
+        if (scale >= 1f || scale <= 0f || minCellScreenPx <= 0) return preferred;
+        int fit = (int) (widthPx * scale / minCellScreenPx);
+        return Math.max(1, Math.min(preferred, fit));
+    }
+
+    /** gridColumns con la escala de ahora. */
+    static int gridColumns(int preferred, int widthPx, int minCellScreenPx) {
+        return gridColumns(preferred, widthPx, uiScale, minCellScreenPx);
+    }
+
+    /**
+     * Ancho mínimo en la pantalla de una celda con logo y nombre (TV, radio): en el T03 (lienzo de ~1390 de ancho al
+     * 60 %, unos 830 px de pantalla) deja 3 columnas en lugar de 4.
+     */
+    static final int MIN_CELL_SCREEN_PX = 240;
+
+    // ------------------------------------------------------------------ piezas
+
     static TextView text(Context c, String s, int sizePx, int color) {
         TextView t = new TextView(c);
         t.setText(s);
         t.setTextColor(color);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_PX, sizePx);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_PX, textPx(sizePx));
         return t;
     }
 
@@ -54,6 +158,7 @@ final class CarStyle {
         t.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
         t.setGravity(Gravity.CENTER);
         t.setPadding(26, 14, 26, 14);
+        minTouch(t);
         t.setBackground(round(PILL_BG, 28));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -130,13 +235,17 @@ final class CarStyle {
     static LinearLayout tabs(Context c, String[] names, int selected, java.util.function.IntConsumer onSelect) {
         LinearLayout row = new LinearLayout(c);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(24, 16, 24, 12);
+        // Con la interfaz reducida las pestañas ya son más altas (mínimo táctil): menos margen, para no quitar más alto.
+        if (scaled()) row.setPadding(24, 6, 24, 4);
+        else row.setPadding(24, 16, 24, 12);
         TextView[] views = new TextView[names.length];
         for (int i = 0; i < names.length; i++) {
             int idx = i;
             TextView t = text(c, names[i], 25, TEXT);
             t.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
             t.setPadding(32, 12, 32, 12);
+            if (scaled()) t.setGravity(Gravity.CENTER);
+            minTouch(t);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.rightMargin = 10;

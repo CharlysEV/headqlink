@@ -30,10 +30,32 @@ final class ChargePlanner {
         double capacityKwh = 69.9;
         /** Voltaje de la batería (V): 800 en la de 81,9 kWh. */
         double carVolts = 400;
+        /** Cargadores favoritos (ChargerMarks): se prefieren al elegir parada (FAV_BONUS_KW). Los vetados ni llegan aquí. */
+        java.util.Set<RoutePlanner.Charger> favorites = Collections.emptySet();
+        /** Con «preferir paradas con sitio para comer»: los que lo tienen cerca (FoodNearby; FOOD_BONUS_KW). */
+        java.util.Set<RoutePlanner.Charger> food = Collections.emptySet();
         /** La curva aprendida de las cargas de este coche (ChargeCurveModel), o null: la de fábrica. */
         ChargeCurveModel.Curve curve;
         /** Parte del pico que admite un coche de 800 V en un cargador de 400–500 V: la mitad, o la aprendida. */
         double lowVoltsFactor = LOW_VOLTS_FACTOR;
+    }
+
+    /**
+     * Lo que suma un favorito a la potencia al elegir parada (kW): gana a uno algo más potente de su tramo (un favorito de
+     * 50 kW, a uno de 100), no a uno mucho mejor. Y se mira en más tramo (FAV_WINDOW): no solo en el último 40 %.
+     */
+    static final double FAV_BONUS_KW = 50;
+    /** Lo que suma un cargador con sitio para comer cerca, si se prefiere (kW). */
+    static final double FOOD_BONUS_KW = 25;
+    /** Un favorito vale desde aquí del tramo alcanzable (0,4: el último 60 %; los demás, desde 0,6). */
+    static final double FAV_WINDOW = 0.4;
+
+    /** Puntuación de un cargador para elegir parada: lo que da al coche más lo que suman favorito y comida. */
+    static double score(RoutePlanner.Charger c, Settings s) {
+        double v = effKw(c, s);
+        if (s.favorites.contains(c)) v += FAV_BONUS_KW;
+        if (s.food.contains(c)) v += FOOD_BONUS_KW;
+        return v;
     }
 
     static final class Stop {
@@ -122,6 +144,39 @@ final class ChargePlanner {
         double kwh = 0;
         for (Stop s : r.stops) kwh += s.kwh;
         return kwh / CHARGE_EFF * eurPerKwh;
+    }
+
+    // ------------------------------------------------------------------ viaje con paradas y cargador en el destino
+
+    /** Puro: el % al llegar a cada punto del viaje (km de cada uno, en orden), según el plan con sus cargas. */
+    static double[] arrivals(Result r, double[] waypointKm) {
+        double[] out = new double[waypointKm.length];
+        for (int i = 0; i < out.length; i++) out[i] = r.pctAt(waypointKm[i]);
+        return out;
+    }
+
+    /**
+     * Puro: el % que hace falta al salir del km fromKm para llegar al final con el margen (sin cargar por el camino):
+     * lo que se gasta en la vuelta de un viaje de ida y vuelta más el mínimo al llegar.
+     */
+    static double neededFrom(Result r, double fromKm, double arriveMinPct) {
+        double end = r.km[r.km.length - 1];
+        return (kwhAt(r.km, r.kwhCum, end) - kwhAt(r.km, r.kwhCum, fromKm)) / r.capacityKwh * 100 + arriveMinPct;
+    }
+
+    /**
+     * Puro: ¿conviene cargar en el destino? Si se llega con menos del umbral elegido (thresholdPct; 0 o menos: nunca por
+     * eso) o, en un viaje de ida y vuelta, con menos de lo que hace falta para volver (returnNeedPct; NaN si no vuelve).
+     */
+    static boolean destChargeAdvised(double pctAtDest, double thresholdPct, double returnNeedPct) {
+        if (Double.isNaN(pctAtDest)) return false;
+        if (thresholdPct > 0 && pctAtDest < thresholdPct) return true;
+        return !Double.isNaN(returnNeedPct) && pctAtDest < returnNeedPct;
+    }
+
+    /** Puro: ¿es una parada larga, de las que dan para comer algo (FoodNearby.LONG_STOP_MIN o más)? */
+    static boolean longStop(Stop s) {
+        return s.minutes >= FoodNearby.LONG_STOP_MIN;
     }
 
     /** Minutos que se pierden en cada parada aparte de cargar (aparcar, enchufar, pagar). */
@@ -366,7 +421,8 @@ final class ChargePlanner {
 
     /**
      * El cargador de la siguiente parada: de los alcanzables (llegando con al menos minPct), los del último 40 % del
-     * tramo alcanzable; de ellos, el más potente (y, a igualdad, el más lejano). null si no hay.
+     * tramo alcanzable (los favoritos, del último 60 %); de ellos, el de más puntuación (score: el más potente, con lo
+     * que suman favorito y comida; a igualdad, el más lejano). null si no hay.
      */
     private static RoutePlanner.Charger pick(double[] km, double[] kwhCum, double cur, double soc, double end,
                                              List<RoutePlanner.Charger> chargers, Settings s, double minPct) {
@@ -381,11 +437,13 @@ final class ChargePlanner {
         }
         if (ok.isEmpty()) return null;
         double window = cur + 0.6 * (far - cur);
+        double favWindow = cur + FAV_WINDOW * (far - cur);
         RoutePlanner.Charger best = null;
         for (RoutePlanner.Charger c : ok) {
-            if (c.kmAlong < window) continue;
-            if (best == null || effKw(c, s) > effKw(best, s) + 1e-9
-                    || (Math.abs(effKw(c, s) - effKw(best, s)) < 1e-9 && c.kmAlong > best.kmAlong)) {
+            if (c.kmAlong < (s.favorites.contains(c) ? favWindow : window)) continue;
+            double sc = score(c, s);
+            double sb = best == null ? 0 : score(best, s);
+            if (best == null || sc > sb + 1e-9 || (Math.abs(sc - sb) < 1e-9 && c.kmAlong > best.kmAlong)) {
                 best = c;
             }
         }

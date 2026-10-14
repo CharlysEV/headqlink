@@ -3,7 +3,7 @@ package com.headqlink.link
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Campos numéricos de Ajustes de imagen › Avanzado: un número de 11 cifras cerraba la app. */
+/** Campos numéricos de Ajustes › Avanzado: un número de 11 cifras cerraba la app. */
 class SettingsInputTest {
     @Test
     fun numbersOutOfRangeAreRejected() {

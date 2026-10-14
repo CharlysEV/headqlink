@@ -45,30 +45,53 @@ final class NavApps {
     }
 
     /**
-     * Navegar con las paradas del plan de carga: Maps las lleva como puntos intermedios (hasta 3: con más, se va a las 3
-     * primeras y se replanifica allí); Waze no admite paradas, así que va a la siguiente (y desde allí, a la otra).
+     * Navegar con las paradas del plan de carga y las del viaje (paradas intermedias, el destino y, de ida y vuelta, la
+     * vuelta), en el orden de la ruta: Maps las lleva como puntos intermedios (hasta 3: con más, va hasta la cuarta y
+     * desde allí se vuelve a pulsar); Waze no admite paradas, así que va a la siguiente. cp puede ser null (sin plan de
+     * carga: solo las del viaje).
      */
     static void goWithStops(Context ctx, RoutePlanner.Plan p, ChargePlanner.Result cp) {
-        ChargePlanner.Stop next = cp.next();
+        double from = cp != null ? cp.fromKm : p.km[Math.min(Math.max(0, p.progress), p.n - 1)];
+        java.util.List<double[]> pts = new java.util.ArrayList<>();
+        if (cp != null) for (ChargePlanner.Stop st : cp.stops) pts.add(new double[]{st.charger.lat, st.charger.lon, st.km});
+        for (int i = 0; i < p.waypoints.size() && i < p.waypointKm.length; i++) {
+            RoutePlanner.Place w = p.waypoints.get(i);
+            pts.add(new double[]{w.lat, w.lon, p.waypointKm[i]});
+        }
+        if (p.waypoints.isEmpty()) pts.add(new double[]{p.destLat, p.destLon, p.totalKm});
+        java.util.List<double[]> route = ahead(pts, from + ChargePlanner.HERE_KM, MAX_WAYPOINTS);
+        if (route.isEmpty()) route.add(new double[]{p.destLat, p.destLon, p.totalKm});
         if (useWaze(ctx)) {
-            if (next != null) go(ctx, next.charger.lat, next.charger.lon);
-            else go(ctx, p.destLat, p.destLon);
+            go(ctx, route.get(0)[0], route.get(0)[1]);
             return;
         }
+        double[] dest = route.get(route.size() - 1);
         StringBuilder wp = new StringBuilder();
-        int n = 0;
-        for (ChargePlanner.Stop st : cp.stops) {
-            if (st.km <= cp.fromKm + ChargePlanner.HERE_KM) continue;
-            if (n++ >= 3) break;
+        for (int i = 0; i < route.size() - 1; i++) {
             if (wp.length() > 0) wp.append('|');
-            wp.append(String.format(Locale.US, "%.6f,%.6f", st.charger.lat, st.charger.lon));
+            wp.append(String.format(Locale.US, "%.6f,%.6f", route.get(i)[0], route.get(i)[1]));
         }
         // Coche virtual con otra salida: desde ella (Maps enseña la ruta; navegar solo se puede desde donde se está).
         RoutePlanner.Place o = RoutePlanner.testOrigin();
         String url = String.format(Locale.US, "https://www.google.com/maps/dir/?api=1&destination=%.6f,%.6f&travelmode=driving",
-                p.destLat, p.destLon) + (o == null ? "&dir_action=navigate" : String.format(Locale.US, "&origin=%.6f,%.6f", o.lat, o.lon))
+                dest[0], dest[1]) + (o == null ? "&dir_action=navigate" : String.format(Locale.US, "&origin=%.6f,%.6f", o.lat, o.lon))
                 + (wp.length() > 0 ? "&waypoints=" + Uri.encode(wp.toString()) : "");
-        if (start(ctx, url, MAPS, "Google Maps")) L.i("ruta: Google Maps con " + Math.min(3, n) + " paradas de carga");
+        if (start(ctx, url, MAPS, "Google Maps")) L.i("ruta: Google Maps con " + (route.size() - 1) + " paradas por el camino");
+    }
+
+    /** Puntos intermedios que admite Google Maps en el móvil. */
+    static final int MAX_WAYPOINTS = 3;
+
+    /**
+     * Puro: de los puntos {lat, lon, km}, los que quedan por delante de fromKm en el orden de la ruta, como mucho
+     * maxWaypoints + 1 (el último es a donde se navega; los demás, puntos intermedios).
+     */
+    static java.util.List<double[]> ahead(java.util.List<double[]> pts, double fromKm, int maxWaypoints) {
+        java.util.List<double[]> out = new java.util.ArrayList<>();
+        for (double[] x : pts) if (x[2] > fromKm) out.add(x);
+        java.util.Collections.sort(out, (a, b) -> Double.compare(a[2], b[2]));
+        while (out.size() > maxWaypoints + 1) out.remove(out.size() - 1);
+        return out;
     }
 
     private static boolean start(Context ctx, String uri, String pkg, String label) {

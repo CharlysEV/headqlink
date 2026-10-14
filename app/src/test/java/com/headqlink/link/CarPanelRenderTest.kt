@@ -61,7 +61,8 @@ class CarPanelRenderTest {
         val scale = UiScale.forCar(W, H, 0)
         CW = UiScale.canvas(W, scale)
         CH = UiScale.canvas(H, scale)
-        val ui = CarUi(act, CW, CH, 320, 200) { }
+        // Con su escala, como en el coche: los mínimos de tamaño (CarStyle.touch, textPx) cuentan en la pantalla pequeña.
+        val ui = CarUi(act, CW, CH, 320, 200, scale) { }
         try {
             val container = FrameLayout(act)
             act.setContentView(container)
@@ -84,6 +85,7 @@ class CarPanelRenderTest {
             ui.stop()
             idle(200)
             DemoMode.disable()
+            CarStyle.setUiScale(1f, false)
         }
     }
 

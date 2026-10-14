@@ -137,6 +137,15 @@
                 android:id="@+id/hql_w_detail"
                 style="@style/HQL.Widget.Detail"
                 android:text="@string/hql_w_tap_to_connect" />
+
+            <!-- «¿Llego a Casa?» (HomeReach): solo con Casa guardada y el % del coche -->
+            <TextView
+                android:id="@+id/hql_w_home"
+                style="@style/HQL.Widget.Detail"
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:textColor="@color/hql_accent"
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 

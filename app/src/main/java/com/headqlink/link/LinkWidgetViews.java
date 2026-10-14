@@ -74,6 +74,9 @@ final class LinkWidgetViews {
             return rv;
         }
 
+        // «Casa: llegas con ~34 %» (HomeReach), en el 4x2 con altura.
+        rv.setTextViewText(R.id.hql_w_home, g.home);
+        rv.setViewVisibility(R.id.hql_w_home, tall && !g.home.isEmpty() ? View.VISIBLE : View.GONE);
         rv.setTextViewText(R.id.hql_w_action, action);
         rv.setTextColor(R.id.hql_w_action, ContextCompat.getColor(c, actionColor(g)));
         rv.setViewVisibility(R.id.hql_w_action, tall ? View.VISIBLE : View.GONE);

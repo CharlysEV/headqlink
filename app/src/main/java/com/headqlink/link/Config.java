@@ -78,7 +78,7 @@ final class Config {
     static final String ENGINE_QDAUTO = "qdauto";
     static final String ENGINE_ORIGINAL = "original";
     /**
-     * Motor por defecto mientras no se elija otro: QDAuto. El original sigue disponible como respaldo (Ajustes de imagen ›
+     * Motor por defecto mientras no se elija otro: QDAuto. El original sigue disponible como respaldo (Ajustes ›
      * Avanzado › Motor de protocolo, o el extra link_engine=original).
      */
     static final String DEFAULT_ENGINE = ENGINE_QDAUTO;
@@ -183,7 +183,7 @@ final class Config {
     }
 
     /**
-     * «Fluidez» (Ajustes de imagen): VideoProfile.FLUID_30 (lo que pide el coche; menos calor, recomendado) o FLUID_60
+     * «Fluidez» (Ajustes › Imagen): VideoProfile.FLUID_30 (lo que pide el coche; menos calor, recomendado) o FLUID_60
      * (60 fps y 8-12 Mbit/s, como el HeadQLink original). Solo actúa con los perfiles Coche y Automático (cuando el
      * recomendado es Coche). Se aplica en la sesión siguiente (o al instante con «Guardar» estando conectado).
      */
@@ -333,7 +333,7 @@ final class Config {
     }
 
     /**
-     * «Protección térmica» (Ajustes de imagen): ThermalPolicy.MODE_NORMAL (recomendada), MODE_SOFT (solo baja el bitrate;
+     * «Protección térmica» (Ajustes › Imagen): ThermalPolicy.MODE_NORMAL (recomendada), MODE_SOFT (solo baja el bitrate;
      * nunca por debajo de 30 fps salvo en estado crítico) o MODE_OFF (solo se registra). Se aplica en el acto.
      */
     static final String THERMAL_MODE = "thermal_mode";
@@ -631,6 +631,54 @@ final class Config {
 
     void setRecentPlaces(String json) {
         sp.edit().putString("recent_places", json).apply();
+    }
+
+    /** Destinos guardados de la Ruta: Casa, Trabajo y los de nombre (SavedPlaces, JSON). Solo en el móvil. */
+    static final String SAVED_PLACES = "saved_places";
+    /** La última ruta calculada a Casa (HomeReach: distancia por carretera para el widget). Solo en el móvil. */
+    static final String HOME_ROUTE = "home_route";
+
+    String savedPlaces() {
+        return sp.getString(SAVED_PLACES, "");
+    }
+
+    void setSavedPlaces(String json) {
+        sp.edit().putString(SAVED_PLACES, json).apply();
+    }
+
+    String homeRoute() {
+        return sp.getString(HOME_ROUTE, "");
+    }
+
+    void setHomeRoute(String json) {
+        sp.edit().putString(HOME_ROUTE, json).apply();
+    }
+
+    /** Cargadores favoritos y vetados (ChargerMarks, JSON). */
+    String chargerMarks() {
+        return sp.getString("charger_marks", "");
+    }
+
+    void setChargerMarks(String json) {
+        sp.edit().putString("charger_marks", json).apply();
+    }
+
+    /** Sugerir cargadores en el destino si se llega con menos de este % (0: solo si hace falta para volver). */
+    int destChargePct() {
+        return Math.max(0, Math.min(50, sp.getInt("dest_charge_pct", 20)));
+    }
+
+    void setDestChargePct(int pct) {
+        sp.edit().putInt("dest_charge_pct", pct).apply();
+    }
+
+    /** Preferir paradas de carga con sitio para comer cerca (FoodNearby). */
+    boolean planPreferFood() {
+        return sp.getBoolean("plan_prefer_food", false);
+    }
+
+    void setPlanPreferFood(boolean on) {
+        sp.edit().putBoolean("plan_prefer_food", on).apply();
     }
 
     /** Marcadores de la pantalla Web del coche: {nombre, url}; los de serie si no se han cambiado. */

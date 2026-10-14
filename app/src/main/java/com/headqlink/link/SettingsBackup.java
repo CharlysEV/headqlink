@@ -16,8 +16,8 @@ import java.util.Set;
  * Copia de seguridad de los ajustes en un archivo JSON, para cambiar de móvil o pasárselos a otro: listas de TV y radio,
  * favoritos, marcadores de la Web, precios, filtros de cargadores, planificador, imagen, panel y el modelo del coche.
  * Nunca lleva la cuenta de Leapmotor (sesión, certificados, PIN), Home Assistant, el historial de la Web, los sitios
- * recientes, la calibración de los viajes ni nada del estado del móvil. Lo mismo se filtra al importar, por si el archivo
- * viene tocado.
+ * recientes ni los guardados (Casa, Trabajo…), la calibración de los viajes ni nada del estado del móvil. Lo mismo se
+ * filtra al importar, por si el archivo viene tocado.
  */
 final class SettingsBackup {
     static final String MAGIC = "qonecta-settings";
@@ -25,7 +25,7 @@ final class SettingsBackup {
 
     /** Del almacén «cfg», lo que no viaja (personal, de este móvil o del momento). */
     static final Set<String> SKIP = new HashSet<>(Arrays.asList(
-            "recent_places", "route_calib", "soc_pct", "soc_used_kwh", "uuid", "seen_version_code", "setup_done",
+            "recent_places", Config.SAVED_PLACES, Config.HOME_ROUTE, "route_calib", "soc_pct", "soc_used_kwh", "uuid", "seen_version_code", "setup_done",
             "update_checked_at", "update_version", "update_url", "update_notes", "update_apk", Config.NES_TREE,
             Config.BT_AUTO_NAME, Config.MODE_BEFORE_PATTERN, Config.QD_PHONE_INFO, "panel_home_seen", "float_x", "float_y",
             // Las condiciones de uso las acepta cada uno en su móvil; la accesibilidad es de este móvil.

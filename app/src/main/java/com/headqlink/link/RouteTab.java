@@ -63,11 +63,33 @@ final class RouteTab implements CarScreen {
     private TextView search;
     /** Los botones de arriba a la derecha (buscar, Google Maps, quitar): su ancho real recorta el nombre del destino. */
     private LinearLayout actionsRow;
+    /** La fila de botones, o el desplazable que la lleva (interfaz reducida). */
+    private View actionsHost;
     private TextView goMaps;
     /** Mapa con el trazado del plan (para compararlo con el de Google Maps). */
     private TextView mapPill;
     private TextView clear;
     private TextView cta;
+    /** El viaje: paradas intermedias, ida y vuelta y guardarlo («Viaje · 2 ⇄»). */
+    private TextView tripPill;
+    /** Sin ruta: Casa, Trabajo y Guardados, grandes, arriba a la izquierda. */
+    private LinearLayout quickRow;
+    private TextView homePill;
+    private TextView workPill;
+    /** Los guardados (SavedPlaces) y el JSON del que salen (se vuelven a leer si cambia). */
+    private java.util.List<SavedPlaces.Saved> saved = new java.util.ArrayList<>();
+    private String savedJson;
+    /** Favoritos y vetados (ChargerMarks) y su JSON. */
+    private java.util.List<ChargerMarks.Mark> marks = new java.util.ArrayList<>();
+    private String marksJson = "";
+    /** Cargadores cerca del destino (cargar allí): de qué ruta son, y si se están pidiendo a OpenStreetMap. */
+    private RoutePlanner.Plan destNearFor;
+    private java.util.List<RoutePlanner.Charger> destNear = new java.util.ArrayList<>();
+    private boolean destFetching;
+    /** El panel del viaje abierto (para rehacerlo al volver del buscador), o null. */
+    private Runnable tripRefresh;
+    /** El panel de guardados abierto (para rehacerlo), o null. */
+    private Runnable savedRefresh;
     private int shownChargersFor = -1;
     private RoutePlanner.Plan plan;
     private double soc = Double.NaN;
@@ -126,12 +148,23 @@ final class RouteTab implements CarScreen {
         } else {
             actions.addView(search);
         }
+        tripPill = CarKit.pill(ctx, Str.get(R.string.hql_pl_trip), false);
+        tripPill.setOnClickListener(v -> openTrip());
+        actions.addView(tripPill, spaced());
         mapPill = CarKit.pill(ctx, Str.get(R.string.hql_route_map), false);
         mapPill.setOnClickListener(v -> openMap());
         actions.addView(mapPill, spaced());
         actions.addView(goMaps, spaced());
         actions.addView(clear, spaced());
-        routeCard.addView(actions, CarKit.at(Gravity.TOP | Gravity.END, 0, 0, 0, 0));
+        // Con la interfaz reducida (T03) los botones, más grandes, pueden no caber en la tarjeta: la fila se desplaza.
+        actionsHost = actions;
+        if (CarStyle.scaled()) {
+            android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(ctx);
+            hs.setHorizontalScrollBarEnabled(false);
+            hs.addView(actions);
+            actionsHost = hs;
+        }
+        routeCard.addView(actionsHost, CarKit.at(Gravity.TOP | Gravity.END, 0, 0, 0, 0));
         search.setOnClickListener(v -> openSearch(false));
         goMaps.setOnClickListener(v -> {
             RoutePlanner.Place m = RoutePlanner.manualDestination();
@@ -139,7 +172,8 @@ final class RouteTab implements CarScreen {
             // Con plan de carga, el navegador lleva sus paradas (si quedan por delante); si no, directo al destino.
             ChargePlanner.Result cp = chargePlan;
             RoutePlanner.Plan pl = plan;
-            if (cp != null && pl != null && cp.next() != null) RoutePlanner.navigateWithStops(ctx, pl, cp);
+            // Un viaje de varios tramos lleva también sus paradas y la vuelta.
+            if (pl != null && ((cp != null && cp.next() != null) || pl.multi())) RoutePlanner.navigateWithStops(ctx, pl, cp);
             else navigateTo(m.lat, m.lon);
         });
         clear.setOnClickListener(v -> {
@@ -152,6 +186,18 @@ final class RouteTab implements CarScreen {
         cta.setPadding(44, 20, 44, 20);
         routeCard.addView(cta, CarKit.at(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0, 0, 90));
         cta.setOnClickListener(v -> openSearch(false));
+        // Sin ruta: Casa, Trabajo y los guardados, a un toque (arriba a la izquierda).
+        quickRow = CarKit.row(ctx);
+        homePill = bigPill("");
+        workPill = bigPill("");
+        TextView savedPill = bigPill("★ " + Str.get(R.string.hql_pl_saved));
+        quickRow.addView(homePill);
+        quickRow.addView(workPill, spaced());
+        quickRow.addView(savedPill, spaced());
+        routeCard.addView(quickRow, CarKit.at(Gravity.TOP | Gravity.START, 0, 0, 0, 0));
+        homePill.setOnClickListener(v -> goTagged(SavedPlaces.HOME));
+        workPill.setOnClickListener(v -> goTagged(SavedPlaces.WORK));
+        savedPill.setOnClickListener(v -> openSaved());
         // Cargando: la carga en directo encima del perfil de la ruta (con «Ver ruta» para volver a él).
         routeCard.addView(buildLive(), new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         liveShow = CarKit.pill(ctx, Str.get(R.string.hql_live_block_title), true);
@@ -160,7 +206,7 @@ final class RouteTab implements CarScreen {
             tick();
         });
         actions.addView(liveShow, 0);
-        actionsRow.bringToFront();
+        actionsHost.bringToFront();
 
         LinearLayout right = CarKit.add(row, CarKit.col(ctx), 1f, 0);
         batteryCard = CarKit.add(right, new CarKit.Card(ctx, Str.get(R.string.hql_battery_arrival), this::paintBattery), 0, 290);
@@ -250,6 +296,32 @@ final class RouteTab implements CarScreen {
      * o Ir buscan ya y, si no hay nada, prueban Nominatim.
      */
     private void openSearch(boolean origin) {
+        openSearch(origin ? S_ORIGIN : S_DEST);
+    }
+
+    /** Qué se busca: el destino, la salida (coche virtual), una parada del viaje, Casa o Trabajo. */
+    private static final int S_DEST = 0;
+    private static final int S_ORIGIN = 1;
+    private static final int S_VIA = 2;
+    private static final int S_HOME = 3;
+    private static final int S_WORK = 4;
+
+    private static String hintFor(int mode) {
+        switch (mode) {
+            case S_ORIGIN:
+                return Str.get(R.string.hql_route_origin_hint);
+            case S_VIA:
+                return Str.get(R.string.hql_pl_via_hint);
+            case S_HOME:
+                return Str.get(R.string.hql_pl_home_hint);
+            case S_WORK:
+                return Str.get(R.string.hql_pl_work_hint);
+            default:
+                return Str.get(R.string.hql_route_query_hint);
+        }
+    }
+
+    private void openSearch(int mode) {
         LinearLayout panel = new LinearLayout(ctx);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setBackgroundColor(CarKit.BG);
@@ -257,7 +329,7 @@ final class RouteTab implements CarScreen {
         LinearLayout bar = CarStyle.bar(ctx);
         bar.setBackgroundColor(CarKit.SURFACE);
         TextView query = CarStyle.text(ctx, "", 30, CarKit.TEXT);
-        query.setHint(Str.get(origin ? R.string.hql_route_origin_hint : R.string.hql_route_query_hint));
+        query.setHint(hintFor(mode));
         query.setHintTextColor(CarKit.FAINT);
         query.setSingleLine(true);
         query.setEllipsize(android.text.TextUtils.TruncateAt.START);
@@ -279,7 +351,7 @@ final class RouteTab implements CarScreen {
         ScrollView rs = new ScrollView(ctx);
         rs.addView(results);
         panel.addView(rs, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        SearchState st = new SearchState(panel, query, results, origin);
+        SearchState st = new SearchState(panel, query, results, mode);
         searchState = st;
         CarKeyboard kb = new CarKeyboard(ctx, new CarKeyboard.Listener() {
             @Override
@@ -329,16 +401,19 @@ final class RouteTab implements CarScreen {
         final Runnable typed = () -> searchNow(false);
         /** Se busca la salida (coche virtual), no el destino. */
         final boolean origin;
+        /** S_DEST, S_ORIGIN, S_VIA, S_HOME o S_WORK. */
+        final int mode;
 
-        SearchState(View panel, TextView query, LinearLayout results, boolean origin) {
+        SearchState(View panel, TextView query, LinearLayout results, int mode) {
             this.panel = panel;
             this.query = query;
             this.results = results;
-            this.origin = origin;
+            this.mode = mode;
+            this.origin = mode == S_ORIGIN;
         }
 
         String hint() {
-            return Str.get(origin ? R.string.hql_route_origin_hint : R.string.hql_route_query_hint);
+            return hintFor(mode);
         }
 
         /** Cambió el texto: se ve en la caja y sobre el teclado; se busca solo al dejar de escribir. */
@@ -388,15 +463,23 @@ final class RouteTab implements CarScreen {
         void showRecents() {
             results.removeAllViews();
             java.util.List<RoutePlanner.Place> rec = PlaceSearch.recents(new Config(ctx).recentPlaces());
-            if (rec.isEmpty()) {
-                header(Str.get(R.string.hql_search_tip), CarKit.FAINT);
-                if (origin) results.addView(gpsItem(this), itemParams());
-                return;
-            }
-            header(Str.get(R.string.hql_search_recent), CarKit.FAINT);
-            if (origin) results.addView(gpsItem(this), itemParams());
             double[] pos = planner.position();
+            // Buscando el destino: primero los guardados (Casa, Trabajo, los de nombre), a un toque.
+            java.util.List<SavedPlaces.Saved> sv = mode == S_DEST ? savedList() : new java.util.ArrayList<>();
+            if (!sv.isEmpty()) {
+                results.addView(sub(Str.get(R.string.hql_pl_saved)));
+                for (SavedPlaces.Saved x : sv) results.addView(savedItem(this, x, pos), itemParams());
+            }
+            results.addView(sub(Str.get(rec.isEmpty() ? R.string.hql_search_tip : R.string.hql_search_recent)));
+            if (origin) results.addView(gpsItem(this), itemParams());
             for (RoutePlanner.Place pl : rec) results.addView(item(this, pl, pos), itemParams());
+        }
+
+        /** Un subtítulo de la lista (sin quitar lo que hay). */
+        TextView sub(String text) {
+            TextView h = CarStyle.text(ctx, text, 22, CarKit.FAINT);
+            h.setPadding(6, 4, 6, 12);
+            return h;
         }
 
         void header(String text, int color) {
@@ -559,16 +642,45 @@ final class RouteTab implements CarScreen {
             k.setPadding(18, 0, 0, 0);
             item.addView(k);
         }
+        if (st.mode == S_DEST || st.mode == S_VIA) {
+            // Guardar (como Casa, Trabajo o con su nombre) sin elegirlo como destino.
+            TextView save = CarKit.pill(ctx, "☆", false);
+            save.setMinWidth(76);
+            save.setOnClickListener(v -> openSaveChooser(pl, null, false));
+            LinearLayout.LayoutParams lp = spaced();
+            lp.leftMargin = 18;
+            item.addView(save, lp);
+        }
         item.setOnClickListener(v -> {
             Config c = new Config(ctx);
+            if (st.mode == S_HOME || st.mode == S_WORK) {
+                // Fijar Casa o Trabajo: se guarda y ya (no es el destino).
+                String tag = st.mode == S_HOME ? SavedPlaces.HOME : SavedPlaces.WORK;
+                c.setSavedPlaces(SavedPlaces.setTagged(c.savedPlaces(), pl, tag));
+                L.i("ruta: " + (st.mode == S_HOME ? "Casa" : "Trabajo") + " fijado en el coche"); // sin el sitio
+                st.close();
+                if (savedRefresh != null) savedRefresh.run();
+                flash(Str.get(R.string.hql_pl_saved_ok, tagLabel(tag)));
+                tick();
+                return;
+            }
             c.setRecentPlaces(PlaceSearch.remember(c.recentPlaces(), pl));
             if (st.origin) {
                 RoutePlanner.setTestOrigin(pl);
+            } else if (st.mode == S_VIA) {
+                // Una parada más del viaje, antes del destino.
+                java.util.List<RoutePlanner.Place> v2 = RoutePlanner.vias();
+                RoutePlanner.Place dest = RoutePlanner.manualDestination();
+                if (dest != null && v2.size() < SavedPlaces.MAX_VIA) {
+                    v2.add(pl);
+                    RoutePlanner.setTrip(dest, v2, RoutePlanner.roundTrip());
+                }
             } else {
                 L.i("ruta: destino elegido en el coche"); // sin el nombre: el log se exporta (qdauto §7.5)
                 RoutePlanner.setManualDestination(pl);
             }
             st.close();
+            if (tripRefresh != null) tripRefresh.run();
             tick();
         });
         return item;
@@ -622,6 +734,20 @@ final class RouteTab implements CarScreen {
             originPill.setText(Str.get(R.string.hql_route_from, o == null ? Str.get(R.string.hql_route_gps) : o.name));
         }
         clear.setVisibility(manual ? View.VISIBLE : View.GONE);
+        // El viaje (paradas, ida y vuelta): «Viaje · 2 ⇄».
+        tripPill.setVisibility(manual && !DemoMode.active() ? View.VISIBLE : View.GONE);
+        if (manual) {
+            int nv = RoutePlanner.vias().size();
+            String tt = Str.get(R.string.hql_pl_trip) + (nv > 0 ? " · " + nv : "") + (RoutePlanner.roundTrip() ? " ⇄" : "");
+            if (!tt.contentEquals(tripPill.getText())) tripPill.setText(tt);
+        }
+        updateQuick(!have);
+        String mj = new Config(ctx).chargerMarks();
+        if (!mj.equals(marksJson)) {
+            marksJson = mj;
+            marks = ChargerMarks.parse(mj);
+            shownChargersFor = -1;
+        }
         mapPill.setVisibility(have ? View.VISIBLE : View.GONE);
         cta.setVisibility(have ? View.GONE : View.VISIBLE);
         search.setVisibility(have ? View.VISIBLE : View.GONE);
@@ -645,6 +771,626 @@ final class RouteTab implements CarScreen {
         }
         routeCard.removeCallbacks(tickTask);
         routeCard.postDelayed(tickTask, TICK_MS);
+    }
+
+    // ------------------------------------------------------------------ guardados: Casa, Trabajo y los de nombre
+
+    /** Botón grande (Casa, Trabajo, Guardados). */
+    private TextView bigPill(String text) {
+        TextView t = CarKit.pill(ctx, text, false);
+        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 28);
+        t.setPadding(36, 18, 36, 18);
+        return t;
+    }
+
+    /** Un aviso corto abajo en el centro (2,5 s). */
+    private void flash(String text) {
+        if (root == null) return;
+        TextView t = CarKit.pill(ctx, text, true);
+        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 26);
+        t.setPadding(34, 16, 34, 16);
+        root.addView(t, CarKit.at(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0, 0, 40));
+        t.postDelayed(() -> root.removeView(t), 2500);
+    }
+
+    /** «Casa», «Trabajo» o "" (uno con nombre). */
+    private static String tagLabel(String tag) {
+        if (SavedPlaces.HOME.equals(tag)) return Str.get(R.string.hql_pl_home);
+        if (SavedPlaces.WORK.equals(tag)) return Str.get(R.string.hql_pl_work);
+        return "";
+    }
+
+    private static String tagIcon(String tag) {
+        return SavedPlaces.HOME.equals(tag) ? "🏠" : SavedPlaces.WORK.equals(tag) ? "💼" : "★";
+    }
+
+    /** Los guardados (se vuelven a leer solo si cambió el JSON). */
+    private java.util.List<SavedPlaces.Saved> savedList() {
+        String j = new Config(ctx).savedPlaces();
+        if (!j.equals(savedJson)) {
+            savedJson = j;
+            saved = SavedPlaces.parse(j);
+        }
+        return saved;
+    }
+
+    /** Sin ruta: los botones de Casa y Trabajo («Fijar Casa» si aún no está). */
+    private void updateQuick(boolean show) {
+        quickRow.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (!show) return;
+        java.util.List<SavedPlaces.Saved> sv = savedList();
+        String h = "🏠 " + Str.get(SavedPlaces.tagged(sv, SavedPlaces.HOME) != null ? R.string.hql_pl_home : R.string.hql_pl_set_home);
+        String w = "💼 " + Str.get(SavedPlaces.tagged(sv, SavedPlaces.WORK) != null ? R.string.hql_pl_work : R.string.hql_pl_set_work);
+        if (!h.contentEquals(homePill.getText())) homePill.setText(h);
+        if (!w.contentEquals(workPill.getText())) workPill.setText(w);
+    }
+
+    /** Casa o Trabajo con un toque: el destino si está guardado; si no, buscarlo para fijarlo. */
+    private void goTagged(String tag) {
+        SavedPlaces.Saved s = SavedPlaces.tagged(savedList(), tag);
+        if (s == null) {
+            openSearch(SavedPlaces.HOME.equals(tag) ? S_HOME : S_WORK);
+            return;
+        }
+        goSaved(s);
+    }
+
+    /** Un guardado como destino (con sus paradas y su vuelta, si es un viaje). */
+    private void goSaved(SavedPlaces.Saved s) {
+        L.i("ruta: destino guardado elegido en el coche" + (s.isTrip() ? " (viaje con " + s.via.size() + " paradas"
+                + (s.roundTrip ? ", ida y vuelta)" : ")") : "")); // sin el sitio: el log se exporta
+        RoutePlanner.setTrip(s.place(), s.via, s.roundTrip);
+        tick();
+    }
+
+    /** «🏠 Casa · Calle…» o «★ Nombre · con 2 paradas · ida y vuelta». */
+    private String savedTitle(SavedPlaces.Saved s) {
+        String label = tagLabel(s.tag);
+        return tagIcon(s.tag) + " " + (label.isEmpty() ? s.name : label);
+    }
+
+    private String savedDetail(SavedPlaces.Saved s) {
+        StringBuilder b = new StringBuilder();
+        if (!s.tag.isEmpty()) b.append(s.name);
+        else if (s.detail != null) b.append(s.detail);
+        if (!s.via.isEmpty()) {
+            b.insert(0, Str.get(s.via.size() == 1 ? R.string.hql_pl_via_one : R.string.hql_pl_via_many, s.via.size())
+                    + (b.length() > 0 ? " · " : ""));
+        }
+        if (s.roundTrip) b.insert(0, Str.get(R.string.hql_pl_round) + " · ");
+        return b.toString();
+    }
+
+    /** Un guardado en el buscador: al pulsarlo, es el destino. */
+    private View savedItem(SearchState st, SavedPlaces.Saved s, double[] pos) {
+        LinearLayout item = new LinearLayout(ctx);
+        item.setOrientation(LinearLayout.HORIZONTAL);
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setPadding(22, 14, 22, 14);
+        item.setBackground(CarKit.outlined(CarKit.SURFACE, CarKit.ACCENT, 18));
+        LinearLayout text = CarKit.col(ctx);
+        TextView n = CarStyle.text(ctx, savedTitle(s), 27, CarKit.TEXT);
+        n.setSingleLine(true);
+        n.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView d = CarStyle.text(ctx, savedDetail(s), 20, CarKit.DIM);
+        d.setSingleLine(true);
+        d.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        text.addView(n);
+        text.addView(d);
+        item.addView(text, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        if (!Double.isNaN(pos[0])) {
+            double km = RoadInfo.dist(pos[0], pos[1], s.lat, s.lon) / 1000;
+            TextView k = CarStyle.text(ctx, km < 10 ? String.format(Locale.getDefault(), "%.1f km", km)
+                    : String.format(Locale.getDefault(), "%.0f km", km), 24, CarKit.ACCENT);
+            k.setPadding(18, 0, 0, 0);
+            item.addView(k);
+        }
+        item.setOnClickListener(v -> {
+            st.close();
+            goSaved(s);
+        });
+        return item;
+    }
+
+    /** Guardar un lugar (o el viaje: via y round) como Casa, como Trabajo o con su nombre. */
+    private void openSaveChooser(RoutePlanner.Place pl, java.util.List<RoutePlanner.Place> via, boolean round) {
+        LinearLayout panel = overlay(Str.get(R.string.hql_pl_save_title, pl.name), null);
+        LinearLayout body = (LinearLayout) panel.getTag();
+        Runnable close = () -> root.removeView(panel);
+        boolean trip = (via != null && !via.isEmpty()) || round;
+        body.addView(section(Str.get(R.string.hql_pl_save)));
+        LinearLayout row = CarKit.row(ctx);
+        row.addView(chip("🏠 " + Str.get(R.string.hql_pl_save_home), false, () -> {
+            Config c = new Config(ctx);
+            c.setSavedPlaces(SavedPlaces.setTagged(c.savedPlaces(), pl, SavedPlaces.HOME));
+            L.i("ruta: Casa fijada en el coche");
+            close.run();
+            flash(Str.get(R.string.hql_pl_saved_ok, tagLabel(SavedPlaces.HOME)));
+            tick();
+        }), chipParams());
+        row.addView(chip("💼 " + Str.get(R.string.hql_pl_save_work), false, () -> {
+            Config c = new Config(ctx);
+            c.setSavedPlaces(SavedPlaces.setTagged(c.savedPlaces(), pl, SavedPlaces.WORK));
+            L.i("ruta: Trabajo fijado en el coche");
+            close.run();
+            flash(Str.get(R.string.hql_pl_saved_ok, tagLabel(SavedPlaces.WORK)));
+            tick();
+        }), chipParams());
+        row.addView(chip("★ " + Str.get(trip ? R.string.hql_pl_save_trip : R.string.hql_pl_save_named), false, () -> {
+            Config c = new Config(ctx);
+            c.setSavedPlaces(SavedPlaces.add(c.savedPlaces(), pl, via, round, pl.name));
+            L.i("ruta: guardado en el coche" + (trip ? " (viaje)" : ""));
+            close.run();
+            flash(Str.get(R.string.hql_pl_saved_ok, pl.name));
+            if (savedRefresh != null) savedRefresh.run();
+        }), chipParams());
+        body.addView(row);
+        if (trip) body.addView(hint(Str.get(R.string.hql_pl_save_trip_note)));
+        root.addView(panel, CarStyle.match());
+    }
+
+    /**
+     * Ventana a pantalla completa con un título y «Cerrar»; el cuerpo (con desplazamiento) va en su tag. Para los paneles
+     * de guardados, viaje y guardar.
+     */
+    private LinearLayout overlay(String titleText, Runnable onClose) {
+        LinearLayout panel = new LinearLayout(ctx);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setBackgroundColor(CarKit.BG);
+        panel.setClickable(true);
+        panel.setPadding(CarKit.PAD, 18, CarKit.PAD, CarKit.PAD);
+        LinearLayout bar = CarKit.row(ctx);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = CarStyle.text(ctx, titleText, 34, CarKit.TEXT);
+        title.setTypeface(CarKit.MEDIUM);
+        title.setSingleLine(true);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        bar.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView done = CarKit.pill(ctx, Str.get(R.string.hql_close), true);
+        bar.addView(done);
+        panel.addView(bar);
+        LinearLayout body = CarKit.col(ctx);
+        ScrollView sv = new ScrollView(ctx);
+        sv.addView(body);
+        LinearLayout.LayoutParams svp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        svp.topMargin = 6;
+        panel.addView(sv, svp);
+        done.setOnClickListener(v -> {
+            root.removeView(panel);
+            if (onClose != null) onClose.run();
+        });
+        panel.setTag(body);
+        return panel;
+    }
+
+    /** Los guardados: ir, renombrar y borrar; y fijar Casa o Trabajo si aún no están. */
+    private void openSaved() {
+        LinearLayout panel = overlay(Str.get(R.string.hql_pl_saved_title), () -> savedRefresh = null);
+        LinearLayout body = (LinearLayout) panel.getTag();
+        Runnable[] build = new Runnable[1];
+        build[0] = () -> {
+            body.removeAllViews();
+            java.util.List<SavedPlaces.Saved> sv = savedList();
+            LinearLayout top = CarKit.row(ctx);
+            if (SavedPlaces.tagged(sv, SavedPlaces.HOME) == null) {
+                top.addView(chip("🏠 " + Str.get(R.string.hql_pl_set_home), false, () -> openSearch(S_HOME)), chipParams());
+            }
+            if (SavedPlaces.tagged(sv, SavedPlaces.WORK) == null) {
+                top.addView(chip("💼 " + Str.get(R.string.hql_pl_set_work), false, () -> openSearch(S_WORK)), chipParams());
+            }
+            if (top.getChildCount() > 0) body.addView(top);
+            if (sv.isEmpty()) body.addView(hint(Str.get(R.string.hql_pl_saved_empty)));
+            for (int i = 0; i < sv.size(); i++) body.addView(savedRow(sv.get(i), i, build[0], () -> root.removeView(panel)), itemParams());
+        };
+        savedRefresh = () -> {
+            if (panel.getParent() != null) build[0].run();
+        };
+        build[0].run();
+        root.addView(panel, CarStyle.match());
+    }
+
+    /** Una fila de los guardados: el nombre (y Casa o Trabajo), «Ir», «Renombrar» y «Borrar» (con un segundo toque). */
+    private View savedRow(SavedPlaces.Saved s, int index, Runnable rebuild, Runnable closePanel) {
+        LinearLayout item = CarKit.row(ctx);
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setPadding(18, 12, 18, 12);
+        item.setBackground(CarKit.outlined(CarKit.SURFACE, s.tag.isEmpty() ? CarKit.OUTLINE : CarKit.ACCENT, 18));
+        LinearLayout txt = CarKit.col(ctx);
+        txt.setPadding(6, 0, 12, 0);
+        TextView name = CarStyle.text(ctx, savedTitle(s), 26, CarKit.TEXT);
+        name.setTypeface(CarKit.MEDIUM);
+        name.setSingleLine(true);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView detail = CarStyle.text(ctx, savedDetail(s), 21, CarKit.DIM);
+        detail.setSingleLine(true);
+        detail.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        txt.addView(name);
+        txt.addView(detail);
+        item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView go = CarKit.pill(ctx, Str.get(R.string.hql_go), true);
+        go.setOnClickListener(v -> {
+            closePanel.run();
+            savedRefresh = null;
+            goSaved(s);
+        });
+        TextView ren = CarKit.pill(ctx, Str.get(R.string.hql_pl_rename), false);
+        ren.setOnClickListener(v -> openRename(index, s.name, rebuild));
+        TextView del = CarKit.pill(ctx, Str.get(R.string.hql_pl_delete), false);
+        del.setOnClickListener(v -> {
+            if (!Boolean.TRUE.equals(del.getTag())) {
+                // Primer toque: se pide confirmar (que no se borre Casa por rozar el botón).
+                del.setTag(Boolean.TRUE);
+                del.setText(Str.get(R.string.hql_pl_delete_confirm));
+                del.setTextColor(CarKit.RED);
+                return;
+            }
+            Config c = new Config(ctx);
+            c.setSavedPlaces(SavedPlaces.remove(c.savedPlaces(), index));
+            L.i("ruta: guardado borrado en el coche");
+            rebuild.run();
+            tick();
+        });
+        item.addView(go);
+        item.addView(ren, spaced());
+        item.addView(del, spaced());
+        return item;
+    }
+
+    /** Cambiar el nombre de un guardado con el teclado del coche. */
+    private void openRename(int index, String current, Runnable done) {
+        LinearLayout panel = new LinearLayout(ctx);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setBackgroundColor(CarKit.BG);
+        panel.setClickable(true);
+        LinearLayout bar = CarStyle.bar(ctx);
+        bar.setBackgroundColor(CarKit.SURFACE);
+        StringBuilder buf = new StringBuilder(current == null ? "" : current);
+        TextView box = CarStyle.text(ctx, buf.toString(), 30, CarKit.TEXT);
+        box.setHint(Str.get(R.string.hql_pl_name_hint));
+        box.setHintTextColor(CarKit.FAINT);
+        box.setSingleLine(true);
+        box.setEllipsize(android.text.TextUtils.TruncateAt.START);
+        box.setPadding(26, 14, 26, 14);
+        box.setBackground(CarKit.outlined(CarKit.SURFACE_HI, CarKit.ACCENT, 28));
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        blp.rightMargin = 10;
+        bar.addView(box, blp);
+        TextView ok = CarKit.pill(ctx, Str.get(R.string.hql_pl_save), true);
+        TextView cancel = CarKit.pill(ctx, Str.get(R.string.hql_close), false);
+        bar.addView(ok);
+        bar.addView(cancel, spaced());
+        panel.addView(bar);
+        panel.addView(new View(ctx), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        Runnable apply = () -> {
+            String name = buf.toString().trim();
+            if (!name.isEmpty()) {
+                Config c = new Config(ctx);
+                c.setSavedPlaces(SavedPlaces.rename(c.savedPlaces(), index, name));
+            }
+            root.removeView(panel);
+            done.run();
+        };
+        CarKeyboard[] kbRef = new CarKeyboard[1];
+        CarKeyboard kb = new CarKeyboard(ctx, new CarKeyboard.Listener() {
+            @Override
+            public void onText(String t) {
+                buf.append(t);
+                box.setText(buf);
+                kbRef[0].showText(buf, Str.get(R.string.hql_pl_name_hint));
+            }
+
+            @Override
+            public void onBackspace() {
+                if (buf.length() > 0) buf.setLength(buf.length() - 1);
+                box.setText(buf);
+                kbRef[0].showText(buf, Str.get(R.string.hql_pl_name_hint));
+            }
+
+            @Override
+            public void onEnter() {
+                apply.run();
+            }
+
+            @Override
+            public void onHide() {
+                kbRef[0].setVisibility(View.GONE);
+            }
+        });
+        kbRef[0] = kb;
+        box.setOnClickListener(v -> kb.setVisibility(View.VISIBLE));
+        panel.addView(kb);
+        kb.showText(buf, Str.get(R.string.hql_pl_name_hint));
+        ok.setOnClickListener(v -> apply.run());
+        cancel.setOnClickListener(v -> root.removeView(panel));
+        root.addView(panel, CarStyle.match());
+    }
+
+    // ------------------------------------------------------------------ viaje: paradas intermedias e ida y vuelta
+
+    /** El viaje: desde dónde, las paradas (quitar, añadir), el destino, ida y vuelta y guardarlo. */
+    private void openTrip() {
+        if (RoutePlanner.manualDestination() == null) return;
+        LinearLayout panel = overlay(Str.get(R.string.hql_pl_trip_title), () -> tripRefresh = null);
+        LinearLayout body = (LinearLayout) panel.getTag();
+        Runnable[] build = new Runnable[1];
+        build[0] = () -> {
+            body.removeAllViews();
+            RoutePlanner.Place dest = RoutePlanner.manualDestination();
+            if (dest == null) {
+                root.removeView(panel);
+                return;
+            }
+            java.util.List<RoutePlanner.Place> via = RoutePlanner.vias();
+            boolean round = RoutePlanner.roundTrip();
+            RoutePlanner.Place o = RoutePlanner.testOrigin();
+            body.addView(tripLine("📍", Str.get(R.string.hql_pl_from), o == null ? Str.get(R.string.hql_pl_your_location) : o.name, null));
+            for (int i = 0; i < via.size(); i++) {
+                final int k = i;
+                body.addView(tripLine("•", Str.get(R.string.hql_pl_via_n, i + 1), via.get(i).name, () -> {
+                    java.util.List<RoutePlanner.Place> v2 = RoutePlanner.vias();
+                    if (k < v2.size()) v2.remove(k);
+                    RoutePlanner.setTrip(RoutePlanner.manualDestination(), v2, RoutePlanner.roundTrip());
+                    build[0].run();
+                    tick();
+                }), itemParams());
+            }
+            body.addView(tripLine("🏁", Str.get(R.string.hql_destination), dest.name, null), itemParams());
+            if (round) body.addView(tripLine("⇄", Str.get(R.string.hql_pl_back), Str.get(R.string.hql_pl_your_location), null), itemParams());
+            LinearLayout acts = CarKit.row(ctx);
+            if (via.size() < SavedPlaces.MAX_VIA) {
+                acts.addView(chip("＋ " + Str.get(R.string.hql_pl_add_via), false, () -> openSearch(S_VIA)), chipParams());
+            }
+            body.addView(acts);
+            body.addView(section(Str.get(R.string.hql_pl_round_q)));
+            LinearLayout rr = CarKit.row(ctx);
+            rr.addView(chip(capital(Str.get(R.string.hql_yes)), round, () -> {
+                RoutePlanner.setTrip(RoutePlanner.manualDestination(), RoutePlanner.vias(), true);
+                build[0].run();
+                tick();
+            }), chipParams());
+            rr.addView(chip(capital(Str.get(R.string.hql_no)), !round, () -> {
+                RoutePlanner.setTrip(RoutePlanner.manualDestination(), RoutePlanner.vias(), false);
+                build[0].run();
+                tick();
+            }), chipParams());
+            body.addView(rr);
+            body.addView(hint(Str.get(R.string.hql_pl_trip_note)));
+            LinearLayout sv = CarKit.row(ctx);
+            sv.setPadding(0, 24, 0, 0);
+            sv.addView(chip("★ " + Str.get(R.string.hql_pl_save), false, () -> openSaveChooser(dest, via, round)), chipParams());
+            body.addView(sv);
+        };
+        tripRefresh = () -> {
+            if (panel.getParent() != null) build[0].run();
+        };
+        build[0].run();
+        root.addView(panel, CarStyle.match());
+    }
+
+    /** Una línea del viaje: icono, qué es («Parada 1»), el sitio y, si se puede, «Quitar». */
+    private View tripLine(String icon, String what, String place, Runnable remove) {
+        LinearLayout item = CarKit.row(ctx);
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setPadding(18, 12, 18, 12);
+        item.setBackground(CarKit.outlined(CarKit.SURFACE, CarKit.OUTLINE, 18));
+        TextView ic = CarStyle.text(ctx, icon, 28, CarKit.ACCENT);
+        ic.setMinWidth(52);
+        item.addView(ic);
+        LinearLayout txt = CarKit.col(ctx);
+        txt.setPadding(12, 0, 12, 0);
+        txt.addView(CarStyle.text(ctx, what, 20, CarKit.FAINT));
+        TextView n = CarStyle.text(ctx, place, 26, CarKit.TEXT);
+        n.setSingleLine(true);
+        n.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        txt.addView(n);
+        item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        if (remove != null) {
+            TextView rm = CarKit.pill(ctx, Str.get(R.string.hql_remove), false);
+            rm.setOnClickListener(v -> remove.run());
+            item.addView(rm);
+        }
+        return item;
+    }
+
+    // ------------------------------------------------------------------ cargadores favoritos y vetados
+
+    /** «☆» (sin marca), «★» (favorito) o «⊘» (vetado); al tocarlo, la siguiente. */
+    private TextView markPill(RoutePlanner.Charger c) {
+        TextView t = CarKit.pill(ctx, "", false);
+        t.setMinWidth(72);
+        paintMark(t, ChargerMarks.kindOf(marks, c));
+        t.setOnClickListener(v -> {
+            int k = ChargerMarks.next(ChargerMarks.kindOf(marks, c));
+            Config cfg = new Config(ctx);
+            cfg.setChargerMarks(ChargerMarks.set(cfg.chargerMarks(), c, k));
+            marksJson = cfg.chargerMarks();
+            marks = ChargerMarks.parse(marksJson);
+            L.i("ruta: cargador " + (k == ChargerMarks.FAV ? "marcado como favorito" : k == ChargerMarks.BAN ? "vetado" : "sin marca"));
+            paintMark(t, k);
+            flash(Str.get(k == ChargerMarks.FAV ? R.string.hql_pl_mark_fav_done : k == ChargerMarks.BAN ? R.string.hql_pl_mark_ban_done
+                    : R.string.hql_pl_mark_none_done, RoutePlanner.chargerName(c)));
+            shownChargersFor = -1;
+            tick();
+        });
+        return t;
+    }
+
+    private static void paintMark(TextView t, int kind) {
+        t.setText(kind == ChargerMarks.FAV ? "★" : kind == ChargerMarks.BAN ? "⊘" : "☆");
+        t.setTextColor(kind == ChargerMarks.FAV ? CarKit.AMBER : kind == ChargerMarks.BAN ? CarKit.RED : CarKit.DIM);
+    }
+
+    /** En el filtro: la lista de favoritos y vetados, para quitarles la marca. */
+    private void addMarksSection(LinearLayout body, Runnable rebuild) {
+        body.addView(section(Str.get(R.string.hql_pl_marks_title)));
+        java.util.List<ChargerMarks.Mark> list = ChargerMarks.parse(new Config(ctx).chargerMarks());
+        if (list.isEmpty()) {
+            body.addView(hint(Str.get(R.string.hql_pl_marks_empty)));
+            return;
+        }
+        for (int i = 0; i < list.size(); i++) {
+            ChargerMarks.Mark m = list.get(i);
+            final int k = i;
+            LinearLayout item = CarKit.row(ctx);
+            item.setGravity(Gravity.CENTER_VERTICAL);
+            item.setPadding(18, 10, 18, 10);
+            item.setBackground(CarKit.outlined(CarKit.SURFACE, CarKit.OUTLINE, 18));
+            TextView ic = CarStyle.text(ctx, m.kind == ChargerMarks.FAV ? "★" : "⊘", 28, m.kind == ChargerMarks.FAV ? CarKit.AMBER : CarKit.RED);
+            ic.setMinWidth(52);
+            item.addView(ic);
+            LinearLayout txt = CarKit.col(ctx);
+            txt.setPadding(12, 0, 12, 0);
+            TextView n = CarStyle.text(ctx, m.name.isEmpty() ? Str.get(R.string.hql_plan_charger) : m.name, 24, CarKit.TEXT);
+            n.setSingleLine(true);
+            n.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            txt.addView(n);
+            txt.addView(CarStyle.text(ctx, Str.get(m.kind == ChargerMarks.FAV ? R.string.hql_pl_mark_fav : R.string.hql_pl_mark_ban), 20,
+                    CarKit.DIM));
+            item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            TextView rm = CarKit.pill(ctx, Str.get(R.string.hql_remove), false);
+            rm.setOnClickListener(v -> {
+                Config c = new Config(ctx);
+                c.setChargerMarks(ChargerMarks.remove(c.chargerMarks(), k));
+                L.i("ruta: marca de un cargador quitada");
+                rebuild.run();
+                tick();
+            });
+            item.addView(rm);
+            body.addView(item, itemParams());
+        }
+    }
+
+    // ------------------------------------------------------------------ tramos del viaje, cargar en el destino y comer
+
+    /** En un viaje de varios tramos: con cuánto se llega a cada punto que queda («Parada 1 · km 80 · llegas con 54 %»). */
+    private void addLegs(RoutePlanner.Plan p, ChargePlanner.Result cp) {
+        if (p.waypoints.isEmpty() || (!p.multi() && !p.roundTrip)) return;
+        double[] at = ChargePlanner.arrivals(cp, p.waypointKm);
+        for (int i = 0; i < p.waypoints.size() && i < at.length; i++) {
+            if (p.waypointKm[i] <= cp.fromKm + ChargePlanner.HERE_KM) continue;
+            RoutePlanner.Place w = p.waypoints.get(i);
+            boolean last = i == p.waypoints.size() - 1;
+            String what = i == p.destIndex ? w.name : last && p.roundTrip ? Str.get(R.string.hql_pl_back) : w.name;
+            TextView t = hint(Str.get(R.string.hql_pl_leg_line, what, p.waypointKm[i], Math.max(0, at[i])));
+            t.setTextColor(at[i] < 10 ? CarKit.AMBER : CarKit.DIM);
+            t.setSingleLine(true);
+            t.setEllipsize(android.text.TextUtils.TruncateAt.MIDDLE);
+            chargers.addView(t);
+        }
+    }
+
+    /** Radio en el que se buscan cargadores junto al destino (km). */
+    static final double DEST_RADIUS_KM = 1.5;
+
+    /**
+     * Si al destino se llega con poca batería (menos del umbral del filtro) o, de ida y vuelta, con menos de lo que hace
+     * falta para volver: los cargadores más cerca del destino (los favoritos primero), para cargar allí.
+     */
+    private void addDestChargers(RoutePlanner.Plan p, ChargePlanner.Result cp) {
+        double destKm = p.waypoints.isEmpty() ? p.totalKm
+                : p.destIndex >= 0 && p.destIndex < p.waypointKm.length ? p.waypointKm[p.destIndex] : Double.NaN;
+        if (Double.isNaN(destKm) || destKm <= cp.fromKm + ChargePlanner.HERE_KM || DemoMode.active()) return;
+        Config c = new Config(ctx);
+        double pct = cp.pctAt(destKm);
+        double ret = p.roundTrip && destKm < p.totalKm - 1 ? ChargePlanner.neededFrom(cp, destKm, c.planArrivePct()) : Double.NaN;
+        if (!ChargePlanner.destChargeAdvised(pct, c.destChargePct(), ret)) return;
+        if (destNearFor != p) {
+            destNearFor = p;
+            java.util.List<String> missing = new java.util.ArrayList<>();
+            java.util.List<RoutePlanner.Charger> near = ChargerMarks.withoutBanned(planner.nearby(p.destLat, p.destLon, DEST_RADIUS_KM, missing), marks);
+            java.util.List<RoutePlanner.Charger> sorted = new java.util.ArrayList<>(near);
+            java.util.Collections.sort(sorted, (a, b) -> {
+                int fa = ChargerMarks.kindOf(marks, a) == ChargerMarks.FAV ? 0 : 1;
+                int fb = ChargerMarks.kindOf(marks, b) == ChargerMarks.FAV ? 0 : 1;
+                return fa != fb ? fa - fb : Double.compare(a.kmAlong, b.kmAlong);
+            });
+            destNear = sorted;
+            if (!missing.isEmpty() && !destFetching) {
+                destFetching = true;
+                planner.fetchNearby(missing, () -> root.post(() -> {
+                    destFetching = false;
+                    destNearFor = null;
+                    shownChargersFor = -1;
+                }));
+            }
+            L.i(String.format(Locale.US, "ruta: cargar en el destino (llegada %.0f %%): %d cargadores a menos de %.1f km", pct,
+                    sorted.size(), DEST_RADIUS_KM));
+        }
+        TextView title = CarStyle.text(ctx, Str.get(R.string.hql_pl_dest_section).toUpperCase(Locale.getDefault()), 19, CarKit.AMBER);
+        title.setTypeface(CarKit.MEDIUM);
+        title.setLetterSpacing(0.1f);
+        title.setPadding(0, 12, 0, 2);
+        chargers.addView(title);
+        TextView why = hint(!Double.isNaN(ret) && pct < ret ? Str.get(R.string.hql_pl_dest_return, Math.max(0, pct), ret)
+                : Str.get(R.string.hql_pl_dest_low, Math.max(0, pct)));
+        why.setTextColor(CarKit.AMBER);
+        why.setMaxLines(2);
+        chargers.addView(why);
+        int shown = 0;
+        for (RoutePlanner.Charger ch : destNear) {
+            if (shown >= 3) break;
+            shown++;
+            LinearLayout item = CarKit.row(ctx);
+            item.setGravity(Gravity.CENTER_VERTICAL);
+            item.setPadding(0, 8, 0, 8);
+            item.addView(new ChargerDot(ctx, ch.maxKw, ch.network), new LinearLayout.LayoutParams(52, 52));
+            LinearLayout txt = CarKit.col(ctx);
+            txt.setPadding(16, 0, 10, 0);
+            TextView name = CarStyle.text(ctx, ch.name, 24, CarKit.TEXT);
+            name.setTypeface(CarKit.MEDIUM);
+            name.setSingleLine(true);
+            name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            TextView line = CarStyle.text(ctx, Str.get(R.string.hql_pl_dest_line, ch.kmAlong, kwText(ch)), 20, CarKit.DIM);
+            line.setSingleLine(true);
+            line.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            txt.addView(name);
+            txt.addView(line);
+            item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            item.addView(markPill(ch));
+            TextView go = CarKit.pill(ctx, Str.get(R.string.hql_go), false);
+            go.setOnClickListener(v -> navigateTo(ch.lat, ch.lon));
+            item.addView(go, spaced());
+            chargers.addView(item);
+        }
+        if (shown == 0) {
+            chargers.addView(hint(destFetching ? Str.get(R.string.hql_pl_dest_loading) : Str.get(R.string.hql_pl_dest_none, DEST_RADIUS_KM)));
+        }
+    }
+
+    /** «🍴 Bar Ejemplo y 3 más cerca» o «Sin sitio para comer a menos de 300 m» (o "" si aún no se sabe). */
+    private String foodText(RoutePlanner.Charger c) {
+        FoodNearby.Info i = FoodNearby.get(ctx, c);
+        if (i == null) return "";
+        if (i.count == 0) return Str.get(R.string.hql_pl_food_no, Math.round(FoodNearby.RADIUS_M));
+        String name = i.name.isEmpty() ? Str.get(R.string.hql_pl_food_place) : i.name;
+        return i.count == 1 ? Str.get(R.string.hql_pl_food_yes, name) : Str.get(R.string.hql_pl_food_more, name, i.count - 1);
+    }
+
+    /**
+     * Pide (una vez: FoodNearby guarda lo sabido) si hay dónde comer junto a las paradas largas del plan; con «preferir
+     * comida», también junto a unas pocas alternativas rápidas de las paradas largas que no tienen.
+     */
+    private void requestFood(RoutePlanner.Plan p, ChargePlanner.Result cp) {
+        java.util.List<RoutePlanner.Charger> want = new java.util.ArrayList<>();
+        boolean prefer = new Config(ctx).planPreferFood();
+        for (ChargePlanner.Stop st : cp.stops) {
+            if (!ChargePlanner.longStop(st) || st.km <= cp.fromKm + ChargePlanner.HERE_KM) continue;
+            want.add(st.charger);
+            FoodNearby.Info i = FoodNearby.get(ctx, st.charger);
+            if (!prefer || i == null || i.count > 0) continue;
+            int alt = 0;
+            for (RoutePlanner.Charger c : p.chargers) {
+                if (alt >= 4) break;
+                if (c == st.charger || Math.abs(c.kmAlong - st.km) > 40 || !wanted(c) || c.acOnly || c.maxKw < ChargePlanner.FAST_KW) continue;
+                want.add(c);
+                alt++;
+            }
+        }
+        if (want.isEmpty()) return;
+        FoodNearby.request(ctx, want, () -> root.post(() -> {
+            shownChargersFor = -1;
+            if (running) tick();
+        }));
     }
 
     // ------------------------------------------------------------------ carga en directo
@@ -763,7 +1509,8 @@ final class RouteTab implements CarScreen {
 
     /** El cargador pasa el filtro elegido. */
     private boolean wanted(RoutePlanner.Charger c) {
-        return ChargerFilter.accepts(c, chargerMinKw, chargerNets, chargerUnknown);
+        return ChargerFilter.accepts(c, chargerMinKw, chargerNets, chargerUnknown)
+                && (marks.isEmpty() || ChargerMarks.kindOf(marks, c) != ChargerMarks.BAN);
     }
 
     /** «Todos los cargadores» o «≥ 100 kW · Tesla, Zunder». */
@@ -1014,9 +1761,10 @@ final class RouteTab implements CarScreen {
             txt.addView(CarStyle.text(ctx, Str.get(R.string.hql_charger_low_volts, c.maxVolts), 20, CarKit.AMBER));
         }
         item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        item.addView(markPill(c));
         TextView go = CarKit.pill(ctx, Str.get(R.string.hql_go), false);
         go.setOnClickListener(v -> navigateTo(c.lat, c.lon));
-        item.addView(go);
+        item.addView(go, spaced());
         return item;
     }
 
@@ -1063,9 +1811,10 @@ final class RouteTab implements CarScreen {
             tag.setPadding(0, 0, 16, 0);
             item.addView(tag);
         }
+        item.addView(markPill(c));
         TextView go = CarKit.pill(ctx, Str.get(R.string.hql_go), false);
         go.setOnClickListener(v -> navigateTo(c.lat, c.lon));
-        item.addView(go);
+        item.addView(go, spaced());
         return item;
     }
 
@@ -1156,6 +1905,32 @@ final class RouteTab implements CarScreen {
                 build[0].run();
             }), chipParams());
             body.addView(vo);
+            // Cargar en el destino: si se llega con menos de este % (o, de ida y vuelta, con menos de lo de volver).
+            body.addView(section(Str.get(R.string.hql_pl_dest_setting)));
+            LinearLayout dc = CarKit.row(ctx);
+            for (int v : new int[]{0, 10, 15, 20, 25, 30}) {
+                dc.addView(chip(v == 0 ? capital(Str.get(R.string.hql_no)) : v + " %", pc.destChargePct() == v, () -> {
+                    pc.setDestChargePct(v);
+                    filterChanged();
+                    build[0].run();
+                }), chipParams());
+            }
+            body.addView(dc);
+            body.addView(section(Str.get(R.string.hql_pl_food_pref)));
+            LinearLayout fo = CarKit.row(ctx);
+            fo.addView(chip(capital(Str.get(R.string.hql_yes)), pc.planPreferFood(), () -> {
+                pc.setPlanPreferFood(true);
+                filterChanged();
+                build[0].run();
+            }), chipParams());
+            fo.addView(chip(capital(Str.get(R.string.hql_no)), !pc.planPreferFood(), () -> {
+                pc.setPlanPreferFood(false);
+                filterChanged();
+                build[0].run();
+            }), chipParams());
+            body.addView(fo);
+            body.addView(hint(Str.get(R.string.hql_pl_food_note, Math.round(FoodNearby.LONG_STOP_MIN), Math.round(FoodNearby.RADIUS_M))));
+            addMarksSection(body, build[0]);
             // Navegador para «Guiar», los «Ir» y las paradas (Waze, si está instalado).
             if (NavApps.wazeInstalled(ctx)) {
                 body.addView(section(Str.get(R.string.hql_nav_app)));
@@ -1317,6 +2092,8 @@ final class RouteTab implements CarScreen {
             t.setTextColor(CarKit.GREEN);
             chargers.addView(t);
             addReplanNote(cp);
+            addLegs(p, cp);
+            addDestChargers(p, cp);
             return;
         }
         if (cp.outcome == ChargePlanner.Outcome.NO_CHARGER && cp.stops.isEmpty()) {
@@ -1325,6 +2102,7 @@ final class RouteTab implements CarScreen {
             chargers.addView(t);
             // Si yendo más despacio sí se llega, se dice aquí (es para lo que está el consejo de rescate).
             addSpeedAdvice(cp.speed);
+            addDestChargers(p, cp);
             return;
         }
         TextView title = CarStyle.text(ctx, Str.get(R.string.hql_plan_title).toUpperCase(Locale.getDefault()), 19, CarKit.ACCENT);
@@ -1345,6 +2123,7 @@ final class RouteTab implements CarScreen {
         chargers.addView(s);
         addReplanNote(cp);
         addSpeedAdvice(cp.speed);
+        addLegs(p, cp);
         if (cp.outcome == ChargePlanner.Outcome.NO_CHARGER) chargers.addView(hint(Str.get(R.string.hql_plan_impossible)));
         int n = 1;
         for (ChargePlanner.Stop st : cp.stops) {
@@ -1366,13 +2145,23 @@ final class RouteTab implements CarScreen {
             line.setMaxLines(2);
             txt.addView(name);
             txt.addView(line);
+            // Parada larga: si hay dónde comer cerca (FoodNearby, pedido una vez).
+            String food = ChargePlanner.longStop(st) ? foodText(st.charger) : "";
+            if (!food.isEmpty()) {
+                TextView f = CarStyle.text(ctx, food, 19, food.startsWith("🍴") ? CarKit.GREEN : CarKit.FAINT);
+                f.setSingleLine(true);
+                f.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                txt.addView(f);
+            }
             item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            item.addView(markPill(st.charger));
             TextView go = CarKit.pill(ctx, Str.get(R.string.hql_go), false);
             go.setOnClickListener(v -> navigateTo(st.charger.lat, st.charger.lon));
-            item.addView(go);
+            item.addView(go, spaced());
             chargers.addView(item);
         }
         addLowVoltsNote(p, cp);
+        addDestChargers(p, cp);
         TextView all = CarKit.pill(ctx, Str.get(R.string.hql_plan_go), true);
         all.setOnClickListener(v -> RoutePlanner.navigateWithStops(ctx, p, cp));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1417,6 +2206,7 @@ final class RouteTab implements CarScreen {
             chargers.addView(t);
         }
         addPlan(p);
+        if (chargePlan != null) requestFood(p, chargePlan);
         java.util.Set<RoutePlanner.Charger> inPlan = new java.util.HashSet<>();
         if (chargePlan != null) for (ChargePlanner.Stop st : chargePlan.stops) inPlan.add(st.charger);
         double here = p.km[Math.min(p.progress, p.n - 1)];
@@ -1452,9 +2242,10 @@ final class RouteTab implements CarScreen {
             txt.addView(name);
             txt.addView(detail);
             item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            item.addView(markPill(c));
             TextView go = CarKit.pill(ctx, Str.get(R.string.hql_go), false);
             go.setOnClickListener(v -> navigateTo(c.lat, c.lon));
-            item.addView(go);
+            item.addView(go, spaced());
             chargers.addView(item);
         }
         if (shown == 0 && hidden > 0) {
@@ -1627,15 +2418,26 @@ final class RouteTab implements CarScreen {
         float x0 = r.left;
         float y0 = r.top;
         String dest = nav.destination != null ? nav.destination : pl != null ? pl.destination : null;
+        if (dest != null && nav.destination == null && pl != null) {
+            // Viaje: «Destino · +2 ⇄» (las paradas que quedan antes del destino y si vuelve).
+            int before = Math.max(0, pl.destIndex);
+            if (before > 0) dest += " · +" + before;
+            if (pl.roundTrip) dest += " ⇄";
+        }
         if (pl == null || pl.n < 2) {
             paintEmpty(cv, r, p, dest);
             return;
         }
-        // Destino.
-        CarIcons.pin(cv, x0 + 16, y0 + 30, 40, CarKit.ACCENT, CarKit.SURFACE, p);
         // El hueco de los botones, medido (en otros idiomas son más anchos que en español).
         float pillsW = actionsRow.getWidth() > 0 ? actionsRow.getWidth() + 20
                 : goMaps.getVisibility() == View.VISIBLE ? 620 : clear.getVisibility() == View.VISIBLE ? 360 : 240;
+        if (CarStyle.scaled() && r.width() - pillsW - 60 < r.width() * 0.3f) {
+            // Interfaz reducida (T03): con los botones más grandes no queda sitio para el destino a su lado; va debajo.
+            y0 += (actionsHost.getHeight() > 0 ? actionsHost.getHeight() : CarStyle.touch(56)) + 4;
+            pillsW = 0;
+        }
+        // Destino.
+        CarIcons.pin(cv, x0 + 16, y0 + 30, 40, CarKit.ACCENT, CarKit.SURFACE, p);
         CarKit.label(cv, Str.get(R.string.hql_destination), x0 + 48, y0 + 14, CarKit.FAINT, p, Paint.Align.LEFT, r.width() - pillsW - 60);
         p.setTypeface(CarKit.MEDIUM);
         p.setTextSize(40);
@@ -1682,7 +2484,11 @@ final class RouteTab implements CarScreen {
         // Perfil, viento, tramos y leyenda.
         float gx0 = x0 + 74;
         RectF chart = chartRect;
-        chart.set(gx0, y0 + 222, r.right, y0 + 530);
+        float chartBottom = y0 + 530;
+        // Interfaz reducida (T03): la tarjeta es más baja; el perfil se encoge para que el viento, los tramos y la leyenda
+        // quepan debajo (como en el C10, 190 px).
+        if (CarStyle.scaled()) chartBottom = Math.max(y0 + 302, Math.min(chartBottom, r.bottom - 190));
+        chart.set(gx0, y0 + 222, r.right, chartBottom);
         profile(cv, chart, pl, prog, p);
         float wy = chart.bottom + 36;
         for (int i = 1; i < pl.n; i++) {
