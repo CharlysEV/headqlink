@@ -811,7 +811,7 @@ final class WebScreen implements CarScreen {
             web.reload();
         }));
         panel.addView(menuRow(c, (adblock ? "🛡  " : "○  ") + Str.get(R.string.hql_web_adblock)
-                + (adblock && page ? " · " + Str.get(R.string.hql_web_adblock_count, blockedHere) : ""), true, () -> {
+                + (adblock && page ? " · " + Str.plural(R.plurals.hql_web_adblock_count, blockedHere) : ""), true, () -> {
             adblock = !adblock;
             prefs(c).edit().putBoolean("adblock", adblock).apply();
             closeOverlay();

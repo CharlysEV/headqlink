@@ -91,7 +91,7 @@ final class TripsTab implements CarScreen {
             list.addView(new TripCard(ctx, trips.get(i), i), lp);
         }
         if (!trips.isEmpty()) {
-            TextView note = CarStyle.text(ctx, Str.get(R.string.hql_trips_note, cfg.electricityPrice(), cfg.fuelLitersPer100(), cfg.fuelPrice()), 20, CarKit.FAINT);
+            TextView note = CarStyle.text(ctx, Str.get(R.string.hql_trips_note, Money.per(cfg.electricityPrice(), "kWh"), cfg.fuelLitersPer100(), Money.per(cfg.fuelPrice(), "l")), 20, CarKit.FAINT);
             note.setPadding(8, 16, 8, 8);
             list.addView(note);
         }
@@ -349,7 +349,7 @@ final class TripsTab implements CarScreen {
                         Paint.Align.LEFT) + 40;
             }
             double cost = TripStats.cost(t, history, cfg.electricityPrice(), cfg.fuelPrice());
-            CarKit.number(cv, String.format(Locale.getDefault(), "%.2f", cost), "€", cx, y, 32, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+            CarKit.number(cv, Money.parts(cost)[0], Money.parts(cost)[1], cx, y, 32, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
             // Se puede abrir: una flecha discreta a la derecha.
             CarKit.text(cv, "›", getWidth() - pad - 6, getHeight() / 2f + 22, 56, CarKit.MUTED, CarKit.LIGHT, p, Paint.Align.RIGHT);
             // Distintivo si es un récord.
@@ -450,19 +450,19 @@ final class TripsTab implements CarScreen {
             km += t.km;
             cost += TripStats.cost(t, history, cfg.electricityPrice(), cfg.fuelPrice());
         }
-        CarKit.text(cv, Str.get(R.string.hql_trips_total, trips.size(), km, cost), r.left, r.bottom, 21, CarKit.FAINT,
+        CarKit.text(cv, Str.plural(R.plurals.hql_trips_total, trips.size(), trips.size(), km, Money.format(cost)), r.left, r.bottom, 21, CarKit.FAINT,
                 CarKit.MEDIUM, p, Paint.Align.LEFT);
         // Lo que dice el coche de los últimos 30 días (su historial) o, sin él, los totales reales de la bajada del %.
         CloudHistory.Match car = CloudHistory.totals(history, DemoMode.wallClockMs() - 30 * 86_400_000L);
         if (car != null && !Double.isNaN(car.kwhPer100())) {
             String ct = Double.isNaN(car.fuelL) || car.fuelL < 0.05
-                    ? Str.get(R.string.hql_cloud_trips_car_total, car.trips, car.km, car.kwhPer100())
-                    : Str.get(R.string.hql_cloud_trips_car_total_fuel, car.trips, car.km, car.kwhPer100(), car.litersPer100());
+                    ? Str.plural(R.plurals.hql_cloud_trips_car_total, car.trips, car.trips, car.km, car.kwhPer100())
+                    : Str.plural(R.plurals.hql_cloud_trips_car_total_fuel, car.trips, car.trips, car.km, car.kwhPer100(), car.litersPer100());
             p.setTypeface(CarKit.MEDIUM);
             p.setTextSize(21);
             CarKit.text(cv, CarKit.ellipsize(ct, r.width(), p), r.left, r.bottom - 30, 21, CarKit.ACCENT, CarKit.MEDIUM, p, Paint.Align.LEFT);
         } else if (realLine) {
-            String rt = Str.get(R.string.hql_cloud_trips_real_total, allTotals.realTrips, allTotals.realKm, allTotals.realKwhPer100());
+            String rt = Str.plural(R.plurals.hql_cloud_trips_real_total, allTotals.realTrips, allTotals.realTrips, allTotals.realKm, allTotals.realKwhPer100());
             p.setTypeface(CarKit.MEDIUM);
             p.setTextSize(21);
             CarKit.text(cv, CarKit.ellipsize(rt, r.width(), p), r.left, r.bottom - 30, 21, CarKit.ACCENT, CarKit.MEDIUM, p, Paint.Align.LEFT);

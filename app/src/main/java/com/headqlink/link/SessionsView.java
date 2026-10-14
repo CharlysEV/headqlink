@@ -79,7 +79,7 @@ final class SessionsView {
         } else {
             b.append(" · ").append(Math.round(r.fps)).append(" fps");
             if (r.cuts > 0) {
-                b.append(" · ").append(Str.get(R.string.hql_sessions_cuts, r.cuts));
+                b.append(" · ").append(Str.plural(R.plurals.hql_sessions_cuts, r.cuts));
                 if (r.maxCutMs > 0) b.append(" (").append(Str.get(R.string.hql_sessions_max_cut, Math.round(r.maxCutMs / 1000.0))).append(')');
             }
         }

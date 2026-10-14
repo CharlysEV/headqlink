@@ -1607,7 +1607,7 @@ final class RouteTab implements CarScreen {
             if (body.getChildCount() == 0) body.addView(hint(Str.get(R.string.hql_chargers_list_none)));
             body.addView(hint(Str.get(pl.dgtCount > 0 ? R.string.hql_chargers_source_dgt : R.string.hql_chargers_source_osm)));
         }
-        count.setText(Str.get(R.string.hql_chargers_list_count, total, passing));
+        count.setText(Str.plural(R.plurals.hql_chargers_list_count, passing, total, passing));
         root.addView(panel, CarStyle.match());
     }
 
@@ -2019,7 +2019,7 @@ final class RouteTab implements CarScreen {
         for (RoutePlanner.Charger c : p.chargers) if (wanted(c)) ahead.add(c);
         java.util.List<RoutePlanner.Charger> low = ChargePlanner.lowVoltsBetween(ahead, here, p.km[p.n - 1], cp.carVolts);
         if (low.isEmpty()) return;
-        TextView t = CarStyle.text(ctx, Str.get(R.string.hql_plan_low_volts, low.size(), low.get(0).kmAlong), 20, CarKit.AMBER);
+        TextView t = CarStyle.text(ctx, Str.plural(R.plurals.hql_plan_low_volts, low.size(), low.size(), low.get(0).kmAlong), 20, CarKit.AMBER);
         t.setPadding(0, 8, 0, 4);
         t.setOnClickListener(v -> openChargerList(false));
         chargers.addView(t);
@@ -2075,10 +2075,10 @@ final class RouteTab implements CarScreen {
         if (a.stopsAfter < a.stopsBefore) {
             // Menos paradas pero cargando más rato (la que queda llega a la parte lenta de la curva): lo que se tarda de más.
             if (a.chargeSavedMin < 0) {
-                return Str.get(R.string.hql_speed_advice_stops_total, a.capKmh, a.stopsAfter, a.stopsBefore,
+                return Str.plural(R.plurals.hql_speed_advice_stops_total, a.stopsAfter, a.capKmh, a.stopsAfter, a.stopsBefore,
                         DriveTab.duration(Math.round(-a.gainMin() * 60)));
             }
-            return Str.get(R.string.hql_speed_advice_stops, a.capKmh, a.stopsAfter, a.stopsBefore, drive, charge);
+            return Str.plural(R.plurals.hql_speed_advice_stops, a.stopsAfter, a.capKmh, a.stopsAfter, a.stopsBefore, drive, charge);
         }
         return Str.get(R.string.hql_speed_advice, a.capKmh, DriveTab.duration(Math.round(a.gainMin() * 60)), drive, charge);
     }
@@ -2114,11 +2114,10 @@ final class RouteTab implements CarScreen {
         // Sin cargador alcanzable tras la última parada: dónde se queda, no un «llegas con -130 %».
         String sum = cp.outcome == ChargePlanner.Outcome.NO_CHARGER
                 ? Str.get(R.string.hql_plan_summary_stuck, cp.stops.size(), dur, cp.stops.get(cp.stops.size() - 1).km)
-                : cp.stops.size() == 1 ? Str.get(R.string.hql_plan_summary_one, dur, cp.arrivalPct)
-                : Str.get(R.string.hql_plan_summary_many, cp.stops.size(), dur, cp.arrivalPct);
+                : Str.plural(R.plurals.hql_plan_summary, cp.stops.size(), cp.stops.size(), dur, cp.arrivalPct);
         // Con el precio de ahora (si se cambia en Ajustes, el plan no se rehace por eso).
         double cost = ChargePlanner.cost(cp, new Config(ctx).fastChargePrice());
-        if (cost >= 0.5) sum += Str.get(R.string.hql_plan_cost, cost);
+        if (cost >= 0.5) sum += Str.get(R.string.hql_plan_cost, Money.format(cost, 0));
         TextView s = CarStyle.text(ctx, sum, 22, cp.outcome == ChargePlanner.Outcome.PLANNED ? CarKit.TEXT : CarKit.AMBER);
         chargers.addView(s);
         addReplanNote(cp);

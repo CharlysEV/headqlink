@@ -151,7 +151,7 @@ final class SettingsScreen implements CarScreen {
             case SEC_PANEL:
                 return Str.get(R.string.hql_settings_sec_panel_sub);
             case SEC_TRIP:
-                return String.format(java.util.Locale.getDefault(), "%.2f €/kWh", cfg.electricityPrice())
+                return Money.per(cfg.electricityPrice(), "kWh")
                         + (cfg.radarVoice() ? " · " + Str.get(R.string.hql_radar_voice) : "");
             case SEC_CONN:
                 return Ui.linkTitle(LinkState.linkModeFor(cfg));
@@ -452,7 +452,7 @@ final class SettingsScreen implements CarScreen {
         priceRow.addView(value);
         priceRow.addView(plus);
         Runnable showPrice = () -> {
-            value.setText(String.format(java.util.Locale.getDefault(), "%.2f €/kWh", get.getAsDouble()));
+            value.setText(Money.per(get.getAsDouble(), "kWh"));
             refreshSummaries();
         };
         showPrice.run();

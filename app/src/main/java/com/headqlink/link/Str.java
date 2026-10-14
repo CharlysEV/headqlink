@@ -28,6 +28,15 @@ public final class Str {
     }
 
     /**
+     * Texto con cantidad (res/values-xx/hql_plurals.xml): «1 viaje», «2 viajes», con las reglas de plural del idioma.
+     * Sin {@code args}, el único argumento es {@code n}; si no, van {@code args} tal cual (con {@code n} donde toque).
+     */
+    static String plural(int id, int n, Object... args) {
+        Object[] a = args == null || args.length == 0 ? new Object[]{n} : args;
+        return app.getResources().getQuantityString(id, n, a);
+    }
+
+    /**
      * Textos donde «C10» es el coche del usuario (juegos, bienvenida, estimaciones): con otro modelo (CarSpec, el T03)
      * dicen el suyo, y la autonomía WLTP la suya. Los que hablan del C10 como referencia («probado en el C10») no cambian.
      */

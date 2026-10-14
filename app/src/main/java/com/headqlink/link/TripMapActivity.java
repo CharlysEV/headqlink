@@ -81,10 +81,10 @@ public class TripMapActivity extends Activity {
         card.addView(big);
         StringBuilder line = new StringBuilder();
         if (!Double.isNaN(per100)) line.append(String.format(Locale.getDefault(), "%.1f kWh/100 km", per100));
-        if (!Double.isNaN(cost) && cost > 0) line.append(String.format(Locale.getDefault(), " · %.2f €", cost));
+        if (!Double.isNaN(cost) && cost > 0) line.append(" · ").append(Money.format(cost));
         line.append(String.format(Locale.getDefault(), " · ↑%.0f m ↓%.0f m", trip.climb, trip.descent));
         if (trip.maxKmh > 0) line.append(String.format(Locale.getDefault(), " · %s %.0f km/h", Str.get(R.string.hql_ins_max), trip.maxKmh));
-        if (!stops.isEmpty()) line.append(" · ").append(Str.get(R.string.hql_ins_stops, stops.size()));
+        if (!stops.isEmpty()) line.append(" · ").append(Str.plural(R.plurals.hql_ins_stops, stops.size()));
         card.addView(text(line.toString(), 14, PhoneCharts.DIM));
         FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP);

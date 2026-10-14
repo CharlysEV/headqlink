@@ -192,7 +192,7 @@ final class TripDetail {
         stat(cv, x + col, y, Str.get(R.string.hql_trip_max), String.format(Locale.getDefault(), "%.0f", t.maxKmh), "km/h", p);
         stat(cv, x + 2 * col, y, Str.get(R.string.hql_trip_climb), "↑" + String.format(Locale.getDefault(), "%.0f", t.climb), "m", p);
         double cost = TripStats.cost(t, history, cfg.electricityPrice(), cfg.fuelPrice());
-        stat(cv, x + 3 * col, y, Str.get(R.string.hql_trip_cost_label), String.format(Locale.getDefault(), "%.2f", cost), "€", p);
+        stat(cv, x + 3 * col, y, Str.get(R.string.hql_trip_cost_label), Money.parts(cost)[0], Money.parts(cost)[1], p);
         // Paradas.
         y += 70;
         p.setColor(CarKit.OUTLINE);

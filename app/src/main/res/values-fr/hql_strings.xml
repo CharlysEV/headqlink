@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- headqlink: textos de la interfaz (francés). -->
 <resources>
-    <string name="hql_2048_over">Fin de partie · %1$d points · appuyez pour rejouer</string>
     <string name="hql_aa_devmode_missing">le mode développeur d\'Android Auto est désactivé</string>
     <string name="hql_aa_no_start_why">Ne démarre pas : %1$s</string>
     <string name="hql_aa_server_failed">Impossible de démarrer le serveur d\'Android Auto</string>
@@ -24,8 +23,8 @@
     <string name="hql_autohide_panel">Masquer le panneau latéral après quelques secondes</string>
     <string name="hql_nes">NES</string>
     <string name="hql_nes_sub">Nestopia · vos jeux, manette ou tactile</string>
-    <string name="hql_nes_folder">Dossier des jeux (NES, Mega Drive)</string>
-    <string name="hql_nes_folder_set">Dossier des jeux enregistré. Dans la voiture : Jeux › NES ou Mega Drive.</string>
+    <string name="hql_nes_folder">Dossier des jeux (NES, Mega Drive, SNES, PlayStation)</string>
+    <string name="hql_nes_folder_set">Dossier des jeux enregistré. Dans la voiture : Jeux › NES, Mega Drive, Super Nintendo ou PlayStation.</string>
     <string name="hql_nes_no_folder">Choisissez le dossier des jeux sur le téléphone : menu ⚙ › Jeux › « Dossier des jeux ». Les .zip fonctionnent aussi.</string>
     <string name="hql_nes_empty">Aucun jeu %1$s dans ce dossier (les .zip fonctionnent aussi).</string>
     <string name="hql_nes_pad_title">Manette connectée à la voiture</string>
@@ -56,7 +55,6 @@
     <string name="hql_sessions_title">Dernières sessions</string>
     <string name="hql_sessions_none">Pas encore de sessions.</string>
     <string name="hql_sessions_no_video">sans vidéo</string>
-    <string name="hql_sessions_cuts">%1$d coupures</string>
     <string name="hql_sessions_max_cut">max. %1$d s</string>
     <string name="hql_panel_right">Panneau latéral à droite</string>
     <string name="hql_panel_buttons">Boutons du panneau latéral</string>
@@ -127,8 +125,6 @@
     <string name="hql_finish_anyway">Terminer quand même</string>
     <string name="hql_fly_10">10 poteaux, comme la C10 !</string>
     <string name="hql_fly_70">70 poteaux : comme les kWh de sa batterie !</string>
-    <string name="hql_fly_over">%1$d poteaux · appuyez pour rejouer</string>
-    <string name="hql_fly_posts">%1$d poteaux</string>
     <string name="hql_fly_start">Appuyez pour décoller</string>
     <string name="hql_fluidity">Fluidité</string>
     <string name="hql_fluidity_30">30 fps · moins de chaleur (60 dans les émulateurs)</string>
@@ -257,7 +253,7 @@
     <string name="hql_radio_none">Aucune station.</string>
     <string name="hql_radio_pick">Choisissez une station</string>
     <string name="hql_radio_popular">Populaires</string>
-    <string name="hql_radio_setup_list">Configurez votre liste radio sur le téléphone (URL ou fichier M3U) : écran principal → Liste radio.</string>
+    <string name="hql_radio_setup_list">Configurez votre liste radio sur le téléphone (URL ou fichier M3U) : menu ⚙ › Contenu du mode étendu › Liste radio.</string>
     <string name="hql_range_charge">+18 % · recharge rapide</string>
     <string name="hql_range_cone">Cône</string>
     <string name="hql_range_crash">Collision</string>
@@ -341,7 +337,7 @@
     <string name="hql_touch_label">Qonecta+ tactile</string>
     <string name="hql_touch_service_desc">Transmet à l\'appli projetée les appuis sur l\'écran de la voiture et démarre le serveur d\'Android Auto si nécessaire.</string>
     <string name="hql_trips_none">Ils s\'enregistrent automatiquement à la fin de chaque trajet de plus de 300 m en Auto étendu, avec le parcours, la consommation estimée et le dénivelé.</string>
-    <string name="hql_trips_note">Énergie estimée avec le modèle de la C10 (sans données de la voiture). Prix : %1$.2f €/kWh ; essence %2$.1f l/100 km à %3$.2f €/l.</string>
+    <string name="hql_trips_note">Énergie estimée avec le modèle de la C10 (sans données de la voiture). Prix : %1$s ; essence %2$.1f l/100 km à %3$s.</string>
     <string name="hql_ttt_draw">Match nul. Appuyez pour rejouer</string>
     <string name="hql_ttt_lose">La C10 gagne. Appuyez pour rejouer</string>
     <string name="hql_ttt_start">Vous jouez les X ; la C10 joue les O</string>
@@ -351,7 +347,7 @@
     <string name="hql_tv_list">Liste TV</string>
     <string name="hql_tv_loading">Chargement de la liste des chaînes…</string>
     <string name="hql_tv_read_failed">Impossible de lire la liste : %1$s</string>
-    <string name="hql_tv_setup_list">Configurez la liste TV sur le téléphone (URL ou fichier M3U) : écran principal → Liste TV.</string>
+    <string name="hql_tv_setup_list">Configurez la liste TV sur le téléphone (URL ou fichier M3U) : menu ⚙ › Contenu du mode étendu › Liste TV.</string>
     <string name="hql_type2">Type 2</string>
     <string name="hql_video_status">Voiture connectée · vidéo %1$d×%2$d</string>
     <string name="hql_videos">Vidéos</string>
@@ -364,7 +360,7 @@
     <string name="hql_welcome_parked">Faites la configuration voiture garée</string>
     <string name="hql_welcome_mirror">Appli de duplication d\'écran ouverte dans la voiture</string>
     <string name="hql_welcome_title">Votre téléphone sur l\'écran de la C10</string>
-    <string name="hql_welcome_wifi">Le téléphone et la voiture se connectent en Wi-Fi (Wi-Fi Direct ou point d\'accès du téléphone) ; pas besoin de câble.</string>
+    <string name="hql_welcome_wifi">Le téléphone et la voiture se connectent en Wi-Fi (Wi-Fi Direct ou point d\'accès du téléphone), sans câble, ou avec un câble USB de données si vous préférez.</string>
     <string name="hql_width">largeur</string>
     <string name="hql_wind">Vent</string>
     <string name="hql_wx_clear">Dégagé</string>
@@ -612,8 +608,8 @@
     <string name="hql_recovered">Récupéré</string>
     <string name="hql_net_kwh">net %1$.2f kWh</string>
     <string name="hql_estimated_model">Estimé avec le modèle de la C10</string>
-    <string name="hql_cost_rate">à %1$.2f €/kWh · %2$.2f kWh</string>
-    <string name="hql_cost_petrol">En voiture essence, ~%1$.2f €</string>
+    <string name="hql_cost_rate">à %1$s · %2$.2f kWh</string>
+    <string name="hql_cost_petrol">En voiture essence, ~%1$s</string>
     <string name="hql_co2_note">Par rapport à une voiture essence à %1$.1f l/100 km (%2$.2f kg de CO₂ par litre, à l\'échappement uniquement).</string>
     <string name="hql_tip_slower">Rouler 10 km/h moins vite économiserait ~%1$.0f %% d\'énergie.</string>
     <string name="hql_tip_gentler">Les accélérations prennent %1$.0f %% de l\'énergie : accélérez plus doucement.</string>
@@ -650,7 +646,6 @@
     <string name="hql_record_efficient">Le plus sobre</string>
     <string name="hql_record_climb">Le plus de dénivelé</string>
     <string name="hql_no_records">Pas encore de records.</string>
-    <string name="hql_trips_total">%1$d trajets · %2$.0f km · ~%3$.2f €</string>
     <string name="hql_trips_empty_title">Vos trajets apparaîtront ici</string>
     <!-- Ajustes del coche: precio de la electricidad -->
     <string name="hql_settings_energy">Énergie</string>
@@ -740,8 +735,6 @@
     <string name="hql_charger_clear_filters">Effacer les filtres</string>
     <string name="hql_key_space">espace</string>
     <string name="hql_plan_title">Plan de recharge</string>
-    <string name="hql_plan_summary_one">1 arrêt · %1$s de recharge · arrivée à %2$.0f %%</string>
-    <string name="hql_plan_summary_many">%1$d arrêts · %2$s de recharge · arrivée à %3$.0f %%</string>
     <string name="hql_plan_none">Sans arrêt : arrivée à %1$.0f %%</string>
     <string name="hql_plan_impossible">Aucune borne accessible avec ces filtres : essayez d\'en retirer.</string>
     <string name="hql_plan_stop_line">km %1$.0f · arrivée à %2$.0f %% · charge jusqu\'à %3$.0f %% · %4$s</string>
@@ -779,14 +772,12 @@
     <string name="hql_charger_unknown_exclude">Seulement puissance confirmée</string>
     <string name="hql_charger_unknown_note">En Espagne, les bornes viennent du registre officiel de la DGT, avec la puissance et la tension de chacune. Ailleurs, d\'OpenStreetMap, où la plupart n\'indiquent pas leur puissance : Tesla, Ionity, Zunder, Fastned, Electra et Atlante comptent avec leur puissance typique (≈) ; les autres seulement si vous les incluez, et le plan préfère celles confirmées.</string>
     <string name="hql_chargers_list_title">Bornes sur l\'itinéraire</string>
-    <string name="hql_chargers_list_count">%1$d devant · %2$d passent le filtre</string>
     <string name="hql_chargers_list_filtered">Filtrées</string>
     <string name="hql_chargers_list_all">Toutes</string>
     <string name="hql_chargers_list_stop">Arrêt %1$d</string>
     <string name="hql_chargers_list_none">Aucune borne devant avec ce filtre.</string>
     <string name="hql_charger_points">%1$d points</string>
     <string name="hql_charger_low_volts">%1$.0f V : votre voiture 800 V y charge à moitié puissance</string>
-    <string name="hql_plan_low_volts">Il y a aussi sur le trajet %1$d bornes 400–500 V (la première au km %2$.0f) : elles marchent, mais votre voiture 800 V y charge à moitié puissance, donc le plan s\'arrête aux bornes 800 V. Touchez pour les voir.</string>
     <string name="hql_chargers_source_dgt">Données : en Espagne, le registre officiel des points de recharge (ministère de la Transition écologique, publié par la DGT sur nap.dgt.es, CC BY) ; ailleurs, © contributeurs d\'OpenStreetMap (ODbL).</string>
     <string name="hql_chargers_source_osm">Données : © contributeurs d\'OpenStreetMap (ODbL).</string>
     <string name="hql_live_block_title">Recharge en direct</string>
@@ -847,14 +838,12 @@
     <string name="hql_ins_no_cloud">Associez votre compte Leapmotor (⚙ › Voiture › Données de la voiture) pour voir la batterie et l’historique des trajets.</string>
     <string name="hql_ins_cloud_wait">Lecture des données de la voiture…</string>
     <string name="hql_ins_30d">30 derniers jours</string>
-    <string name="hql_ins_trips">trajets</string>
     <string name="hql_ins_daily_legend">Barres : km de chaque jour · ligne : consommation</string>
     <string name="hql_ins_from_car">selon la voiture</string>
     <string name="hql_ins_from_app">trajets avec Qonecta+</string>
     <string name="hql_ins_how">Votre consommation</string>
     <string name="hql_ins_per_trip">Consommation des derniers trajets (kWh/100 km)</string>
     <string name="hql_ins_by_length">Selon la longueur du trajet</string>
-    <string name="hql_ins_n_trips">%1$d trajets</string>
     <string name="hql_ins_cold_tip">Les trajets courts consomment %1$s %% de plus : chauffer la batterie et l’habitacle pèse plus sur un trajet court.</string>
     <string name="hql_ins_best">Votre meilleur trajet : %1$s kWh/100 km sur %2$s km (%3$s)</string>
     <string name="hql_ins_charges">Recharges</string>
@@ -867,7 +856,6 @@
     <string name="hql_ins_no_drives">Aucun parcours : les trajets faits avec Qonecta+ sont enregistrés ici.</string>
     <string name="hql_ins_drive_line">%1$s km · %2$s · %3$s</string>
     <string name="hql_ins_max">max</string>
-    <string name="hql_ins_stops">%1$d arrêts</string>
     <string name="hql_ha_title">Maison</string>
     <string name="hql_ha_menu">Home Assistant</string>
     <string name="hql_ha_label">La maison dans la voiture</string>
@@ -950,8 +938,7 @@
     <string name="hql_web_text_size">Texte : %1$d %%</string>
     <string name="hql_web_desktop">Version ordinateur (ce site)</string>
     <string name="hql_web_adblock">Bloquer les pubs</string>
-    <string name="hql_web_adblock_count">%1$d bloqués ici</string>
-    <string name="hql_psx_sub">PCSX ReARMed · .chd, .cue, .pbp</string>
+    <string name="hql_psx_sub">PCSX ReARMed · .cue, .chd, .pbp, .iso, .m3u</string>
     <string name="hql_psx_copying">Copie du disque sur le téléphone… %1$d Mo\nSeulement la première fois : ensuite, ça démarre tout de suite.</string>
     <string name="hql_nes_save">Sauver</string>
     <string name="hql_nes_load">Charger</string>
@@ -987,16 +974,14 @@
     <string name="hql_tv_formats">Listes M3U ou la liste JSON de TDTChannels (…/lists/tv.json), qui apporte aussi ses chaînes YouTube et web.</string>
     <string name="hql_tv_backup">source de secours</string>
     <string name="hql_tv_other_source">Autre source</string>
-    <string name="hql_plan_cost">\u0020· ≈ %1$.0f € de recharge</string>
+    <string name="hql_plan_cost">\u0020· ≈ %1$s de recharge</string>
     <string name="hql_speed_advice">Conseil : à %1$d km/h vous gagnez %2$s au total (%3$s de conduite en plus, %4$s de recharge en moins).</string>
-    <string name="hql_speed_advice_stops">Conseil : à %1$d km/h, %2$d arrêts au lieu de %3$d (%4$s de conduite en plus, %5$s de recharge en moins).</string>
     <string name="hql_speed_advice_nostop">Conseil : à %1$d km/h vous arrivez sans vous arrêter (%2$s de conduite en plus, %3$s de recharge en moins).</string>
     <string name="hql_speed_advice_rescue">Avec ce plan vous n\'arrivez pas : à %1$d km/h, si (%2$s de conduite en plus).</string>
     <string name="hql_settings_price_fast">Prix de la recharge rapide</string>
     <string name="hql_settings_price_fast_help">Pour le coût du plan de recharge de l\'itinéraire (les arrêts aux bornes rapides).</string>
     <string name="hql_profile_best">Maximum (câble)</string>
     <string name="hql_profile_best_detail">Pour le câble : 60 i/s, pleine résolution, 12-16 Mbit/s, H.264 High et encodeur à faible latence. Le téléphone chauffe davantage. Si l\'écran de la voiture reste noir, revenez à Voiture.</string>
-    <string name="hql_speed_advice_stops_total">Conseil : à %1$d km/h, %2$d arrêts au lieu de %3$d (%4$s de plus au total).</string>
     <string name="hql_route_flat">Pas de données de relief pour l\'instant : l\'estimation ignore les côtes.</string>
     <string name="hql_usb_cut_title">La voiture a coupé l\'alimentation USB</string>
     <string name="hql_usb_cut_text">Pendant %1$d s le câble n\'a plus eu de courant ; c\'est la voiture, et Qonecta+ s\'est reconnectée seule. Si cela arrive souvent, essayez un câble de données plus court et sans adaptateur.</string>
@@ -1009,7 +994,6 @@
     <string name="hql_trip_notice_help">Une notification sur le téléphone avec les i/s, les reconnexions, la chaleur et la justesse de l\'itinéraire.</string>
     <string name="hql_trip_notice_channel">Résumé du trajet</string>
     <string name="hql_trip_notice_title">Trajet terminé · %1$s</string>
-    <string name="hql_trip_notice_video">%1$.0f i/s en moyenne · %2$d reconnexions · %3$d coupures</string>
     <string name="hql_trip_notice_heat">chaleur : niveau %1$d max · %2$.0f °C</string>
     <string name="hql_trip_notice_route">itinéraire : %1$.1f kWh prévus, %2$.1f réels</string>
     <string name="hql_android_car_mode">Mode voiture d\'Android pendant la projection (inutile ; en sortant, le téléphone recharge toutes les applis, comme un redémarrage léger)</string>
@@ -1024,7 +1008,7 @@
     <string name="hql_backup_saved">Réglages enregistrés dans le fichier</string>
     <string name="hql_backup_failed">Impossible d\'enregistrer le fichier : %1$s</string>
     <string name="hql_backup_invalid">Ce fichier n\'est pas une sauvegarde de réglages Qonecta+</string>
-    <string name="hql_backup_confirm">Le fichier contient %1$d réglages : %2$d listes TV, %3$d radio, %4$d favoris et %5$d marque-pages web. Ils remplacent ceux de ce téléphone ; le reste ne change pas.</string>
+    <string name="hql_backup_confirm">Contenu du fichier : réglages %1$d · listes TV %2$d · listes radio %3$d · favoris %4$d · marque-pages web %5$d. Ils remplacent ceux de ce téléphone ; le reste ne change pas.</string>
     <string name="hql_backup_done">Réglages importés. Ceux de l\'image et de la connexion s\'appliquent à la prochaine connexion.</string>
     <string name="hql_usb_auto_switch">Se connecter en branchant le câble de la voiture</string>
     <string name="hql_usb_auto_off">Brancher le câble ne fera rien : appuie sur Connecter quand tu veux. Si Android ouvre toujours Qonecta+ avec le câble et que tu veux utiliser QDLink, retire « Ouvrir par défaut » dans les réglages de l\'appli.</string>

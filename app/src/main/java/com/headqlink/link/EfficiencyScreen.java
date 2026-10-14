@@ -352,10 +352,10 @@ final class EfficiencyScreen implements CarScreen {
         double cost = Math.max(0, s.tripKwh) * price;
         double km = Math.max(0, s.tripKmEnergy);
         double petrol = km * cfg.fuelLitersPer100() / 100 * cfg.fuelPrice();
-        CarKit.number(cv, num(cost, 2), "€", r.left, r.top + 64, 72, CarKit.TEXT, CarKit.REGULAR, p, Paint.Align.LEFT);
-        CarKit.text(cv, Str.get(R.string.hql_cost_rate, price, Math.max(0, s.tripKwh)), r.left, r.top + 108, 23, CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
+        CarKit.number(cv, Money.parts(cost)[0], Money.parts(cost)[1], r.left, r.top + 64, 72, CarKit.TEXT, CarKit.REGULAR, p, Paint.Align.LEFT);
+        CarKit.text(cv, Str.get(R.string.hql_cost_rate, Money.per(price, "kWh"), Math.max(0, s.tripKwh)), r.left, r.top + 108, 23, CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
         if (km > 0.2) {
-            CarKit.text(cv, Str.get(R.string.hql_cost_petrol, petrol), r.left, r.bottom - 2, 25, CarKit.GREEN, CarKit.MEDIUM, p, Paint.Align.LEFT);
+            CarKit.text(cv, Str.get(R.string.hql_cost_petrol, Money.format(petrol)), r.left, r.bottom - 2, 25, CarKit.GREEN, CarKit.MEDIUM, p, Paint.Align.LEFT);
         }
     }
 

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: textos con cantidad (Nederlands): «1 viaje», «2 viajes». Str.plural(R.plurals.x, n, …). -->
+<resources>
+    <plurals name="hql_2048_over">
+        <item quantity="one">Game over · %1$d punt · tik voor nog een potje</item>
+        <item quantity="other">Game over · %1$d punten · tik voor nog een potje</item>
+    </plurals>
+    <plurals name="hql_sessions_cuts">
+        <item quantity="one">%1$d onderbreking</item>
+        <item quantity="other">%1$d onderbrekingen</item>
+    </plurals>
+    <plurals name="hql_fly_over">
+        <item quantity="one">%1$d paal · tik voor nog een potje</item>
+        <item quantity="other">%1$d palen · tik voor nog een potje</item>
+    </plurals>
+    <plurals name="hql_fly_posts">
+        <item quantity="one">%1$d paal</item>
+        <item quantity="other">%1$d palen</item>
+    </plurals>
+    <plurals name="hql_trips_total">
+        <item quantity="one">%1$d rit · %2$.0f km · ~%3$s</item>
+        <item quantity="other">%1$d ritten · %2$.0f km · ~%3$s</item>
+    </plurals>
+    <plurals name="hql_plan_summary">
+        <item quantity="one">%1$d stop · %2$s laden · aankomst met %3$.0f %%</item>
+        <item quantity="other">%1$d stops · %2$s laden · aankomst met %3$.0f %%</item>
+    </plurals>
+    <plurals name="hql_chargers_list_count">
+        <item quantity="one">%1$d verderop · %2$d past bij het filter</item>
+        <item quantity="other">%1$d verderop · %2$d passen bij het filter</item>
+    </plurals>
+    <plurals name="hql_plan_low_volts">
+        <item quantity="one">Onderweg is er ook een laadpaal van 400–500 V (bij km %2$.0f): die werkt, maar je 800V-auto laadt er op half vermogen, dus het plan stopt bij 800V-laadpalen. Tik om hem te zien.</item>
+        <item quantity="other">Onderweg zijn er ook %1$d laadpalen van 400–500 V (de eerste bij km %2$.0f): ze werken, maar je 800V-auto laadt er op half vermogen, dus het plan stopt bij 800V-laadpalen. Tik om ze te zien.</item>
+    </plurals>
+    <plurals name="hql_ins_n_trips">
+        <item quantity="one">%1$d rit</item>
+        <item quantity="other">%1$d ritten</item>
+    </plurals>
+    <plurals name="hql_ins_trips">
+        <item quantity="one">rit</item>
+        <item quantity="other">ritten</item>
+    </plurals>
+    <plurals name="hql_ins_stops">
+        <item quantity="one">%1$d stop</item>
+        <item quantity="other">%1$d stops</item>
+    </plurals>
+    <plurals name="hql_web_adblock_count">
+        <item quantity="one">%1$d hier geblokkeerd</item>
+        <item quantity="other">%1$d hier geblokkeerd</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops">
+        <item quantity="one">Tip: met %1$d km/u %2$d stop in plaats van %3$d (%4$s langer rijden, %5$s korter laden).</item>
+        <item quantity="other">Tip: met %1$d km/u %2$d stops in plaats van %3$d (%4$s langer rijden, %5$s korter laden).</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops_total">
+        <item quantity="one">Tip: met %1$d km/u %2$d stop in plaats van %3$d (in totaal %4$s langer).</item>
+        <item quantity="other">Tip: met %1$d km/u %2$d stops in plaats van %3$d (in totaal %4$s langer).</item>
+    </plurals>
+    <plurals name="hql_trip_notice_reconnects">
+        <item quantity="one">%1$d herverbinding</item>
+        <item quantity="other">%1$d herverbindingen</item>
+    </plurals>
+    <plurals name="hql_trip_notice_cuts">
+        <item quantity="one">%1$d onderbreking</item>
+        <item quantity="other">%1$d onderbrekingen</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_real_total">
+        <item quantity="one">Werkelijk (%1$d rit · %2$.0f km): %3$.1f kWh/100 km</item>
+        <item quantity="other">Werkelijk (%1$d ritten · %2$.0f km): %3$.1f kWh/100 km</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total">
+        <item quantity="one">Volgens de auto: %1$d rit · %2$.0f km · %3$.1f kWh/100</item>
+        <item quantity="other">Volgens de auto: %1$d ritten · %2$.0f km · %3$.1f kWh/100</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total_fuel">
+        <item quantity="one">Volgens de auto: %1$d rit · %3$.1f kWh/100 · %4$.1f L/100</item>
+        <item quantity="other">Volgens de auto: %1$d ritten · %3$.1f kWh/100 · %4$.1f L/100</item>
+    </plurals>
+</resources>
