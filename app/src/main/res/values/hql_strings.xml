@@ -233,7 +233,7 @@
     <string name="hql_thermal_off">Off · only logged</string>
     <string name="hql_thermal_help">When Android reports heat: Normal drops to 30 fps at "moderate" (if the session runs at 60), 24 fps at "severe" and 20 fps at "critical", with less bitrate; Gentle keeps the fps and only lowers the bitrate (30 fps at most when severe). Back to normal after 30 s cooler. Applies at once.</string>
     <string name="hql_profile_car">Car</string>
-    <string name="hql_profile_car_detail">What the car asks for (30 fps and about 5 Mbit/s): it starts at 720p and goes up to full resolution when the phone stays cool, without pushing it: the least heat and battery</string>
+    <string name="hql_profile_car_detail">What the car asks for (30 fps and about 5 Mbit/s): full resolution if this phone stayed cool on earlier trips, 720p if it got hot. It doesn\'t change while driving: the least heat and battery</string>
     <string name="hql_profile_high">High</string>
     <string name="hql_profile_high_detail">Full resolution at 60 fps without pushing the phone: less battery and heat, a little more delay</string>
     <string name="hql_profile_low">Very low</string>

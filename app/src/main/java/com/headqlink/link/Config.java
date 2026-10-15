@@ -770,6 +770,23 @@ final class Config {
         return sp.getBoolean(MAPS_PLANNER, false);
     }
 
+    /** Viajes anteriores para la resolución del siguiente (ResolutionMemory.encode) y el viaje en curso. */
+    String resHistory() {
+        return sp.getString("res_history", "");
+    }
+
+    void setResHistory(String s) {
+        sp.edit().putString("res_history", s).apply();
+    }
+
+    String resCurrent() {
+        return sp.getString("res_current", "");
+    }
+
+    void setResCurrent(String s) {
+        sp.edit().putString("res_current", s).apply();
+    }
+
     /** Posición de la tarjeta flotante: fracciones (0-1) de la zona de AA; -1 = sin guardar (arriba a la derecha). */
     float floatX() {
         return sp.getFloat("float_x", -1f);

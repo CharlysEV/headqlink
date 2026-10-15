@@ -33,18 +33,11 @@ class ResolutionLadderTest {
     }
 
     @Test
-    fun goesUpAfterTenCoolMinutes() {
+    fun neverGoesUpWhileDriving() {
+        // Fresco una hora a 720p: sigue a 720p (subir reconectaría AA en marcha).
         val r = ResolutionLadder(false)
-        assertEquals(0, r.update(0, 0.6f, 0, 0))
-        assertEquals(0, r.update(1, 0.7f, 0, 9 * min))
-        assertEquals(1, r.update(1, 0.7f, 0, 10 * min))
-        assertTrue(r.high())
-        // Un rato templado corta la cuenta.
-        val s = ResolutionLadder(false)
-        s.update(0, 0.6f, 0, 0)
-        s.update(2, 0.85f, 0, 5 * min)
-        assertEquals(0, s.update(0, 0.6f, 0, 11 * min))
-        assertFalse(s.high())
+        for (t in 0..60) assertEquals(0, r.update(0, 0.5f, 0, t * min))
+        assertFalse(r.high())
     }
 
     @Test
@@ -54,10 +47,9 @@ class ResolutionLadderTest {
         assertEquals(0, r.update(3, 0.95f, 2, 1 * min))
         assertEquals(-1, r.update(3, 0.95f, 2, 2 * min))
         assertFalse(r.high())
-        // Fresco enseguida: no vuelve a subir hasta 20 min después de bajar.
-        for (t in 3..21) r.update(0, 0.5f, 0, t * min)
+        // Fresco enseguida: no vuelve a subir en este viaje.
+        for (t in 3..60) assertEquals(0, r.update(0, 0.5f, 0, t * min))
         assertFalse(r.high())
-        assertEquals(1, r.update(0, 0.5f, 0, 22 * min))
     }
 
     @Test

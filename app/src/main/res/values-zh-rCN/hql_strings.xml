@@ -233,7 +233,7 @@
     <string name="hql_thermal_off">关闭 · 仅记录</string>
     <string name="hql_thermal_help">当 Android 报告发热时：“标准”在“中等”时降到 30 fps（如果会话为 60 fps），“严重”时降到 24 fps，“危急”时降到 20 fps，同时降低码率；“温和”保持 fps，只降低码率（“严重”时最高 30 fps）。降温 30 秒后恢复正常。立即生效。</string>
     <string name="hql_profile_car">车辆</string>
-    <string name="hql_profile_car_detail">车辆要求的规格（30 fps，约 5 Mbit/s）：从 720p 开始，手机保持凉爽时提升到全分辨率，但不会强推：发热和耗电最少</string>
+    <string name="hql_profile_car_detail">车辆要求的规格（30 fps，约 5 Mbit/s）：这部手机在之前的行程中保持凉爽就用全分辨率，发热过就用 720p。行驶中不切换：发热和耗电最少</string>
     <string name="hql_profile_high">高</string>
     <string name="hql_profile_high_detail">全分辨率 60 fps，不强推手机性能：耗电和发热较少，延迟略高</string>
     <string name="hql_profile_low">很低</string>

@@ -233,7 +233,7 @@
     <string name="hql_thermal_off">Uit · wordt alleen gelogd</string>
     <string name="hql_thermal_help">Als Android warmte meldt: Normaal zakt bij ‘matig’ naar 30 fps (als de sessie op 60 draait), bij ‘ernstig’ naar 24 fps en bij ‘kritiek’ naar 20 fps, met minder bitrate; Mild houdt de fps en verlaagt alleen de bitrate (hooguit 30 fps bij ‘ernstig’). Na 30 s koeler weer normaal. Wordt direct toegepast.</string>
     <string name="hql_profile_car">Volgens de auto</string>
-    <string name="hql_profile_car_detail">Wat de auto vraagt (30 fps en ongeveer 5 Mbit/s): begint op 720p en gaat naar volledige resolutie als de telefoon koel blijft, zonder hem te belasten: de minste warmte en het laagste batterijverbruik</string>
+    <string name="hql_profile_car_detail">Wat de auto vraagt (30 fps en ongeveer 5 Mbit/s): volledige resolutie als deze telefoon op eerdere ritten koel bleef, 720p als hij warm werd. Verandert niet tijdens het rijden: de minste warmte en het laagste batterijverbruik</string>
     <string name="hql_profile_high">Hoog</string>
     <string name="hql_profile_high_detail">Volledige resolutie op 60 fps zonder de telefoon te belasten: minder batterijverbruik en warmte, iets meer vertraging</string>
     <string name="hql_profile_low">Zeer laag</string>

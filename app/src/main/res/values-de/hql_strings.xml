@@ -233,7 +233,7 @@
     <string name="hql_thermal_off">Aus · wird nur protokolliert</string>
     <string name="hql_thermal_help">Wenn Android Hitze meldet: Normal geht bei „mäßig“ auf 30 fps (falls die Sitzung mit 60 läuft), bei „schwer“ auf 24 fps und bei „kritisch“ auf 20 fps, jeweils mit weniger Bitrate; Sanft behält die fps und senkt nur die Bitrate (bei „schwer“ höchstens 30 fps). Nach 30 s Abkühlung wieder normal. Gilt sofort.</string>
     <string name="hql_profile_car">Fahrzeug</string>
-    <string name="hql_profile_car_detail">Was das Fahrzeug anfordert (30 fps und ca. 5 Mbit/s): startet mit 720p und geht auf volle Auflösung, wenn das Handy kühl bleibt, ohne es zu fordern: am wenigsten Hitze und Akkuverbrauch</string>
+    <string name="hql_profile_car_detail">Was das Fahrzeug anfordert (30 fps und ca. 5 Mbit/s): volle Auflösung, wenn dieses Handy auf den letzten Fahrten kühl blieb; 720p, wenn es heiß wurde. Ändert sich während der Fahrt nicht: am wenigsten Hitze und Akkuverbrauch</string>
     <string name="hql_profile_high">Hoch</string>
     <string name="hql_profile_high_detail">Volle Auflösung mit 60 fps, ohne das Handy zu fordern: weniger Akkuverbrauch und Hitze, etwas mehr Verzögerung</string>
     <string name="hql_profile_low">Sehr niedrig</string>

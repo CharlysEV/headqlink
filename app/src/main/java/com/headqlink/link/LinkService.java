@@ -468,8 +468,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         if (!goForeground(Str.get(R.string.hql_waiting_car))) return START_NOT_STICKY;
         if (!transportStarted) {
             transportStarted = true;
-            // Cada viaje empieza por la resolución más baja (720p); con el móvil fresco sube (ThermalResolution).
-            ThermalResolution.reset();
+            // La resolución del viaje sale de cómo le fue a este móvil en los anteriores (ThermalResolution).
+            ThermalResolution.reset(this);
             UsbDiagnosis.reset();
             ThermalGuard.resetTripPeak();
             PhoneCall.watch(this);

@@ -233,7 +233,7 @@
     <string name="hql_thermal_off">Desligada · só é registrada</string>
     <string name="hql_thermal_help">Quando o Android avisa de calor: Normal baixa para 30 fps em «moderado» (se a sessão vai a 60), para 24 fps em «grave» e para 20 fps em «crítico», com menos taxa de bits; Suave mantém os fps e só baixa a taxa de bits (30 fps no máximo em «grave»). Volta ao normal após 30 s mais fresco. Aplica-se na hora.</string>
     <string name="hql_profile_car">Carro</string>
-    <string name="hql_profile_car_detail">O que o carro pede (30 fps e cerca de 5 Mbit/s): começa em 720p e sobe para a resolução completa com o celular fresco, sem forçá-lo: o mínimo de calor e bateria</string>
+    <string name="hql_profile_car_detail">O que o carro pede (30 fps e cerca de 5 Mbit/s): resolução completa se este celular ficou fresco nas viagens anteriores; 720p se esquentou. Não muda durante a viagem: o mínimo de calor e bateria</string>
     <string name="hql_profile_high">Alto</string>
     <string name="hql_profile_high_detail">Resolução completa a 60 fps sem forçar o celular: menos bateria e calor, um pouco mais de atraso</string>
     <string name="hql_profile_low">Muito baixo</string>

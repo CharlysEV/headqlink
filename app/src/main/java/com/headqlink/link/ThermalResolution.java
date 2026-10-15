@@ -21,13 +21,63 @@ final class ThermalResolution {
         return high;
     }
 
-    /** Al arrancar el servicio: se empieza por la más baja. */
-    static synchronized void reset() {
-        high = false;
-        ladder = new ResolutionLadder(false);
+    /** El viaje en curso: si empezó a 1080p, cuándo y el estado térmico más alto (para ResolutionMemory). */
+    private static long tripStartMs;
+    private static int tripMax;
+    private static long lastSavedMs;
+    private static int lastSavedMax = -1;
+
+    /**
+     * Al arrancar el servicio: se apunta el viaje anterior (si contaba) y la resolución del nuevo sale de cómo le fue a
+     * este móvil en los anteriores (ResolutionMemory). En marcha ya no se sube.
+     */
+    static synchronized void reset(Context ctx) {
+        Config cfg = new Config(ctx);
+        java.util.List<ResolutionMemory.Entry> hist = ResolutionMemory.decode(cfg.resHistory());
+        java.util.List<ResolutionMemory.Entry> cur = ResolutionMemory.decode(cfg.resCurrent());
+        if (!cur.isEmpty()) {
+            ResolutionMemory.Entry e = cur.get(0);
+            if (e.counts()) {
+                hist = ResolutionMemory.add(hist, e);
+                cfg.setResHistory(ResolutionMemory.encode(hist));
+                L.i("resolución: viaje anterior apuntado (" + ResolutionMemory.describe(e) + ")");
+            }
+            cfg.setResCurrent("");
+        }
+        ResolutionMemory.Decision d = ResolutionMemory.start(hist, ThermalGuard.status());
+        high = d.high;
+        tripStartedHigh = d.high;
+        ladder = new ResolutionLadder(d.high);
         deferred = 0;
         deferredWhy = null;
+        tripStartMs = android.os.SystemClock.elapsedRealtime();
+        tripMax = Math.max(0, ThermalGuard.status());
+        lastSavedMs = 0;
+        lastSavedMax = -1;
+        if (applies(cfg.videoProfile())) L.i("resolución: el viaje empieza a " + (d.high ? "1080p" : "720p") + " (" + d.why + ")");
     }
+
+    /** Apunta el viaje en curso (cada minuto o si se calienta más): si el servicio muere, el siguiente lo encuentra. */
+    private static void saveTrip(Context ctx, int status, long nowMs) {
+        Config cfg = new Config(ctx);
+        if (!applies(cfg.videoProfile()) || !Config.isAa(cfg.mode())) return;
+        boolean startedHigh;
+        synchronized (ThermalResolution.class) {
+            if (tripStartMs == 0) return;
+            tripMax = Math.max(tripMax, status);
+            if (nowMs - lastSavedMs < 60_000 && tripMax == lastSavedMax) return;
+            lastSavedMs = nowMs;
+            lastSavedMax = tripMax;
+            startedHigh = ladder.high() || tripStartedHigh;
+        }
+        int minutes = (int) ((android.os.SystemClock.elapsedRealtime() - tripStartMs) / 60_000L);
+        java.util.List<ResolutionMemory.Entry> one = new java.util.ArrayList<>();
+        one.add(new ResolutionMemory.Entry(startedHigh, tripMax, minutes));
+        cfg.setResCurrent(ResolutionMemory.encode(one));
+    }
+
+    /** El viaje empezó a 1080p (aunque luego bajara por calor: cuenta como viaje a 1080p que se calentó). */
+    private static boolean tripStartedHigh;
 
     /** Un cambio decidido en plena llamada, a la espera de que acabe: +1 sube, -1 baja, 0 ninguno. */
     private static int deferred;
@@ -35,6 +85,7 @@ final class ThermalResolution {
 
     /** Cada 10 s (ThermalGuard): estado térmico, margen previsto (NaN si no hay) y etapa de anticipación. */
     static void tick(Context ctx, int status, float headroom, int stage, long nowMs) {
+        saveTrip(ctx, status, nowMs);
         int step;
         synchronized (ThermalResolution.class) {
             step = ladder.update(status, headroom, stage, nowMs);
