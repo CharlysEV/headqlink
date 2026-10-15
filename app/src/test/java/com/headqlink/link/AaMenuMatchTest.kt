@@ -35,6 +35,13 @@ class AaMenuMatchTest {
         assertEquals(Kind.START, AaMenuMatch.serverItem("Iniciar servidor da unidade principal"))
         assertEquals(Kind.STOP, AaMenuMatch.serverItem("Parar servidor da unidade principal"))
         assertEquals(Kind.STOP, AaMenuMatch.serverItem("Interromper o servidor da unidade principal"))
+        // zh (simplificado y tradicional): sin espacios entre palabras.
+        assertEquals(Kind.START, AaMenuMatch.serverItem("启动主机服务器"))
+        assertEquals(Kind.STOP, AaMenuMatch.serverItem("停止主机服务器"))
+        assertEquals(Kind.START, AaMenuMatch.serverItem("啟動主機伺服器"))
+        assertEquals(Kind.NONE, AaMenuMatch.serverItem("开发者设置"))
+        assertTrue(AaMenuMatch.isDeveloperItem("开发者设置"))
+        assertTrue(AaMenuMatch.isOverflow("更多选项", null, null))
     }
 
     @Test

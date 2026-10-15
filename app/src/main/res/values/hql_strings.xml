@@ -928,6 +928,10 @@
     <string name="hql_usb_busy_other">Close the app that is using it, or unplug and plug the cable back in.</string>
     <string name="hql_float_card">Next stop card over Android Auto</string>
     <string name="hql_float_card_help">Tap it to open the route; press and hold to move it.</string>
+    <string name="hql_maps_planner">Planner from Google Maps</string>
+    <string name="hql_maps_planner_help">When you navigate with Google Maps, the car asks whether to turn on the planner. If you say yes, it reads the Maps destination on the car screen and works out the charging stops.</string>
+    <string name="hql_sim_night">Night mode (virtual car)</string>
+    <string name="hql_sim_night_help">To try the switch between day and night. When you reconnect, it goes back to normal.</string>
     <string name="hql_float_stop_sub">in %1$.0f km · you arrive with %2$.0f %%</string>
     <string name="hql_float_dest">You arrive with %1$.0f %%</string>
     <string name="hql_float_no_stop">No stops</string>

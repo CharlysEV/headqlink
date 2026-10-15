@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla de Ajustes del móvil (SettingsActivity). -->
+<resources>
+    <string name="hql_aj_sec_car_screen">车机屏幕</string>
+    <string name="hql_aj_sec_phone_screen">手机屏幕</string>
+    <string name="hql_aj_mode">模式与连接</string>
+    <string name="hql_aj_off">关闭</string>
+    <string name="hql_aj_bt_auto_sum">连接到名称包含“%1$s”的蓝牙设备时</string>
+    <string name="hql_aj_usb_auto_sum">插入数据线后自动启动</string>
+    <string name="hql_aj_usb_auto_off_sum">仅在点按“连接”时</string>
+    <string name="hql_aj_ui_scale">车机界面大小</string>
+    <string name="hql_aj_ui_scale_auto">自动（T03 上为 %1$d %%）</string>
+    <string name="hql_aj_percent">%1$d %%</string>
+    <string name="hql_aj_ui_scale_help">Qonecta+ 界面（面板及其自有页面）在车机屏幕上的大小，仅限 Auto 扩展模式。自动：在 C10 上保持原样，在 T03 等小屏幕上缩小。重新连接后生效。</string>
+    <string name="hql_aj_ext_only">仅限 Auto 扩展模式</string>
+    <string name="hql_aj_panel_help">面板的颜色、透明度和按钮请在车机屏幕的“设置”中选择。</string>
+    <string name="hql_aj_keep_screen">保持屏幕常亮</string>
+    <string name="hql_aj_keep_screen_sum">更耗电、更发热。关闭时屏幕照常熄灭，投屏继续。</string>
+    <string name="hql_aj_car_mode">Android 车载模式</string>
+    <string name="hql_aj_car_mode_sum">投屏期间。无需开启；退出时手机会重新加载所有应用（类似软重启）。下次连接时生效。</string>
+    <string name="hql_aj_price_home">家用电价</string>
+    <string name="hql_aj_price_invalid">请输入 0 到 %1$s €/kWh 之间的价格</string>
+    <string name="hql_aj_adv_warning">用于测试。此处的值会覆盖配置方案；留空 = 自动（使用配置方案的值或车辆要求的值）。</string>
+    <string name="hql_aj_low_latency">低延迟优化</string>
+    <string name="hql_aj_low_latency_sum">由配置方案决定；更耗电</string>
+    <string name="hql_aj_fps">每秒帧数（fps）</string>
+    <string name="hql_aj_kbps">码率（kbps）</string>
+    <string name="hql_aj_width">宽度（px）</string>
+    <string name="hql_aj_height">高度（px）</string>
+    <string name="hql_aj_brake">Android Auto 节流</string>
+    <string name="hql_aj_window">节流时的在途帧数</string>
+    <string name="hql_aj_window_auto">自动（2）</string>
+    <string name="hql_aj_range">0 到 %1$d。留空 = 自动。</string>
+    <string name="hql_aj_range_invalid">请输入 0 到 %1$d 之间的数字（留空 = 自动）</string>
+    <string name="hql_aj_diag_trace">详细跟踪</string>
+    <string name="hql_aj_diag_trace_sum">每帧一行日志、触摸、性能和完整 logcat：更发热，日志非常大。重新连接后生效。</string>
+    <string name="hql_aj_reconnect_msg">部分更改将在重新连接后生效</string>
+    <string name="hql_aj_reconnect_now">立即重新连接</string>
+</resources>

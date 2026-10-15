@@ -64,11 +64,29 @@
     <string name="hql_pl_here_set">Here, where I am now</string>
     <string name="hql_pl_here_name">Location from GPS</string>
     <string name="hql_guess_title">Route to %1$s</string>
-    <string name="hql_guess_text">Taken from Google Maps (%1$s to go). The charging plan follows it.</string>
+    <string name="hql_guess_text">Read from Google Maps (%1$s to go). The charging plan follows it.</string>
     <string name="hql_guess_ok">OK</string>
     <string name="hql_guess_not">That\'s not it</string>
     <string name="hql_guess_ask_title">Where are you going?</string>
     <string name="hql_guess_ask_text">Google Maps is navigating (%1$s). Pick the destination for the charging plan:</string>
     <string name="hql_guess_search">Search</string>
     <string name="hql_guess_close">Close</string>
+    <plurals name="hql_guess_stops_title">
+        <item quantity="one">Add the charging stop to Google Maps?</item>
+        <item quantity="other">Add the %1$d charging stops to Google Maps?</item>
+    </plurals>
+    <string name="hql_guess_stops_text">You need to charge to get there (first stop: %1$s). If you add them, the planner will end the current Google Maps route and start its own, through the stops.</string>
+    <string name="hql_guess_stops_add">Add to Maps</string>
+    <string name="hql_guess_stops_no">No</string>
+    <string name="hql_guess_stops_fail_title">Couldn\'t change the Google Maps route</string>
+    <string name="hql_guess_stops_fail_text">Maps is still on its own route. End it with the X and tap «Try again».</string>
+    <string name="hql_guess_stops_retry">Try again</string>
+    <string name="hql_guess_plan_title">Turn on the route planner?</string>
+    <string name="hql_guess_plan_text">Google Maps is heading to a destination %1$s away. I can read it and work out the charging stops.</string>
+    <string name="hql_guess_plan_text_existing">Google Maps already had a route (%1$s). I can read it and work out the charging stops.</string>
+    <string name="hql_guess_plan_text_dest">Google Maps is heading to %1$s (%2$s). I can work out the charging stops.</string>
+    <string name="hql_guess_plan_yes">Yes, plan it</string>
+    <string name="hql_guess_plan_this">Plan this route</string>
+    <string name="hql_guess_plan_no">No</string>
+    <string name="hql_guess_plan_countdown">If you don\'t tap anything, you carry on without the planner in %1$d s</string>
 </resources>

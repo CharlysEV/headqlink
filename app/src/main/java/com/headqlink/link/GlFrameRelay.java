@@ -1,5 +1,6 @@
 package com.headqlink.link;
 
+import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
 import android.opengl.EGL14;
 import android.opengl.EGLConfig;
@@ -119,6 +120,18 @@ final class GlFrameRelay {
     private final float[] ov2M = new float[16];
     private volatile boolean manualOverlay;
     private volatile Gate gate;
+
+    /** Una copia pedida de la zona de AA del próximo frame dibujado (MapsReader): la imagen, de arriba abajo. */
+    interface Capture {
+        void onCapture(Bitmap aa);
+    }
+
+    private volatile Capture capture;
+
+    /** Pide una copia de la zona de AA tal como sale al coche en el próximo frame que se dibuje (una sola vez). */
+    void captureAa(Capture c) {
+        capture = c;
+    }
 
     private EGLDisplay dpy = EGL14.EGL_NO_DISPLAY;
     private EGLContext eglCtx = EGL14.EGL_NO_CONTEXT;
@@ -326,15 +339,15 @@ final class GlFrameRelay {
 
     /** AA visible en su zona (false: nuestra interfaz ocupa toda la pantalla). */
     /**
-     * Tarjeta flotante de nuestra interfaz sobre AA: {x, y, ancho, alto} en px de la capa de la interfaz, o null. Tras
-     * dibujar AA se vuelve a pintar ese trozo de la capa encima, con las esquinas redondeadas transparentes.
+     * Tarjetas de nuestra interfaz sobre AA: cada una {x, y, ancho, alto} en px de la capa de la interfaz, o null si no
+     * hay. Tras dibujar AA se vuelven a pintar esos trozos de la capa encima, con las esquinas redondeadas transparentes.
      */
     /** Radio de las esquinas de la tarjeta flotante (px de la interfaz; FloatCard dibuja 24). */
     private static final float FLOAT_RADIUS = 24f;
-    private volatile int[] floatRect;
+    private volatile int[][] floatRects;
 
-    void setFloatRect(int[] r) {
-        floatRect = r;
+    void setFloatRects(int[][] r) {
+        floatRects = r;
     }
 
     void setAaVisible(boolean v) {
@@ -608,18 +621,59 @@ final class GlFrameRelay {
             drawLayer(layer, layerM, 0, 0, outW, outH, 0f, 0f, 1f, 1f, 0f);
             if (aaVisible && aaHasFrame) {
                 drawAa(aaOutX, aaOutW, AA_CORNER_RADIUS * outW / (float) ovW);
-                int[] fr = floatRect;
-                if (fr != null) drawFloat(layer, layerM, fr);
+                // La copia para leer Maps, solo con AA (sin nuestra tarjeta flotante encima).
+                takeCapture();
+                int[][] fr = floatRects;
+                if (fr != null) for (int[] r : fr) drawFloat(layer, layerM, r);
             }
         } else {
             drawAa(0, outW, 0f);
         }
+        takeCapture();
         EGLExt.eglPresentationTimeANDROID(dpy, eglSurface, now);
         long t0 = System.nanoTime();
         EGL14.eglSwapBuffers(dpy, eglSurface);
         // Dibujar + entregar al encoder (el swap se bloquea si el encoder no ha soltado un búfer).
         PerfTrace.event("swap_ms", (System.nanoTime() - now) / 1_000_000);
         if (t0 - now > 0) PerfTrace.event("gl_ms", (t0 - now) / 1_000_000);
+    }
+
+    /**
+     * Lee la zona de AA de lo que se acaba de dibujar (antes de entregarlo al encoder) y la da como imagen en otro hilo
+     * (darle la vuelta y lo demás no frena el dibujo). Unos 7 MB a 1920x882; se pide de uvas a peras.
+     */
+    private void takeCapture() {
+        Capture c = capture;
+        if (c != null) {
+            capture = null;
+            readAa(c);
+        }
+    }
+
+    private void readAa(Capture c) {
+        boolean region = withOverlay && !splashOnly && aaVisible;
+        int x = region ? aaOutX : 0;
+        int w = region ? aaOutW : outW;
+        int h = outH;
+        if (w <= 0 || h <= 0) return;
+        ByteBuffer bb = ByteBuffer.allocateDirect(w * h * 4).order(ByteOrder.nativeOrder());
+        GLES20.glReadPixels(x, 0, w, h, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, bb);
+        new Thread(() -> {
+            try {
+                Bitmap gl = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                bb.rewind();
+                gl.copyPixelsFromBuffer(bb);
+                // GL lee de abajo arriba.
+                android.graphics.Matrix m = new android.graphics.Matrix();
+                m.preScale(1, -1);
+                Bitmap up = Bitmap.createBitmap(gl, 0, 0, w, h, m, false);
+                gl.recycle();
+                c.onCapture(up);
+            } catch (RuntimeException | OutOfMemoryError e) {
+                L.w("relay: copia de la zona de AA: " + e.getClass().getSimpleName());
+                c.onCapture(null);
+            }
+        }, "aa-capture").start();
     }
 
     /** Trozo (x, y, w, h en px de la capa de la interfaz) de la capa encima de lo dibujado, con esquinas transparentes. */

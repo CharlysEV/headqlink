@@ -923,6 +923,10 @@
     <string name="hql_usb_busy_other">Sluit de app die hem gebruikt, of trek de kabel uit en steek hem weer in.</string>
     <string name="hql_float_card">Kaart met de volgende stop boven Android Auto</string>
     <string name="hql_float_card_help">Tik om de route te openen; houd ingedrukt om hem te verplaatsen.</string>
+    <string name="hql_maps_planner">Planner vanuit Google Maps</string>
+    <string name="hql_maps_planner_help">Als je met Google Maps navigeert, vraagt de auto of je de planner aanzet. Zo ja, dan leest hij de Maps-bestemming op het autoscherm en berekent hij de laadstops.</string>
+    <string name="hql_sim_night">Nachtmodus (virtuele auto)</string>
+    <string name="hql_sim_night_help">Om de wissel tussen dag en nacht te testen. Bij opnieuw verbinden geldt weer de gewone.</string>
     <string name="hql_float_stop_sub">over %1$.0f km · je komt aan met %2$.0f %%</string>
     <string name="hql_float_dest">Je komt aan met %1$.0f %%</string>
     <string name="hql_float_no_stop">Zonder stops</string>

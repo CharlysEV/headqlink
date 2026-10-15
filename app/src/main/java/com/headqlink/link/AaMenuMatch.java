@@ -30,6 +30,9 @@ final class AaMenuMatch {
             "Démarrer le serveur de l'unité principale",
             "Haupteinheit-Server starten",
             "Hoofdunit-server starten",
+            "启动主机服务器",
+            "启动车机服务器",
+            "啟動主機伺服器",
     };
     static final String[] KNOWN_STOP = {
             "Parar servidor unidad principal",
@@ -43,6 +46,9 @@ final class AaMenuMatch {
             "Arrêter le serveur de l'unité principale",
             "Haupteinheit-Server stoppen",
             "Hoofdunit-server stoppen",
+            "停止主机服务器",
+            "停止车机服务器",
+            "停止主機伺服器",
     };
 
     /** «Unidad principal» en cada idioma (normalizado): sin esto no es la opción del servidor. */
@@ -51,6 +57,8 @@ final class AaMenuMatch {
             "unita principale", "unite principale", "haupteinheit", "hoofdunit",
             // Alemán: según la versión, «Server für Infotainmentsystem starten»; neerlandés, «hoofdeenheid».
             "infotainmentsystem", "hoofdeenheid",
+            // Chino (simplificado y tradicional): «主机» / «车机» y sus formas tradicionales.
+            "主机", "车机", "主機", "車機",
     };
     /** Verbos de parar (palabras enteras, normalizadas). */
     private static final String[] STOP_WORDS = {
@@ -58,10 +66,13 @@ final class AaMenuMatch {
             "finalizar", "encerrar",
             "arresta", "arrestare", "ferma", "interrompi", "arreter", "stoppen", "anhalten", "beenden",
     };
+    /** Verbos de parar en chino (sin espacios entre palabras: trozos). */
+    private static final String[] STOP_CJK = {"停止", "关闭", "關閉"};
     /** Descripción del botón ⋮ (normalizada; trozos). */
     private static final String[] OVERFLOW_DESC = {
             "mas opciones", "more options", "mais opcoes", "outras opcoes", "otras opciones", "opciones adicionales",
             "altre opzioni", "plus d options", "weitere optionen", "meer opties",
+            "更多选项", "更多選項",
     };
     /** Descripción del botón ⋮ (normalizada; entera). */
     private static final String[] OVERFLOW_DESC_EXACT = {
@@ -71,6 +82,7 @@ final class AaMenuMatch {
     private static final String[] DEVELOPER = {
             "desarrollador", "developer", "programador", "desenvolvedor",
             "sviluppatore", "developpeur", "entwickler", "ontwikkelaar",
+            "开发者", "开发人员", "開發人員", "開發者",
     };
 
     private static final Pattern MARKS = Pattern.compile("\\p{M}+");
@@ -100,7 +112,7 @@ final class AaMenuMatch {
         String n = normalize(text);
         if (n.isEmpty() || !containsAny(n, HEAD_UNIT)) return Kind.NONE;
         // El texto es la acción disponible: «Parar…» ⇒ encendido. Sin verbo de parar, la de iniciar (como siempre).
-        return hasWord(n, STOP_WORDS) ? Kind.STOP : Kind.START;
+        return hasWord(n, STOP_WORDS) || containsAny(n, STOP_CJK) ? Kind.STOP : Kind.START;
     }
 
     /**

@@ -20,7 +20,10 @@ import javax.xml.parsers.DocumentBuilderFactory
 @ConscryptMode(ConscryptMode.Mode.OFF)
 @RoboConfig(sdk = [35], application = android.app.Application::class)
 class TranslationsTest {
-    private val langs = listOf("values", "values-es", "values-pt-rBR", "values-pt-rPT", "values-it", "values-fr", "values-de", "values-nl")
+    private val langs = listOf("values", "values-es", "values-pt-rBR", "values-pt-rPT", "values-it", "values-fr", "values-de", "values-nl",
+        "values-zh-rCN")
+    /** Sin singular: un solo «other» (chino). */
+    private val onlyOther = setOf("values-zh-rCN")
     private val withMany = setOf("values-es", "values-pt-rBR", "values-pt-rPT", "values-it", "values-fr")
 
     /** Huecos de formato; sin «% » (un % suelto en un texto sin argumentos) ni «%%». */
@@ -69,12 +72,12 @@ class TranslationsTest {
             val m = plurals(d)
             assertEquals("$d: plurales", en.keys.sorted(), m.keys.sorted())
             for ((k, q) in m) {
-                assertTrue("$d/$k sin one", q.containsKey("one"))
+                if (d !in onlyOther) assertTrue("$d/$k sin one", q.containsKey("one"))
                 assertTrue("$d/$k sin other", q.containsKey("other"))
                 if (d in withMany) assertTrue("$d/$k sin many", q.containsKey("many"))
                 // «other» con los mismos huecos que en inglés; «one» puede decir «un cargador» sin la cifra.
                 assertEquals("$d/$k", specs(en.getValue(k).getValue("other")), specs(q.getValue("other")))
-                assertTrue("$d/$k one", specs(q.getValue("other")).containsAll(specs(q.getValue("one"))))
+                q["one"]?.let { assertTrue("$d/$k one", specs(q.getValue("other")).containsAll(specs(it))) }
                 q["many"]?.let { assertEquals("$d/$k many", specs(q.getValue("other")), specs(it)) }
             }
         }

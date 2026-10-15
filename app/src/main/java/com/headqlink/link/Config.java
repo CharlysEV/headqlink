@@ -760,6 +760,16 @@ final class Config {
         return sp.getBoolean(FLOAT_CARD, true);
     }
 
+    /**
+     * Planificador desde Google Maps: al navegar con Maps, preguntar en el coche si se activa el planificador y, si sí,
+     * leer el destino de la tarjeta de Maps (RoutePlanner.guessFromMaps). Apagado de fábrica.
+     */
+    static final String MAPS_PLANNER = "maps_planner";
+
+    boolean mapsPlanner() {
+        return sp.getBoolean(MAPS_PLANNER, false);
+    }
+
     /** Posición de la tarjeta flotante: fracciones (0-1) de la zona de AA; -1 = sin guardar (arriba a la derecha). */
     float floatX() {
         return sp.getFloat("float_x", -1f);

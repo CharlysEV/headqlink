@@ -810,17 +810,17 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     }
 
     /**
-     * Idioma de la app (Android 13+): el del sistema, español, inglés, portugués (Portugal o Brasil), italiano, francés, alemán
-     * o neerlandés. Android recrea las pantallas
+     * Idioma de la app (Android 13+): el del sistema, español, inglés, portugués (Portugal o Brasil), italiano, francés, alemán,
+     * neerlandés o chino simplificado. Android recrea las pantallas
      * y la interfaz del coche usa el nuevo al volver a conectar.
      */
     @android.annotation.TargetApi(33)
     private void showLanguage() {
         android.app.LocaleManager lm = getSystemService(android.app.LocaleManager.class);
         String cur = lm.getApplicationLocales().isEmpty() ? "" : lm.getApplicationLocales().get(0).getLanguage();
-        String[] tags = {"", "es", "en", "pt-PT", "pt-BR", "it", "fr", "de", "nl"};
+        String[] tags = {"", "es", "en", "pt-PT", "pt-BR", "it", "fr", "de", "nl", "zh-CN"};
         String[] names = {Str.get(R.string.hql_language_system), "Español", "English", "Português (Portugal)", "Português (Brasil)",
-                "Italiano", "Français", "Deutsch", "Nederlands"};
+                "Italiano", "Français", "Deutsch", "Nederlands", "简体中文"};
         String curTag = lm.getApplicationLocales().isEmpty() ? "" : lm.getApplicationLocales().get(0).toLanguageTag();
         int checked = 0;
         for (int i = 1; i < tags.length; i++) {

@@ -414,6 +414,17 @@ final class SettingsScreen implements CarScreen {
             CarUi.applyFloatCard();
         }));
         alerts.addView(divider(c));
+        alerts.addView(toggle(c, Str.get(R.string.hql_maps_planner), Str.get(R.string.hql_maps_planner_help), cfg.mapsPlanner(), on -> {
+            cfg.putBool(Config.MAPS_PLANNER, on);
+            L.i("planificador desde Google Maps: " + (on ? "sí" : "no"));
+        }));
+        // Solo en el coche virtual: día o noche a mano, para probar el cambio de tema con las tarjetas en pantalla.
+        if (RoutePlanner.testMode()) {
+            alerts.addView(divider(c));
+            alerts.addView(toggle(c, Str.get(R.string.hql_sim_night), Str.get(R.string.hql_sim_night_help), CarTheme.night(),
+                    on -> AaPassthroughSource.simNight(c, on)));
+        }
+        alerts.addView(divider(c));
         alerts.addView(toggle(c, Str.get(R.string.hql_trip_notice), Str.get(R.string.hql_trip_notice_help), cfg.tripNotice(),
                 on -> cfg.putBool("trip_notice", on)));
         col.addView(alerts, cardLp());

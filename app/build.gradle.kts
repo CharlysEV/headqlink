@@ -217,10 +217,10 @@ android {
         }
     }
 
-    // headqlink: solo los 8 idiomas de la app (res/xml/hql_locales_config.xml). Las librerías traían textos de
+    // headqlink: solo los 9 idiomas de la app (res/xml/hql_locales_config.xml). Las librerías traían textos de
     // unos 25 idiomas que la app no usa (~5 MB de resources.arsc).
     androidResources {
-        localeFilters += listOf("en", "es", "pt-rPT", "pt-rBR", "it", "fr", "de", "nl")
+        localeFilters += listOf("en", "es", "pt-rPT", "pt-rBR", "it", "fr", "de", "nl", "zh-rCN")
     }
 
     packaging {
@@ -306,6 +306,9 @@ dependencies {
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
     implementation("androidx.startup:startup-runtime:1.1.1")
     implementation("com.google.android.gms:play-services-nearby:19.3.0")
+    // Qonecta+: el destino de Google Maps leído de su tarjeta en Android Auto (MapsReader). El de Play Services: el
+    // modelo lo descarga Google Play (no engorda el APK).
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
     // ViewModel and LiveData
     implementation("androidx.lifecycle:lifecycle-extensions:2.2.0")
     kapt("androidx.lifecycle:lifecycle-compiler:2.6.2")

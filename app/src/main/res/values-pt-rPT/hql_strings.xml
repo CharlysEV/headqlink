@@ -924,6 +924,10 @@
     <string name="hql_usb_busy_other">Feche a aplicação que o está a usar, ou desligue e volte a ligar o cabo.</string>
     <string name="hql_float_card">Cartão da próxima paragem sobre o Android Auto</string>
     <string name="hql_float_card_help">Toque para abrir a rota; mantenha premido para o mover.</string>
+    <string name="hql_maps_planner">Planeador a partir do Google Maps</string>
+    <string name="hql_maps_planner_help">Ao navegar com o Google Maps, o carro pergunta se ativa o planeador. Se disser que sim, lê o destino do Maps no ecrã do carro e calcula as paragens de carregamento.</string>
+    <string name="hql_sim_night">Modo noturno (carro virtual)</string>
+    <string name="hql_sim_night_help">Para testar a mudança entre dia e noite. Ao voltar a ligar, volta ao habitual.</string>
     <string name="hql_float_stop_sub">a %1$.0f km · chega com %2$.0f %%</string>
     <string name="hql_float_dest">Chega com %1$.0f %%</string>
     <string name="hql_float_no_stop">Sem paragens</string>

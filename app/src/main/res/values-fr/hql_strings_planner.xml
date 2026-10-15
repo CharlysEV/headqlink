@@ -64,11 +64,30 @@
     <string name="hql_pl_here_set">Ici, là où je suis</string>
     <string name="hql_pl_here_name">Position GPS</string>
     <string name="hql_guess_title">Trajet vers %1$s</string>
-    <string name="hql_guess_text">Déduit de Google Maps (il reste %1$s). Le plan de recharge suit.</string>
+    <string name="hql_guess_text">Lu dans Google Maps (il reste %1$s). Le plan de recharge suit.</string>
     <string name="hql_guess_ok">OK</string>
     <string name="hql_guess_not">Ce n\'est pas ça</string>
     <string name="hql_guess_ask_title">Où allez-vous ?</string>
     <string name="hql_guess_ask_text">Google Maps navigue (%1$s). Choisissez la destination pour le plan de recharge :</string>
     <string name="hql_guess_search">Chercher</string>
     <string name="hql_guess_close">Fermer</string>
+    <plurals name="hql_guess_stops_title">
+        <item quantity="one">J\'ajoute l\'arrêt de recharge à Google Maps ?</item>
+        <item quantity="many">J\'ajoute les %1$d arrêts de recharge à Google Maps ?</item>
+        <item quantity="other">J\'ajoute les %1$d arrêts de recharge à Google Maps ?</item>
+    </plurals>
+    <string name="hql_guess_stops_text">Pour arriver, il faut recharger (premier arrêt : %1$s). Si vous les ajoutez, le planificateur arrête l\'itinéraire actuel de Google Maps et lance le sien, qui y passe.</string>
+    <string name="hql_guess_stops_add">Ajouter à Maps</string>
+    <string name="hql_guess_stops_no">Non</string>
+    <string name="hql_guess_stops_fail_title">Impossible de changer l\'itinéraire Google Maps</string>
+    <string name="hql_guess_stops_fail_text">Maps est toujours sur son itinéraire. Arrêtez-le avec le X et touchez «Réessayer».</string>
+    <string name="hql_guess_stops_retry">Réessayer</string>
+    <string name="hql_guess_plan_title">J\'active le planificateur ?</string>
+    <string name="hql_guess_plan_text">Google Maps va vers une destination à %1$s. Je peux la lire et calculer les arrêts de recharge.</string>
+    <string name="hql_guess_plan_text_existing">Google Maps avait déjà un itinéraire (%1$s). Je peux le lire et calculer les arrêts de recharge.</string>
+    <string name="hql_guess_plan_text_dest">Google Maps va vers %1$s (%2$s). Je peux calculer les arrêts de recharge.</string>
+    <string name="hql_guess_plan_yes">Oui, planifier</string>
+    <string name="hql_guess_plan_this">Planifier cet itinéraire</string>
+    <string name="hql_guess_plan_no">Non</string>
+    <string name="hql_guess_plan_countdown">Si vous ne touchez rien, vous continuez sans planificateur dans %1$d s</string>
 </resources>

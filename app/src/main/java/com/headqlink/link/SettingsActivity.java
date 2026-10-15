@@ -225,6 +225,10 @@ public class SettingsActivity extends Activity implements LinkState.Listener {
             L.i("tarjeta flotante: " + (on ? "sí" : "no"));
             CarUi.applyFloatCard();
         });
+        switchRow(Str.get(R.string.hql_maps_planner), () -> Str.get(R.string.hql_maps_planner_help), cfg::mapsPlanner, on -> {
+            cfg.putBool(Config.MAPS_PLANNER, on);
+            L.i("planificador desde Google Maps: " + (on ? "sí" : "no"));
+        });
         switchRow(Str.get(R.string.hql_trip_notice), () -> Str.get(R.string.hql_trip_notice_help), cfg::tripNotice, on -> {
             cfg.putBool("trip_notice", on);
             L.i("resumen del viaje al desconectar: " + (on ? "sí" : "no"));

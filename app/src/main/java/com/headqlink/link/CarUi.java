@@ -65,10 +65,10 @@ final class CarUi {
         }
 
         /**
-         * Tarjeta flotante sobre AA: {x, y, ancho, alto} en px de la pantalla del coche, o null si no se ve. Su trozo de
-         * nuestra interfaz se pinta encima de la imagen de AA (GlFrameRelay) y sus toques vienen a nuestra interfaz.
+         * Tarjetas sobre AA: cada una {x, y, ancho, alto} en px de la pantalla del coche, o null si no hay ninguna. Sus
+         * trozos de nuestra interfaz se pintan encima de la imagen de AA (GlFrameRelay) y sus toques vienen aquí.
          */
-        default void onFloatRect(int[] rect) {
+        default void onFloatRects(int[][] rects) {
         }
     }
 
@@ -127,14 +127,69 @@ final class CarUi {
     private static final long ALERT_KEEP_MS = 10 * 60_000L;
     private final Runnable alertExpire = this::clearAlert;
     private final RoutePlanner.ChargeAlertListener chargeAlert = (title, text, kind) -> main.post(() -> showAlert(title, text, kind));
-    // Destino deducido de Google Maps (o la pregunta, si no se sabe cuál): tarjeta abajo en el panel, como el aviso.
+    // Destino de Google Maps y sus preguntas: tarjeta flotante encima de AA (el panel no se despliega: AA no se recoloca).
     private LinearLayout guessCard;
+    private static final int GUESS_W = 480;
+    /**
+     * La tarjeta del planificador que se ve ahora, para volver a pintarla al rehacer la interfaz (día o noche): la nueva
+     * nace vacía. replaying: se está volviendo a pintar (no se reinician la cuenta atrás ni el tiempo de la tarjeta).
+     */
+    private Runnable guessReplay;
+    private boolean replaying;
+    /** Qué tarjeta del planificador es (para el log, sin su texto) y dónde se puso la última vez. */
+    private String guessKind = "";
+    private String guessPlaced = "";
+    /** El aviso del plan que se ve ahora (título, texto, tipo), por lo mismo. */
+    private Object[] alertShown;
     private TextView guessTitle;
     private TextView guessText;
+    /** Cuenta atrás de la pregunta del planificador: qué pasa si no se pulsa nada, y en cuántos segundos. */
+    private TextView guessCountdown;
+    private long askDeadline;
+    /** Segundos de la pregunta del planificador antes de quedarse en «No». */
+    private static final int ASK_CARD_S = 15;
     private LinearLayout guessBtns;
     private boolean guessPending;
     private final Runnable guessExpire = this::clearGuess;
-    private final RoutePlanner.DestGuessListener destGuess = (chosen, options, km) -> main.post(() -> showGuess(chosen, options, km));
+    /**
+     * La pregunta del planificador: cada segundo, la cuenta atrás; al llegar a 0 sin respuesta, la tarjeta se va y es un
+     * «No» (Maps sigue como está; nunca se quita ni se lee nada sin que el conductor lo pida).
+     */
+    private final Runnable askExpire = new Runnable() {
+        @Override
+        public void run() {
+            long left = askDeadline - android.os.SystemClock.elapsedRealtime();
+            if (left > 0) {
+                guessCountdown.setText(Str.get(R.string.hql_guess_plan_countdown, (int) Math.ceil(left / 1000.0)));
+                main.postDelayed(this, Math.min(1000, left));
+                return;
+            }
+            clearGuess();
+            RoutePlanner.declinePlanner(true);
+        }
+    };
+    private final RoutePlanner.DestGuessListener destGuess = new RoutePlanner.DestGuessListener() {
+        @Override
+        public void onDestGuess(DestGuess.Candidate chosen, java.util.List<DestGuess.Candidate> options, double mapsKm) {
+            main.post(() -> showGuess(chosen, options, mapsKm));
+        }
+
+        @Override
+        public void onDestStops(int stops, String first) {
+            main.post(() -> showGuessStops(stops, first));
+        }
+
+        @Override
+        public void onDestStopsFailed() {
+            main.post(CarUi.this::showGuessStopsFailed);
+        }
+
+        @Override
+        public void onPlannerAsk(double mapsKm, boolean existing, String dest) {
+            main.post(() -> showPlannerAsk(mapsKm, existing, dest));
+        }
+
+    };
     private final Runnable hideTask = () -> setHidden(true);
     /** AA ya ha dado imagen; antes, en su zona se ve la animación de carga. */
     private boolean aaReady;
@@ -144,7 +199,17 @@ final class CarUi {
     private FloatCard floatCard;
     private int aaRegX;
     private int aaRegW;
+    /**
+     * Los trozos de nuestra capa encima de AA, uno por tarjeta, sin pisarse: la de la próxima parada (floatRect), la del
+     * planificador (guessRect, en la misma columna de la derecha, debajo o encima de la otra) y el cartel de la imagen
+     * (infoRect, arriba en el centro). sentRects: lo último que se mandó al relay.
+     */
     private volatile int[] floatRect;
+    private volatile int[] guessRect;
+    private volatile int[] infoRect;
+    private int[][] sentRects;
+    /** Se está arrastrando la tarjeta de la próxima parada: ni se recoloca sola ni se apunta cada paso en el log. */
+    private boolean dragging;
     private int dragLeft;
     private int dragTop;
     private static final int FLOAT_MARGIN = 20;
@@ -237,7 +302,14 @@ final class CarUi {
         pres.setContentView(buildRoot(pres.getContext()));
         open(name);
         if (wasHidden && "aa".equals(name)) setHidden(true);
-        if (alertPending) renderAlert();
+        // Las tarjetas nuevas nacen vacías: se vuelven a pintar las que se veían, con los colores de ahora.
+        replaying = true;
+        try {
+            if (alertPending && alertShown != null) showAlert((String) alertShown[0], (String) alertShown[1], (Integer) alertShown[2]);
+            if (guessPending && guessReplay != null) guessReplay.run();
+        } finally {
+            replaying = false;
+        }
     }
 
     private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
@@ -625,6 +697,11 @@ final class CarUi {
      */
     private void setHidden(boolean on) {
         if (panel == null || on == hidden) return;
+        if (MapsReader.busy()) {
+            // Leyendo la tarjeta de Maps: que Android Auto no cambie de sitio entre la copia y el toque. Luego.
+            main.postDelayed(() -> setHidden(on), 500);
+            return;
+        }
         hidden = on;
         applyLayout();
         L.i("CarUi: panel " + (hidden ? "minimizado" : "desplegado"));
@@ -641,7 +718,15 @@ final class CarUi {
 
     /** Inicio de un gesto en el coche; toUi: va a nuestra interfaz (si no, a AA). */
     void noteTouch(boolean toUi) {
+        lastTouchMs = android.os.SystemClock.elapsedRealtime();
         if (toUi) main.post(this::scheduleHide);
+    }
+
+    /** Último toque en la pantalla del coche (AA o nuestra interfaz), reloj de arranque. */
+    private static volatile long lastTouchMs;
+
+    static long lastTouchMs() {
+        return lastTouchMs;
     }
 
     /**
@@ -759,9 +844,13 @@ final class CarUi {
             main.removeCallbacks(hideTask);
             main.removeCallbacks(alertExpire);
             main.removeCallbacks(guessExpire);
+            main.removeCallbacks(askExpire);
             main.removeCallbacks(railTick);
             main.removeCallbacks(floatTick);
-            setFloatRect(null);
+            floatRect = null;
+            guessRect = null;
+            infoRect = null;
+            pushRects();
             if (RoutePlanner.chargeAlerts == chargeAlert) RoutePlanner.chargeAlerts = null;
             if (RoutePlanner.destGuesses == destGuess) RoutePlanner.destGuesses = null;
             SspSession.setDrivingUi(true);
@@ -977,12 +1066,8 @@ final class CarUi {
         alp.rightMargin = 12;
         alp.bottomMargin = 12;
         root.addView(buildAlert(c), alp);
-        FrameLayout.LayoutParams glp2 = new FrameLayout.LayoutParams(panelW - 24, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM | side);
-        glp2.leftMargin = 12;
-        glp2.rightMargin = 12;
-        glp2.bottomMargin = 12;
-        root.addView(buildGuess(c), glp2);
+        root.addView(buildGuess(c), new FrameLayout.LayoutParams(GUESS_W, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.LEFT));
         floatCard = new FloatCard(c, new FloatCard.Listener() {
             @Override
             public void onTap() {
@@ -995,11 +1080,13 @@ final class CarUi {
             public void onDrag(float dx, float dy) {
                 int[] r = floatRect;
                 if (r == null) return;
+                dragging = true;
                 placeFloatAt(dragLeft + Math.round(dx), dragTop + Math.round(dy));
             }
 
             @Override
             public void onDrop() {
+                dragging = false;
                 int[] r = floatRect;
                 if (r == null) return;
                 // Se guarda como fracción de la zona de AA: vale con el panel recogido o desplegado.
@@ -1011,6 +1098,8 @@ final class CarUi {
                 L.i(String.format(java.util.Locale.ROOT, "CarUi: tarjeta flotante movida a %.2f, %.2f", fx, fy));
                 dragLeft = r[0];
                 dragTop = r[1];
+                // La del planificador se aparta si ha quedado debajo.
+                if (guessPending) placeGuess();
             }
         });
         floatCard.setVisibility(View.GONE);
@@ -1020,8 +1109,42 @@ final class CarUi {
 
     /** ¿Cae (x, y) en la tarjeta flotante? Hilo del coche: sus toques van a nuestra interfaz, no a AA. */
     boolean floatHit(float x, float y) {
-        int[] r = floatRect;
+        return inside(floatRect, x, y) || inside(guessRect, x, y) || inside(infoRect, x, y);
+    }
+
+    private static boolean inside(int[] r, float x, float y) {
         return r != null && x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + r[3];
+    }
+
+    /** Puro: ¿se pisan dos rectángulos {x, y, w, h} (con un margen m entre ellos)? */
+    static boolean overlaps(int[] a, int[] b, int m) {
+        return a != null && b != null && a[0] < b[0] + b[2] + m && b[0] < a[0] + a[2] + m
+                && a[1] < b[1] + b[3] + m && b[1] < a[1] + a[3] + m;
+    }
+
+    /**
+     * Puro: la altura (y) de una tarjeta de alto h en la columna de la derecha (x, w): en el centro; si pisa la otra
+     * tarjeta (other, la de la próxima parada), justo debajo de ella o, si no cabe, justo encima; si tampoco, en el centro.
+     */
+    static int stackY(int x, int w, int h, int height, int[] other, int margin) {
+        int center = Math.max(0, (height - h) / 2);
+        if (!overlaps(new int[]{x, center, w, h}, other, margin)) return center;
+        int below = other[1] + other[3] + margin;
+        if (below + h <= height - margin) return below;
+        int above = other[1] - margin - h;
+        if (above >= margin) return above;
+        return center;
+    }
+
+    /** Manda al relay los trozos que hay ahora (si han cambiado). */
+    private void pushRects() {
+        java.util.List<int[]> l = new java.util.ArrayList<>();
+        for (int[] r : new int[][]{floatRect, guessRect, infoRect}) if (r != null) l.add(r);
+        int[][] now = l.isEmpty() ? null : l.toArray(new int[0][]);
+        if (java.util.Arrays.deepEquals(now, sentRects)) return;
+        sentRects = now;
+        if (!dragging) logFloatRects(now);
+        listener.onFloatRects(now);
     }
 
     /** La tarjeta flotante desde Ajustes (encendida o apagada). */
@@ -1035,11 +1158,17 @@ final class CarUi {
         if (floatCard == null) return;
         boolean show = aaShown && !splitActive() && !compact && aaRegW > FloatCard.W + 2 * FLOAT_MARGIN
                 && new Config(ctx).floatCard() && floatCard.update();
+        if (show != (floatCard.getVisibility() == View.VISIBLE)) {
+            L.i("CarUi: tarjeta de la próxima parada " + (show ? "a la vista" : "fuera"));
+        }
         floatCard.setVisibility(show ? View.VISIBLE : View.GONE);
         if (!show) {
             setFloatRect(null);
+            if (guessPending) placeGuess();
             return;
         }
+        // En pleno arrastre manda el dedo, no la posición guardada.
+        if (dragging) return;
         Config cfg = new Config(ctx);
         float fx = cfg.floatX();
         float fy = cfg.floatY();
@@ -1054,6 +1183,8 @@ final class CarUi {
             dragLeft = r[0];
             dragTop = r[1];
         }
+        // La del planificador, en la misma columna sin pisarla.
+        if (guessPending) placeGuess();
     }
 
     /** Coloca la tarjeta (dentro de la zona de AA) y avisa de su rectángulo. */
@@ -1068,13 +1199,20 @@ final class CarUi {
             lp.topMargin = y;
             floatCard.setLayoutParams(lp);
         }
-        setFloatRect(new int[]{x, y, FloatCard.W, FloatCard.H});
+        // Con la del planificador a la vista, se recoloca también y las dos van al relay de una vez (sin un fotograma pisadas).
+        floatRect = new int[]{x, y, FloatCard.W, FloatCard.H};
+        if (guessPending && !dragging) placeGuess();
+        else pushRects();
     }
 
     private void setFloatRect(int[] r) {
-        if (java.util.Arrays.equals(r, floatRect)) return;
         floatRect = r;
-        listener.onFloatRect(r);
+        pushRects();
+    }
+
+    private void setGuessRect(int[] r) {
+        guessRect = r;
+        pushRects();
     }
 
     /** Tarjeta del aviso del plan de carga: qué ha cambiado, «Ir» (Google Maps con las paradas nuevas) y «Ruta». */
@@ -1132,6 +1270,7 @@ final class CarUi {
      */
     private void showAlert(String title, String text, int kind) {
         if (alertCard == null) return;
+        alertShown = new Object[]{title, text, kind};
         boolean ok = kind == RoutePlanner.ALERT_READY;
         alertCard.setBackground(CarStyle.round(CarTheme.alertBg(ok), 24));
         alertTitle.setTextColor(ok ? CarKit.GREEN : CarKit.AMBER);
@@ -1142,27 +1281,89 @@ final class CarUi {
         ChargePlanner.Result cp = r == null ? null : r.lastChargePlan();
         alertGo.setVisibility(cp != null && cp.next() != null ? View.VISIBLE : View.GONE);
         alertPending = true;
-        main.removeCallbacks(alertExpire);
-        main.postDelayed(alertExpire, ALERT_KEEP_MS);
-        if (hidden) setHidden(false);
+        if (!replaying) {
+            main.removeCallbacks(alertExpire);
+            main.postDelayed(alertExpire, ALERT_KEEP_MS);
+        }
+        if (hidden && !replaying) setHidden(false);
         renderAlert();
         markNav();
-        main.removeCallbacks(hideTask);
-        if (autoHide && aaShown) main.postDelayed(hideTask, ALERT_SHOW_MS);
+        if (!replaying) {
+            main.removeCallbacks(hideTask);
+            if (autoHide && aaShown) main.postDelayed(hideTask, ALERT_SHOW_MS);
+        }
     }
 
     private void clearAlert() {
         alertPending = false;
+        alertShown = null;
         main.removeCallbacks(alertExpire);
         renderAlert();
         markNav();
     }
 
-    /** La tarjeta solo con el panel completo (en la barra de iconos no cabe: queda el botón Coche en ámbar). */
+    /**
+     * El aviso solo con el panel completo (en la barra de iconos no cabe: queda el botón Coche en ámbar). La tarjeta del
+     * planificador flota encima de AA, esté el panel como esté.
+     */
     private void renderAlert() {
-        // El destino de Maps va delante del aviso del plan (el aviso vuelve al quitarse la tarjeta).
-        if (alertCard != null) alertCard.setVisibility(alertPending && !guessPending && !rail() ? View.VISIBLE : View.GONE);
-        if (guessCard != null) guessCard.setVisibility(guessPending && !rail() ? View.VISIBLE : View.GONE);
+        if (alertCard != null) {
+            boolean show = alertPending && !rail();
+            if (show != (alertCard.getVisibility() == View.VISIBLE)) L.i("CarUi: aviso del plan en el panel " + (show ? "a la vista" : "fuera"));
+            alertCard.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+        if (guessCard == null) return;
+        if (guessPending) {
+            placeGuess();
+        } else if (guessCard.getVisibility() != View.GONE) {
+            guessCard.setVisibility(View.GONE);
+            L.i("CarUi: tarjeta «" + guessKind + "» fuera");
+            guessPlaced = "";
+            setGuessRect(null);
+        }
+    }
+
+    /**
+     * Coloca la tarjeta del planificador: a la derecha de la zona de AA y centrada en alto, lejos del recuadro de Maps y
+     * de su tarjeta del viaje (a la izquierda); el relay pinta ese trozo de nuestra capa encima de AA y sus toques vienen
+     * aquí (floatHit). Con una pantalla nuestra delante, en el mismo sitio de esa pantalla.
+     */
+    private void placeGuess() {
+        if (guessCard == null || root == null) return;
+        boolean overAa = aaVisible() && aaRegW >= GUESS_W + 2 * FLOAT_MARGIN;
+        int areaX;
+        int areaW;
+        if (overAa) {
+            areaX = aaRegX;
+            areaW = aaRegW;
+        } else {
+            areaX = ((FrameLayout.LayoutParams) content.getLayoutParams()).leftMargin;
+            areaW = contentWidth();
+        }
+        guessCard.measure(View.MeasureSpec.makeMeasureSpec(GUESS_W, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.AT_MOST));
+        int h = Math.min(height, guessCard.getMeasuredHeight());
+        int x = Math.max(areaX, areaX + areaW - GUESS_W - FLOAT_MARGIN);
+        // Lo más a la derecha posible, en el centro; con la de la próxima parada a la vista, sin pisarla.
+        int[] other = overAa && floatCard != null && floatCard.getVisibility() == View.VISIBLE ? floatRect : null;
+        int y = stackY(x, GUESS_W, h, height, other, FLOAT_MARGIN);
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) guessCard.getLayoutParams();
+        if (lp.leftMargin != x || lp.topMargin != y) {
+            lp.leftMargin = x;
+            lp.topMargin = y;
+            guessCard.setLayoutParams(lp);
+        }
+        if (guessCard.getVisibility() != View.VISIBLE) {
+            guessCard.setVisibility(View.VISIBLE);
+            guessCard.bringToFront();
+        }
+        String placed = guessKind + "|" + x + "," + y + "," + h + "|" + overAa;
+        if (!placed.equals(guessPlaced)) {
+            guessPlaced = placed;
+            L.i("CarUi: tarjeta «" + guessKind + "» en " + x + "," + y + " " + GUESS_W + "x" + h
+                    + (overAa ? " encima de AA" : " encima de nuestra pantalla") + (replaying ? " (repintada)" : ""));
+        }
+        setGuessRect(overAa ? new int[]{x, y, GUESS_W, h} : null);
     }
 
     /** Tarjeta del destino de Google Maps: «Ruta a Casa · según Google Maps» con «No es», o «¿A dónde vas?» con opciones. */
@@ -1177,9 +1378,14 @@ final class CarUi {
         guessTitle.setMaxLines(2);
         card.addView(guessTitle);
         guessText = CarStyle.text(c, "", 20, CarStyle.TEXT);
-        guessText.setMaxLines(4);
+        guessText.setMaxLines(7);
         guessText.setPadding(0, 8, 0, 12);
         card.addView(guessText);
+        guessCountdown = CarStyle.text(c, "", 20, CarKit.AMBER);
+        guessCountdown.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        guessCountdown.setPadding(0, 0, 0, 10);
+        guessCountdown.setVisibility(View.GONE);
+        card.addView(guessCountdown);
         guessBtns = new LinearLayout(c);
         guessBtns.setOrientation(LinearLayout.VERTICAL);
         card.addView(guessBtns);
@@ -1200,11 +1406,13 @@ final class CarUi {
     }
 
     /**
-     * Google Maps navega y el planificador ha deducido el destino (chosen) o no sabe cuál es (chosen null): se despliega
-     * el panel con la tarjeta, como el aviso del plan. Todo con un toque en la pantalla del coche.
+     * Google Maps navega y el planificador ha leído el destino (chosen) o no sabe cuál es (chosen null): tarjeta
+     * flotante encima de AA. Todo con un toque en la pantalla del coche.
      */
     private void showGuess(DestGuess.Candidate chosen, java.util.List<DestGuess.Candidate> options, double km) {
         if (guessCard == null) return;
+        guessReplay = () -> showGuess(chosen, options, km);
+        guessKind = chosen != null ? "destino leído" : "destino sin leer";
         guessBtns.removeAllViews();
         String dist = String.format(java.util.Locale.getDefault(), "%.0f km", km);
         boolean ok = chosen != null;
@@ -1237,17 +1445,104 @@ final class CarUi {
             guessPill(Str.get(R.string.hql_guess_close), false, this::clearGuess);
         }
         guessPending = true;
-        main.removeCallbacks(guessExpire);
-        main.postDelayed(guessExpire, ok ? ALERT_SHOW_MS : 2 * 60_000L);
-        if (hidden) setHidden(false);
+        if (!replaying) {
+            main.removeCallbacks(guessExpire);
+            main.postDelayed(guessExpire, ok ? ALERT_SHOW_MS : 2 * 60_000L);
+        }
         renderAlert();
-        main.removeCallbacks(hideTask);
-        if (autoHide && aaShown) main.postDelayed(hideTask, ok ? ALERT_SHOW_MS : 2 * 60_000L);
+    }
+
+    /** El plan al destino de Maps lleva paradas: el conductor decide si el planificador cambia la ruta de Google Maps. */
+    private void showGuessStops(int stops, String first) {
+        if (guessCard == null) return;
+        guessReplay = () -> showGuessStops(stops, first);
+        guessKind = "paradas a Maps";
+        guessBtns.removeAllViews();
+        guessCard.setBackground(CarStyle.round(CarTheme.alertBg(false), 24));
+        guessTitle.setTextColor(CarKit.AMBER);
+        guessTitle.setText(Str.plural(R.plurals.hql_guess_stops_title, stops, stops));
+        guessText.setText(Str.get(R.string.hql_guess_stops_text, first == null ? "" : first));
+        guessPill(Str.get(R.string.hql_guess_stops_add), true, () -> {
+            clearGuess();
+            RoutePlanner.addStopsToMaps(ctx);
+        });
+        guessPill(Str.get(R.string.hql_guess_stops_no), false, () -> {
+            L.i("ruta: el conductor no quiere las paradas en Google Maps");
+            clearGuess();
+        });
+        guessPending = true;
+        if (!replaying) {
+            main.removeCallbacks(guessExpire);
+            main.postDelayed(guessExpire, 2 * 60_000L);
+        }
+        renderAlert();
+    }
+
+    /**
+     * Maps navega sin destino aquí: ¿activo el planificador? «Sí» lee la ruta de Maps (si ya navegaba al entrar,
+     * existing, esa misma, sin quitarla). Sin respuesta en ASK_CARD_S, «No».
+     */
+    private void showPlannerAsk(double km, boolean existing, String dest) {
+        if (guessCard == null) return;
+        guessReplay = () -> showPlannerAsk(km, existing, dest);
+        guessKind = (existing ? "¿planificador? (ruta de antes)" : "¿planificador?") + (dest != null ? " con destino" : " sin destino");
+        guessBtns.removeAllViews();
+        guessCard.setBackground(CarStyle.round(CarTheme.alertBg(false), 24));
+        guessTitle.setTextColor(CarKit.AMBER);
+        guessTitle.setText(Str.get(R.string.hql_guess_plan_title));
+        String dist = String.format(java.util.Locale.getDefault(), "%.0f km", km);
+        // Con el destino ya leído, la pregunta dice a dónde va.
+        guessText.setText(dest != null ? Str.get(R.string.hql_guess_plan_text_dest, dest, dist)
+                : Str.get(existing ? R.string.hql_guess_plan_text_existing : R.string.hql_guess_plan_text, dist));
+        guessPill(Str.get(existing ? R.string.hql_guess_plan_this : R.string.hql_guess_plan_yes), true, () -> {
+            main.removeCallbacks(askExpire);
+            clearGuess();
+            RoutePlanner.acceptPlanner();
+        });
+        guessPill(Str.get(R.string.hql_guess_plan_no), false, () -> {
+            main.removeCallbacks(askExpire);
+            clearGuess();
+            RoutePlanner.declinePlanner(false);
+        });
+        guessPending = true;
+        main.removeCallbacks(guessExpire);
+        // Sin respuesta en ASK_CARD_S: la tarjeta se va y es un «No».
+        main.removeCallbacks(askExpire);
+        if (!replaying) askDeadline = android.os.SystemClock.elapsedRealtime() + ASK_CARD_S * 1000L;
+        guessCountdown.setVisibility(View.VISIBLE);
+        askExpire.run();
+        renderAlert();
+    }
+
+    /** No se pudo quitar la navegación de Maps para mandarle la del plan: «Reintentar» lo vuelve a hacer. */
+    private void showGuessStopsFailed() {
+        if (guessCard == null) return;
+        guessReplay = this::showGuessStopsFailed;
+        guessKind = "paradas: no se pudo";
+        guessBtns.removeAllViews();
+        guessCard.setBackground(CarStyle.round(CarTheme.alertBg(false), 24));
+        guessTitle.setTextColor(CarKit.AMBER);
+        guessTitle.setText(Str.get(R.string.hql_guess_stops_fail_title));
+        guessText.setText(Str.get(R.string.hql_guess_stops_fail_text));
+        guessPill(Str.get(R.string.hql_guess_stops_retry), true, () -> {
+            clearGuess();
+            RoutePlanner.addStopsToMaps(ctx);
+        });
+        guessPill(Str.get(R.string.hql_guess_close), false, this::clearGuess);
+        guessPending = true;
+        if (!replaying) {
+            main.removeCallbacks(guessExpire);
+            main.postDelayed(guessExpire, 2 * 60_000L);
+        }
+        renderAlert();
     }
 
     private void clearGuess() {
         guessPending = false;
+        guessReplay = null;
         main.removeCallbacks(guessExpire);
+        main.removeCallbacks(askExpire);
+        if (guessCountdown != null) guessCountdown.setVisibility(View.GONE);
         renderAlert();
     }
 
@@ -1324,15 +1619,23 @@ final class CarUi {
     static final long VIDEO_INFO_MS = 8000;
     private final Runnable hideVideoInfo = () -> {
         if (videoInfo != null) videoInfo.setVisibility(View.GONE);
-        // La tarjeta flotante (si la hay) vuelve a su hueco encima de AA.
-        dropFloatRect();
-        refreshFloat();
+        infoRect = null;
+        pushRects();
     };
 
-    /** Sin trozo de nuestra capa encima de AA (el cartel se ha ido; refreshFloat pone el de la tarjeta, si la hay). */
-    private void dropFloatRect() {
-        floatRect = null;
-        listener.onFloatRect(null);
+    /** Log: los trozos de nuestra capa que el relay pinta encima de AA (null: ninguno). */
+    private static void logFloatRects(int[][] rs) {
+        if (rs == null) {
+            L.i("CarUi: nada nuestro encima de AA");
+            return;
+        }
+        StringBuilder b = new StringBuilder("CarUi: encima de AA, ");
+        b.append(rs.length == 1 ? "el trozo " : rs.length + " trozos: ");
+        for (int i = 0; i < rs.length; i++) {
+            if (i > 0) b.append(" · ");
+            b.append(rs[i][0]).append(',').append(rs[i][1]).append(' ').append(rs[i][2]).append('x').append(rs[i][3]);
+        }
+        L.i(b.toString());
     }
 
     /** Puro: «720p · 30 fps · 38 °C» (la resolución por el ancho del vídeo: más de 1280, 1080p). */
@@ -1385,10 +1688,10 @@ final class CarUi {
         videoInfo.setLayoutParams(lp);
         videoInfo.setVisibility(View.VISIBLE);
         videoInfo.bringToFront();
-        // Encima de AA: el relay pinta ese trozo de nuestra capa (el de la tarjeta flotante, que vuelve al quitarlo).
+        // Encima de AA: el relay pinta también ese trozo de nuestra capa, sin quitarle el suyo a las tarjetas.
         if (aaShown) {
-            floatRect = new int[]{x, y, w, h};
-            listener.onFloatRect(floatRect);
+            infoRect = new int[]{x, y, w, h};
+            pushRects();
         }
         main.postDelayed(hideVideoInfo, VIDEO_INFO_MS);
     }

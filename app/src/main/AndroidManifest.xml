@@ -155,6 +155,10 @@
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
         tools:ignore="GoogleAppIndexingWarning">
+        <!-- El lector de texto de Google (MapsReader): que Play Services baje su modelo al instalar. -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="ocr" />
 
         <activity
             android:name=".aap.AapProjectionActivity"

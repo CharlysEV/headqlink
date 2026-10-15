@@ -924,6 +924,10 @@
     <string name="hql_usb_busy_other">Chiudi l\'app che lo sta usando, oppure scollega e ricollega il cavo.</string>
     <string name="hql_float_card">Scheda della prossima sosta sopra Android Auto</string>
     <string name="hql_float_card_help">Toccala per aprire il percorso; tienila premuta per spostarla.</string>
+    <string name="hql_maps_planner">Pianificatore da Google Maps</string>
+    <string name="hql_maps_planner_help">Quando navighi con Google Maps, l\'auto chiede se attivare il pianificatore. Se dici di sì, legge la destinazione di Maps sullo schermo dell\'auto e calcola le soste di ricarica.</string>
+    <string name="hql_sim_night">Modalità notte (auto virtuale)</string>
+    <string name="hql_sim_night_help">Per provare il passaggio tra giorno e notte. Quando ti ricolleghi, torna quella di sempre.</string>
     <string name="hql_float_stop_sub">tra %1$.0f km · arrivi con il %2$.0f %%</string>
     <string name="hql_float_dest">Arrivi con il %1$.0f %%</string>
     <string name="hql_float_no_stop">Senza soste</string>

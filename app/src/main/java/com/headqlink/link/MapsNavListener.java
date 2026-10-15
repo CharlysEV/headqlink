@@ -30,6 +30,8 @@ public class MapsNavListener extends NotificationListenerService {
         int totalM = -1;
         /** Hora de llegada (ms de pared); -1 si no se sabe. */
         long etaMs = -1;
+        /** Cuándo empezó esta navegación (reloj de arranque; la primera notificación vista). */
+        long startedMs;
         /** Texto de la próxima indicación (calle). */
         String instruction;
         long updatedMs;
@@ -39,6 +41,18 @@ public class MapsNavListener extends NotificationListenerService {
     private static volatile boolean loggedFirst;
 
     private static volatile MapsNavListener instance;
+
+    /**
+     * ¿Hay ruta? Al acabar o al quitar la navegación, Maps deja a veces su notificación con 0 km: eso cuenta como
+     * terminada.
+     */
+    static boolean routing(Info i) {
+        return i != null && i.remainingM > 50;
+    }
+
+    static boolean routing() {
+        return routing(current());
+    }
 
     /** Lo último de Google Maps si es reciente (2 min), está navegando y su notificación sigue puesta; si no, null. */
     static Info current() {
@@ -99,6 +113,11 @@ public class MapsNavListener extends NotificationListenerService {
                 String.valueOf(x.getCharSequence(Notification.EXTRA_SUB_TEXT)), String.valueOf(x.getCharSequence(Notification.EXTRA_TITLE)),
                 System.currentTimeMillis());
         i.updatedMs = SystemClock.elapsedRealtime();
+        // La navegación empieza ahora si antes no había (o lo de antes era viejo): para saber si ya estaba al entrar.
+        Info prev = info;
+        // Solo cuenta lo que tiene km por delante: Maps deja a veces su notificación con 0 km tras acabar o quitar la ruta.
+        boolean prevRoute = prev.active && prev.remainingM > 0 && i.updatedMs - prev.updatedMs < 120_000;
+        i.startedMs = prevRoute ? prev.startedMs : i.updatedMs;
         info = i;
         if (!loggedFirst && i.remainingM >= 0) {
             loggedFirst = true;

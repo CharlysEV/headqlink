@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: textos con cantidad (Simplified Chinese: no plural forms, only "other"). Str.plural(R.plurals.x, n, …). -->
+<resources>
+    <plurals name="hql_2048_over">
+        <item quantity="other">游戏结束 · %1$d 分 · 点按再玩一局</item>
+    </plurals>
+    <plurals name="hql_sessions_cuts">
+        <item quantity="other">%1$d 次中断</item>
+    </plurals>
+    <plurals name="hql_fly_over">
+        <item quantity="other">%1$d 根柱子 · 点按再玩一局</item>
+    </plurals>
+    <plurals name="hql_fly_posts">
+        <item quantity="other">%1$d 根柱子</item>
+    </plurals>
+    <plurals name="hql_trips_total">
+        <item quantity="other">%1$d 次行程 · %2$.0f km · ~%3$s</item>
+    </plurals>
+    <plurals name="hql_plan_summary">
+        <item quantity="other">%1$d 次停靠 · 充电 %2$s · 到达时 %3$.0f %%</item>
+    </plurals>
+    <plurals name="hql_chargers_list_count">
+        <item quantity="other">前方 %1$d 个 · %2$d 个符合筛选</item>
+    </plurals>
+    <plurals name="hql_plan_low_volts">
+        <item quantity="other">沿途还有 %1$d 个 400–500 V 充电桩（最近的在 km %2$.0f）：可以充电，但你的 800 V 车型在这些桩上只能以一半功率充电，所以计划只在 800 V 充电桩停靠。点按查看。</item>
+    </plurals>
+    <plurals name="hql_ins_n_trips">
+        <item quantity="other">%1$d 次行程</item>
+    </plurals>
+    <plurals name="hql_ins_trips">
+        <item quantity="other">次行程</item>
+    </plurals>
+    <plurals name="hql_ins_stops">
+        <item quantity="other">%1$d 次停靠</item>
+    </plurals>
+    <plurals name="hql_web_adblock_count">
+        <item quantity="other">本页已拦截 %1$d 个</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops">
+        <item quantity="other">建议：以 %1$d km/h 行驶，只需停靠 %2$d 次而不是 %3$d 次（驾驶多 %4$s，充电少 %5$s）。</item>
+    </plurals>
+    <plurals name="hql_speed_advice_stops_total">
+        <item quantity="other">建议：以 %1$d km/h 行驶，只需停靠 %2$d 次而不是 %3$d 次（总共多 %4$s）。</item>
+    </plurals>
+    <plurals name="hql_trip_notice_reconnects">
+        <item quantity="other">%1$d 次重连</item>
+    </plurals>
+    <plurals name="hql_trip_notice_cuts">
+        <item quantity="other">%1$d 次卡顿</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_real_total">
+        <item quantity="other">实测（%1$d 次行程 · %2$.0f km）：%3$.1f kWh/100 km</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total">
+        <item quantity="other">车辆数据：%1$d 次行程 · %2$.0f km · %3$.1f kWh/100</item>
+    </plurals>
+    <plurals name="hql_cloud_trips_car_total_fuel">
+        <item quantity="other">车辆数据：%1$d 次行程 · %3$.1f kWh/100 · %4$.1f L/100</item>
+    </plurals>
+</resources>

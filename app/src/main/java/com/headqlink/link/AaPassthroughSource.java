@@ -179,6 +179,53 @@ final class AaPassthroughSource implements VideoSource {
         }
     }
 
+    /** La sesión con AA en marcha (para MapsReader), o null. */
+    static AaPassthroughSource current() {
+        return active;
+    }
+
+    /** ¿Se ve AA ahora en el coche y su imagen pasa por el relay (se puede copiar y tocar)? */
+    boolean aaOnScreen() {
+        CarUi ui = carUi;
+        return relay != null && (ui == null || ui.aaVisible());
+    }
+
+    /**
+     * Copia la zona de AA del próximo frame (como sale al coche). La imagen va a la escala del vídeo: para pasar de sus
+     * píxeles a la pantalla del coche, aaToCar.
+     */
+    boolean captureAa(GlFrameRelay.Capture c) {
+        GlFrameRelay r = relay;
+        if (r == null) return false;
+        r.captureAa(c);
+        // Que llegue algún frame pronto aunque AA esté quieto.
+        VideoPipeline.onTouch();
+        return true;
+    }
+
+    /** Píxel (x, y) de la copia de AA a la pantalla del coche (coordenadas de los toques del coche). */
+    float[] aaToCar(float x, float y) {
+        float s = scale();
+        return new float[]{aaCarX() + x / s, y / s};
+    }
+
+    /** Un toque corto de la app en la pantalla del coche, como si fuera del conductor (MapsReader: abrir la tarjeta). */
+    void tapCar(float x, float y) {
+        Proto.Finger f = new Proto.Finger();
+        f.id = 9;
+        f.action = 1;
+        f.x = x;
+        f.y = y;
+        touchMulti(0, new Proto.Finger[]{f});
+        SystemClock.sleep(60);
+        Proto.Finger u = new Proto.Finger();
+        u.id = 9;
+        u.action = 2;
+        u.x = x;
+        u.y = y;
+        touchMulti(1, new Proto.Finger[]{u});
+    }
+
     /** Escala de la pantalla del coche al vídeo (1 a resolución completa, 2/3 a 720p). */
     private float scale() {
         return videoW / (float) carW;
@@ -219,6 +266,16 @@ final class AaPassthroughSource implements VideoSource {
         if (comm().isConnected()) {
             ctx.startForegroundService(new Intent(ctx, AapService.class).setAction(AapService.ACTION_REQUEST_NIGHT_MODE_UPDATE));
         }
+    }
+
+    /**
+     * Coche virtual: día o noche a mano, para probar el cambio de tema (AA y nuestro panel). La sesión siguiente vuelve a
+     * lo de siempre (sessionNightMode, al arrancar).
+     */
+    static void simNight(Context ctx, boolean night) {
+        App.Companion.provide(ctx).getSettings().setNightMode(night ? Settings.NightMode.NIGHT : Settings.NightMode.DAY);
+        L.i("coche virtual: modo " + (night ? "noche" : "día") + " a mano");
+        ctx.startForegroundService(new Intent(ctx, AapService.class).setAction(AapService.ACTION_REQUEST_NIGHT_MODE_UPDATE));
     }
 
     @Override
@@ -619,8 +676,8 @@ final class AaPassthroughSource implements VideoSource {
                 }
 
                 @Override
-                public void onFloatRect(int[] rect) {
-                    r.setFloatRect(rect);
+                public void onFloatRects(int[][] rects) {
+                    r.setFloatRects(rects);
                 }
             });
             carUi.setRefreshRate(fps);

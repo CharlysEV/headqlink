@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- headqlink: «Tu curva de carga» (curva aprendida de las cargas rápidas, ChargeCurveModel). -->
+<resources>
+    <string name="hql_curva_title">你的充电曲线</string>
+    <string name="hql_curva_from">基于 %1$d 次快充生成。实线：路线计划使用的曲线（学习结果与出厂曲线的融合）；虚线：出厂曲线；圆点：每个 5 %% 区间的实测值。</string>
+    <string name="hql_curva_waiting">曲线会随你的快充逐步完善（目前 %1$d 次）：每个 5 %% 区间至少需要 3 次由车辆（而非充电桩）决定功率的充电。在此之前，路线计划使用出厂曲线（虚线）。</string>
+    <string name="hql_curva_low_volts">在 400–500 V 充电桩上：你能达到 %1$s %% 的功率（%2$d 次充电；计划原先假设为 50 %%）。</string>
+    <string name="hql_curva_low_volts_used">路线计划已改用此值，不再按一半计算。</string>
+    <string name="hql_curva_fast">150 kW 及以上的充电桩：平均峰值 %1$s kW（为可达功率的 %2$s %%，可达功率取充电桩标称功率与车辆可接受功率中的较低者；%3$d 次充电）。</string>
+    <string name="hql_curva_net">%1$s：峰值 %2$s kW，%3$s %%（%4$d 次充电）</string>
+    <string name="hql_curva_rules_wait">在 150 kW 及以上的充电桩（800 V 的 C10 也包括 400–500 V 充电桩）上至少充电 3 次后，这里会显示它们的实际表现。</string>
+    <string name="hql_curva_use">在路线计划中使用我的曲线</string>
+</resources>

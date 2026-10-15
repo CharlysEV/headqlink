@@ -64,11 +64,30 @@
     <string name="hql_pl_here_set">Qui, dove sono ora</string>
     <string name="hql_pl_here_name">Posizione del GPS</string>
     <string name="hql_guess_title">Percorso per %1$s</string>
-    <string name="hql_guess_text">Dedotto da Google Maps (mancano %1$s). Il piano di ricarica lo segue.</string>
+    <string name="hql_guess_text">Letto da Google Maps (mancano %1$s). Il piano di ricarica lo segue.</string>
     <string name="hql_guess_ok">OK</string>
     <string name="hql_guess_not">Non è questo</string>
     <string name="hql_guess_ask_title">Dove vai?</string>
     <string name="hql_guess_ask_text">Google Maps sta navigando (%1$s). Scegli la destinazione per il piano di ricarica:</string>
     <string name="hql_guess_search">Cerca</string>
     <string name="hql_guess_close">Chiudi</string>
+    <plurals name="hql_guess_stops_title">
+        <item quantity="one">Aggiungo la sosta di ricarica a Google Maps?</item>
+        <item quantity="many">Aggiungo le %1$d soste di ricarica a Google Maps?</item>
+        <item quantity="other">Aggiungo le %1$d soste di ricarica a Google Maps?</item>
+    </plurals>
+    <string name="hql_guess_stops_text">Per arrivare bisogna ricaricare (prima sosta: %1$s). Se le aggiungi, il pianificatore chiude il percorso attuale di Google Maps e mette il suo, che ci passa.</string>
+    <string name="hql_guess_stops_add">Aggiungi a Maps</string>
+    <string name="hql_guess_stops_no">No</string>
+    <string name="hql_guess_stops_fail_title">Non sono riuscito a cambiare il percorso di Google Maps</string>
+    <string name="hql_guess_stops_fail_text">Maps è ancora sul suo percorso. Chiudilo con la X e tocca «Riprova».</string>
+    <string name="hql_guess_stops_retry">Riprova</string>
+    <string name="hql_guess_plan_title">Attivo il pianificatore?</string>
+    <string name="hql_guess_plan_text">Google Maps va verso una destinazione a %1$s. Posso leggerla e calcolare le soste di ricarica.</string>
+    <string name="hql_guess_plan_text_existing">Google Maps aveva già un percorso (%1$s). Posso leggerlo e calcolare le soste di ricarica.</string>
+    <string name="hql_guess_plan_text_dest">Google Maps va verso %1$s (%2$s). Posso calcolare le soste di ricarica.</string>
+    <string name="hql_guess_plan_yes">Sì, pianifica</string>
+    <string name="hql_guess_plan_this">Pianifica questo percorso</string>
+    <string name="hql_guess_plan_no">No</string>
+    <string name="hql_guess_plan_countdown">Se non tocchi nulla, continui senza pianificatore tra %1$d s</string>
 </resources>
