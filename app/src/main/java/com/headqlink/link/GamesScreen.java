@@ -229,10 +229,11 @@ final class GamesScreen implements CarScreen {
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(24, 18, 24, 6);
         TextView back = CarStyle.pill(c, "‹  " + Str.get(R.string.hql_games));
-        TextView title = CarStyle.text(c, Str.get(GAMES[game][0]), 30, CarStyle.TEXT);
+        // Directamente sobre el fondo de la pantalla (el color del panel, que puede ser fijo): el color que contrasta con él.
+        TextView title = CarStyle.text(c, Str.get(GAMES[game][0]), 30, CarTheme.navText());
         title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         title.setPadding(16, 0, 24, 0);
-        TextView status = CarStyle.text(c, "", 24, CarStyle.TEXT_DIM);
+        TextView status = CarStyle.text(c, "", 24, CarTheme.navTextDim());
         TextView again = CarStyle.pill(c, Str.get(R.string.hql_new_game));
         header.addView(back);
         header.addView(title);

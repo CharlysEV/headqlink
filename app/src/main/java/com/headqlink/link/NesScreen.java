@@ -110,7 +110,8 @@ final class NesScreen {
         header.addView(back);
         String tree = cfg.nesTree();
         String where = dirNames.isEmpty() ? console.title : console.title + " › " + String.join(" › ", dirNames);
-        TextView title = CarStyle.text(c, where, 30, CarStyle.TEXT);
+        // Directamente sobre el fondo de la pantalla (el color del panel, que puede ser fijo): el color que contrasta con él.
+        TextView title = CarStyle.text(c, where, 30, CarTheme.navText());
         title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         title.setPadding(16, 0, 24, 0);
         title.setSingleLine(true);

@@ -167,9 +167,9 @@ final class CarStyle {
         return t;
     }
 
-    /** Mensaje centrado (vacío, sin permiso, error). */
+    /** Mensaje centrado (vacío, sin permiso, error), sobre el fondo de la pantalla (el color del panel). */
     static View message(Context c, String s) {
-        TextView t = text(c, s, 24, TEXT_DIM);
+        TextView t = text(c, s, 24, CarTheme.navTextDim());
         t.setGravity(Gravity.CENTER);
         t.setPadding(40, 40, 40, 40);
         return t;
