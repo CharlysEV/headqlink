@@ -51,7 +51,29 @@ public class MapsNavListener extends NotificationListenerService {
     }
 
     static boolean routing() {
-        return routing(current());
+        return routing(ongoing());
+    }
+
+    /** Puro: ¿la misma ruta? (su longitud total, con margen: 3 % o 1 km; Maps la recalcula un poco al desviarse). */
+    static boolean sameRoute(int totalA, int totalB) {
+        if (totalA <= 0 || totalB <= 0) return totalA == totalB;
+        return Math.abs(totalA - totalB) <= Math.max(1000, Math.max(totalA, totalB) * 0.03);
+    }
+
+    /**
+     * La navegación de Maps mientras su notificación siga puesta, aunque Maps lleve rato sin actualizarla (con el coche
+     * parado apenas la toca); si no, null. Para el planificador: con current() (que caduca a los 2 min) una navegación
+     * parada parecía acabada y la siguiente actualización, nueva.
+     */
+    static Info ongoing() {
+        Info i = info;
+        if (!i.active) return null;
+        MapsNavListener l = instance;
+        if (l != null && !l.mapsNavigating()) {
+            info = new Info();
+            return null;
+        }
+        return i;
     }
 
     /** Lo último de Google Maps si es reciente (2 min), está navegando y su notificación sigue puesta; si no, null. */
@@ -116,7 +138,9 @@ public class MapsNavListener extends NotificationListenerService {
         // La navegación empieza ahora si antes no había (o lo de antes era viejo): para saber si ya estaba al entrar.
         Info prev = info;
         // Solo cuenta lo que tiene km por delante: Maps deja a veces su notificación con 0 km tras acabar o quitar la ruta.
-        boolean prevRoute = prev.active && prev.remainingM > 0 && i.updatedMs - prev.updatedMs < 120_000;
+        // La misma navegación mientras su notificación siga puesta y la ruta mida lo mismo, aunque Maps tarde en
+        // actualizarla (parado, minutos); otra ruta (otro destino) es otra navegación.
+        boolean prevRoute = prev.active && prev.remainingM > 0 && sameRoute(prev.totalM, i.totalM);
         i.startedMs = prevRoute ? prev.startedMs : i.updatedMs;
         info = i;
         if (!loggedFirst && i.remainingM >= 0) {

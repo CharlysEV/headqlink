@@ -770,6 +770,15 @@ final class Config {
         return sp.getBoolean(MAPS_PLANNER, false);
     }
 
+    /** Última ruta de Maps contestada en la pregunta del planificador: «longitud,ms de pared». */
+    String mapsAnswered() {
+        return sp.getString("maps_answered", "");
+    }
+
+    void setMapsAnswered(String s) {
+        sp.edit().putString("maps_answered", s).apply();
+    }
+
     /** Carpeta de vídeos elegida en la app (árbol de documentos; también un USB-C), o "". */
     String videoTree() {
         return sp.getString("video_tree", "");

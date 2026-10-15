@@ -753,7 +753,7 @@ final class RoutePlanner {
      */
     private void guessFromMaps(CarSensors.Snapshot s) {
         if (!new Config(ctx).mapsPlanner()) return;
-        MapsNavListener.Info mi = MapsNavListener.current();
+        MapsNavListener.Info mi = MapsNavListener.ongoing();
         // Sin ruta (o con la notificación de 0 km que deja Maps al acabar o quitarla): la siguiente navegación se lee.
         if (!MapsNavListener.routing(mi)) {
             if (guessAsked) {
@@ -793,6 +793,13 @@ final class RoutePlanner {
             return;
         }
         if (guessAsked) return;
+        // Ya contestada (en esta sesión o en otra de hace poco): la misma ruta no se vuelve a preguntar.
+        Config cfg = new Config(ctx);
+        if (answered(cfg, mi.totalM)) {
+            guessAsked = true;
+            askedNavMs = mi.startedMs;
+            return;
+        }
         if (!Double.isNaN(s.speedKmh) && s.speedKmh >= ASK_MAX_KMH) return;
         AaPassthroughSource src = AaPassthroughSource.current();
         boolean canRead = src != null && src.aaOnScreen();
@@ -801,6 +808,7 @@ final class RoutePlanner {
         if (canRead && SystemClock.elapsedRealtime() - CarUi.lastTouchMs() < IDLE_BEFORE_READ_MS) return;
         guessAsked = true;
         askedNavMs = mi.startedMs;
+        askedTotalM = mi.totalM;
         boolean existing = !existingDecided && mi.startedMs <= startedMs + 2000;
         existingDecided = true;
         if (canRead) {
@@ -814,9 +822,22 @@ final class RoutePlanner {
                 AaPassthroughSource now = AaPassthroughSource.current();
                 return MapsNavListener.routing() && manual == null && now != null && now.aaOnScreen();
             }, read -> {
-                Place pl = locate(read, lat, lon, km);
-                pendingPlace = pl;
+                // La búsqueda del sitio, como mucho LOCATE_ASK_MS: si el buscador va lento (o falla), se pregunta sin el
+                // sitio y, si llega antes del «Sí», se usa igual.
+                Place[] got = new Place[1];
+                java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
                 pendingKm = km;
+                new Thread(() -> {
+                    got[0] = locate(read, lat, lon, km);
+                    if (got[0] != null) pendingPlace = got[0];
+                    done.countDown();
+                }, "maps-situar").start();
+                try {
+                    done.await(LOCATE_ASK_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+                } catch (InterruptedException ignored) {
+                }
+                Place pl = got[0];
+                if (pl == null && done.getCount() > 0) L.i("ruta: el buscador tarda: pregunto sin el sitio");
                 L.i("ruta: pregunto si activo el planificador " + (pl != null ? "(con el destino leído)" : "(sin destino: no se ha leído)"));
                 DestGuessListener gl = destGuesses;
                 if (gl != null) gl.onPlannerAsk(km, existing, pl == null ? null : pl.name);
@@ -828,8 +849,40 @@ final class RoutePlanner {
         if (l != null) l.onPlannerAsk(km, existing, null);
     }
 
+    /** Longitud de la ruta de Maps por la que se preguntó (para recordarla al contestar). */
+    private static volatile int askedTotalM = -1;
+    /** Lo que se espera al buscador del sitio leído antes de preguntar. */
+    static final long LOCATE_ASK_MS = 8000;
+    /** Una ruta contestada no se vuelve a preguntar durante esto (también tras cerrar y abrir el coche). */
+    static final long ANSWERED_MS = 12 * 3600_000L;
+
+    /** Puro: ¿la ruta de longitud totalM se contestó (stored: «total,ms de pared») hace menos de ANSWERED_MS? */
+    static boolean answered(String stored, int totalM, long nowMs) {
+        if (stored == null || stored.isEmpty() || totalM <= 0) return false;
+        String[] f = stored.split(",");
+        if (f.length != 2) return false;
+        try {
+            return MapsNavListener.sameRoute(Integer.parseInt(f[0]), totalM) && nowMs - Long.parseLong(f[1]) < ANSWERED_MS;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private static boolean answered(Config cfg, int totalM) {
+        return answered(cfg.mapsAnswered(), totalM, System.currentTimeMillis());
+    }
+
+    /** Apunta la ruta contestada (Sí, No o sin respuesta). */
+    private static void rememberAnswer() {
+        RoutePlanner r = instance;
+        int t = askedTotalM;
+        if (r == null || t <= 0) return;
+        new Config(r.ctx).setMapsAnswered(t + "," + System.currentTimeMillis());
+    }
+
     /** El panel del coche: el conductor activa el planificador; se lee la ruta de Maps en el próximo paso. */
     static void acceptPlanner() {
+        rememberAnswer();
         Place pl = pendingPlace;
         RoutePlanner r = instance;
         pendingPlace = null;
@@ -845,6 +898,7 @@ final class RoutePlanner {
 
     /** El panel del coche: «No», o sin respuesta. Nada más en esta navegación de Maps. */
     static void declinePlanner(boolean timeout) {
+        rememberAnswer();
         pendingPlace = null;
         L.i("ruta: " + (timeout ? "sin respuesta" : "el conductor no quiere el planificador") + ": sigo sin planificar esta navegación");
     }

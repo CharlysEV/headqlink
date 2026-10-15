@@ -15,6 +15,22 @@ class DestGuessTest {
     }
 
     @Test
+    fun theSameMapsRouteIsAskedOnce() {
+        // La misma ruta aunque Maps la recalcule un poco; otra ruta, otra pregunta.
+        assertTrue(MapsNavListener.sameRoute(434_000, 436_500))
+        assertFalse(MapsNavListener.sameRoute(434_000, 411_000))
+        assertTrue(MapsNavListener.sameRoute(5_000, 5_800))
+        assertFalse(MapsNavListener.sameRoute(5_000, 7_000))
+        // Contestada hace una hora: no se vuelve a preguntar; hace 13 h, o por otra ruta, sí.
+        val now = 1_760_000_000_000L
+        assertTrue(RoutePlanner.answered("434000," + (now - 3_600_000), 435_000, now))
+        assertFalse(RoutePlanner.answered("434000," + (now - 13 * 3_600_000L), 434_000, now))
+        assertFalse(RoutePlanner.answered("434000," + (now - 3_600_000), 298_000, now))
+        assertFalse(RoutePlanner.answered("", 434_000, now))
+        assertFalse(RoutePlanner.answered("basura", 434_000, now))
+    }
+
+    @Test
     fun thePlanMustAgreeWithMaps() {
         assertTrue(DestGuess.planMatches(14.0, 13.0))
         assertTrue(DestGuess.planMatches(110.0, 100.0))     // 20 % de 100
