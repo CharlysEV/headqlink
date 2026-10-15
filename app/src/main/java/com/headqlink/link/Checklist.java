@@ -341,6 +341,15 @@ final class Checklist {
                 : new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
     }
 
+    /** Lo que se pide con las fotos: también su ubicación (el sitio en el pase de diapositivas), que no hace falta. */
+    private static String[] mediaRequestPerms() {
+        String[] p = mediaPerms();
+        if (Build.VERSION.SDK_INT < 33) return p;
+        String[] out = java.util.Arrays.copyOf(p, p.length + 1);
+        out[p.length] = Manifest.permission.ACCESS_MEDIA_LOCATION;
+        return out;
+    }
+
     private static String[] mediaPerms() {
         return Build.VERSION.SDK_INT >= 33 ? Ui.MEDIA_PERMS
                 : new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
@@ -677,7 +686,7 @@ final class Checklist {
             default: { // MEDIA
                 Row r = new Row(Str.get(R.string.hql_setup_media),
                         ok ? Str.get(R.string.hql_allowed) : blocked ? Str.get(R.string.hql_req_blocked) : Str.get(R.string.hql_setup_media_why));
-                return ok ? r : permAction(r, blocked, KEY_MEDIA, mediaPerms());
+                return ok ? r : permAction(r, blocked, KEY_MEDIA, mediaRequestPerms());
             }
         }
     }

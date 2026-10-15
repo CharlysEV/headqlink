@@ -129,6 +129,8 @@
     <!-- headqlink: fotos y vídeos del móvil en la pantalla del coche (modo Android Auto ampliado) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- headqlink: el sitio de cada foto en el pase de diapositivas (su GPS); sin él, solo la fecha. -->
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
     <!--
         Only requested up to API 32. From API 33 (Android 13) a granted READ_LOGS makes the app a
         privileged logd reader, which routes every `logcat` spawn through LogcatManagerService: the

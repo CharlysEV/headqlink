@@ -68,6 +68,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     private static final int REQ_IPTV_FILE = 10;
     private static final int REQ_RADIO_FILE = 11;
     private static final int REQ_NES_TREE = 21;
+    private static final int REQ_VIDEO_TREE = 24;
     private static final int REQ_BACKUP_EXPORT = 22;
     private static final int REQ_BACKUP_IMPORT = 23;
     private static final int REQ_CHECKLIST = 12;
@@ -613,7 +614,7 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         if (ext) {
             menuGroup(sheet, col, 2, Str.get(R.string.hql_menu_content), R.drawable.hql_ic_tv,
                     new int[][]{{2, R.string.hql_tv_list}, {3, R.string.hql_radio_list}, {12, R.string.hql_web_bookmarks},
-                            {16, R.string.hql_ha_menu}});
+                            {16, R.string.hql_ha_menu}, {20, R.string.hql_video_folder}});
             // Una sola carpeta para todas las consolas: cada emulador coge sus archivos.
             menuGroup(sheet, col, 3, Str.get(R.string.hql_games), R.drawable.hql_ic_games, new int[][]{{14, R.string.hql_nes_folder}});
         }
@@ -788,6 +789,10 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             case 14:
                 // Carpeta de ROMs: permiso persistente sobre el árbol elegido (ver onActivityResult).
                 startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_NES_TREE);
+                break;
+            case 20:
+                // Carpeta de vídeos (también una memoria USB-C): sus vídeos salen en Vídeos › «Mi carpeta».
+                startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_VIDEO_TREE);
                 break;
             case 17:
                 TermsOfUse.show(this);
@@ -1077,6 +1082,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
             } catch (SecurityException e) {
                 L.w("sin permiso persistente para " + u + ": " + e.getMessage());
             }
+        }
+        if (req == REQ_VIDEO_TREE && !uris.isEmpty()) {
+            cfg.setVideoTree(uris.get(0).toString());
+            L.i("vídeos: carpeta elegida");
+            android.widget.Toast.makeText(this, Str.get(R.string.hql_video_folder_set), android.widget.Toast.LENGTH_LONG).show();
         }
         if (req == REQ_NES_TREE && !uris.isEmpty()) {
             cfg.setNesTree(uris.get(0).toString());

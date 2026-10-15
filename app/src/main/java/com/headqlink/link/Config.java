@@ -770,6 +770,15 @@ final class Config {
         return sp.getBoolean(MAPS_PLANNER, false);
     }
 
+    /** Carpeta de vídeos elegida en la app (árbol de documentos; también un USB-C), o "". */
+    String videoTree() {
+        return sp.getString("video_tree", "");
+    }
+
+    void setVideoTree(String uri) {
+        sp.edit().putString("video_tree", uri == null ? "" : uri).apply();
+    }
+
     /** Viajes anteriores para la resolución del siguiente (ResolutionMemory.encode) y el viaje en curso. */
     String resHistory() {
         return sp.getString("res_history", "");
