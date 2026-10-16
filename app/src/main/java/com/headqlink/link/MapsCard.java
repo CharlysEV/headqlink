@@ -409,7 +409,9 @@ final class MapsCard {
      * del ancho, con la otra app a su derecha: una banda del fondo que llega al final (la imagen de AA más estrecha que su
      * zona, como en el coche virtual) no es la pantalla partida (16-10: se pulsaba el icono de Maps con Maps ya a
      * pantalla completa, y así se partía). Y tiene que empezar después del 40 %, con contenido a su izquierda: la que ya
-     * viene de antes es un panel de Maps (16-10: «franja al 42 %» con Maps a pantalla completa).
+     * viene de antes es un panel de Maps. Y es del color de la barra de apps de AA (su fondo): el mapa de día, beis y
+     * liso, también hacía columnas «del fondo» (16-10: «franja al 41 %» con Maps a pantalla completa). Sin barra lisa a
+     * la izquierda no se sabe: se da por completa (-1).
      */
     static int splitGapX(int[] argb, int w, int h) {
         int y0 = Math.round(h * 0.04f);
@@ -418,14 +420,18 @@ final class MapsCard {
         for (int y = y0; y < y1; y += 3) rows++;
         int minRun = Math.max(4, w / 400);
         int maxRun = Math.max(minRun, w / 20);
+        // El fondo de AA: el de su barra de apps, en su borde izquierdo (los iconos van más adentro).
+        int rx = Math.max(1, Math.round(w * 0.008f));
+        int rail = luma(argb[y0 * w + rx]);
+        int railOk = 0;
+        for (int y = y0; y < y1; y += 3) if (Math.abs(luma(argb[y * w + rx]) - rail) <= 12) railOk++;
+        if (railOk < rows * 0.9) return -1;
         int run = 0;
         int x0 = Math.round(w * 0.40f);
         for (int x = x0; x < Math.round(w * 0.95f); x++) {
-            int first = luma(argb[y0 * w + x]);
             int ok = 0;
             for (int y = y0; y < y1; y += 3) {
-                int l = luma(argb[y * w + x]);
-                if (Math.abs(l - first) <= 12 && (l < 45 || l > 210)) ok++;
+                if (Math.abs(luma(argb[y * w + x]) - rail) <= 12) ok++;
             }
             if (ok >= rows * 0.95) {
                 run++;

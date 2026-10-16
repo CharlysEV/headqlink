@@ -313,15 +313,30 @@ class MapsCardTest {
      * No es la pantalla partida: antes se pulsaba el icono de Maps y así se partía.
      */
     /**
-     * Coche virtual (16-10, «franja al 42 %»): un panel oscuro de Maps a la izquierda que llega hasta pasado el 40 % del
-     * ancho. Su borde no es el hueco de la pantalla partida.
+     * Coche virtual (16-10, «franja al 41 %»): mapa de día a pantalla completa, con columnas beis lisas de arriba abajo.
+     * No son el hueco de la pantalla partida, que es del color de la barra de AA (negra).
+     */
+    @Test
+    fun aPlainDayMapIsNotASplitScreen() {
+        val black = 0xFF000000.toInt()
+        val beige = 0xFFF5F0E8.toInt()
+        val px = aa(false, black, beige)
+        for (y in 0 until 882) for (x in 760 until 800) px[y * 1824 + x] = beige
+        assertFalse(MapsCard.splitScreen(px, 1824, 882))
+        // La pantalla partida de verdad (hueco negro entre Maps y la música), con el mapa de día: sí.
+        assertTrue(MapsCard.splitScreen(aa(true, black, beige), 1824, 882))
+    }
+
+    /**
+     * Un panel oscuro de Maps a la izquierda que llega hasta pasado el 40 % del ancho: su borde no es el hueco de la
+     * pantalla partida.
      */
     @Test
     fun aMapsPanelOnTheLeftIsNotASplitScreen() {
         val night = 0xFF000000.toInt()
         for (end in intArrayOf(760, 790, 820)) {
             val px = aa(false, night, 0xFF35466A.toInt())
-            for (y in 0 until 882) for (x in 300 until end) px[y * 1824 + x] = 0xFF202124.toInt()
+            for (y in 0 until 882) for (x in 300 until end) px[y * 1824 + x] = 0xFF000000.toInt()
             assertFalse("panel hasta x=$end", MapsCard.splitScreen(px, 1824, 882))
         }
     }
