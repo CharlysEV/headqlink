@@ -66,6 +66,7 @@
     <string name="hql_guess_title">Percorso per %1$s</string>
     <string name="hql_guess_text">Letto da Google Maps (mancano %1$s). Il piano di ricarica lo segue.</string>
     <string name="hql_guess_auto_text">Letto da Google Maps e già pianificato (mancano %1$s): arrivi con il %2$s %%.</string>
+    <string name="hql_guess_auto_nocharger">Letto da Google Maps e pianificato (mancano %1$s), ma con i tuoi filtri in qualche tratto non c\'è nessuna colonnina raggiungibile: guarda la scheda %2$s.</string>
     <string name="hql_guess_ok">Giusto</string>
     <string name="hql_guess_not">Non è questo</string>
     <string name="hql_guess_ask_title">Dove vai?</string>

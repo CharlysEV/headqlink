@@ -66,6 +66,7 @@
     <string name="hql_guess_title">Route to %1$s</string>
     <string name="hql_guess_text">Read from Google Maps (%1$s to go). The charging plan follows it.</string>
     <string name="hql_guess_auto_text">Read from Google Maps and already planned (%1$s to go): you arrive with %2$s %%.</string>
+    <string name="hql_guess_auto_nocharger">Read from Google Maps and planned (%1$s to go), but with your filters there\'s no charger within reach on some stretch: check the %2$s tab.</string>
     <string name="hql_guess_ok">That\'s right</string>
     <string name="hql_guess_not">That\'s not it</string>
     <string name="hql_guess_ask_title">Where are you going?</string>

@@ -164,8 +164,8 @@ final class CarUi {
         }
 
         @Override
-        public void onMapsRoute(String name, double mapsKm, int stops, String first, double arrivalPct) {
-            main.post(() -> showMapsRoute(name, mapsKm, stops, first, arrivalPct));
+        public void onMapsRoute(String name, double mapsKm, int stops, String first, double arrivalPct, boolean noCharger) {
+            main.post(() -> showMapsRoute(name, mapsKm, stops, first, arrivalPct, noCharger));
         }
 
         @Override
@@ -1699,12 +1699,36 @@ final class CarUi {
      * La ruta de Google Maps ya está planificada: «Ruta a Sevilla», con «Correcto» y «No es» (la quita del planificador).
      * Sin respuesta, se queda. Con paradas, además si se añaden a Google Maps (cambia su ruta: eso sí se pregunta).
      */
-    private void showMapsRoute(String name, double km, int stops, String first, double arrivalPct) {
+    private void showMapsRoute(String name, double km, int stops, String first, double arrivalPct, boolean noCharger) {
         if (guessCard == null) return;
-        guessReplay = () -> showMapsRoute(name, km, stops, first, arrivalPct);
-        guessKind = stops > 0 ? "ruta de Maps planificada, con paradas" : "ruta de Maps planificada";
+        guessReplay = () -> showMapsRoute(name, km, stops, first, arrivalPct, noCharger);
+        guessKind = noCharger ? "ruta de Maps planificada, sin cargador al alcance"
+                : stops > 0 ? "ruta de Maps planificada, con paradas" : "ruta de Maps planificada";
         guessBtns.removeAllViews();
         String dist = String.format(java.util.Locale.getDefault(), "%.0f km", km);
+        if (noCharger) {
+            // Con los filtros no hay cargador al alcance en algún tramo: en ámbar, y a la pestaña Ruta (filtros, paradas).
+            guessCard.setBackground(CarStyle.round(CarTheme.alertBg(false), 24));
+            guessTitle.setTextColor(CarKit.AMBER);
+            guessTitle.setText(Str.get(R.string.hql_guess_title, name));
+            guessText.setText(Str.get(R.string.hql_guess_auto_nocharger, dist, Str.get(R.string.hql_tab_route)));
+            guessPill(Str.get(R.string.hql_tab_route), true, () -> {
+                clearGuess();
+                CarHubScreen.selectTab(0);
+                open("car");
+            });
+            guessPill(Str.get(R.string.hql_guess_not), false, () -> {
+                clearGuess();
+                RoutePlanner.rejectGuess();
+            });
+            guessPending = true;
+            if (!replaying) {
+                main.removeCallbacks(guessExpire);
+                main.postDelayed(guessExpire, 2 * 60_000L);
+            }
+            renderAlert();
+            return;
+        }
         boolean ok = stops <= 0;
         guessCard.setBackground(CarStyle.round(CarTheme.alertBg(ok), 24));
         guessTitle.setTextColor(ok ? CarKit.GREEN : CarKit.AMBER);
@@ -2120,7 +2144,20 @@ final class CarUi {
         }
     }
 
+    /** La última pantalla que se vio junto a AA con la pantalla partida: «Auto» vuelve a ella (AA no cambia de tamaño). */
+    private String lastSplitScreen = "car";
+
     private void open(String name) {
+        // Pantalla partida: AA se queda en su mitad (cada cambio de ancho lo reinicia: 16-10). «Auto» lo deja donde está,
+        // junto a la última pantalla de al lado; para verlo entero se quita la pantalla partida con su botón.
+        if (split && "aa".equals(name)) {
+            if (splitActive()) {
+                L.i("CarUi: pantalla partida: Android Auto sigue en su mitad");
+                return;
+            }
+            name = splitCapable(lastSplitScreen) ? lastSplitScreen : "car";
+            L.i("CarUi: pantalla partida: Android Auto en su mitad, junto a " + name);
+        }
         if (themePending && pres != null) {
             // El cambio de día o noche que esperaba: la interfaz entera con los colores de ahora, ya en la pantalla nueva.
             themePending = false;
@@ -2189,6 +2226,7 @@ final class CarUi {
         listener.onAaVisible(aaVisible());
         scheduleHide();
         L.i("CarUi: pantalla " + name + (splitActive() ? " (partida, con AA)" : ""));
+        if (splitActive()) lastSplitScreen = name;
         saveScreen();
         // Fuera de la TV o los vídeos a pantalla completa, AA vuelve a tener su vídeo.
         aaForGame();

@@ -66,6 +66,7 @@
     <string name="hql_guess_title">前往 %1$s 的路线</string>
     <string name="hql_guess_text">从 Google Maps 读取（剩余 %1$s）。充电计划将跟随此路线。</string>
     <string name="hql_guess_auto_text">已从 Google Maps 读取并完成规划（剩余 %1$s）：到达时电量 %2$s %%。</string>
+    <string name="hql_guess_auto_nocharger">已从 Google Maps 读取并完成规划（剩余 %1$s），但按你的筛选条件，某段路程内没有可到达的充电站：请查看“%2$s”标签。</string>
     <string name="hql_guess_ok">正确</string>
     <string name="hql_guess_not">不是这个</string>
     <string name="hql_guess_ask_title">你要去哪里？</string>

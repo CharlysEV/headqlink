@@ -616,6 +616,8 @@ final class RoutePlanner {
                             ? String.format(Locale.US, " · %d tramos%s", np.waypoints.size(), np.roundTrip ? ", ida y vuelta" : "") : ""));
             // Para el widget («¿llego a Casa?»): la distancia por carretera si la ruta va a Casa desde donde está el móvil.
             if (origin == null && !np.multi()) HomeReach.rememberRoute(ctx, oLat, oLon, np.destLat, np.destLon, np.totalKm, np.kwhCum[np.n - 1]);
+            // Destino leído de Maps: su plan de carga ya, para la tarjeta «Ruta a…» (si no, a la vuelta siguiente, 5 s).
+            if (routeOffer != null) followCharge(np);
         } catch (Exception e) {
             failedDestination = dest;
             // Sin red (sin cobertura un momento) se reintenta a los 30 s; si el servicio falla, a los 2 min.
@@ -821,9 +823,10 @@ final class RoutePlanner {
         /**
          * El destino leído de Maps ya está planificado: «Ruta a name», con «No es». stops: paradas del plan (con ellas,
          * se ofrece añadirlas a Google Maps; first, la primera); arrivalPct: con cuánto se llega sin parar (NaN si no se
-         * sabe: el plan aún no está o no hay cargador al alcance).
+         * sabe: el plan aún no está o no hay cargador al alcance); noCharger: con los filtros no hay cargador al alcance en
+         * algún tramo (se avisa).
          */
-        default void onMapsRoute(String name, double mapsKm, int stops, String first, double arrivalPct) {
+        default void onMapsRoute(String name, double mapsKm, int stops, String first, double arrivalPct, boolean noCharger) {
         }
 
         /** No se ha podido quitar la navegación de Maps para mandarle la del plan. */
@@ -968,7 +971,7 @@ final class RoutePlanner {
         if (manual == null || !guessed) return;
         L.i("ruta: el plan de carga tarda: enseño la ruta leída de Google Maps sin las paradas");
         DestGuessListener l = destGuesses;
-        if (l != null) l.onMapsRoute(o.name, o.km, 0, null, Double.NaN);
+        if (l != null) l.onMapsRoute(o.name, o.km, 0, null, Double.NaN, false);
     }
 
     /**
@@ -1272,7 +1275,8 @@ final class RoutePlanner {
                             : r.outcome.name().toLowerCase(Locale.ROOT)) + ")");
                     DestGuessListener gl = destGuesses;
                     if (gl != null) gl.onMapsRoute(offer.name, offer.km, stops ? r.stops.size() : 0, stops ? next.charger.name : null,
-                            r.outcome == ChargePlanner.Outcome.NO_STOPS ? r.arrivalPct : Double.NaN);
+                            r.outcome == ChargePlanner.Outcome.NO_STOPS ? r.arrivalPct : Double.NaN,
+                            r.outcome == ChargePlanner.Outcome.NO_CHARGER);
                 }
             }
             return r;
@@ -1287,8 +1291,8 @@ final class RoutePlanner {
         if (k.equals(speedLogged)) return;
         speedLogged = k;
         if (a == null) return;
-        L.i(String.format(Locale.US, "ruta: consejo de velocidad: a %d km/h, %d → %d paradas, +%.0f min conduciendo, −%.0f min "
-                        + "cargando (%+.0f min en total)%s", a.capKmh, a.stopsBefore, a.stopsAfter, a.extraDriveMin, a.chargeSavedMin,
+        L.i(String.format(Locale.US, "ruta: consejo de velocidad: a %d km/h, %d → %d paradas, +%.0f min conduciendo, %+.0f min "
+                        + "cargando (%+.0f min en total)%s", a.capKmh, a.stopsBefore, a.stopsAfter, a.extraDriveMin, -a.chargeSavedMin,
                 -a.gainMin(), a.rescue ? ", y así se llega" : ""));
     }
 

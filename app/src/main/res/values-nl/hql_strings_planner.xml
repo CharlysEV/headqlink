@@ -66,6 +66,7 @@
     <string name="hql_guess_title">Route naar %1$s</string>
     <string name="hql_guess_text">Gelezen uit Google Maps (nog %1$s). Het laadplan volgt.</string>
     <string name="hql_guess_auto_text">Gelezen uit Google Maps en al gepland (nog %1$s): je komt aan met %2$s %%.</string>
+    <string name="hql_guess_auto_nocharger">Gelezen uit Google Maps en gepland (nog %1$s), maar met je filters is er op een stuk geen laadpunt binnen bereik: kijk op het tabblad %2$s.</string>
     <string name="hql_guess_ok">Klopt</string>
     <string name="hql_guess_not">Klopt niet</string>
     <string name="hql_guess_ask_title">Waar ga je heen?</string>
