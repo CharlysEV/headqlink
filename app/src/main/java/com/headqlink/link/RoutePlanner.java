@@ -822,7 +822,10 @@ final class RoutePlanner {
         // Tan cerca no hay nada que planificar.
         if (km < DestGuess.MIN_ROAD_KM) return;
         // Al entrar: unos segundos para que Android Auto enseñe Maps.
-        if (SystemClock.elapsedRealtime() - startedMs < EXISTING_WAIT_MS || Double.isNaN(s.lat)) return;
+        if (SystemClock.elapsedRealtime() - startedMs < EXISTING_WAIT_MS) return;
+        // Sin GPS (en el garaje): la última posición conocida del móvil, que es donde está el coche.
+        double[] here = Double.isNaN(s.lat) ? lastKnown(ctx) : new double[]{s.lat, s.lon, 0};
+        if (here == null) return;
         long want = readWantedMs;
         if (want != 0 && SystemClock.elapsedRealtime() - want > READ_WANT_MS) readWantedMs = want = 0;
         if (want != 0) {
@@ -833,8 +836,8 @@ final class RoutePlanner {
             guessAsked = true;
             askedNavMs = mi.startedMs;
             L.i(String.format(Locale.US, "ruta: Google Maps navega %.1f km sin destino aquí: leo su tarjeta", km));
-            double lat = s.lat;
-            double lon = s.lon;
+            double lat = here[0];
+            double lon = here[1];
             MapsReader.read(ctx, () -> {
                 AaPassthroughSource now = AaPassthroughSource.current();
                 return MapsNavListener.routing() && manual == null && now != null && now.aaOnScreen();
@@ -870,8 +873,8 @@ final class RoutePlanner {
             // pregunta sin el sitio y se lee tras el «Sí»).
             L.i(String.format(Locale.US, "ruta: Google Maps navega %.1f km sin destino aquí%s: leo su tarjeta antes de preguntar", km,
                     existing ? " (ya navegaba al entrar)" : ""));
-            double lat = s.lat;
-            double lon = s.lon;
+            double lat = here[0];
+            double lon = here[1];
             boolean yes = autoYes;
             MapsReader.read(ctx, () -> {
                 AaPassthroughSource now = AaPassthroughSource.current();
