@@ -304,6 +304,22 @@ class MapsCardTest {
         assertFalse(MapsCard.splitScreen(aa(false, night, 0xFF35466A.toInt()), 1824, 882))
         assertTrue(MapsCard.splitScreen(aa(true, day, 0xFFE8EAED.toInt()), 1824, 882))
         assertFalse(MapsCard.splitScreen(aa(false, day, 0xFFE8EAED.toInt()), 1824, 882))
+        // La franja, en medio de las dos apps.
+        assertEquals(1248.0, MapsCard.splitGapX(aa(true, night, 0xFF35466A.toInt()), 1824, 882).toDouble(), 2.0)
+    }
+
+    /**
+     * Coche virtual (16-10): la imagen de AA es más estrecha que su zona y queda una banda negra hasta el borde derecho.
+     * No es la pantalla partida: antes se pulsaba el icono de Maps y así se partía.
+     */
+    @Test
+    fun aBandUpToTheEdgeIsNotASplitScreen() {
+        val night = 0xFF000000.toInt()
+        for (from in intArrayOf(1600, 1650, 1700)) {
+            val px = aa(false, night, 0xFF35466A.toInt())
+            for (y in 0 until 882) for (x in from until 1824) px[y * 1824 + x] = night
+            assertFalse("banda desde x=$from", MapsCard.splitScreen(px, 1824, 882))
+        }
     }
 
     @Test

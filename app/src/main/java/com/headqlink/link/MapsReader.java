@@ -330,8 +330,9 @@ final class MapsReader {
      * toque nunca cae en otra app que se ponga delante. false: no se ha podido (y no se toca nada más).
      */
     private static boolean ensureMapsFull(AaPassthroughSource src) throws InterruptedException {
-        // Un solo toque: el icono alterna entre partida y completa (un segundo lo desharía).
-        for (int i = 0; i < 2; i++) {
+        // El icono alterna entre partida y completa. Si tras un toque sigue «partida», otro: si no lo estaba (se vio mal y el
+        // primer toque la partió), la deja como estaba; si lo estaba y el toque no entró, la pone completa.
+        for (int i = 0; i < 3; i++) {
             Bitmap shot = capture(src);
             if (shot == null) return false;
             int w = shot.getWidth();
@@ -339,22 +340,24 @@ final class MapsReader {
             int[] px = new int[w * h];
             shot.getPixels(px, 0, w, 0, 0, w, h);
             shot.recycle();
-            if (!MapsCard.splitScreen(px, w, h)) {
+            int gap = MapsCard.splitGapX(px, w, h);
+            if (gap < 0) {
                 if (i > 0) L.i("Maps: ya a pantalla completa");
                 return true;
             }
-            if (i == 1) break;
+            if (i == 2) break;
             int[] icon = MapsCard.mapsIcon(px, w, h);
             if (icon == null) {
                 L.i("Maps: pantalla partida y no veo el icono de Maps en la barra: no toco nada");
                 return false;
             }
             float[] p = src.aaToCar(icon[0], icon[1]);
-            L.i("Maps: pantalla partida: pulso el icono de Maps para ponerlo a pantalla completa");
+            L.i("Maps: pantalla partida (franja al " + Math.round(100f * gap / w) + " % del ancho): pulso el icono de Maps"
+                    + (i > 0 ? " otra vez" : "") + " para ponerlo a pantalla completa");
             src.tapCar(p[0], p[1]);
             SystemClock.sleep(FULL_ANIM_MS);
         }
-        L.i("Maps: sigue la pantalla partida tras pulsar su icono: no toco nada");
+        L.i("Maps: sigue la pantalla partida tras pulsar su icono dos veces: no toco nada más");
         return false;
     }
 

@@ -401,6 +401,16 @@ final class MapsCard {
      * completa no la hay.
      */
     static boolean splitScreen(int[] argb, int w, int h) {
+        return splitGapX(argb, w, h) >= 0;
+    }
+
+    /**
+     * Puro: el centro x de la franja de la pantalla partida (splitScreen), o -1. La franja tiene que acabar antes del 95 %
+     * del ancho, con la otra app a su derecha: una banda del fondo que llega al final (la imagen de AA más estrecha que su
+     * zona, como en el coche virtual) no es la pantalla partida (16-10: se pulsaba el icono de Maps con Maps ya a
+     * pantalla completa, y así se partía).
+     */
+    static int splitGapX(int[] argb, int w, int h) {
         int y0 = Math.round(h * 0.04f);
         int y1 = Math.round(h * 0.96f);
         int rows = 0;
@@ -418,11 +428,11 @@ final class MapsCard {
             if (ok >= rows * 0.95) {
                 run++;
             } else {
-                if (run >= minRun && run <= maxRun) return true;
+                if (run >= minRun && run <= maxRun) return x - (run + 1) / 2;
                 run = 0;
             }
         }
-        return run >= minRun && run <= maxRun;
+        return -1;
     }
 
     /** Los cuatro colores del icono de Google Maps (rojo, amarillo, verde, azul de Google). */
