@@ -48,6 +48,11 @@ public final class UpdateReceiver extends BroadcastReceiver {
             boolean was = new Config(c).getBool(ACC_WAS_ON);
             L.i("actualización instalada: accesibilidad " + (on ? "activa" : "desactivada") + (was ? " (estaba activa)" : ""));
             if (on || !was) return;
+            // La vuelve a activar sola si puede (permiso dado desde el PC); si no, el aviso de la actualización.
+            if (AccessibilityGuard.restore(c)) {
+                L.i("actualización instalada: accesibilidad vuelta a activar sola");
+                return;
+            }
             NotificationManager nm = c.getSystemService(NotificationManager.class);
             if (nm == null) return;
             nm.createNotificationChannel(new NotificationChannel(CHANNEL, Str.get(R.string.hql_update_acc_channel),

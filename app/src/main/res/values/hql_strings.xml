@@ -1036,4 +1036,16 @@
     <string name="hql_usb_auto_off">Plugging in the cable will do nothing: tap Connect when you want it. If Android always opens Qonecta+ with the cable and you want to use QDLink, remove "Open by default" in the app settings.</string>
     <string name="hql_qd_diag_trace">Detailed trace (one log line per frame, touch dumps, performance trace, full logcat; more heat and very large logs)</string>
     <string name="hql_v_invalid">Advanced: a value out of range was ignored (fps 0-120, kbps 0-100000, width and height 0-4096, window 0-64; empty = automatic)</string>
+    <string name="hql_acc_lost_channel">Accessibility</string>
+    <string name="hql_acc_lost_title">Qonecta+ lost its accessibility</string>
+    <string name="hql_acc_lost_text">Android turned off «Qonecta+ touch» (it usually happens when it force-closes the app). Without it the car screen stays black. Tap to turn it back on.</string>
+    <string name="hql_acc_prevent">Stop it happening again</string>
+    <string name="hql_acc_guide_title">Keep Android from turning it off</string>
+    <string name="hql_acc_guide">Android turns accessibility off when it force-closes Qonecta+ to save battery or memory. To avoid it:\n\n• Qonecta+ battery: «Unrestricted».\n• %1$s\n• Never use «Force stop» on Qonecta+.</string>
+    <string name="hql_acc_guide_samsung">Samsung: Settings › Battery › Background usage limits: remove Qonecta+ from the sleeping apps and add it to «Never sleeping apps».</string>
+    <string name="hql_acc_guide_honor">%1$s: Settings › Battery › App launch › Qonecta+ › «Manage manually», with all three options on.</string>
+    <string name="hql_acc_guide_xiaomi">Xiaomi: turn on «Autostart» for Qonecta+ and set its Battery saver to «No restrictions».</string>
+    <string name="hql_acc_guide_other">The manufacturer\'s battery manager: let Qonecta+ run in the background.</string>
+    <string name="hql_acc_guide_restricted">If Android won\'t let you turn it on: App info › ⋮ › «Allow restricted settings».</string>
+    <string name="hql_acc_guide_battery">Battery</string>
 </resources>

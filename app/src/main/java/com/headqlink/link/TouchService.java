@@ -50,6 +50,8 @@ public class TouchService extends AccessibilityService {
     @Override
     public boolean onUnbind(android.content.Intent intent) {
         instance = null;
+        // Android la ha desconectado con la app viva (quitada en Ajustes o por el sistema): ¿sigue activa?
+        AccessibilityGuard.checkLater(this, "desconectada con la app abierta");
         main.removeCallbacks(coverWatchdog);
         hideGameCover("accesibilidad parada");
         try {

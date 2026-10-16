@@ -1032,4 +1032,16 @@
     <string name="hql_usb_auto_off">Ao ligar o cabo, nada acontece: toca em Ligar quando quiseres. Se o Android abre sempre o Qonecta+ com o cabo e queres usar o QDLink, retira «Abrir por predefinição» nas definições da app.</string>
     <string name="hql_qd_diag_trace">Registo detalhado (uma linha de log por fotograma, toques, registo de desempenho e logcat completo; mais calor e logs muito grandes)</string>
     <string name="hql_v_invalid">Avançado: foi ignorado um valor fora do intervalo (fps de 0 a 120, kbps de 0 a 100000, largura e altura de 0 a 4096, janela de 0 a 64; vazio = automático)</string>
+    <string name="hql_acc_lost_channel">Acessibilidade</string>
+    <string name="hql_acc_lost_title">O Qonecta+ perdeu a acessibilidade</string>
+    <string name="hql_acc_lost_text">O Android desativou «Qonecta+ toque» (costuma acontecer quando fecha a app à força). Sem ela, o ecrã do carro fica preto. Toque para a voltar a ativar.</string>
+    <string name="hql_acc_prevent">Evitar que se repita</string>
+    <string name="hql_acc_guide_title">Para o Android não a voltar a desativar</string>
+    <string name="hql_acc_guide">O Android desativa a acessibilidade quando fecha o Qonecta+ à força para poupar bateria ou memória. Para o evitar:\n\n• Bateria do Qonecta+: «Sem restrições».\n• %1$s\n• Nunca use «Forçar paragem» no Qonecta+.</string>
+    <string name="hql_acc_guide_samsung">Samsung: Definições › Bateria › Limites de utilização em segundo plano: tire o Qonecta+ das apps em suspensão e adicione-o a «Apps nunca em suspensão».</string>
+    <string name="hql_acc_guide_honor">%1$s: Definições › Bateria › Início de aplicações › Qonecta+ › «Gerir manualmente», com as três opções ativadas.</string>
+    <string name="hql_acc_guide_xiaomi">Xiaomi: ative o «Início automático» do Qonecta+ e ponha a poupança de bateria em «Sem restrições».</string>
+    <string name="hql_acc_guide_other">O gestor de bateria do fabricante: deixe o Qonecta+ funcionar em segundo plano.</string>
+    <string name="hql_acc_guide_restricted">Se o Android não deixar ativá-la: Informações da app › ⋮ › «Permitir definições restritas».</string>
+    <string name="hql_acc_guide_battery">Bateria</string>
 </resources>

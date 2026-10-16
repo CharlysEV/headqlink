@@ -1032,4 +1032,16 @@
     <string name="hql_usb_auto_off">Brancher le câble ne fera rien : appuie sur Connecter quand tu veux. Si Android ouvre toujours Qonecta+ avec le câble et que tu veux utiliser QDLink, retire « Ouvrir par défaut » dans les réglages de l\'appli.</string>
     <string name="hql_qd_diag_trace">Trace détaillée (une ligne de journal par image, les touches, la trace de performance et le logcat complet ; plus de chaleur et des journaux très volumineux)</string>
     <string name="hql_v_invalid">Avancé : une valeur hors limites a été ignorée (fps de 0 à 120, kbps de 0 à 100000, largeur et hauteur de 0 à 4096, fenêtre de 0 à 64 ; vide = automatique)</string>
+    <string name="hql_acc_lost_channel">Accessibilité</string>
+    <string name="hql_acc_lost_title">Qonecta+ a perdu l\'accessibilité</string>
+    <string name="hql_acc_lost_text">Android a désactivé «Qonecta+ tactile» (souvent quand il ferme l\'appli de force). Sans elle, l\'écran de la voiture reste noir. Touchez pour la réactiver.</string>
+    <string name="hql_acc_prevent">Éviter que ça recommence</string>
+    <string name="hql_acc_guide_title">Pour qu\'Android ne la retire plus</string>
+    <string name="hql_acc_guide">Android retire l\'accessibilité quand il ferme Qonecta+ de force pour économiser la batterie ou la mémoire. Pour l\'éviter :\n\n• Batterie de Qonecta+ : «Sans restriction».\n• %1$s\n• N\'utilisez jamais «Forcer l\'arrêt» sur Qonecta+.</string>
+    <string name="hql_acc_guide_samsung">Samsung : Paramètres › Batterie › Limites d\'utilisation en arrière-plan : retirez Qonecta+ des applis en veille et ajoutez-la aux «Applis jamais en veille».</string>
+    <string name="hql_acc_guide_honor">%1$s : Paramètres › Batterie › Lancement d\'applis › Qonecta+ › «Gérer manuellement», avec les trois options activées.</string>
+    <string name="hql_acc_guide_xiaomi">Xiaomi : activez le «Démarrage automatique» de Qonecta+ et mettez son économiseur de batterie sur «Aucune restriction».</string>
+    <string name="hql_acc_guide_other">Le gestionnaire de batterie du fabricant : laissez Qonecta+ fonctionner en arrière-plan.</string>
+    <string name="hql_acc_guide_restricted">Si Android ne vous laisse pas l\'activer : Infos sur l\'appli › ⋮ › «Autoriser les paramètres restreints».</string>
+    <string name="hql_acc_guide_battery">Batterie</string>
 </resources>

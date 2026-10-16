@@ -1035,4 +1035,16 @@
     <string name="hql_usb_auto_off">插入数据线时不会有任何动作：需要时请点按“连接”。如果 Android 总是在插入数据线时打开 Qonecta+，而你想使用 QDLink，请在应用设置中移除“默认打开”。</string>
     <string name="hql_qd_diag_trace">详细跟踪（每帧一行日志、触摸转储、性能跟踪、完整 logcat；更发热，日志非常大）</string>
     <string name="hql_v_invalid">高级：已忽略超出范围的值（fps 0-120，kbps 0-100000，宽度和高度 0-4096，窗口 0-64；留空 = 自动）</string>
+    <string name="hql_acc_lost_channel">无障碍</string>
+    <string name="hql_acc_lost_title">Qonecta+ 的无障碍服务已被关闭</string>
+    <string name="hql_acc_lost_text">Android 关闭了「Qonecta+ 触控」（通常是强行关闭应用时）。没有它，车机屏幕会一片黑。点按重新开启。</string>
+    <string name="hql_acc_prevent">避免再次发生</string>
+    <string name="hql_acc_guide_title">让 Android 不再关闭它</string>
+    <string name="hql_acc_guide">Android 为省电或省内存强行关闭 Qonecta+ 时，会同时关闭它的无障碍服务。避免方法：\n\n• Qonecta+ 的电池：「不受限制」。\n• %1$s\n• 不要对 Qonecta+ 使用「强行停止」。</string>
+    <string name="hql_acc_guide_samsung">三星：设置 › 电池 › 后台使用限制：把 Qonecta+ 从休眠应用中移除，加入「从不休眠的应用」。</string>
+    <string name="hql_acc_guide_honor">%1$s：设置 › 电池 › 应用启动管理 › Qonecta+ › 「手动管理」，三个选项全部开启。</string>
+    <string name="hql_acc_guide_xiaomi">小米：为 Qonecta+ 开启「自启动」，省电策略设为「无限制」。</string>
+    <string name="hql_acc_guide_other">厂商的电池管理：允许 Qonecta+ 在后台运行。</string>
+    <string name="hql_acc_guide_restricted">如果 Android 不让开启：应用信息 › ⋮ › 「允许受限制的设置」。</string>
+    <string name="hql_acc_guide_battery">电池</string>
 </resources>

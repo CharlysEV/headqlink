@@ -561,6 +561,7 @@ final class Checklist {
                     if (it.hint == Requirements.Hint.RESTRICTED) r.detail += "\n" + Str.get(R.string.hql_req_acc_restricted);
                 }
                 r.action(Str.get(R.string.hql_enable), this::openAccessibility);
+                r.action(Str.get(R.string.hql_acc_prevent), () -> AccessibilityGuard.showGuide(act));
                 if (it.hint == Requirements.Hint.RESTRICTED) {
                     r.action(Str.get(R.string.hql_req_app_info), () -> PowerHelper.openAppDetails(act, act.getPackageName()));
                 }

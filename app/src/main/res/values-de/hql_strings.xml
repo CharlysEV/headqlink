@@ -1031,4 +1031,16 @@
     <string name="hql_usb_auto_off">Beim Einstecken passiert nichts: tippe auf Verbinden, wenn du willst. Öffnet Android mit dem Kabel immer Qonecta+ und du willst QDLink nutzen, entferne „Standardmäßig öffnen“ in den App-Einstellungen.</string>
     <string name="hql_qd_diag_trace">Detaillierte Ablaufverfolgung (eine Logzeile pro Bild, Berührungen, Leistungstrace und vollständiges Logcat; mehr Wärme und sehr große Logs)</string>
     <string name="hql_v_invalid">Erweitert: ein Wert außerhalb des Bereichs wurde ignoriert (fps 0-120, kbps 0-100000, Breite und Höhe 0-4096, Fenster 0-64; leer = automatisch)</string>
+    <string name="hql_acc_lost_channel">Bedienungshilfe</string>
+    <string name="hql_acc_lost_title">Qonecta+ hat die Bedienungshilfe verloren</string>
+    <string name="hql_acc_lost_text">Android hat «Qonecta+ Touch» ausgeschaltet (meist, wenn es die App zwangsweise beendet). Ohne sie bleibt der Autobildschirm schwarz. Tippen, um sie wieder einzuschalten.</string>
+    <string name="hql_acc_prevent">Nicht wieder passieren lassen</string>
+    <string name="hql_acc_guide_title">Damit Android sie nicht wieder ausschaltet</string>
+    <string name="hql_acc_guide">Android schaltet die Bedienungshilfe aus, wenn es Qonecta+ zwangsweise beendet, um Akku oder Speicher zu sparen. So vermeidest du es:\n\n• Akku von Qonecta+: «Nicht eingeschränkt».\n• %1$s\n• Nie «Beenden erzwingen» bei Qonecta+ verwenden.</string>
+    <string name="hql_acc_guide_samsung">Samsung: Einstellungen › Akku › Grenzwerte für Hintergrundnutzung: Qonecta+ aus den Apps im Standby entfernen und zu «Apps nie im Standby» hinzufügen.</string>
+    <string name="hql_acc_guide_honor">%1$s: Einstellungen › Akku › App-Start › Qonecta+ › «Manuell verwalten», alle drei Optionen an.</string>
+    <string name="hql_acc_guide_xiaomi">Xiaomi: «Autostart» für Qonecta+ einschalten und den Akku-Sparmodus auf «Keine Einschränkungen» stellen.</string>
+    <string name="hql_acc_guide_other">Der Akku-Manager des Herstellers: Qonecta+ im Hintergrund laufen lassen.</string>
+    <string name="hql_acc_guide_restricted">Wenn Android das Einschalten nicht erlaubt: App-Info › ⋮ › «Eingeschränkte Einstellungen zulassen».</string>
+    <string name="hql_acc_guide_battery">Akku</string>
 </resources>

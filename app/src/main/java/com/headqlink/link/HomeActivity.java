@@ -146,6 +146,13 @@ public class HomeActivity extends Activity implements LinkState.Listener {
     }
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        // Ya abierta (singleTask) y llega el aviso de la accesibilidad: onResume abre su guía.
+        if (intent.getBooleanExtra(AccessibilityGuard.EXTRA_GUIDE, false)) getIntent().putExtra(AccessibilityGuard.EXTRA_GUIDE, true);
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         if (modeView == null) return;
@@ -166,6 +173,11 @@ public class HomeActivity extends Activity implements LinkState.Listener {
         // Con HeadQLink delante, el servicio recupera la ubicación «mientras se usa» si pasó a primer plano sin ella.
         LinkService.appShown("pantalla principal");
         // Versión nueva en GitHub (como mucho una consulta cada 6 h; con el extra force_update_check, ahora: pruebas).
+        // Desde el aviso «Qonecta+ ha perdido la accesibilidad»: la guía «Que no se repita».
+        if (getIntent().getBooleanExtra(AccessibilityGuard.EXTRA_GUIDE, false)) {
+            getIntent().removeExtra(AccessibilityGuard.EXTRA_GUIDE);
+            AccessibilityGuard.showGuide(this);
+        }
         boolean forceCheck = getIntent().getBooleanExtra("force_update_check", false);
         getIntent().removeExtra("force_update_check");
         UpdateCheck.check(this, forceCheck, r -> {

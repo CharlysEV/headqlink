@@ -144,6 +144,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
         com.headqlink.link.QdTrace.init(this)
         com.headqlink.link.ExitReasons.start(this)
         com.headqlink.link.LiveLog.resume(this)
+        com.headqlink.link.AccessibilityGuard.checkLater(this, "al arrancar la app")
 
         // Root support
         component.suExecutor.register()

@@ -84,6 +84,8 @@
 
     <!-- headqlink: «Descargar e instalar» la versión nueva desde la app (abre el instalador de Android). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- headqlink: solo si se da desde un PC (adb shell pm grant): la accesibilidad se vuelve a activar sola (AccessibilityGuard). -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />

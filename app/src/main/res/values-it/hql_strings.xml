@@ -1032,4 +1032,16 @@
     <string name="hql_usb_auto_off">Collegando il cavo non succede nulla: tocca Connetti quando vuoi. Se Android apre sempre Qonecta+ con il cavo e vuoi usare QDLink, togli «Apri per impostazione predefinita» nelle impostazioni dell\'app.</string>
     <string name="hql_qd_diag_trace">Traccia dettagliata (una riga di log per fotogramma, tocchi, traccia delle prestazioni e logcat completo; più calore e log molto grandi)</string>
     <string name="hql_v_invalid">Avanzate: un valore fuori intervallo è stato ignorato (fps da 0 a 120, kbps da 0 a 100000, larghezza e altezza da 0 a 4096, finestra da 0 a 64; vuoto = automatico)</string>
+    <string name="hql_acc_lost_channel">Accessibilità</string>
+    <string name="hql_acc_lost_title">Qonecta+ ha perso l\'accessibilità</string>
+    <string name="hql_acc_lost_text">Android ha disattivato «Qonecta+ tocco» (succede di solito quando chiude l\'app forzatamente). Senza, lo schermo dell\'auto resta nero. Tocca per riattivarla.</string>
+    <string name="hql_acc_prevent">Evita che si ripeta</string>
+    <string name="hql_acc_guide_title">Perché Android non la tolga più</string>
+    <string name="hql_acc_guide">Android toglie l\'accessibilità quando chiude Qonecta+ forzatamente per risparmiare batteria o memoria. Per evitarlo:\n\n• Batteria di Qonecta+: «Senza restrizioni».\n• %1$s\n• Non usare mai «Forza arresto» su Qonecta+.</string>
+    <string name="hql_acc_guide_samsung">Samsung: Impostazioni › Batteria › Limiti di utilizzo in background: togli Qonecta+ dalle app in sospensione e aggiungila a «App mai in sospensione».</string>
+    <string name="hql_acc_guide_honor">%1$s: Impostazioni › Batteria › Avvio app › Qonecta+ › «Gestisci manualmente», con tutte e tre le opzioni attive.</string>
+    <string name="hql_acc_guide_xiaomi">Xiaomi: attiva l\'«Avvio automatico» di Qonecta+ e imposta il risparmio batteria su «Nessuna restrizione».</string>
+    <string name="hql_acc_guide_other">Il gestore della batteria del produttore: lascia che Qonecta+ funzioni in background.</string>
+    <string name="hql_acc_guide_restricted">Se Android non ti lascia attivarla: Info app › ⋮ › «Consenti impostazioni con restrizioni».</string>
+    <string name="hql_acc_guide_battery">Batteria</string>
 </resources>

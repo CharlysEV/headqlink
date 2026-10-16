@@ -1031,4 +1031,16 @@
     <string name="hql_usb_auto_off">Bij het insteken gebeurt er niets: tik op Verbinden wanneer je wilt. Opent Android met de kabel altijd Qonecta+ en wil je QDLink gebruiken, verwijder dan „Standaard openen” in de app-instellingen.</string>
     <string name="hql_qd_diag_trace">Gedetailleerde tracering (één logregel per frame, aanrakingen, prestatietracering en volledige logcat; meer warmte en zeer grote logs)</string>
     <string name="hql_v_invalid">Geavanceerd: een waarde buiten bereik is genegeerd (fps 0-120, kbps 0-100000, breedte en hoogte 0-4096, venster 0-64; leeg = automatisch)</string>
+    <string name="hql_acc_lost_channel">Toegankelijkheid</string>
+    <string name="hql_acc_lost_title">Qonecta+ is de toegankelijkheid kwijt</string>
+    <string name="hql_acc_lost_text">Android heeft «Qonecta+ aanraking» uitgezet (meestal als het de app geforceerd sluit). Zonder blijft het autoscherm zwart. Tik om hem weer aan te zetten.</string>
+    <string name="hql_acc_prevent">Voorkomen dat het weer gebeurt</string>
+    <string name="hql_acc_guide_title">Zodat Android hem niet weer uitzet</string>
+    <string name="hql_acc_guide">Android zet de toegankelijkheid uit als het Qonecta+ geforceerd sluit om batterij of geheugen te sparen. Zo voorkom je dat:\n\n• Batterij van Qonecta+: «Onbeperkt».\n• %1$s\n• Gebruik nooit «Gedwongen stoppen» bij Qonecta+.</string>
+    <string name="hql_acc_guide_samsung">Samsung: Instellingen › Batterij › Limieten achtergrondgebruik: haal Qonecta+ uit de slapende apps en voeg hem toe aan «Nooit slapende apps».</string>
+    <string name="hql_acc_guide_honor">%1$s: Instellingen › Batterij › App starten › Qonecta+ › «Handmatig beheren», met alle drie de opties aan.</string>
+    <string name="hql_acc_guide_xiaomi">Xiaomi: zet «Autostart» aan voor Qonecta+ en zet de batterijbesparing op «Geen beperkingen».</string>
+    <string name="hql_acc_guide_other">De batterijbeheerder van de fabrikant: laat Qonecta+ op de achtergrond werken.</string>
+    <string name="hql_acc_guide_restricted">Als Android het aanzetten niet toestaat: App-info › ⋮ › «Beperkte instellingen toestaan».</string>
+    <string name="hql_acc_guide_battery">Batterij</string>
 </resources>
