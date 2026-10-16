@@ -111,11 +111,13 @@ final class MapsCard {
      * con el destino). En argb (w × h, de arriba abajo) se mira la franja de debajo de la línea de los km: el fondo del
      * recuadro es el color que más se repite justo ahí; los iconos, lo que contrasta con él (de día, negro sobre blanco;
      * de noche, claro sobre oscuro); el recuadro acaba donde deja de verse su fondo (empieza el mapa). Del último grupo
-     * de columnas con icono, su centro. null si no se ve.
+     * de columnas con icono, su centro. null si no se ve. Solo con los cuatro botones (X, alternativas, añadir parada y
+     * ruta): con menos, el recuadro aún se está montando (Maps recién cambiada de ruta) y el último que se ve puede ser
+     * «alternativas», que deja la navegación a medias (16-10, coche virtual).
      */
     static int[] routeIcon(int[] argb, int w, int h, Line eta, Line km) {
         List<int[]> icons = rowIcons(argb, w, h, eta, km);
-        return icons.isEmpty() ? null : icons.get(icons.size() - 1);
+        return icons.size() == ROW_MAX ? icons.get(ROW_MAX - 1) : null;
     }
 
     /** Puro: dónde tocar la X del recuadro de navegación (el primer icono de la fila: termina la navegación), o null. */

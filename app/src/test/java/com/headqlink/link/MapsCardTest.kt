@@ -146,6 +146,18 @@ class MapsCardTest {
         assertNull(MapsCard.routeIcon(empty, 1824, 882, navEta, navKm))
     }
 
+    /**
+     * Recuadro a medio montar (Maps recién cambiada de ruta, 16-10): solo la X y «alternativas». No se toca nada (el último
+     * visto sería «alternativas», que deja la navegación a medias); se vuelve a mirar.
+     */
+    @Test
+    fun withoutTheFourButtonsTheRouteIconIsNotTouched() {
+        val px = panel(1824, 882, 0xFF202124.toInt(), 0xFFE8EAED.toInt(), 0xFF35466A.toInt())
+        for (y in 815 until 851) for (x in 600 until 760) px[y * 1824 + x] = 0xFF202124.toInt() // sin «+» ni ruta
+        assertEquals(2, MapsCard.rowIcons(px, 1824, 882, navEta, navKm).size)
+        assertNull(MapsCard.routeIcon(px, 1824, 882, navEta, navKm))
+    }
+
     @Test
     fun theKmLineIsTheOneUnderTheTime() {
         assertEquals("36 km · 21:09", MapsCard.kmLine(navigating, MapsCard.etaBox(navigating, 882))!!.text)
