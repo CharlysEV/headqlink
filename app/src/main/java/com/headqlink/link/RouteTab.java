@@ -269,6 +269,10 @@ final class RouteTab implements CarScreen {
         running = true;
         root = CarKit.page(ctx, narrow ? narrowLayout(right, ch) : row);
         tick();
+        if (previewChargers) {
+            previewChargers = false;
+            root.postDelayed(() -> openChargerList(false), 300);
+        }
         String pq = previewQuery;
         if (pq != null) {
             previewQuery = null;
@@ -298,6 +302,8 @@ final class RouteTab implements CarScreen {
     private SearchState searchState;
     /** Vista previa: abrir el buscador con este texto al crear la pestaña. */
     static volatile String previewQuery;
+    /** Vista previa (CarUi "car-0-…cargadores"): con la lista de cargadores de la ruta abierta. */
+    static volatile boolean previewChargers;
 
     /**
      * Buscador a pantalla completa de la pestaña: la caja con lo escrito, el micrófono, los resultados (o los destinos
@@ -1654,10 +1660,23 @@ final class RouteTab implements CarScreen {
         bar.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = CarStyle.text(ctx, Str.get(R.string.hql_chargers_list_title), 34, CarKit.TEXT);
         title.setTypeface(CarKit.MEDIUM);
+        title.setSingleLine(true);
         bar.addView(title);
+        // Una sola línea: sin sitio (pantalla partida) se partía letra a letra y la cabecera empujaba la lista fuera.
         TextView count = CarStyle.text(ctx, "", 22, CarKit.DIM);
+        count.setSingleLine(true);
+        count.setEllipsize(android.text.TextUtils.TruncateAt.END);
         count.setPadding(20, 0, 0, 0);
-        bar.addView(count, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        // Pantalla partida: el título y «Cerrar» arriba; los filtros y la cuenta, en una segunda fila.
+        LinearLayout bar2 = null;
+        if (narrowUi) {
+            bar.addView(new View(ctx), new LinearLayout.LayoutParams(0, 1, 1f));
+            bar2 = CarKit.row(ctx);
+            bar2.setGravity(Gravity.CENTER_VERTICAL);
+            bar2.setPadding(0, 10, 0, 0);
+        } else {
+            bar.addView(count, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        }
         TextView onlyF = chip(Str.get(R.string.hql_chargers_list_filtered), !all, () -> {
             root.removeViewAt(root.getChildCount() - 1);
             openChargerList(false);
@@ -1666,11 +1685,14 @@ final class RouteTab implements CarScreen {
             root.removeViewAt(root.getChildCount() - 1);
             openChargerList(true);
         });
-        bar.addView(onlyF, chipParams());
-        bar.addView(every, chipParams());
+        LinearLayout chipsRow = bar2 != null ? bar2 : bar;
+        chipsRow.addView(onlyF, chipParams());
+        chipsRow.addView(every, chipParams());
+        if (bar2 != null) bar2.addView(count, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView done = CarKit.pill(ctx, Str.get(R.string.hql_close), true);
         bar.addView(done);
         panel.addView(bar);
+        if (bar2 != null) panel.addView(bar2);
         LinearLayout body = CarKit.col(ctx);
         ScrollView sv = new ScrollView(ctx);
         sv.addView(body);

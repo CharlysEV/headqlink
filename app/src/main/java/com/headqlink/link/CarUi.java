@@ -1088,8 +1088,9 @@ final class CarUi {
                 CarHubScreen.selectTab(Integer.parseInt(parts[1]));
                 if (parts.length > 2 && parts[2].equals("detalle")) TripsTab.previewDetail = true;
                 if (parts.length > 2 && parts[2].equals("buscar")) RouteTab.previewQuery = "electrolinera";
-                // "car-N-partida": con la pantalla partida (AA a la izquierda).
-                split = parts.length > 2 && parts[2].equals("partida");
+                // "car-N-partida": con la pantalla partida (AA a la izquierda); "…-cargadores": con su lista abierta.
+                if (parts.length > 2 && parts[2].endsWith("cargadores")) RouteTab.previewChargers = true;
+                split = parts.length > 2 && parts[2].startsWith("partida");
                 splitAccepted = true;
                 open("car");
             } else {
