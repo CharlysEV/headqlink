@@ -799,6 +799,10 @@ final class RoutePlanner {
         default void onDestStopsFailed() {
         }
 
+        /** Google Maps ha dejado de navegar: fuera las tarjetas de esa navegación. */
+        default void onMapsGone() {
+        }
+
     }
 
     static volatile DestGuessListener destGuesses;
@@ -818,9 +822,14 @@ final class RoutePlanner {
         MapsNavListener.Info mi = MapsNavListener.ongoing();
         // Sin ruta (o con la notificación de 0 km que deja Maps al acabar o quitarla): la siguiente navegación se lee.
         if (!MapsNavListener.routing(mi)) {
+            readWantedMs = 0;
             if (guessAsked) {
                 guessAsked = false;
                 guessRejected.clear();
+                // Las tarjetas de esa navegación («Ruta a…», «¿A dónde vas?», las paradas) ya no valen.
+                routeOffer = null;
+                DestGuessListener l = destGuesses;
+                if (l != null) l.onMapsGone();
             }
             return;
         }
@@ -936,6 +945,11 @@ final class RoutePlanner {
      * en el coche se ofrece buscarlo a mano.
      */
     private void onMapsAddress(MapsCard.Read read, double lat, double lon, double km) {
+        // Maps dejó de navegar mientras se leía (16-10: el conductor quitó la ruta): nada que preguntar.
+        if (!MapsNavListener.routing() || manual != null) {
+            L.i("ruta: Google Maps ya no navega (o ya hay destino): no pregunto a dónde vas");
+            return;
+        }
         Place pl = locate(read, lat, lon, km);
         if (pl == null) {
             DestGuessListener l = destGuesses;

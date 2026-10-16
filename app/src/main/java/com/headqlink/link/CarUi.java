@@ -173,6 +173,15 @@ final class CarUi {
             main.post(CarUi.this::showGuessStopsFailed);
         }
 
+        @Override
+        public void onMapsGone() {
+            main.post(() -> {
+                if (!guessPending) return;
+                L.i("CarUi: Google Maps ya no navega: quito la tarjeta «" + guessKind + "»");
+                clearGuess();
+            });
+        }
+
     };
     private final Runnable hideTask = () -> setHidden(true);
     /** AA ya ha dado imagen; antes, en su zona se ve la animación de carga. */
@@ -446,12 +455,14 @@ final class CarUi {
     private boolean aaPausedForGame;
 
     /**
-     * Hilo principal: con un juego a pantalla completa, AA no se ve pero seguía mandando y decodificándose su vídeo (GPU,
-     * calor y tirones en el juego): se le quita el foco de vídeo. Al acabar el juego, o con la pantalla partida (AA a la
-     * vista), se le devuelve y manda una imagen nueva.
+     * Hilo principal: con un juego, o con la TV o un vídeo a pantalla completa, AA no se ve pero seguía mandando y
+     * decodificándose su vídeo (GPU, calor y tirones): se le quita el foco de vídeo. Al acabar, o con la pantalla partida
+     * (AA a la vista), se le devuelve y manda una imagen nueva. Con el resto de pantallas AA sigue vivo (16-10: el
+     * conductor lo quiere siempre activo salvo con lo pesado).
      */
     private void aaForGame() {
-        boolean want = gaming && !splitActive();
+        boolean video = compact && ("tv".equals(screenName) || "videos".equals(screenName));
+        boolean want = (gaming || video) && !splitActive();
         if (want == aaPausedForGame) return;
         com.andrerinas.openheadunit.connection.CommManager cm = com.andrerinas.openheadunit.App.Companion.provide(ctx).getCommManager();
         if (!cm.isConnected()) {
@@ -461,7 +472,8 @@ final class CarUi {
         aaPausedForGame = want;
         aaGameGen = cm.getTransportGeneration();
         cm.send(new com.andrerinas.openheadunit.aap.protocol.messages.VideoFocusEvent(!want, true));
-        L.i("CarUi: vídeo de Android Auto " + (want ? "en pausa mientras se juega a pantalla completa" : "de vuelta (fin del juego o pantalla partida)"));
+        L.i("CarUi: vídeo de Android Auto " + (want ? "en pausa mientras " + (gaming ? "se juega" : "se ve la TV o un vídeo") + " a pantalla completa"
+                : "de vuelta (fin del juego o del vídeo, otra pantalla o pantalla partida)"));
         main.removeCallbacks(aaGamePing);
         if (want) main.postDelayed(aaGamePing, AA_GAME_PING_MS);
     }
@@ -606,14 +618,17 @@ final class CarUi {
         content.setLayoutParams(lp);
         renderSplitButton(rail);
         fitPanelButtons(rail, pw);
-        // Solo importa a AA cuando se ve (el modo compacto es de nuestras pantallas).
+        // Solo importa a AA cuando se ve: con una pantalla nuestra delante, AA se queda como estaba. Cada cambio de márgenes
+        // lo reinicia (16-10: pantalla negra con su logo al volver de Coche, Web, TV o Juegos).
         if (sp) {
             listener.onAaRegion(aaX, aaW);
-        } else if (!compact) {
+            aaRegX = aaX;
+            aaRegW = aaW;
+        } else if (aaShown) {
             listener.onAaRegion(aaX, width - side);
+            aaRegX = aaX;
+            aaRegW = width - side;
         }
-        aaRegX = aaX;
-        aaRegW = sp ? aaW : width - side;
         updatePanelRect();
         refreshFloat();
     }
@@ -894,6 +909,7 @@ final class CarUi {
         compact = on && !aaShown;
         applyLayout();
         L.i("CarUi: pantalla grande " + (compact ? "sí" : "no"));
+        aaForGame();
     }
 
     /** ¿Ocupa nuestra interfaz la zona de contenido (y por tanto recibe sus toques)? */
@@ -2174,6 +2190,8 @@ final class CarUi {
         scheduleHide();
         L.i("CarUi: pantalla " + name + (splitActive() ? " (partida, con AA)" : ""));
         saveScreen();
+        // Fuera de la TV o los vídeos a pantalla completa, AA vuelve a tener su vídeo.
+        aaForGame();
     }
 
     private static Supplier<CarScreen> factory(String name) {
