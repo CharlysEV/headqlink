@@ -43,4 +43,17 @@ class DestGuessTest {
         assertFalse(DestGuess.planMatches(20.0, 13.0))
         assertTrue(DestGuess.planMatches(Double.NaN, 13.0)) // sin dato, no se deshace nada
     }
+
+    @Test
+    fun theRouteStaysNearAChargingStop() {
+        val c = RoutePlanner.Charger()
+        c.lat = 40.4000
+        c.lon = -3.7000
+        val stops = listOf(ChargePlanner.Stop(c, 120.0, 15.0, 60.0, 25.0, 30.0))
+        // A unos 550 m de la parada: sigue; a unos 2,2 km, no; sin paradas o sin posición, no.
+        assertTrue(RoutePlanner.nearAnyStop(40.4050, -3.7000, stops, RoutePlanner.STOP_KEEP_KM))
+        assertFalse(RoutePlanner.nearAnyStop(40.4200, -3.7000, stops, RoutePlanner.STOP_KEEP_KM))
+        assertFalse(RoutePlanner.nearAnyStop(40.4050, -3.7000, emptyList(), RoutePlanner.STOP_KEEP_KM))
+        assertFalse(RoutePlanner.nearAnyStop(Double.NaN, -3.7000, stops, RoutePlanner.STOP_KEEP_KM))
+    }
 }

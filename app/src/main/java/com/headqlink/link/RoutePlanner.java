@@ -199,6 +199,14 @@ final class RoutePlanner {
      */
     private static volatile boolean guessed;
     private static volatile boolean guessChecked;
+    /**
+     * «Añadir a Maps» (reloj de arranque; 0: nada pendiente): cuando Maps empiece la navegación nueva, con las paradas, la
+     * ruta vuelve a ir unida a Maps (guessed): si el conductor la quita allí, se quita aquí (16-10).
+     */
+    private static volatile long relinkAfterMs;
+    /** A menos de esto de una parada de carga del plan, que Maps deje de navegar no quita la ruta (llegada a la parada). */
+    static final double STOP_KEEP_KM = 1.0;
+    private boolean keptAtStopLogged;
     /** Para el próximo setTrip: es la suposición (y si ya está comprobada). */
     private static volatile boolean nextGuess;
     private static volatile boolean nextGuessChecked;
@@ -292,6 +300,7 @@ final class RoutePlanner {
         // Antes de calcular (el cálculo va en otro hilo): si es el destino deducido de Maps o uno elegido a mano.
         guessed = pl != null && nextGuess;
         guessChecked = nextGuessChecked;
+        relinkAfterMs = 0;
         nextGuess = false;
         nextGuessChecked = false;
         if (pl != null && (!v.isEmpty() || round)) L.i("ruta: viaje con " + v.size() + " paradas" + (round ? ", ida y vuelta" : ""));
@@ -491,13 +500,35 @@ final class RoutePlanner {
             if (!demo && origin == null) guessFromMaps(s);
             return;
         }
-        // Destino deducido y Maps ya no navega (llegada, o la ruta cancelada): fuera, sin preguntar nada.
+        // Tras «Añadir a Maps»: con la navegación nueva de Maps (la de las paradas), la ruta vuelve a ir unida a Maps.
+        long relink = relinkAfterMs;
+        if (relink != 0 && m != null && !demo) {
+            MapsNavListener.Info mi = MapsNavListener.ongoing();
+            if (MapsNavListener.routing(mi) && mi.startedMs > relink) {
+                relinkAfterMs = 0;
+                guessed = true;
+                guessChecked = true;
+                L.i("ruta: Google Maps ya guía con las paradas: la ruta vuelve a ir unida a Maps (si se quita allí, se quita aquí)");
+            }
+        }
+        // Destino deducido y Maps ya no navega (llegada, o la ruta cancelada): fuera, sin preguntar nada. Junto a una parada
+        // de carga del plan no: al llegar a ella Maps puede dar el tramo por acabado, y la carga y el resto siguen.
         if (guessed && !demo && !MapsNavListener.routing()) {
-            L.i("ruta: Google Maps ha dejado de navegar: quito el destino que había deducido");
-            guessAsked = false;
-            guessRejected.clear();
-            setManualDestination(null);
-            return;
+            double[] here = Double.isNaN(s.lat) ? lastKnown(ctx) : new double[]{s.lat, s.lon, 0};
+            ChargePlanner.Result cp = lastChargePlan();
+            if (here != null && cp != null && nearAnyStop(here[0], here[1], cp.stops, STOP_KEEP_KM)) {
+                if (!keptAtStopLogged) L.i("ruta: Google Maps ha dejado de navegar junto a una parada de carga del plan: sigo con la ruta");
+                keptAtStopLogged = true;
+            } else {
+                L.i("ruta: Google Maps ha dejado de navegar: quito el destino que había deducido");
+                keptAtStopLogged = false;
+                guessAsked = false;
+                guessRejected.clear();
+                setManualDestination(null);
+                return;
+            }
+        } else {
+            keptAtStopLogged = false;
         }
         boolean replan = false;
         if (p != null && dest.equals(p.destination)) {
@@ -1002,6 +1033,15 @@ final class RoutePlanner {
         setManualDestination(pl);
     }
 
+    /** Puro: ¿está (lat, lon) a menos de km de alguna parada de carga? */
+    static boolean nearAnyStop(double lat, double lon, List<ChargePlanner.Stop> stops, double km) {
+        if (stops == null || Double.isNaN(lat)) return false;
+        for (ChargePlanner.Stop st : stops) {
+            if (st.charger != null && RoadInfo.dist(lat, lon, st.charger.lat, st.charger.lon) / 1000.0 <= km) return true;
+        }
+        return false;
+    }
+
     /** El panel del coche: el usuario ha elegido uno de la tarjeta (sigue la navegación de Maps). */
     static void chooseGuess(DestGuess.Candidate c) {
         L.i("ruta: destino elegido en la tarjeta de Google Maps (" + c.kind + ")");
@@ -1020,6 +1060,7 @@ final class RoutePlanner {
         ChargePlanner.Result cp = r == null ? null : r.lastChargePlan();
         if (p == null || cp == null || cp.next() == null) return;
         guessed = false;
+        relinkAfterMs = SystemClock.elapsedRealtime();
         L.i("ruta: añado a Google Maps las " + cp.stops.size() + " paradas del plan (lo ha pedido el conductor)");
         // Primero se quita la navegación que tiene Maps (la X de su recuadro) y luego se le manda la del plan.
         MapsReader.cancelNavigation(ctx, (Boolean gone) -> new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
