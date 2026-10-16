@@ -142,7 +142,11 @@ API, which may stop working at any time. The range-extender (REEV) tank signals 
 fields follow [leapmotor-mate](https://github.com/ProtossBlaster/leapmotor-mate) (ProtossBlaster), and the
 weekly consumption endpoint follows [leapmotor-api](https://github.com/markoceri/leapmotor-api) (markoceri),
 both AGPL-3.0. The 3D car in the Status tab uses [three.js](https://threejs.org) (MIT, bundled in
-`app/src/main/assets/three` with its licence).
+`app/src/main/assets/three` with its licence). The C10 in it is
+"[LEAPMOTORS C10](https://sketchfab.com/3d-models/none-6206d1ddcc1b4c1288ba75d521b29b83)" by
+**vinishows-1753d1**, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), modified
+(exterior only, fewer polygons, no textures, plain European plate, grey wheels; see
+`app/src/main/assets/c10.glb.LICENSE.txt`).
 
 This project is not affiliated with, endorsed by or sponsored by Leapmotor, Google, Neusoft, Open
 Headunit or any other company or project. Leapmotor, C10, Android Auto and QDLink are trademarks of

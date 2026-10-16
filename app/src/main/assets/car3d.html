@@ -368,6 +368,121 @@
   scene.add(shadow);
 
   car.position.y = 0;
+
+  // ---------------------------------------------------------------- el C10 de verdad (assets/c10.glb)
+  /*
+   * Modelo «LEAPMOTORS C10» de vinishows-1753d1 (Sketchfab, CC BY 4.0), solo el exterior y con menos polígonos
+   * (ref3d/c10_export.py). Mientras carga se ve el dibujo de arriba; si no carga, se queda el dibujo. Cada pieza va con
+   * su posición ya puesta (glTF: y arriba, el morro a +z, la izquierda a +x): se gira para que el morro mire a +x como el
+   * resto de la página. Las puertas (Door_LF/RF/LB/RB) y el portón (Trunk_) van en las bisagras de doors y bootPivot.
+   */
+  var rimGrey = new THREE.MeshStandardMaterial({ color: 0x9aa1a8, metalness: 0.85, roughness: 0.3 });
+  var lampGlass = new THREE.MeshStandardMaterial({ color: 0xdfe8ef, metalness: 0.2, roughness: 0.05, transparent: true,
+    opacity: 0.22, depthWrite: false });
+  var headLed = new THREE.MeshBasicMaterial({ color: 0xe8f6ff });
+  var tailLed = new THREE.MeshBasicMaterial({ color: 0xff2a3a });
+  var plateMat = new THREE.MeshStandardMaterial({ color: 0xe9ecee, roughness: 0.4 });
+  function partMaterial(mat, name) {
+    switch (mat) {
+      case 'M_Ext_Paint': return paint;
+      case 'M_Ext_Glass': return /Lamp|StopLight/.test(name) ? lampGlass : glass;
+      case 'M_Ext_Wheel': return tyreMat;
+      case 'llanta_gris': return rimGrey;
+      case 'matricula_eu': return plateMat;
+      case 'default': return headLed;           // intermitentes delanteros (luz diurna)
+      case 'M_Ext_Image':
+        if (/TailLamp_Image|Trunk_Lamp_Image|HeightStopLight/.test(name)) return tailLed;
+        if (/HeadLamp_Image/.test(name)) return headLed;
+        return black;
+      default: return gloss;                   // M_Ext_ChromePlastic: molduras, techo y faldones negros
+    }
+  }
+  /** Lee un .glb sin texturas: por cada malla, sus triángulos (posición, normal, índices) y su material. */
+  function parseGlb(buf) {
+    var dv = new DataView(buf);
+    if (dv.getUint32(0, true) !== 0x46546C67) throw new Error('no es un GLB');
+    var jsonLen = dv.getUint32(12, true);
+    var json = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 20, jsonLen)));
+    var bin = 20 + jsonLen + 8;
+    var SIZE = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 };
+    function acc(i) {
+      var a = json.accessors[i], v = json.bufferViews[a.bufferView];
+      var T = a.componentType === 5126 ? Float32Array : a.componentType === 5125 ? Uint32Array
+        : a.componentType === 5123 ? Uint16Array : Uint8Array;
+      var off = bin + (v.byteOffset || 0) + (a.byteOffset || 0);
+      return new T(buf.slice(off, off + a.count * SIZE[a.type] * T.BYTES_PER_ELEMENT));
+    }
+    var out = [];
+    json.nodes.forEach(function (n) {
+      if (n.mesh === undefined) return;
+      json.meshes[n.mesh].primitives.forEach(function (pr) {
+        var g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(acc(pr.attributes.POSITION), 3));
+        if (pr.attributes.NORMAL !== undefined) g.setAttribute('normal', new THREE.BufferAttribute(acc(pr.attributes.NORMAL), 3));
+        if (pr.indices !== undefined) g.setIndex(new THREE.BufferAttribute(acc(pr.indices), 1));
+        if (pr.attributes.NORMAL === undefined) g.computeVertexNormals();
+        var mat = pr.material !== undefined ? json.materials[pr.material].name : '';
+        out.push({ name: (n.name || '').trim(), mat: mat, geo: g });
+      });
+    });
+    return out;
+  }
+  function useModel(parts) {
+    while (car.children.length) car.remove(car.children[0]);
+    var turn = new THREE.Matrix4().makeRotationY(Math.PI / 2);   // morro de +z a +x; la izquierda de +x a -z
+    var DOOR = { Door_LF_: 0, Door_RF_: 1, Door_LB_: 2, Door_RB_: 3 };
+    var groups = [[], [], [], []], boot = [];
+    parts.forEach(function (pt) {
+      pt.geo.applyMatrix4(turn);
+      var m = new THREE.Mesh(pt.geo, partMaterial(pt.mat, pt.name));
+      m.userData.paint = pt.mat === 'M_Ext_Paint';
+      var k = pt.name.slice(0, 8);
+      if (DOOR[k] !== undefined) groups[DOOR[k]].push(m);
+      else if (/^Trunk_/.test(pt.name)) boot.push(m);
+      else car.add(m);
+    });
+    // Bisagra de cada puerta: su borde delantero, por fuera.
+    var box = new THREE.Box3();
+    groups.forEach(function (ms, i) {
+      var d = doors[i];
+      while (d.children.length) d.remove(d.children[0]);
+      if (!ms.length) return;
+      box.makeEmpty();
+      ms.forEach(function (m) { m.geometry.computeBoundingBox(); box.union(m.geometry.boundingBox); });
+      var hx = box.max.x, hz = d.userData.side < 0 ? box.min.z : box.max.z;
+      d.position.set(hx, 0, hz);
+      ms.forEach(function (m) { m.geometry.translate(-hx, 0, -hz); d.add(m); });
+      d.userData.model = true;
+      d.userData.parts = ms;
+      car.add(d);
+    });
+    // El portón: bisagra arriba, en su borde delantero.
+    while (bootPivot.children.length) bootPivot.remove(bootPivot.children[0]);
+    if (boot.length) {
+      box.makeEmpty();
+      boot.forEach(function (m) { m.geometry.computeBoundingBox(); box.union(m.geometry.boundingBox); });
+      var bx = box.max.x, by = box.max.y;
+      bootPivot.position.set(bx, by, 0);
+      boot.forEach(function (m) { m.geometry.translate(-bx, -by, 0); bootPivot.add(m); });
+      bootPivot.userData.model = true;
+      bootPivot.userData.parts = boot;
+      car.add(bootPivot);
+    }
+    kick();
+  }
+  if (!T03) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'c10.glb');
+    xhr.responseType = 'arraybuffer';
+    xhr.onload = function () {
+      try {
+        if (!xhr.response) throw new Error('vacío');
+        useModel(parseGlb(xhr.response));
+      } catch (e) { console.error('modelo del C10: ' + e.message); }
+    };
+    xhr.onerror = function () { console.error('modelo del C10: no se pudo leer'); };
+    xhr.send();
+  }
   var target = new THREE.Vector3(0, T03 ? 0.72 : 0.78, 0);
 
   // ---------------------------------------------------------------- cámara: girar con el dedo (con inercia)
@@ -482,6 +597,11 @@
     return true;
   }
   var lastFrame = 0;
+  /** La chapa de una puerta o del portón del modelo, en ámbar mientras está abierta. */
+  function paintOpen(p) {
+    var open = p.userData.angle > 0.05;
+    p.userData.parts.forEach(function (m) { if (m.userData.paint) m.material = open ? amber : paint; });
+  }
   function frame(now) {
     var dt = lastFrame ? Math.min(64, now - lastFrame) : 16;
     lastFrame = now;
@@ -501,12 +621,15 @@
     for (var i = 0; i < 4; i++) {
       if (animateDoor(doors[i], dt)) moving = true;
       var d = doors[i];
-      d.visible = d.userData.angle > 0.01;
+      // El dibujo: la puerta solo se ve abierta. El modelo: siempre, en ámbar mientras está abierta.
+      d.visible = d.userData.model || d.userData.angle > 0.01;
+      if (d.userData.model) paintOpen(d);
       // Hacia fuera: la izquierda (-z) gira en negativo, la derecha en positivo.
       d.rotation.y = d.userData.side * d.userData.angle;
     }
     if (animateDoor(bootPivot, dt)) moving = true;
-    bootPivot.visible = bootPivot.userData.angle > 0.01;
+    bootPivot.visible = bootPivot.userData.model || bootPivot.userData.angle > 0.01;
+    if (bootPivot.userData.model) paintOpen(bootPivot);
     bootPivot.rotation.z = -bootPivot.userData.angle * 1.15;
     place();
     renderer.render(scene, camera);
@@ -538,7 +661,8 @@
   window.addEventListener('resize', resize);
 
   // ---------------------------------------------------------------- color de la carrocería
-  var COLORS = ['#08261c', '#e6eaee', '#8b949a', '#15181c', '#1d3a5c', '#c3ccd3'];
+  // Los cinco de Leapmotor España: Verde Jade, Blanco Lunar, Negro Metálico, Gris Medianoche y Gris Tierra.
+  var COLORS = ['#123c29', '#e6e8e6', '#121316', '#34393f', '#8c8a82'];
   var colorBox = document.getElementById('colors');
   function setColor(hex, save) {
     paint.color.set(hex);

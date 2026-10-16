@@ -306,6 +306,8 @@ final class CarStatusTab implements CarScreen {
             android.webkit.WebSettings ws = w.getSettings();
             ws.setJavaScriptEnabled(true);
             ws.setAllowFileAccess(true);
+            // La página lee el C10 (assets/c10.glb) con XMLHttpRequest desde file:///android_asset.
+            ws.setAllowFileAccessFromFileURLs(true);
             w.addJavascriptInterface(new Bridge3d(), "HQL");
             w.setWebChromeClient(new android.webkit.WebChromeClient() {
                 @Override

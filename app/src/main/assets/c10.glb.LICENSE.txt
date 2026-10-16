@@ -1,0 +1,12 @@
+c10.glb: Leapmotor C10 en 3D para la pestaña Estado (assets/car3d.html).
+
+Original: "LEAPMOTORS C10" by vinishows-1753d1
+https://sketchfab.com/3d-models/none-6206d1ddcc1b4c1288ba75d521b29b83
+Licencia: Creative Commons Attribution 4.0 International (CC BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+Cambios: solo el exterior (sin interior), menos polígonos en ruedas, molduras y luces, sin texturas ni coordenadas
+de textura, matrícula europea lisa en lugar de la original, llantas en gris metalizado, y cada pieza con su posición
+aplicada (las puertas y el portón siguen siendo piezas sueltas para abrirlas). Los colores los pone la app.
+
+Leapmotor y C10 son marcas de sus dueños; este proyecto no está asociado a Leapmotor.
