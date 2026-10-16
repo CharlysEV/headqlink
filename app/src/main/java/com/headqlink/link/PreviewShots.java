@@ -40,6 +40,7 @@ final class PreviewShots {
             // Estado: datos reales del coche (la nube de Leapmotor; en la demostración, inventados).
             new Shot("coche_estado", "car-5", 300, 1800),
             new Shot("partida_ruta", "car-0-partida", 300, 1800),
+            new Shot("partida_ruta_sin_destino", "car-0-partida", 30, 1500, "sin_ruta"),
             new Shot("partida_conduccion", "car-1-partida", 572, 1800),
             new Shot("partida_viajes", "car-2-partida", 600, 1800),
             new Shot("partida_instrumentos", "car-3-partida", 408.6, 1800),

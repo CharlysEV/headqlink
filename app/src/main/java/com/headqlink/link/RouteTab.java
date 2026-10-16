@@ -130,8 +130,11 @@ final class RouteTab implements CarScreen {
             ridgePaths[i] = new Path();
         }
 
+        boolean narrow = CarKit.narrow;
+        narrowUi = narrow;
         LinearLayout row = CarKit.row(ctx);
-        routeCard = CarKit.add(row, new CarKit.Card(ctx, null, this::paintRoute), 1.95f, 0);
+        routeCard = new CarKit.Card(ctx, null, this::paintRoute);
+        if (!narrow) CarKit.add(row, routeCard, 1.95f, 0);
         // Destino elegido aquí (AA no nos manda el suyo): buscar, abrir en Google Maps, quitar.
         LinearLayout actions = CarKit.row(ctx);
         actionsRow = actions;
@@ -158,7 +161,7 @@ final class RouteTab implements CarScreen {
         actions.addView(clear, spaced());
         // Con la interfaz reducida (T03) los botones, más grandes, pueden no caber en la tarjeta: la fila se desplaza.
         actionsHost = actions;
-        if (CarStyle.scaled()) {
+        if (CarStyle.scaled() || narrow) {
             android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(ctx);
             hs.setHorizontalScrollBarEnabled(false);
             hs.addView(actions);
@@ -208,7 +211,7 @@ final class RouteTab implements CarScreen {
         actions.addView(liveShow, 0);
         actionsHost.bringToFront();
 
-        LinearLayout right = CarKit.add(row, CarKit.col(ctx), 1f, 0);
+        LinearLayout right = narrow ? CarKit.col(ctx) : CarKit.add(row, CarKit.col(ctx), 1f, 0);
         batteryCard = CarKit.add(right, new CarKit.Card(ctx, Str.get(R.string.hql_battery_arrival), this::paintBattery), 0, 290);
         // Batería: el usuario indica el % actual (hasta tener datos del coche).
         LinearLayout ctl = CarKit.row(ctx);
@@ -257,7 +260,7 @@ final class RouteTab implements CarScreen {
         updateFilterSummary();
 
         running = true;
-        root = CarKit.page(ctx, row);
+        root = CarKit.page(ctx, narrow ? narrowLayout(right, ch) : row);
         tick();
         String pq = previewQuery;
         if (pq != null) {
@@ -810,10 +813,15 @@ final class RouteTab implements CarScreen {
     /** Botón grande (Casa, Trabajo, Guardados). */
     private TextView bigPill(String text) {
         TextView t = CarKit.pill(ctx, text, false);
-        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 28);
-        t.setPadding(36, 18, 36, 18);
+        // Pantalla partida: algo más pequeños para que Casa, Trabajo y Guardados quepan en la fila.
+        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, narrowUi ? 24 : 28);
+        if (narrowUi) t.setPadding(26, 16, 26, 16);
+        else t.setPadding(36, 18, 36, 18);
         return t;
     }
+
+    /** La pestaña está en la pantalla partida (CarKit.narrow al crearla). */
+    private boolean narrowUi;
 
     /** Un aviso corto abajo en el centro (2,5 s). */
     private void flash(String text) {
@@ -1602,6 +1610,26 @@ final class RouteTab implements CarScreen {
         View[] ref = new View[1];
         ref[0] = RouteMap.panel(ctx, planner, pl, chargePlan, () -> root.removeView(ref[0]));
         root.addView(ref[0], new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    /**
+     * Pantalla partida: arriba el destino (media pestaña, a lo ancho); debajo, Batería al llegar y Cargadores en ruta
+     * lado a lado (tocar Cargadores abre su lista a toda la pestaña). El tiempo al llegar va dentro del destino.
+     */
+    private View narrowLayout(LinearLayout right, CarKit.Card ch) {
+        right.removeAllViews();
+        int h = Math.max(400, CarKit.pageH - 6 - CarKit.PAD);
+        int top = (h - CarKit.GAP) / 2;
+        LinearLayout list = new LinearLayout(ctx);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.addView(routeCard, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, top));
+        LinearLayout bottom = CarKit.keep(CarKit.row(ctx));
+        CarKit.add(bottom, batteryCard, 1f, 0);
+        CarKit.add(bottom, ch, 1f, 0);
+        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h - top - CarKit.GAP);
+        bp.topMargin = CarKit.GAP;
+        list.addView(bottom, bp);
+        return list;
     }
 
     /**
@@ -2537,6 +2565,11 @@ final class RouteTab implements CarScreen {
                         Paint.Align.LEFT);
             }
         }
+        // Pantalla partida (la tarjeta es media pestaña): sin perfil (se ve entero en «Mapa»); abajo, el tiempo al llegar.
+        if (r.height() < 420) {
+            weatherLine(cv, pl, x0, r.right, r.bottom - 6, p);
+            return;
+        }
         // Perfil, viento, tramos y leyenda.
         float gx0 = x0 + 74;
         RectF chart = chartRect;
@@ -2877,19 +2910,23 @@ final class RouteTab implements CarScreen {
 
     private void paintBattery(Canvas cv, RectF r, Paint p) {
         double arr = arrivalPct();
-        float rad = Math.min(r.height() / 2f, 98) - 4;
+        // Tarjeta estrecha (pantalla partida): el aro más pequeño arriba y el estado debajo, a todo el ancho.
+        boolean small = r.width() < 420;
+        float rad = small ? Math.min(66, r.height() / 2f - 4) : Math.min(r.height() / 2f, 98) - 4;
         float cx = r.left + rad + 4;
-        float cy = r.top + r.height() / 2f;
+        float cy = small ? r.top + rad + 4 : r.top + r.height() / 2f;
         tmp.set(cx - rad, cy - rad, cx + rad, cy + rad);
         int col = Double.isNaN(arr) ? CarKit.MUTED : levelColor(arr);
         CarKit.ring(cv, tmp, 135, 270, Double.isNaN(arr) ? 0 : (float) Math.max(0, arr) / 100f, 18, CarKit.SURFACE_TOP, col, p);
         if (Double.isNaN(arr)) {
             CarKit.text(cv, "—", cx, cy + 16, 50, CarKit.MUTED, CarKit.REGULAR, p, Paint.Align.CENTER);
         } else {
-            CarKit.number(cv, String.format(Locale.getDefault(), "%.0f", Math.max(0, arr)), "%", cx, cy + 18, 56, col, CarKit.REGULAR, p, Paint.Align.CENTER);
+            CarKit.number(cv, String.format(Locale.getDefault(), "%.0f", Math.max(0, arr)), "%", cx, cy + (small ? 14 : 18),
+                    small ? 44 : 56, col, CarKit.REGULAR, p, Paint.Align.CENTER);
         }
-        CarKit.text(cv, Str.get(R.string.hql_route_on_arrival), cx, cy + rad - 6, 19, CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.CENTER);
-        float tx = cx + rad + 30;
+        CarKit.text(cv, Str.get(R.string.hql_route_on_arrival), cx, cy + rad - 6, small ? 17 : 19, CarKit.FAINT, CarKit.MEDIUM, p,
+                Paint.Align.CENTER);
+        float tx = cx + rad + (small ? 24 : 30);
         float lw = CarKit.label(cv, Str.get(R.string.hql_now), tx, r.top + 18, p);
         // De dónde sale: el dato real del coche (con su edad) o la estimación desde el % indicado.
         if (!Double.isNaN(soc)) {
@@ -2929,7 +2966,23 @@ final class RouteTab implements CarScreen {
         statusPara.color(sc);
         // Con los botones ±5 debajo, dos líneas como mucho (la tercera caía encima de ellos).
         statusPara.maxLines(socControls.getVisibility() == View.VISIBLE ? 2 : 3);
-        statusPara.draw(cv, st, tx, r.top + 86, (int) (r.right - tx), false);
+        if (small) statusPara.draw(cv, st, r.left, cy + rad + 14, (int) r.width(), false);
+        else statusPara.draw(cv, st, tx, r.top + 86, (int) (r.right - tx), false);
+    }
+
+    /** El tiempo al llegar en una línea (pantalla partida, dentro de la tarjeta del destino); y: la base del texto. */
+    private void weatherLine(Canvas cv, RoutePlanner.Plan pl, float x, float right, float y, Paint p) {
+        if (pl == null || Double.isNaN(pl.destTemp)) return;
+        float lw = CarKit.label(cv, Str.get(R.string.hql_route_weather), x, y - 8, p);
+        CarIcons.weather(cv, pl.destCode, x + lw + 34, y - 15, 42, p);
+        float tx = x + lw + 64;
+        float w = CarKit.number(cv, String.format(Locale.getDefault(), "%.0f", pl.destTemp), "°C", tx, y, 32, CarKit.TEXT, CarKit.REGULAR,
+                p, Paint.Align.LEFT);
+        String more = weatherText(pl.destCode) + " · " + Str.get(R.string.hql_wind_rain, pl.destWind, pl.destRain);
+        p.setTypeface(CarKit.MEDIUM);
+        p.setTextSize(21);
+        CarKit.text(cv, CarKit.ellipsize(more, right - tx - w - 16, p), tx + w + 16, y - 4, 21, CarKit.DIM, CarKit.MEDIUM, p,
+                Paint.Align.LEFT);
     }
 
     private void paintWeather(Canvas cv, RectF r, Paint p) {

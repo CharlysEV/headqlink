@@ -56,12 +56,28 @@ final class InstrumentsScreen implements CarScreen {
         Context c = h.context();
         sensors = CarSensors.start(c);
         road = RoadInfo.start(c);
-        LinearLayout top = CarKit.row(c);
-        speedCard = CarKit.add(top, new CarKit.Card(c, Str.get(R.string.hql_speed), this::paintSpeed), 1.15f, 0);
-        gCard = CarKit.add(top, new CarKit.Card(c, Str.get(R.string.hql_gforce), this::paintG), 1.15f, 0);
-        LinearLayout right = CarKit.add(top, CarKit.col(c), 0.9f, 0);
-        inclCard = CarKit.add(right, new CarKit.Card(c, Str.get(R.string.hql_inclination), this::paintIncl), 1f, 0);
-        smoothCard = CarKit.add(right, new CarKit.Card(c, Str.get(R.string.hql_smoothness), this::paintSmooth), 0.8f, 0);
+        LinearLayout top;
+        speedCard = new CarKit.Card(c, Str.get(R.string.hql_speed), this::paintSpeed);
+        gCard = new CarKit.Card(c, Str.get(R.string.hql_gforce), this::paintG);
+        inclCard = new CarKit.Card(c, Str.get(R.string.hql_inclination), this::paintIncl);
+        smoothCard = new CarKit.Card(c, Str.get(R.string.hql_smoothness), this::paintSmooth);
+        if (CarKit.narrow) {
+            // Pantalla partida: los cuatro en una cuadrícula de 2 × 2 que cabe entera, sin desplazarse.
+            top = CarKit.keep(CarKit.col(c));
+            LinearLayout r1 = CarKit.add(top, CarKit.row(c), 1f, 0);
+            LinearLayout r2 = CarKit.add(top, CarKit.row(c), 1f, 0);
+            CarKit.add(r1, speedCard, 1f, 0);
+            CarKit.add(r1, gCard, 1f, 0);
+            CarKit.add(r2, inclCard, 1f, 0);
+            CarKit.add(r2, smoothCard, 1f, 0);
+        } else {
+            top = CarKit.row(c);
+            CarKit.add(top, speedCard, 1.15f, 0);
+            CarKit.add(top, gCard, 1.15f, 0);
+            LinearLayout right = CarKit.add(top, CarKit.col(c), 0.9f, 0);
+            CarKit.add(right, inclCard, 1f, 0);
+            CarKit.add(right, smoothCard, 0.8f, 0);
+        }
         // «Reiniciar viaje», en la fila del título del velocímetro.
         TextView reset = CarKit.pill(c, Str.get(R.string.hql_reset_trip), false);
         speedCard.setClipToPadding(false);
@@ -105,12 +121,24 @@ final class InstrumentsScreen implements CarScreen {
 
     // ------------------------------------------------------------------ velocímetro
 
+    /** Cuadro pequeño (la cuadrícula de 2 × 2 de la pantalla partida): cada instrumento se dibuja a su medida. */
+    static boolean compact(RectF r) {
+        return r.width() < COMPACT_W;
+    }
+
+    static final int COMPACT_W = 420;
+    /** Alto de las fichas de abajo en el cuadro pequeño. */
+    private static final int CHIP_SMALL = 88;
+
     private void paintSpeed(Canvas cv, RectF r, Paint p) {
+        boolean small = compact(r);
         float cx = r.centerX();
-        float rad = Math.min(r.width(), r.height()) / 2f - 18;
-        float cy = r.top + rad + 18;
+        float stroke = small ? 14 : 26;
+        // Pequeño: la esfera entera por encima de las fichas (su parte de abajo, abierta, baja 0,71 radios).
+        float rad = small ? Math.min(r.width() / 2f - 30, (r.height() - CHIP_SMALL - 10 - stroke) / 1.71f)
+                : Math.min(r.width(), r.height()) / 2f - 18;
+        float cy = small ? r.top + rad + stroke / 2 + 2 : r.top + rad + 18;
         oval.set(cx - rad, cy - rad, cx + rad, cy + rad);
-        float stroke = 26;
         float segSweep = 270f / SEGMENTS;
         float lit = speedFrac * SEGMENTS;
         p.setStyle(Paint.Style.STROKE);
@@ -134,9 +162,9 @@ final class InstrumentsScreen implements CarScreen {
         // Escala.
         for (int v = 0; v <= MAX_KMH; v += 30) {
             double a = Math.toRadians(135 + 270 * v / MAX_KMH);
-            float lr = rad - stroke - 26;
-            CarKit.text(cv, String.valueOf(v), cx + (float) Math.cos(a) * lr, cy + (float) Math.sin(a) * lr + 8, 21,
-                    CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.CENTER);
+            float lr = rad - stroke - (small ? 15 : 26);
+            CarKit.text(cv, String.valueOf(v), cx + (float) Math.cos(a) * lr, cy + (float) Math.sin(a) * lr + (small ? 5 : 8),
+                    small ? 15 : 21, CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.CENTER);
         }
         // Límite de la vía (marca blanca) y máxima del viaje (marca roja), por fuera del arco.
         if (limit > 0) tick(cv, cx, cy, rad + stroke / 2 + 4, limit, CarKit.TEXT, p);
@@ -144,30 +172,38 @@ final class InstrumentsScreen implements CarScreen {
         String gpsNote = CarSensors.gpsNote(s);
         int color = gpsNote != null ? CarKit.MUTED : limit > 0 && s.speedKmh > limit * 1.1 + 2 ? CarKit.RED
                 : limit > 0 && s.speedKmh > limit + 2 ? CarKit.AMBER : CarKit.TEXT;
-        CarKit.text(cv, gpsNote != null ? "—" : String.format(Locale.getDefault(), "%.0f", s.speedKmh), cx, cy + 46, 136, color,
-                CarKit.REGULAR, p, Paint.Align.CENTER);
-        CarKit.text(cv, "km/h", cx, cy + 92, 28, CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.CENTER);
+        // Pequeño: la cifra cabe dentro de la escala (no la tapa).
+        float big = small ? Math.max(34, rad * 0.46f) : 136;
+        CarKit.text(cv, gpsNote != null ? "—" : String.format(Locale.getDefault(), "%.0f", s.speedKmh), cx, cy + big * 0.34f, big,
+                color, CarKit.REGULAR, p, Paint.Align.CENTER);
+        CarKit.text(cv, "km/h", cx, cy + big * 0.34f + (small ? 24 : 46), small ? 17 : 28, CarKit.DIM, CarKit.MEDIUM, p,
+                Paint.Align.CENTER);
         String[] t = timer(s.timer);
-        if (!t[1].equals("—")) {
+        if (!small && !t[1].equals("—")) {
             CarKit.text(cv, Str.get(R.string.hql_timer_line, t[0], t[1]), cx, cy + rad * 0.71f + 64, 25, CarKit.ACCENT, CarKit.MEDIUM, p, Paint.Align.CENTER);
         }
         if (gpsNote != null) {
+            float ns = small ? 17 : 22;
             p.setTypeface(CarKit.REGULAR);
-            p.setTextSize(22);
-            CarKit.text(cv, CarKit.ellipsize(gpsNote, rad * 1.9f, p), cx, cy + rad * 0.86f, 22, CarKit.RED, CarKit.REGULAR, p,
-                    Paint.Align.CENTER);
+            p.setTextSize(ns);
+            CarKit.text(cv, CarKit.ellipsize(gpsNote, rad * 1.9f, p), cx, cy + rad * (small ? 0.78f : 0.86f), ns, CarKit.RED,
+                    CarKit.REGULAR, p, Paint.Align.CENTER);
         }
         // Fichas del viaje: distancia (y tiempo), media y máxima.
         double avg = s.tripSec > 60 ? s.tripKm / (s.tripSec / 3600.0) : Double.NaN;
-        float first = r.width() * 0.36f;
-        float cw = (r.width() - first - 2 * 14) / 2f;
-        float top = r.bottom - 92;
+        // Pequeño: sin «km/h» en media y máxima (no cabe; la esfera ya lo dice), el viaje sin su duración.
+        float gap = small ? 10 : 14;
+        float first = r.width() * (small ? 0.42f : 0.36f);
+        float cw = (r.width() - first - 2 * gap) / 2f;
+        float top = r.bottom - (small ? CHIP_SMALL : 92);
+        String speedUnit = small ? "" : "km/h";
         tmp.set(r.left, top, r.left + first, r.bottom);
-        CarKit.chip(cv, tmp, Str.get(R.string.hql_trip) + " · " + DriveTab.duration(s.tripSec), String.format(Locale.getDefault(), "%.1f", s.tripKm), "km", CarKit.TEXT, p);
-        tmp.set(tmp.right + 14, top, tmp.right + 14 + cw, r.bottom);
-        CarKit.chip(cv, tmp, Str.get(R.string.hql_avg), Double.isNaN(avg) ? "—" : String.format(Locale.getDefault(), "%.0f", avg), "km/h", CarKit.TEXT, p);
-        tmp.offset(cw + 14, 0);
-        CarKit.chip(cv, tmp, Str.get(R.string.hql_max), String.format(Locale.getDefault(), "%.0f", s.maxSpeedKmh), "km/h", CarKit.TEXT, p);
+        CarKit.chip(cv, tmp, small ? Str.get(R.string.hql_trip) : Str.get(R.string.hql_trip) + " · " + DriveTab.duration(s.tripSec),
+                String.format(Locale.getDefault(), "%.1f", s.tripKm), "km", CarKit.TEXT, p);
+        tmp.set(tmp.right + gap, top, tmp.right + gap + cw, r.bottom);
+        CarKit.chip(cv, tmp, Str.get(R.string.hql_avg), Double.isNaN(avg) ? "—" : String.format(Locale.getDefault(), "%.0f", avg), speedUnit, CarKit.TEXT, p);
+        tmp.offset(cw + gap, 0);
+        CarKit.chip(cv, tmp, Str.get(R.string.hql_max), String.format(Locale.getDefault(), "%.0f", s.maxSpeedKmh), speedUnit, CarKit.TEXT, p);
     }
 
     /** Del texto del cronómetro ("0-50 km/h: 8,1 s · 0-100 km/h: 9,9 s"), el último tramo: {nombre, segundos}. */
@@ -204,9 +240,13 @@ final class InstrumentsScreen implements CarScreen {
     // ------------------------------------------------------------------ fuerzas G
 
     private void paintG(Canvas cv, RectF r, Paint p) {
-        float cx = r.centerX();
-        float rad = Math.min(r.width() / 2f - 14, (r.height() - 130) / 2f - 34);
-        float cy = r.top + rad + 30;
+        boolean small = compact(r);
+        // Pequeño: el radar grande a la izquierda y las dos fichas una encima de otra a la derecha.
+        float chipW = small ? Math.max(110, r.width() * 0.32f) : 0;
+        float cx = small ? r.left + (r.width() - chipW - 12) / 2f : r.centerX();
+        float rad = small ? Math.min((r.width() - chipW - 12) / 2f - 6, r.height() / 2f - 30)
+                : Math.min(r.width() / 2f - 14, (r.height() - 130) / 2f - 34);
+        float cy = small ? r.centerY() : r.top + rad + 30;
         float scale = rad / MAX_G;
         p.setStyle(Paint.Style.STROKE);
         p.setStrokeWidth(2);
@@ -218,15 +258,20 @@ final class InstrumentsScreen implements CarScreen {
         cv.drawLine(cx - rad, cy, cx + rad, cy, p);
         cv.drawLine(cx, cy - rad, cx, cy + rad, p);
         p.setStyle(Paint.Style.FILL);
-        for (float g = 0.2f; g <= MAX_G + 0.01f; g += 0.2f) {
-            CarKit.text(cv, String.format(Locale.getDefault(), "%.1f", g), cx + g * scale * 0.71f + 6, cy - g * scale * 0.71f - 6, 17,
-                    CarKit.MUTED, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        // Pequeño: sin las cifras de los aros ni los lados (se montan); frenada arriba y aceleración abajo sí.
+        if (!small) {
+            for (float g = 0.2f; g <= MAX_G + 0.01f; g += 0.2f) {
+                CarKit.text(cv, String.format(Locale.getDefault(), "%.1f", g), cx + g * scale * 0.71f + 6, cy - g * scale * 0.71f - 6, 17,
+                        CarKit.MUTED, CarKit.MEDIUM, p, Paint.Align.LEFT);
+            }
         }
         // Ejes: arriba frenada (el cuerpo va hacia delante), abajo aceleración, a los lados la curva.
         CarKit.label(cv, Str.get(R.string.hql_braking), cx, cy - rad - 10, CarKit.FAINT, p, Paint.Align.CENTER);
         CarKit.label(cv, Str.get(R.string.hql_acceleration), cx, cy + rad + 26, CarKit.FAINT, p, Paint.Align.CENTER);
-        CarKit.label(cv, Str.get(R.string.hql_left_short), cx - rad + 10, cy - 12, CarKit.FAINT, p, Paint.Align.LEFT);
-        CarKit.label(cv, Str.get(R.string.hql_right_short), cx + rad - 10, cy - 12, CarKit.FAINT, p, Paint.Align.RIGHT);
+        if (!small) {
+            CarKit.label(cv, Str.get(R.string.hql_left_short), cx - rad + 10, cy - 12, CarKit.FAINT, p, Paint.Align.LEFT);
+            CarKit.label(cv, Str.get(R.string.hql_right_short), cx + rad - 10, cy - 12, CarKit.FAINT, p, Paint.Align.RIGHT);
+        }
         // Picos del viaje: marcas en los ejes con su valor.
         peak(cv, cx, cy - (float) clamp(s.maxBrakeG) * scale, s.maxBrakeG, 0, p);
         peak(cv, cx, cy + (float) clamp(s.maxAccelG) * scale, s.maxAccelG, 2, p);
@@ -259,11 +304,20 @@ final class InstrumentsScreen implements CarScreen {
         float dx = cx - (float) clamp(s.latG) * scale;
         float dy = cy + (float) clamp(s.longG) * scale;
         p.setColor(CarKit.alpha(CarKit.ACCENT, 0.22f));
-        cv.drawCircle(dx, dy, 30, p);
+        cv.drawCircle(dx, dy, small ? 20 : 30, p);
         p.setColor(CarKit.ACCENT);
-        cv.drawCircle(dx, dy, 16, p);
+        cv.drawCircle(dx, dy, small ? 11 : 16, p);
         double total = Math.hypot(s.latG, s.longG);
         double peak = Math.max(Math.max(s.maxBrakeG, s.maxAccelG), Math.max(s.maxLeftG, s.maxRightG));
+        if (small) {
+            float ch = Math.min(92, (r.height() - 12) / 2f);
+            float y0 = r.centerY() - ch - 6;
+            tmp.set(r.right - chipW, y0, r.right, y0 + ch);
+            CarKit.chip(cv, tmp, Str.get(R.string.hql_now), String.format(Locale.getDefault(), "%.2f", total), "g", CarKit.ACCENT, p);
+            tmp.offset(0, ch + 12);
+            CarKit.chip(cv, tmp, Str.get(R.string.hql_peak), String.format(Locale.getDefault(), "%.2f", peak), "g", CarKit.AMBER, p);
+            return;
+        }
         float cw = (r.width() - 14) / 2f;
         tmp.set(r.left, r.bottom - 92, r.left + cw, r.bottom);
         CarKit.chip(cv, tmp, Str.get(R.string.hql_now), String.format(Locale.getDefault(), "%.2f", total), "g", CarKit.ACCENT, p);
@@ -373,6 +427,10 @@ final class InstrumentsScreen implements CarScreen {
 
     private void paintSmooth(Canvas cv, RectF r, Paint p) {
         int score = s.smoothScore;
+        if (compact(r)) {
+            paintSmoothSmall(cv, r, score, p);
+            return;
+        }
         float rad = Math.min(r.height() / 2f - 8, 80);
         float cx = r.left + rad + 6;
         float cy = r.centerY();
@@ -394,6 +452,34 @@ final class InstrumentsScreen implements CarScreen {
         }
         // Tarjeta estrecha (pantalla partida): el consejo no cabe sin partir palabras; se queda el aro y la nota.
         if (tw >= 170) how.draw(cv, Str.get(R.string.hql_smooth_how), tx, r.top + 98, tw, false);
+    }
+
+    /** Cuadro pequeño: el aro centrado arriba y, debajo, la nota y los últimos 30 s. */
+    private void paintSmoothSmall(Canvas cv, RectF r, int score, Paint p) {
+        float rad = Math.min(r.width() / 2f - 10, (r.height() - 74) / 1.71f);
+        float cx = r.centerX();
+        float cy = r.top + rad + 8;
+        oval.set(cx - rad, cy - rad, cx + rad, cy + rad);
+        int color = score >= 85 ? CarKit.GREEN : score >= 70 ? CarKit.ACCENT : score >= 50 ? CarKit.AMBER : CarKit.RED;
+        CarKit.ring(cv, oval, 135, 270, score < 0 ? 0 : score / 100f, 14, CarKit.SURFACE_TOP, color, p);
+        float big = Math.max(40, rad * 0.6f);
+        CarKit.text(cv, score < 0 ? "—" : String.valueOf(score), cx, cy + big * 0.34f, big, score < 0 ? CarKit.MUTED : CarKit.TEXT,
+                CarKit.REGULAR, p, Paint.Align.CENTER);
+        float y = cy + rad * 0.71f + 34;
+        if (score < 0) {
+            p.setTypeface(CarKit.REGULAR);
+            p.setTextSize(21);
+            CarKit.text(cv, CarKit.ellipsize(Str.get(R.string.hql_smooth_wait), r.width(), p), cx, y, 21, CarKit.DIM,
+                    CarKit.REGULAR, p, Paint.Align.CENTER);
+            return;
+        }
+        int word = score >= 85 ? R.string.hql_smooth_excellent : score >= 70 ? R.string.hql_smooth_good
+                : score >= 50 ? R.string.hql_smooth_fair : R.string.hql_smooth_rough;
+        CarKit.text(cv, Str.get(word), cx, y, 28, color, CarKit.MEDIUM, p, Paint.Align.CENTER);
+        if (s.smoothRecent >= 0) {
+            CarKit.text(cv, Str.get(R.string.hql_smooth_recent, s.smoothRecent), cx, y + 30, 21, CarKit.DIM, CarKit.REGULAR, p,
+                    Paint.Align.CENTER);
+        }
     }
 
 }

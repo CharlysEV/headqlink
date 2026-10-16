@@ -419,6 +419,12 @@ final class CarKit {
         return grid;
     }
 
+    /** La rejilla se queda como está también en la pantalla estrecha (la pestaña ya la hizo a su medida). */
+    static <T extends View> T keep(T grid) {
+        GRID.remove(grid);
+        return grid;
+    }
+
     /** Añade v a l con peso (0: tamaño fijo size) y el hueco antes si no es el primero. */
     static <T extends View> T add(LinearLayout l, T v, float weight, int size) {
         boolean horiz = l.getOrientation() == LinearLayout.HORIZONTAL;
