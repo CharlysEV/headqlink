@@ -374,7 +374,7 @@ final class RoutePlanner {
     }
 
     String status() {
-        if (demo) return DemoMode.plan() == null ? noRoute() : "";
+        if (demo) return DemoMode.waitingGps ? Str.get(R.string.hql_waiting_gps) : DemoMode.plan() == null ? noRoute() : "";
         return status;
     }
 
@@ -496,7 +496,23 @@ final class RoutePlanner {
         }
         double oLat = origin != null ? origin.lat : s.lat;
         double oLon = origin != null ? origin.lon : s.lon;
+        if (Double.isNaN(oLat) && origin == null && !replan) {
+            // Sin GPS (en un garaje no llega): se sale de la última posición que conoce el móvil, que es donde está el coche.
+            double[] last = lastKnown(ctx);
+            if (last != null) {
+                oLat = last[0];
+                oLon = last[1];
+                if (!dest.equals(lastKnownFor)) {
+                    lastKnownFor = dest;
+                    L.i(String.format(Locale.US, "ruta: sin posición GPS; salgo de la última conocida del móvil (de hace %.0f min)", last[2]));
+                }
+            }
+        }
         if (Double.isNaN(oLat)) {
+            if (!dest.equals(waitingGpsFor)) {
+                waitingGpsFor = dest;
+                L.i("ruta: espero a la posición GPS para calcular (el móvil no sabe dónde está)");
+            }
             status = Str.get(R.string.hql_waiting_gps);
             return;
         }
@@ -564,6 +580,39 @@ final class RoutePlanner {
     }
 
     private long failRetryMs = 120_000;
+    /** Para decirlo una vez por destino en el log: salir de la última posición conocida / esperar al GPS. */
+    private String lastKnownFor;
+    private String waitingGpsFor;
+    /** La última posición que vale para salir sin GPS: de las últimas 12 h. */
+    static final long LAST_KNOWN_MAX_MS = 12 * 3600_000L;
+
+    /**
+     * La última posición conocida del móvil (GPS, red o la fusionada), la más reciente, si es de las últimas 12 h:
+     * {lat, lon, minutos}; null si no hay o no hay permiso.
+     */
+    static double[] lastKnown(Context c) {
+        try {
+            android.location.LocationManager lm = c.getSystemService(android.location.LocationManager.class);
+            if (lm == null) return null;
+            android.location.Location best = null;
+            for (String prov : new String[]{"fused", android.location.LocationManager.GPS_PROVIDER,
+                    android.location.LocationManager.NETWORK_PROVIDER}) {
+                android.location.Location l;
+                try {
+                    l = lm.getLastKnownLocation(prov);
+                } catch (IllegalArgumentException | SecurityException e) {
+                    continue;
+                }
+                if (l != null && (best == null || l.getTime() > best.getTime())) best = l;
+            }
+            if (best == null) return null;
+            long age = System.currentTimeMillis() - best.getTime();
+            if (age > LAST_KNOWN_MAX_MS || age < -60_000) return null;
+            return new double[]{best.getLatitude(), best.getLongitude(), Math.max(0, age) / 60_000.0};
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
 
     static boolean noNetwork(Throwable e) {
         return e instanceof java.net.UnknownHostException || e instanceof java.net.ConnectException

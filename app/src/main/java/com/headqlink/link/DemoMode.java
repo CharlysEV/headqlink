@@ -127,10 +127,11 @@ final class DemoMode {
      * Ruta y Conducción vacías), "sin_viajes" (la pestaña Viajes sin viajes guardados), "sin_nube" (sin cuenta de
      * Leapmotor: todo estimado y Estado vacío), "cargando" (el coche cargando en un cargador rápido), "reev" (un C10
      * de autonomía extendida, con su depósito de gasolina) o "replan" (se gasta más de lo previsto: el plan de carga
-     * cambia y avisa).
+     * cambia y avisa) o "esperando_gps" (destino elegido y la ruta aún sin calcular: el móvil sin posición).
      */
     static void applyState(String state) {
         if (drive == null) return;
+        waitingGps = "esperando_gps".equals(state);
         place = "sin_ruta".equals(state) ? null : defaultPlace;
         trips = "sin_viajes".equals(state) ? new ArrayList<>() : defaultTrips;
         cloudState = "sin_nube".equals(state) || "cargando".equals(state) ? state : "";
@@ -298,9 +299,12 @@ final class DemoMode {
     }
 
     /** Ruta de la demostración con la posición actual, o null si el usuario quitó el destino. */
+    /** Estado "esperando_gps": hay destino pero no ruta. */
+    static volatile boolean waitingGps;
+
     static RoutePlanner.Plan plan() {
         RoutePlanner.Plan p = plan;
-        if (p == null || place == null) return null;
+        if (p == null || place == null || waitingGps) return null;
         p.progress = (int) Math.max(0, Math.min(p.n - 1, Math.round(routeKm() / p.totalKm * (p.n - 1))));
         return p;
     }

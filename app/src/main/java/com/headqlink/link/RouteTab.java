@@ -160,11 +160,10 @@ final class RouteTab implements CarScreen {
         actions.addView(goMaps, spaced());
         actions.addView(clear, spaced());
         // Pantalla partida: botones más pequeños (deja sitio al perfil de la ruta).
-        if (narrow) {
-            for (TextView t : new TextView[]{search, goMaps, clear, originPill, tripPill, mapPill}) {
-                t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 20);
-                t.setPadding(20, 8, 20, 8);
-            }
+        for (TextView t : new TextView[]{search, goMaps, clear, originPill, tripPill, mapPill}) {
+            t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, narrow ? 19 : 21);
+            if (narrow) t.setPadding(18, 8, 18, 8);
+            else t.setPadding(22, 11, 22, 11);
         }
         // Con la interfaz reducida (T03) los botones, más grandes, pueden no caber en la tarjeta: la fila se desplaza.
         actionsHost = actions;
@@ -789,7 +788,7 @@ final class RouteTab implements CarScreen {
             String tt = Str.get(R.string.hql_pl_trip) + (nv > 0 ? " · " + nv : "") + (RoutePlanner.roundTrip() ? " ⇄" : "");
             if (!tt.contentEquals(tripPill.getText())) tripPill.setText(tt);
         }
-        updateQuick(!have);
+        updateQuick(!have && !manual);
         String mj = new Config(ctx).chargerMarks();
         if (!mj.equals(marksJson)) {
             marksJson = mj;
@@ -797,8 +796,8 @@ final class RouteTab implements CarScreen {
             shownChargersFor = -1;
         }
         mapPill.setVisibility(have ? View.VISIBLE : View.GONE);
-        cta.setVisibility(have ? View.GONE : View.VISIBLE);
-        search.setVisibility(have ? View.VISIBLE : View.GONE);
+        cta.setVisibility(have || manual ? View.GONE : View.VISIBLE);
+        search.setVisibility(have || manual ? View.VISIBLE : View.GONE);
         routeCard.invalidate();
         batteryCard.invalidate();
         weatherCard.invalidate();
@@ -827,9 +826,9 @@ final class RouteTab implements CarScreen {
     private TextView bigPill(String text) {
         TextView t = CarKit.pill(ctx, text, false);
         // Pantalla partida: algo más pequeños para que Casa, Trabajo y Guardados quepan en la fila.
-        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, narrowUi ? 24 : 28);
-        if (narrowUi) t.setPadding(26, 16, 26, 16);
-        else t.setPadding(36, 18, 36, 18);
+        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, narrowUi ? 21 : 25);
+        if (narrowUi) t.setPadding(20, 11, 20, 11);
+        else t.setPadding(28, 14, 28, 14);
         return t;
     }
 
@@ -2934,6 +2933,19 @@ final class RouteTab implements CarScreen {
     /** Sin ruta: un camino que sube hasta la chincheta, la pregunta y el estado (calculando, error…). */
     private void paintEmpty(Canvas cv, RectF r, Paint p, String dest) {
         float cx = r.centerX();
+        if (dest != null) {
+            // Destino elegido, ruta en camino: cuál y qué pasa (calculando, esperando al GPS, sin red…).
+            boolean small = r.height() < 420;
+            float y = r.centerY() + (small ? 10 : 0);
+            CarIcons.pin(cv, cx, y - (small ? 62 : 90), small ? 40 : 56, CarKit.ACCENT, CarKit.SURFACE, p);
+            float size = small ? 30 : 40;
+            p.setTypeface(CarKit.MEDIUM);
+            p.setTextSize(size);
+            CarKit.text(cv, CarKit.ellipsize(dest, r.width() - 40, p), cx, y, size, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.CENTER);
+            String msg = status.isEmpty() ? Str.get(R.string.hql_calculating) : status;
+            para.draw(cv, msg, r.left + 40, y + 22, (int) r.width() - 80, true);
+            return;
+        }
         float top = r.top + 70;
         road.rewind();
         road.moveTo(cx - 230, top + 230);
