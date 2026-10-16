@@ -448,8 +448,10 @@ final class LinkLifecycle {
                 return d.why("Bluetooth del coche fuera con la sesión en marcha: sigo (se cierra si el coche se va)");
             case GRACE:
             case PARKED:
-                // Apagar el coche se lleva el Bluetooth y la sesión a la vez: justo lo que cubre «Esperar al coche».
-                return d.why("Bluetooth del coche fuera: sigo esperando al coche " + dur(Math.max(0, closeAt - now)) + " más");
+                // Sin sesión y sin el Bluetooth del coche: el coche se ha cerrado (con el coche encendido el Bluetooth no se
+                // va). Se cierra todo ya, en vez de esperar los minutos de «Esperar al coche» con el juego o la radio sonando.
+                close();
+                return d.add(Action.SHUTDOWN).why("Bluetooth del coche fuera sin sesión: el coche se ha cerrado; cierro todo");
             default:
                 return d;
         }

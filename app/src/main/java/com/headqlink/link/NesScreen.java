@@ -515,6 +515,7 @@ final class NesScreen {
         NesInput.watch(c);
         CarUi.gameDrawing(true);
         host.setContent(game(GameConsole.title(e.name), resume));
+        playing = this;
         engine.start();
         // El mando Bluetooth: las teclas llegan por la accesibilidad; la cruceta y el stick (ejes) solo con una pantalla de
         // HeadQLink delante en el móvil. En el coche virtual ya lo está (CarSimActivity los pasa); con el coche de verdad,
@@ -774,7 +775,23 @@ final class NesScreen {
         return t;
     }
 
+    /** El juego que está en marcha (para pausarlo sin coche). */
+    private static volatile NesScreen playing;
+
+    /**
+     * El coche se ha ido (se apagó, se cortó la conexión) o ha vuelto: el juego se pausa (imagen y sonido) y sigue al
+     * volver. Si el coche no vuelve, al cerrarse todo se guarda el estado como siempre.
+     */
+    static void carPresent(boolean present) {
+        NesScreen s = playing;
+        GameCore e = s != null ? s.engine : null;
+        if (e == null) return;
+        L.i("Juegos: " + (present ? "vuelve el coche: sigue el juego" : "sin coche: juego en pausa"));
+        e.setPaused(!present);
+    }
+
     void stopEngine() {
+        if (playing == this) playing = null;
         CarUi.gameDrawing(false);
         NesInput.removeListener(padsListener);
         padsListener = null;

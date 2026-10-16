@@ -219,18 +219,30 @@ class LinkLifecycleTest {
     }
 
     @Test
-    fun bluetoothGoneWhileWaitingForTheCarKeepsWaiting() {
-        // Apagar el coche se lleva el Bluetooth y la sesión: justo lo que cubre la espera.
+    fun bluetoothGoneWithASessionKeepsGoing() {
         connectedAt10s()
         assertTrue(life.btGone(50 * sec, aaLive()).actions().isEmpty())
+        assertEquals(Phase.CONNECTED, life.phase())
+    }
+
+    @Test
+    fun bluetoothGoneAfterLosingTheCarClosesEverything() {
+        // Sin sesión y sin el Bluetooth del coche: el coche se ha cerrado (no se espera a «Esperar al coche»).
+        connectedAt10s()
         life.carLost(100 * sec, aaLive(), grace, wait)
         val gone = life.btGone(101 * sec, aaLive())
-        assertTrue(gone.actions().isEmpty())
-        assertTrue(gone.reasons().any { it.contains("sigo esperando") })
-        assertEquals(Phase.GRACE, life.phase())
+        assertEquals(listOf(Action.SHUTDOWN), gone.actions())
+        assertTrue(gone.reasons().any { it.contains("cerrado") })
+        assertEquals(Phase.CLOSED, life.phase())
+    }
+
+    @Test
+    fun bluetoothGoneWhileParkedClosesEverything() {
+        connectedAt10s()
+        life.carLost(100 * sec, aaLive(), grace, wait)
         life.timer(130 * sec, aaLive())
-        assertTrue(life.btGone(140 * sec, aaLive().parked(true)).actions().isEmpty())
         assertEquals(Phase.PARKED, life.phase())
+        assertEquals(listOf(Action.SHUTDOWN), life.btGone(140 * sec, aaLive().parked(true)).actions())
     }
 
     @Test

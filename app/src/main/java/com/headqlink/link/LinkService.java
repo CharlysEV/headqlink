@@ -590,7 +590,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             // La sesión por Wi-Fi se ha cerrado con el motor (sin aviso): el vídeo sigue vivo para la del cable.
             setStatus(Str.get(R.string.hql_reconnecting));
             LinkState.setCar(LinkState.Car.RECONNECTING, "");
-            apply(life.carLost(now(), env(), graceMs(), cfg.carWaitMs()));
+            apply(carLostNow());
         }
     }
 
@@ -680,7 +680,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         if (qdWasConnected) {
             setStatus(Str.get(R.string.hql_reconnecting));
             LinkState.setCar(LinkState.Car.RECONNECTING, "");
-            apply(life.carLost(now(), env(), graceMs(), cfg.carWaitMs()));
+            apply(carLostNow());
         } else if (LinkState.car == LinkState.Car.SEEN) {
             setStatus(Str.get(R.string.hql_waiting_car));
             LinkState.setCar(LinkState.Car.SEARCHING, "");
@@ -741,7 +741,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
             // Si el tamaño del coche (CAR_INFO) ya llegó, se conserva.
             LinkState.setCar(LinkState.Car.CONNECTED, LinkState.car == LinkState.Car.CONNECTED ? LinkState.carDetail : "");
             setStatus(Str.get(R.string.hql_car_connected));
-            apply(life.carConnected(now(), env()));
+            apply(carConnectedNow());
         }
 
         @Override
@@ -761,7 +761,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                 setStatus(Str.get(R.string.hql_session_ended));
                 LinkState.setCar(LinkState.Car.SEARCHING, "");
             }
-            apply(life.carLost(now(), env(), graceMs(), cfg.carWaitMs()));
+            apply(carLostNow());
         }
 
         @Override
@@ -952,7 +952,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     @Override
     public void onSessionConnected(SspSession s) {
         LinkState.setCar(LinkState.Car.CONNECTED, "");
-        main.post(() -> apply(life.carConnected(now(), env())));
+        main.post(() -> apply(carConnectedNow()));
     }
 
     @Override
@@ -961,7 +961,7 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
         setStatus(Str.get(R.string.hql_session_ended));
         LinkState.setCar(LinkState.Car.SEARCHING, "");
         // El motor original se lleva el vídeo con la sesión: AA pasa a la pausa en el acto (sin vídeo vivo).
-        main.post(() -> apply(life.carLost(now(), env(), graceMs(), cfg.carWaitMs())));
+        main.post(() -> apply(carLostNow()));
     }
 
     /**
@@ -1191,4 +1191,17 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
     public IBinder onBind(Intent intent) {
         return null;
     }
+
+    /** Coche perdido: el juego que estuviera en marcha, en pausa (sin imagen ni sonido) hasta que vuelva. */
+    private LinkLifecycle.Decision carLostNow() {
+        NesScreen.carPresent(false);
+        return life.carLost(now(), env(), graceMs(), cfg.carWaitMs());
+    }
+
+    /** El coche (otra vez) en sesión: el juego en pausa por haberlo perdido sigue. */
+    private LinkLifecycle.Decision carConnectedNow() {
+        NesScreen.carPresent(true);
+        return life.carConnected(now(), env());
+    }
+
 }

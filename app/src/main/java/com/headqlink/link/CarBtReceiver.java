@@ -37,7 +37,10 @@ public final class CarBtReceiver extends BroadcastReceiver {
         UserManager um = ctx.getSystemService(UserManager.class);
         if (um != null && !um.isUserUnlocked()) return;
         Config cfg = new Config(ctx);
-        if (!cfg.btAutoConnect()) return;
+        // La desconexión del coche se escucha siempre (el coche se ha cerrado: LinkService cierra todo si no hay sesión);
+        // la conexión, solo con la conexión automática por Bluetooth.
+        boolean gone = BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action);
+        if (!cfg.btAutoConnect() && !(gone && LinkState.running)) return;
         BluetoothDevice dev;
         if (android.os.Build.VERSION.SDK_INT >= 33) {
             dev = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);

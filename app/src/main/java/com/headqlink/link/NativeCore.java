@@ -46,6 +46,8 @@ abstract class NativeCore implements GameCore {
     private Thread thread;
     private volatile boolean running;
     private volatile boolean resetPending;
+    private volatile boolean paused;
+    private boolean audioPaused;
     /** Guardado o carga de estado pendiente (lo hace el hilo del emulador entre dos fotogramas). */
     private final Object stateLock = new Object();
     private String statePath;
@@ -248,6 +250,13 @@ abstract class NativeCore implements GameCore {
     }
 
     @Override
+    public void setPaused(boolean p) {
+        if (paused == p) return;
+        paused = p;
+        L.i(name + ": " + (p ? "en pausa" : "sigue"));
+    }
+
+    @Override
     public void stop() {
         listener = null;
         running = false;
@@ -270,6 +279,37 @@ abstract class NativeCore implements GameCore {
         long frameNs = 1_000_000_000L / Math.max(1, consoleFps());
         long next = System.nanoTime();
         while (running) {
+            if (paused) {
+                // Ni fotogramas ni sonido; el reloj vuelve a empezar al quitar la pausa.
+                if (!audioPaused) {
+                    audioPaused = true;
+                    AudioTrack t = track;
+                    if (t != null) {
+                        try {
+                            t.pause();
+                            t.flush();
+                        } catch (IllegalStateException ignored) {
+                        }
+                    }
+                }
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    break;
+                }
+                next = System.nanoTime();
+                continue;
+            }
+            if (audioPaused) {
+                audioPaused = false;
+                AudioTrack t = track;
+                if (t != null) {
+                    try {
+                        t.play();
+                    } catch (IllegalStateException ignored) {
+                    }
+                }
+            }
             if (resetPending) {
                 resetPending = false;
                 nativeReset();

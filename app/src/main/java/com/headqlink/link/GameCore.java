@@ -35,6 +35,10 @@ interface GameCore {
     /** Para el emulador y guarda la partida del cartucho, si la tiene. */
     void stop();
 
+    /** En pausa: ni fotogramas ni sonido, hasta quitarla (sin coche, por ejemplo). */
+    default void setPaused(boolean paused) {
+    }
+
     String romInfo();
 
     /** Fin de un guardado o una carga de estado (en el hilo del emulador). */
