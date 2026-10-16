@@ -1091,7 +1091,7 @@ final class CarUi {
                 // "car-N" o "car-N-detalle" (Viajes con un viaje abierto) o "car-N-buscar" (Ruta con el buscador).
                 String[] parts = name.split("-", 3);
                 CarHubScreen.selectTab(Integer.parseInt(parts[1]));
-                if (parts.length > 2 && parts[2].equals("detalle")) TripsTab.previewDetail = true;
+                if (parts.length > 2 && parts[2].endsWith("detalle")) TripsTab.previewDetail = true;
                 if (parts.length > 2 && parts[2].equals("buscar")) RouteTab.previewQuery = "electrolinera";
                 // "car-N-partida": con la pantalla partida (AA a la izquierda); "…-cargadores": con su lista abierta.
                 if (parts.length > 2 && parts[2].endsWith("cargadores")) RouteTab.previewChargers = true;

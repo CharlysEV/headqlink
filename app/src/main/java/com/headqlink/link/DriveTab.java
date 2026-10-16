@@ -51,18 +51,48 @@ final class DriveTab implements CarScreen {
         road = RoadInfo.start(c);
         compass = Str.get(R.string.hql_compass_short).split(",");
 
-        LinearLayout row = CarKit.row(c);
-        turnCard = CarKit.add(row, new CarKit.Card(c, Str.get(R.string.hql_drive_navigation), this::paintTurn), 1.5f, 0);
-        LinearLayout right = CarKit.add(row, CarKit.col(c), 1f, 0);
-        speedCard = CarKit.add(right, new CarKit.Card(c, Str.get(R.string.hql_speed), this::paintSpeed), 0, 300);
-        headingCard = CarKit.add(right, new CarKit.Card(c, null, this::paintHeading), 0, 112);
-        LinearLayout pair = CarKit.add(right, CarKit.row(c), 0, 150);
-        altCard = CarKit.add(pair, new CarKit.Card(c, Str.get(R.string.hql_altitude), this::paintAltitude), 1f, 0);
-        slopeCard = CarKit.add(pair, new CarKit.Card(c, Str.get(R.string.hql_grade), this::paintSlope), 1f, 0);
-        sunCard = CarKit.add(right, new CarKit.Card(c, Str.get(R.string.hql_sun), this::paintSun), 1f, 0);
+        turnCard = new CarKit.Card(c, Str.get(R.string.hql_drive_navigation), this::paintTurn);
+        speedCard = new CarKit.Card(c, Str.get(R.string.hql_speed), this::paintSpeed);
+        headingCard = new CarKit.Card(c, null, this::paintHeading);
+        altCard = new CarKit.Card(c, Str.get(R.string.hql_altitude), this::paintAltitude);
+        slopeCard = new CarKit.Card(c, Str.get(R.string.hql_grade), this::paintSlope);
+        sunCard = new CarKit.Card(c, Str.get(R.string.hql_sun), this::paintSun);
+        LinearLayout top;
+        if (CarKit.narrow) {
+            // Pantalla partida: todo en una pantalla, sin deslizar. Navegación arriba, a lo ancho; Velocidad y Rumbo;
+            // Altitud, Pendiente y Sol.
+            top = CarKit.keep(CarKit.col(c));
+            CarKit.add(top, turnCard, 1f, 0);
+            LinearLayout r2 = CarKit.add(top, CarKit.row(c), 0, NARROW_ROW2_H);
+            CarKit.add(r2, speedCard, 1f, 0);
+            CarKit.add(r2, headingCard, 1f, 0);
+            LinearLayout r3 = CarKit.add(top, CarKit.row(c), 0, NARROW_ROW3_H);
+            CarKit.add(r3, altCard, 1f, 0);
+            CarKit.add(r3, slopeCard, 1f, 0);
+            CarKit.add(r3, sunCard, 1.5f, 0);
+        } else {
+            top = CarKit.row(c);
+            CarKit.add(top, turnCard, 1.5f, 0);
+            LinearLayout right = CarKit.add(top, CarKit.col(c), 1f, 0);
+            CarKit.add(right, speedCard, 0, 300);
+            CarKit.add(right, headingCard, 0, 112);
+            LinearLayout pair = CarKit.add(right, CarKit.row(c), 0, 150);
+            CarKit.add(pair, altCard, 1f, 0);
+            CarKit.add(pair, slopeCard, 1f, 0);
+            CarKit.add(right, sunCard, 1f, 0);
+        }
         running = true;
         tick();
-        return CarKit.page(c, row);
+        return CarKit.page(c, top);
+    }
+
+    /** Pantalla partida: alto de la fila de Velocidad y Rumbo y de la de Altitud, Pendiente y Sol. */
+    static final int NARROW_ROW2_H = 150;
+    static final int NARROW_ROW3_H = 140;
+
+    /** Escala de un dibujo hecho para la pestaña ancha (alto o ancho de referencia) en una tarjeta más pequeña. */
+    static float fit(float have, float ref) {
+        return Math.max(0.45f, Math.min(1f, have / ref));
     }
 
     private void tick() {
@@ -110,50 +140,52 @@ final class DriveTab implements CarScreen {
     // ------------------------------------------------------------------ maniobra
 
     private void paintTurn(Canvas cv, RectF r, Paint p) {
+        // A escala en una tarjeta más baja (pantalla partida): todo lo de abajo cabe; 1 en la ancha.
+        float k = r.height() >= 600 ? 1f : fit(r.height(), 700);
         if (!nav.active) {
-            float cy = r.centerY() - 60;
+            float cy = r.centerY() - 60 * k;
             p.setColor(CarKit.SURFACE_HI);
-            cv.drawCircle(r.centerX(), cy, 96, p);
-            CarIcons.route(cv, r.centerX(), cy, 110, CarKit.MUTED, p);
-            CarKit.text(cv, Str.get(R.string.hql_no_navigation), r.centerX(), cy + 170, 38, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.CENTER);
-            hint.draw(cv, Str.get(R.string.hql_no_navigation_hint), r.left + 60, cy + 196, (int) r.width() - 120, true);
+            cv.drawCircle(r.centerX(), cy, 96 * k, p);
+            CarIcons.route(cv, r.centerX(), cy, 110 * k, CarKit.MUTED, p);
+            CarKit.text(cv, Str.get(R.string.hql_no_navigation), r.centerX(), cy + 170 * k, 38 * Math.max(k, 0.75f), CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.CENTER);
+            if (k > 0.7f) hint.draw(cv, Str.get(R.string.hql_no_navigation_hint), r.left + 60, cy + 196, (int) r.width() - 120, true);
             return;
         }
         float x0 = r.left;
         float y0 = r.top;
         // Flecha en su baldosa.
-        tmp.set(x0, y0, x0 + 236, y0 + 236);
+        tmp.set(x0, y0, x0 + 236 * k, y0 + 236 * k);
         p.setColor(CarKit.SURFACE_TOP);
-        cv.drawRoundRect(tmp, 28, 28, p);
-        CarIcons.maneuver(cv, nav.kind, nav.angle, tmp.centerX(), tmp.centerY(), 176, CarKit.ACCENT, p);
+        cv.drawRoundRect(tmp, 28 * k, 28 * k, p);
+        CarIcons.maneuver(cv, nav.kind, nav.angle, tmp.centerX(), tmp.centerY(), 176 * k, CarKit.ACCENT, p);
         // Distancia, calle y detalle.
-        float tx = x0 + 276;
+        float tx = x0 + 276 * k;
         String[] d = distance(nav.stepMeters, nav.stepDisplay);
-        CarKit.number(cv, d[0], d[1], tx, y0 + 104, 112, CarKit.TEXT, CarKit.REGULAR, p, Paint.Align.LEFT);
+        CarKit.number(cv, d[0], d[1], tx, y0 + 104 * k, 112 * k, CarKit.TEXT, CarKit.REGULAR, p, Paint.Align.LEFT);
         String street = nav.nextRoad != null ? nav.nextRoad : nav.road != null ? nav.road : "";
         p.setTypeface(CarKit.MEDIUM);
-        p.setTextSize(40);
-        CarKit.text(cv, CarKit.ellipsize(street, r.right - tx, p), tx, y0 + 168, 40, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        p.setTextSize(40 * k);
+        CarKit.text(cv, CarKit.ellipsize(street, r.right - tx, p), tx, y0 + 168 * k, 40 * k, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
         String detail = "";
         if (nav.kind == NavTap.KIND_ROUNDABOUT && nav.roundaboutExit > 0) detail = Str.get(R.string.hql_roundabout_exit, nav.roundaboutExit);
         if (nav.stepSeconds > 0 && nav.stepSeconds < 600) {
             String in = Str.get(R.string.hql_drive_in_sec, (int) nav.stepSeconds);
             detail = detail.isEmpty() ? in : detail + " · " + in;
         }
-        CarKit.text(cv, detail, tx, y0 + 214, 27, CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
+        CarKit.text(cv, detail, tx, y0 + 214 * k, 27 * Math.max(k, 0.7f), CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
         // Barra que se vacía hasta la maniobra.
         if (stepStart > 0 && nav.stepMeters >= 0) {
-            tmp.set(x0, y0 + 256, r.right, y0 + 272);
+            tmp.set(x0, y0 + 256 * k, r.right, y0 + 272 * k);
             CarKit.bar(cv, tmp, nav.stepMeters / (float) stepStart, CarKit.ACCENT, p);
         }
-        float y = y0 + 300;
+        float y = y0 + 300 * k;
         // Carriles.
         boolean[] lanes = nav.lanes;
         if (lanes != null && lanes.length > 0) {
-            float lw = 62;
+            float lw = 62 * k;
             for (int i = 0; i < lanes.length; i++) {
-                float lx = x0 + i * (lw + 12);
-                tmp.set(lx, y, lx + lw, y + 76);
+                float lx = x0 + i * (lw + 12 * k);
+                tmp.set(lx, y, lx + lw, y + 76 * k);
                 p.setColor(lanes[i] ? CarKit.alpha(CarKit.ACCENT, 0.18f) : CarKit.SURFACE_HI);
                 cv.drawRoundRect(tmp, 14, 14, p);
                 if (lanes[i]) {
@@ -163,22 +195,22 @@ final class DriveTab implements CarScreen {
                     cv.drawRoundRect(tmp, 14, 14, p);
                     p.setStyle(Paint.Style.FILL);
                 }
-                CarIcons.lane(cv, tmp.centerX(), tmp.centerY(), 46, lanes[i] ? CarKit.ACCENT : CarKit.MUTED, p);
+                CarIcons.lane(cv, tmp.centerX(), tmp.centerY(), 46 * k, lanes[i] ? CarKit.ACCENT : CarKit.MUTED, p);
             }
-            y += 100;
+            y += 100 * k;
         }
         // La maniobra de después, en una línea.
         if (nav.thenKind >= 0) {
-            float lw = CarKit.label(cv, Str.get(R.string.hql_drive_then), x0, y + 33, p);
-            tmp.set(x0 + lw + 18, y, x0 + lw + 70, y + 52);
+            float lw = CarKit.label(cv, Str.get(R.string.hql_drive_then), x0, y + 33 * k, p);
+            tmp.set(x0 + lw + 18, y, x0 + lw + 18 + 52 * k, y + 52 * k);
             p.setColor(CarKit.SURFACE_HI);
             cv.drawRoundRect(tmp, 12, 12, p);
-            CarIcons.maneuver(cv, nav.thenKind, nav.thenAngle, tmp.centerX(), tmp.centerY(), 40, CarKit.DIM, p);
+            CarIcons.maneuver(cv, nav.thenKind, nav.thenAngle, tmp.centerX(), tmp.centerY(), 40 * k, CarKit.DIM, p);
             if (nav.thenRoad != null) {
                 float tx2 = tmp.right + 16;
                 p.setTypeface(CarKit.REGULAR);
-                p.setTextSize(29);
-                CarKit.text(cv, CarKit.ellipsize(nav.thenRoad, r.right - tx2, p), tx2, y + 36, 29, CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
+                p.setTextSize(29 * Math.max(k, 0.75f));
+                CarKit.text(cv, CarKit.ellipsize(nav.thenRoad, r.right - tx2, p), tx2, y + 36 * k, 29 * Math.max(k, 0.75f), CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
             }
         }
         // Avisos y destino abajo.
@@ -192,39 +224,39 @@ final class DriveTab implements CarScreen {
             alert = Str.get(R.string.hql_sun_glare);
         }
         if (alert != null) {
-            tmp.set(x0, b - 180, r.right, b - 116);
+            tmp.set(x0, b - 180 * k, r.right, b - 116 * k);
             p.setColor(CarKit.alpha(CarKit.AMBER, 0.13f));
-            cv.drawRoundRect(tmp, 18, 18, p);
+            cv.drawRoundRect(tmp, 18 * k, 18 * k, p);
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(2);
             p.setColor(CarKit.alpha(CarKit.AMBER, 0.55f));
-            cv.drawRoundRect(tmp, 18, 18, p);
+            cv.drawRoundRect(tmp, 18 * k, 18 * k, p);
             p.setStyle(Paint.Style.FILL);
-            if (camera) CarIcons.camera(cv, x0 + 44, tmp.centerY(), 38, CarKit.AMBER, p);
-            else CarIcons.sun(cv, x0 + 44, tmp.centerY(), 40, CarKit.AMBER, p);
+            if (camera) CarIcons.camera(cv, x0 + 44 * k, tmp.centerY(), 38 * k, CarKit.AMBER, p);
+            else CarIcons.sun(cv, x0 + 44 * k, tmp.centerY(), 40 * k, CarKit.AMBER, p);
             p.setTypeface(CarKit.MEDIUM);
-            p.setTextSize(28);
-            CarKit.text(cv, CarKit.ellipsize(alert, tmp.width() - 110, p), x0 + 84, tmp.centerY() + 10, 28, CarKit.AMBER, CarKit.MEDIUM, p, Paint.Align.LEFT);
+            p.setTextSize(28 * Math.max(k, 0.75f));
+            CarKit.text(cv, CarKit.ellipsize(alert, tmp.width() - 110 * k, p), x0 + 84 * k, tmp.centerY() + 10 * k, 28 * Math.max(k, 0.75f), CarKit.AMBER, CarKit.MEDIUM, p, Paint.Align.LEFT);
         }
         // Destino: bandera, nombre y lo que falta; la hora de llegada, grande a la derecha.
         p.setColor(CarKit.OUTLINE);
-        cv.drawRect(x0, b - 96, r.right, b - 94, p);
-        CarIcons.flag(cv, x0 + 22, b - 46, 40, CarKit.ACCENT, p);
+        cv.drawRect(x0, b - 96 * k, r.right, b - 96 * k + 2, p);
+        CarIcons.flag(cv, x0 + 22 * k, b - 46 * k, 40 * k, CarKit.ACCENT, p);
         float etaW = 0;
         if (nav.eta != null) {
-            CarKit.label(cv, Str.get(R.string.hql_drive_arrival), r.right, b - 62, CarKit.FAINT, p, Paint.Align.RIGHT);
-            etaW = CarKit.text(cv, nav.eta, r.right, b - 10, 46, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.RIGHT);
+            CarKit.label(cv, Str.get(R.string.hql_drive_arrival), r.right, b - 62 * k, CarKit.FAINT, p, Paint.Align.RIGHT);
+            etaW = CarKit.text(cv, nav.eta, r.right, b - 10 * k, 46 * Math.max(k, 0.7f), CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.RIGHT);
         }
         String dest = nav.destination != null ? nav.destination : "";
         p.setTypeface(CarKit.MEDIUM);
-        p.setTextSize(30);
-        CarKit.text(cv, CarKit.ellipsize(dest, r.right - x0 - 70 - etaW - 30, p), x0 + 58, b - 50, 30, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        p.setTextSize(30 * Math.max(k, 0.75f));
+        CarKit.text(cv, CarKit.ellipsize(dest, r.right - x0 - 70 * k - etaW - 30, p), x0 + 58 * k, b - 50 * k, 30 * Math.max(k, 0.75f), CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
         String rem = "";
         if (nav.remainingMeters >= 0) {
             rem = String.format(Locale.getDefault(), "%.0f km", nav.remainingMeters / 1000.0);
             if (nav.remainingSeconds >= 0) rem += " · " + duration(nav.remainingSeconds);
         }
-        CarKit.text(cv, rem, x0 + 58, b - 12, 25, CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
+        CarKit.text(cv, rem, x0 + 58 * k, b - 12 * k, 25 * Math.max(k, 0.75f), CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
     }
 
     /** "450", "m" / "1,2", "km": la cifra y la unidad por separado (para dibujar la unidad pequeña). */
@@ -257,25 +289,32 @@ final class DriveTab implements CarScreen {
         if (gpsNote != null) color = CarKit.MUTED;
         else if (limit > 0 && v > limit * 1.1 + 2) color = CarKit.RED;
         else if (limit > 0 && v > limit + 2) color = CarKit.AMBER;
-        CarKit.number(cv, gpsNote != null ? "—" : String.format(Locale.getDefault(), "%.0f", v), "km/h", r.left, r.top + 150, 156, color,
-                CarKit.REGULAR, p, Paint.Align.LEFT);
+        // A escala en una tarjeta pequeña (pantalla partida); 1 en la ancha.
+        float k = Math.min(fit(r.height(), 230), fit(r.width(), 520));
+        boolean small = k < 0.8f;
+        CarKit.number(cv, gpsNote != null ? "—" : String.format(Locale.getDefault(), "%.0f", v), "km/h", r.left,
+                r.top + (small ? r.height() * 0.62f : 150), 156 * k, color, CarKit.REGULAR, p, Paint.Align.LEFT);
         if (limit > 0) {
-            float cx = r.right - 82;
-            float cy = r.top + 78;
+            float rad = small ? Math.min(r.height() / 2f - 2, 80) : 80;
+            float cx = r.right - rad - 2;
+            float cy = small ? r.top + rad : r.top + 78;
             p.setColor(0xFFFFFFFF);
-            cv.drawCircle(cx, cy, 80, p);
+            cv.drawCircle(cx, cy, rad, p);
             p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(15);
+            p.setStrokeWidth(15 * rad / 80);
             p.setColor(0xFFD93025);
-            cv.drawCircle(cx, cy, 72, p);
+            cv.drawCircle(cx, cy, rad * 0.9f, p);
             p.setStyle(Paint.Style.FILL);
-            CarKit.text(cv, String.valueOf(limit), cx, cy + 24, limit >= 100 ? 60 : 68, 0xFF15181C, CarKit.MEDIUM, p, Paint.Align.CENTER);
-            if (rs.limitEstimated) CarKit.label(cv, Str.get(R.string.hql_estimated), cx, cy + 112, CarKit.FAINT, p, Paint.Align.CENTER);
+            CarKit.text(cv, String.valueOf(limit), cx, cy + 24 * rad / 80, (limit >= 100 ? 60 : 68) * rad / 80, 0xFF15181C, CarKit.MEDIUM, p,
+                    Paint.Align.CENTER);
+            if (rs.limitEstimated && !small) CarKit.label(cv, Str.get(R.string.hql_estimated), cx, cy + 112, CarKit.FAINT, p, Paint.Align.CENTER);
         }
+        // Pequeña: sin la línea de la vía (no cabe); la velocidad y la señal.
+        if (small && gpsNote == null) return;
         String line = gpsNote != null ? gpsNote : rs.roadName;
         p.setTypeface(CarKit.REGULAR);
-        p.setTextSize(27);
-        CarKit.text(cv, CarKit.ellipsize(line, r.width() - (limit > 0 ? 190 : 0), p), r.left, r.bottom - 6, 27,
+        p.setTextSize(small ? 20 : 27);
+        CarKit.text(cv, CarKit.ellipsize(line, r.width() - (limit > 0 ? 190 * k : 0), p), r.left, r.bottom - 6, small ? 20 : 27,
                 gpsNote == null ? CarKit.DIM : CarKit.RED, CarKit.REGULAR, p, Paint.Align.LEFT);
     }
 
@@ -353,7 +392,7 @@ final class DriveTab implements CarScreen {
         float frac = day ? (now - rise) / (float) (set - rise) : 0;
         // Arco del día: de la salida (izquierda) a la puesta (derecha).
         float ax0 = r.left + 6;
-        float ax1 = r.left + r.width() * 0.42f;
+        float ax1 = r.left + r.width() * (r.width() < 420 ? 0.3f : 0.42f);
         float ah = r.height() * 0.8f;
         tmp.set(ax0, r.bottom - ah, ax1, r.bottom + ah);
         p.setStyle(Paint.Style.STROKE);
@@ -373,15 +412,17 @@ final class DriveTab implements CarScreen {
             float sy = (float) (tmp.centerY() - Math.sin(ang) * tmp.height() / 2);
             CarIcons.sun(cv, sx, sy, 34, CarKit.AMBER, p);
         }
-        float tx = ax1 + 24;
+        float tx = ax1 + (r.width() < 420 ? 16 : 24);
+        // Tarjeta estrecha (pantalla partida): letra más pequeña.
+        float fs = r.width() < 420 ? 0.68f : 1f;
         java.text.DateFormat f = android.text.format.DateFormat.getTimeFormat(sunCard.getContext());
         if (day) {
             String in = duration((set - now) / 1000);
-            CarKit.text(cv, Str.get(R.string.hql_sunset, rs.sunset), tx, r.top + 30, 30, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
-            CarKit.text(cv, Str.get(R.string.hql_sun_in, in), tx, r.top + 68, 25, CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
+            CarKit.text(cv, Str.get(R.string.hql_sunset, rs.sunset), tx, r.top + 30 * fs, 30 * fs, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+            CarKit.text(cv, Str.get(R.string.hql_sun_in, in), tx, r.top + 68 * fs, 25 * fs, CarKit.DIM, CarKit.REGULAR, p, Paint.Align.LEFT);
         } else {
             CarKit.text(cv, Str.get(R.string.hql_sunrise_at, f.format(new java.util.Date(rise + (now > set ? 86_400_000L : 0)))),
-                    tx, r.top + 30, 30, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+                    tx, r.top + 30 * fs, 30 * fs, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
         }
     }
 }
