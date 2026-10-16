@@ -421,11 +421,8 @@ final class SettingsScreen implements CarScreen {
             twoLinesIfScaled(p);
             p.setGravity(Gravity.CENTER);
             p.setOnClickListener(v -> {
-                if (cfg.carTheme() == theme) return;
-                cfg.putInt(Config.CAR_THEME, theme);
-                L.i("tema de la pantalla del coche: " + (theme == 0 ? "automático" : theme == 1 ? "siempre claro" : "siempre oscuro") + " (desde el coche)");
-                AaPassthroughSource.applyCarTheme(c);
-                refresh();
+                if (cfg.carTheme() == theme || themeFilling) return;
+                fillThenApply(p, theme, c);
             });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             if (t < 2) lp.rightMargin = 14;
@@ -433,10 +430,60 @@ final class SettingsScreen implements CarScreen {
             row.addView(p, lp);
         }
         card.addView(row);
+        markTheme();
         TextView note = CarStyle.text(c, Str.get(R.string.hql_theme_help), 20, CarStyle.TEXT_DIM);
         note.setPadding(4, 4, 0, 0);
         card.addView(note);
         return card;
+    }
+
+    /**
+     * El tema elegido, relleno con el color de acento (y con ✓) y los otros apagados: con el contorno de las demás
+     * píldoras no se distinguía cuál estaba marcado. Al crear la tarjeta también (al cambiar el tema la interfaz se rehace).
+     */
+    /** Lo que tarda en rellenarse la opción tocada antes de aplicar el tema. */
+    static final long THEME_FILL_MS = 400;
+    private boolean themeFilling;
+
+    /**
+     * La opción tocada se rellena de verde de izquierda a derecha y, llena, queda marcada y se aplica el tema (16-10: «que
+     * se rellene así en verdecito y después se ponga en verde, ¡pum!»). Con el reloj, no con un animador (con la pantalla
+     * del móvil apagada Android no da el ritmo de las animaciones).
+     */
+    private void fillThenApply(TextView p, int theme, Context c) {
+        themeFilling = true;
+        android.graphics.drawable.ClipDrawable fill = new android.graphics.drawable.ClipDrawable(CarStyle.accent(28),
+                Gravity.LEFT, android.graphics.drawable.ClipDrawable.HORIZONTAL);
+        p.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
+                CarStyle.round(CarStyle.PILL_BG, 28), fill}));
+        long start = android.os.SystemClock.uptimeMillis();
+        p.post(new Runnable() {
+            @Override
+            public void run() {
+                float t = Math.min(1f, (android.os.SystemClock.uptimeMillis() - start) / (float) THEME_FILL_MS);
+                fill.setLevel(Math.round(t * 10000));
+                if (t < 1f) {
+                    p.postDelayed(this, 16);
+                    return;
+                }
+                themeFilling = false;
+                cfg.putInt(Config.CAR_THEME, theme);
+                L.i("tema de la pantalla del coche: " + (theme == 0 ? "automático" : theme == 1 ? "siempre claro" : "siempre oscuro") + " (desde el coche)");
+                markTheme();
+                AaPassthroughSource.applyCarTheme(c);
+            }
+        });
+    }
+
+    private void markTheme() {
+        int now = cfg.carTheme();
+        for (TextView p : themePills) {
+            int t = (int) p.getTag();
+            boolean sel = now == t;
+            p.setBackground(sel ? CarStyle.accent(28) : CarStyle.round(CarStyle.PILL_BG, 28));
+            p.setTextColor(sel ? CarStyle.ON_ACCENT : CarStyle.TEXT);
+            p.setText((sel ? "✓ " : "") + SettingsActivity.themeLabel(t));
+        }
     }
 
     // ------------------------------------------------------------------ Viaje
@@ -854,11 +901,7 @@ final class SettingsScreen implements CarScreen {
             p.setBackground(sel ? CarKit.outlined(CarStyle.ACCENT_BG, CarStyle.ACCENT, 28) : CarStyle.round(CarStyle.PILL_BG, 28));
             p.setTextColor(sel ? CarStyle.ACCENT : CarStyle.TEXT);
         }
-        for (TextView p : themePills) {
-            boolean sel = cfg.carTheme() == (int) p.getTag();
-            p.setBackground(sel ? CarKit.outlined(CarStyle.ACCENT_BG, CarStyle.ACCENT, 28) : CarStyle.round(CarStyle.PILL_BG, 28));
-            p.setTextColor(sel ? CarStyle.ACCENT : CarStyle.TEXT);
-        }
+        markTheme();
         for (TextView p : uiScalePills) {
             boolean sel = pendingUiScale == (int) p.getTag();
             p.setBackground(sel ? CarKit.outlined(CarStyle.ACCENT_BG, CarStyle.ACCENT, 28) : CarStyle.round(CarStyle.PILL_BG, 28));

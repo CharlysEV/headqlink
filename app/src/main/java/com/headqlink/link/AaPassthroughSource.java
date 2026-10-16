@@ -269,7 +269,7 @@ final class AaPassthroughSource implements VideoSource {
         settings.setNightMode(dark ? Settings.NightMode.NIGHT : Settings.NightMode.DAY);
         L.i("AA: modo " + (dark ? "noche" : "día") + " del coche");
         if (comm().isConnected()) {
-            ctx.startForegroundService(new Intent(ctx, AapService.class).setAction(AapService.ACTION_REQUEST_NIGHT_MODE_UPDATE));
+            requestNightUpdate(ctx);
         }
     }
 
@@ -280,7 +280,7 @@ final class AaPassthroughSource implements VideoSource {
     static void simNight(Context ctx, boolean night) {
         App.Companion.provide(ctx).getSettings().setNightMode(night ? Settings.NightMode.NIGHT : Settings.NightMode.DAY);
         L.i("coche virtual: modo " + (night ? "noche" : "día") + " a mano");
-        ctx.startForegroundService(new Intent(ctx, AapService.class).setAction(AapService.ACTION_REQUEST_NIGHT_MODE_UPDATE));
+        requestNightUpdate(ctx);
     }
 
     @Override
@@ -329,6 +329,14 @@ final class AaPassthroughSource implements VideoSource {
         return hasLightSensor ? Settings.NightMode.LIGHT_SENSOR : Settings.NightMode.AUTO;
     }
 
+    /**
+     * Que Open Headunit mande ya el día o la noche a AA (y a nuestro panel). Por difusión: AapService la atiende al momento
+     * (resendCurrentState); arrancar el servicio con esa acción no hacía nada y el cambio entraba ~2 s después.
+     */
+    static void requestNightUpdate(Context ctx) {
+        ctx.sendBroadcast(new Intent(AapService.ACTION_REQUEST_NIGHT_MODE_UPDATE).setPackage(ctx.getPackageName()));
+    }
+
     /** Al arrancar y al cambiar el ajuste «Tema»: el día y la noche de la sesión (sessionNightMode). */
     static void applyCarTheme(Context ctx) {
         Config cfg = new Config(ctx);
@@ -346,7 +354,7 @@ final class AaPassthroughSource implements VideoSource {
             L.i("AA: día y noche " + (light ? "con el sensor de luz del móvil (túneles, garajes)" : "por el amanecer y el atardecer (sin sensor de luz)"));
         }
         if (App.Companion.provide(ctx).getCommManager().isConnected()) {
-            ctx.startForegroundService(new Intent(ctx, AapService.class).setAction(AapService.ACTION_REQUEST_NIGHT_MODE_UPDATE));
+            requestNightUpdate(ctx);
         }
     }
 
