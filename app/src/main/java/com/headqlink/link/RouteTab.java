@@ -779,7 +779,10 @@ final class RouteTab implements CarScreen {
         nav = DemoMode.navInfo();
         boolean have = plan != null && plan.n >= 2;
         boolean test = RoutePlanner.testMode();
-        goMaps.setVisibility(manual && have ? View.VISIBLE : View.GONE);
+        // Si el destino salió de la navegación que ya lleva Maps, mandarlo otra vez solo la rehace (y con un punto en vez
+        // de «Casa»): el botón, solo si hay paradas de carga que añadirle.
+        boolean mapsAlready = RoutePlanner.followingMaps() && (chargePlan == null || chargePlan.next() == null);
+        goMaps.setVisibility(manual && have && !mapsAlready ? View.VISIBLE : View.GONE);
         String guide = Str.get(NavApps.useWaze(ctx) ? R.string.hql_route_guide_waze : R.string.hql_route_guide_maps);
         if (!guide.contentEquals(goMaps.getText())) goMaps.setText(guide);
         if (test) {

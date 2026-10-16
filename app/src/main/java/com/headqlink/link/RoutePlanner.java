@@ -253,6 +253,11 @@ final class RoutePlanner {
         double lon;
     }
 
+    /** El destino salió de la navegación que ya lleva Google Maps (y Maps sigue navegando): ya va hacia allí. */
+    static boolean followingMaps() {
+        return guessed && MapsNavListener.routing();
+    }
+
     static Place manualDestination() {
         if (DemoMode.active()) return DemoMode.place();
         return manual;
