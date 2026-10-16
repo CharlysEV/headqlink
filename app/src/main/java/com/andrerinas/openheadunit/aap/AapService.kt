@@ -3235,10 +3235,13 @@ class AapService : Service() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         } to 101
 
-        val contentText = if (commManager.isConnected)
-            getString(R.string.notification_projection_active)
-        else
-            getString(R.string.notification_service_running)
+        // headqlink: con Android Auto en pausa esperando al coche (sin vídeo), eso, no «proyectado».
+        val parkedText = com.headqlink.link.AaPark.notificationText()
+        val contentText = when {
+            parkedText != null -> parkedText
+            commManager.isConnected -> getString(R.string.notification_projection_active)
+            else -> getString(R.string.notification_service_running)
+        }
 
         val showExit = CarLauncherManager.shouldShowExitButton(
             isCarLauncherEnabled = settings.enableCarLauncher,
@@ -3502,6 +3505,13 @@ class AapService : Service() {
         @JvmStatic
         fun refreshCarModeFlags() {
             instance?.refreshCarMode()
+        }
+
+        /** headqlink: Android Auto entra o sale de la pausa esperando al coche (AaPark): la notificación lo dice ya. */
+        @JvmStatic
+        fun refreshNotification() {
+            val s = instance ?: return
+            if (!s.isDestroying) s.updateNotification()
         }
 
         /**

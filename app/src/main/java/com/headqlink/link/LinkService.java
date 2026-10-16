@@ -219,7 +219,8 @@ public class LinkService extends Service implements UdpDiscovery.Listener, SspSe
                     break;
                 case PARK_AA:
                     // Antes de parar el vídeo: así la fuente, al pararse, no devuelve la vista al móvil.
-                    AaPark.park(this, "esperando al coche");
+                    long close = life.closeAtMs();
+                    AaPark.park(this, "esperando al coche", close > 0 ? System.currentTimeMillis() + close - now() : 0);
                     LinkState.setSource(LinkState.Level.BUSY, Str.get(R.string.hql_auto_paused));
                     break;
                 case STOP_VIDEO:

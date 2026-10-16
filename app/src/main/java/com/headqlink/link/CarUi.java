@@ -283,6 +283,11 @@ final class CarUi {
         splash = null;
         // El aviso abierto se va con la interfaz vieja.
         splitWarning = null;
+        // El cartel de la imagen también: el siguiente se crea en la interfaz nueva. Si no, se escribía en el viejo (ya
+        // fuera de pantalla) y el relay pintaba encima de AA ese hueco de nuestra capa: un recuadro del color del fondo.
+        main.removeCallbacks(hideVideoInfo);
+        hideVideoInfo.run();
+        videoInfo = null;
         pres.setContentView(buildRoot(pres.getContext()));
         open(name);
         if (wasHidden && "aa".equals(name)) setHidden(true);

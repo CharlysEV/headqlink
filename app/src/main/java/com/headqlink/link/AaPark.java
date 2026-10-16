@@ -5,7 +5,9 @@ import android.os.Handler;
 import android.os.Looper;
 
 import com.andrerinas.openheadunit.App;
+import com.andrerinas.openheadunit.R;
 import com.andrerinas.openheadunit.aap.AapMessage;
+import com.andrerinas.openheadunit.aap.AapService;
 import com.andrerinas.openheadunit.aap.protocol.Channel;
 import com.andrerinas.openheadunit.aap.protocol.messages.VideoFocusEvent;
 import com.andrerinas.openheadunit.aap.protocol.proto.Control;
@@ -23,14 +25,22 @@ import com.andrerinas.openheadunit.decoder.video.VideoTap;
  * Mientras está aparcado se manda un ping a AA cada 5 s: sin vídeo, AA se queda en silencio y Open Headunit daría la
  * conexión por perdida a los 15 s sin recibir nada. Hilo principal.
  */
-final class AaPark {
+public final class AaPark {
     private static final long PING_MS = 5_000;
+    /** Hasta cuándo se espera al coche (hora de pared; 0: sin hora, el guardián con el móvil bloqueado). */
+    private static volatile long untilWallMs;
 
     /** AA aparcado (lo mira AaPassthroughSource al parar el vídeo: entonces no vuelve la vista del móvil). */
     static volatile boolean parked;
     /** AA salió de la pausa y el vídeo nuevo aún no le ha devuelto el foco (ver takeFocusOwed). */
     private static volatile boolean focusOwed;
-    private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    /** Hilo principal, creado al usarse (la notificación de AA mira notificationText también en pruebas sin Android). */
+    private static Handler main;
+
+    private static Handler main() {
+        if (main == null) main = new Handler(Looper.getMainLooper());
+        return main;
+    }
     private static volatile Context app;
 
     private static final Runnable PING = new Runnable() {
@@ -42,7 +52,7 @@ final class AaPark {
             if (!cm.isConnected()) return;
             cm.send(new AapMessage(Channel.ID_CTR, Control.ControlMsgType.MESSAGE_PING_REQUEST_VALUE,
                     Control.PingRequest.newBuilder().setTimestamp(System.nanoTime()).build()));
-            MAIN.postDelayed(this, PING_MS);
+            main().postDelayed(this, PING_MS);
         }
     };
 
@@ -56,18 +66,27 @@ final class AaPark {
                 Control.PingRequest.newBuilder().setTimestamp(System.nanoTime()).build()));
     }
 
-    /** Aparca AA (si está conectado): foco nativo, sin vista en el móvil y ping. Idempotente. */
     static void park(Context ctx, String why) {
+        park(ctx, why, 0);
+    }
+
+    /**
+     * Aparca AA (si está conectado): foco nativo, sin vista en el móvil y ping. Idempotente. untilWallMs: fin de la
+     * espera del coche (lo dice la notificación de Android Auto), 0 si no se sabe.
+     */
+    static void park(Context ctx, String why, long untilWallMs) {
         app = ctx.getApplicationContext();
+        AaPark.untilWallMs = untilWallMs;
         boolean was = parked;
         parked = true;
         focusOwed = false;
         VideoTap.setHeadless(true);
         CommManager cm = App.Companion.provide(ctx).getCommManager();
         if (cm.isConnected()) cm.send(new VideoFocusEvent(false, true));
-        MAIN.removeCallbacks(PING);
-        MAIN.postDelayed(PING, PING_MS);
+        main().removeCallbacks(PING);
+        main().postDelayed(PING, PING_MS);
         if (!was) L.life("Android Auto aparcado (" + why + "): sin vídeo, foco en nativo, ping cada " + PING_MS / 1000 + " s");
+        AapService.refreshNotification();
     }
 
     /**
@@ -76,27 +95,41 @@ final class AaPark {
      * arrancar. false si no estaba aparcado.
      */
     static boolean resume(String why) {
-        MAIN.removeCallbacks(PING);
+        main().removeCallbacks(PING);
         if (!parked) return false;
         parked = false;
         focusOwed = true;
         L.life("Android Auto sale de la pausa (" + why + ")");
+        AapService.refreshNotification();
         return true;
     }
 
     /** AA se cierra (apagado del servidor, Desconectar): fuera la pausa y la vista del móvil vuelve a lo normal. */
     static void release(String why) {
-        MAIN.removeCallbacks(PING);
+        main().removeCallbacks(PING);
         focusOwed = false;
         if (!parked) return;
         parked = false;
         VideoTap.setHeadless(false);
         L.life("Android Auto deja de estar aparcado (" + why + ")");
+        AapService.refreshNotification();
+    }
+
+    /**
+     * Texto de la notificación de Android Auto mientras está aparcado (null si no lo está): «en pausa, esperando al coche
+     * hasta las 16:20», no «Android Auto está proyectado» (el 16-10 lo decía sin coche ni coche virtual).
+     */
+    public static String notificationText() {
+        Context c = app;
+        if (!parked || c == null) return null;
+        long u = untilWallMs;
+        if (u <= System.currentTimeMillis()) return Str.get(R.string.hql_aa_paused);
+        return Str.get(R.string.hql_aa_paused_until, android.text.format.DateFormat.getTimeFormat(c).format(new java.util.Date(u)));
     }
 
     /** Deja de mandar pings (apagado del servidor en curso: la sesión cae sola). */
     static void stopPing() {
-        MAIN.removeCallbacks(PING);
+        main().removeCallbacks(PING);
     }
 
     /** El vídeo nuevo tras salir de la pausa: true una vez, si aún hay que devolver el foco de vídeo a AA. */

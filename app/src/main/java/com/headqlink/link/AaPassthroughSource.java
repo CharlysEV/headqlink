@@ -473,6 +473,12 @@ final class AaPassthroughSource implements VideoSource {
 
     private final Runnable dropRelaunch = () -> {
         if (active != this || VideoTap.getSink() == null || aaAlive()) return;
+        if (!VideoPipeline.carAttached()) {
+            // Coche perdido (el aviso de USB desconectado cierra AA): relanzarlo lo dejaba «proyectado» sin coche hasta
+            // el cierre. Si vuelve el coche, onReattached lo relanza (en menos de un segundo).
+            L.life("AA: Android Auto se ha desconectado sin coche: no lo relanzo (si vuelve el coche, entonces)");
+            return;
+        }
         L.lifeWarn("AA: Android Auto se ha desconectado solo con el coche conectado; lo relanzo");
         ensureAaConnected();
     };

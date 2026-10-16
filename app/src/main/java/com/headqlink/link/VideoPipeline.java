@@ -809,6 +809,12 @@ final class VideoPipeline {
         return active;
     }
 
+    /** ¿Hay ahora una sesión con el coche enganchada al vídeo? (false sin vídeo o con el coche perdido) */
+    static boolean carAttached() {
+        VideoPipeline p = current;
+        return p != null && p.active != null;
+    }
+
     /**
      * Hilo hql-video: IDR pedido por la sesión activa. Con encoder, IdrRequestGate: el primero de la sesión
      * (STREAM_START) y el que sustituye a uno descartado por grande (OVERSIZED), al momento; los demás (KEY_FRAME_REQ del

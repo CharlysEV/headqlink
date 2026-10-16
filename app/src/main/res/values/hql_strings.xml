@@ -491,6 +491,8 @@
     <string name="hql_list_url_hint">https://…/list.m3u</string>
     <!-- Ciclo de vida: esperar al coche, Android Auto en pausa, arrancar al desbloquear y servidor encendido. -->
     <string name="hql_auto_paused">Paused until the car comes back</string>
+    <string name="hql_aa_paused_until">Android Auto paused, waiting for the car until %1$s</string>
+    <string name="hql_aa_paused">Android Auto paused (no video)</string>
     <string name="hql_waiting_car_paused">Waiting for the car · Android Auto paused</string>
     <string name="hql_unlock_channel">Android Auto start</string>
     <string name="hql_unlock_start_title">Unlock the phone to start Android Auto</string>
