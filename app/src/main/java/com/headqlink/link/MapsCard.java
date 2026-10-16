@@ -535,6 +535,44 @@ final class MapsCard {
         return null;
     }
 
+    /**
+     * Puro: el botón redondo de «Iniciar» de «Detalles de la ruta» cuando AA es estrecho (media pantalla): sin texto, un
+     * círculo verde azulado con la flecha, a la izquierda del tiempo y los km de la ruta (16-10, pantalla partida: no se
+     * veía «Iniciar» y Maps se quedaba esperando). Su centro {x, y}, o null. Verde azulado: g y b muy por encima de r (el
+     * verde del mapa tiene poco azul; el azul del agua, el verde y el rojo parecidos).
+     */
+    static int[] startRound(int[] argb, int w, int h, List<Line> lines) {
+        Line eta = etaBox(lines, h);
+        Line km = kmLine(lines, eta);
+        if (eta == null || km == null) return null;
+        int lh = Math.max(8, eta.h());
+        int x0 = Math.max(0, eta.left - 4 * lh);
+        int x1 = Math.max(0, eta.left - 2);
+        int y0 = Math.max(0, eta.top - lh);
+        int y1 = Math.min(h, km.bottom + lh);
+        long sx = 0;
+        long sy = 0;
+        int n = 0;
+        for (int y = y0; y < y1; y++) {
+            for (int x = x0; x < x1; x++) {
+                int c = argb[y * w + x];
+                int r = (c >> 16) & 0xFF;
+                int g = (c >> 8) & 0xFF;
+                int b = c & 0xFF;
+                if (g > r + 50 && b > r + 50) {
+                    sx += x;
+                    sy += y;
+                    n++;
+                }
+            }
+        }
+        if (n < lh * lh * 0.3) return null;
+        int cx = (int) (sx / n);
+        int cy = (int) (sy / n);
+        if (cy < eta.top - lh / 2 || cy > km.bottom + lh / 2) return null;
+        return new int[]{cx, cy};
+    }
+
     /** «Salir de la navegación» de Maps en cada idioma de la app (en minúsculas). */
     private static final String[] EXIT_NAV = {
             "salir de la navegación", "salir de la navegacion", "exit navigation", "sair da navegação", "sair da navegacao",

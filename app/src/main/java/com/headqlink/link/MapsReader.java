@@ -301,11 +301,26 @@ final class MapsReader {
                     Bitmap shot = capture(src);
                     if (shot == null) continue;
                     List<MapsCard.Line> lines = ocr(rec, shot);
-                    shot.recycle();
                     MapsCard.Line b = MapsCard.startButton(lines);
-                    if (b == null) continue;
-                    float[] p = src.aaToCar(b.cx(), (b.top + b.bottom) / 2f);
-                    L.i("Maps: pulso «Iniciar» (copia " + (i + 1) + " de " + START_LOOKS + ")");
+                    float[] p;
+                    if (b != null) {
+                        p = src.aaToCar(b.cx(), (b.top + b.bottom) / 2f);
+                        L.i("Maps: pulso «Iniciar» (copia " + (i + 1) + " de " + START_LOOKS + ")");
+                    } else {
+                        // AA estrecho (media pantalla): «Iniciar» es un botón redondo sin texto junto al tiempo y los km.
+                        int sw = shot.getWidth();
+                        int sh = shot.getHeight();
+                        int[] px = new int[sw * sh];
+                        shot.getPixels(px, 0, sw, 0, 0, sw, sh);
+                        int[] c = MapsCard.startRound(px, sw, sh, lines);
+                        if (c == null) {
+                            shot.recycle();
+                            continue;
+                        }
+                        p = src.aaToCar(c[0], c[1]);
+                        L.i("Maps: pulso el botón redondo de «Iniciar» (sin texto; copia " + (i + 1) + " de " + START_LOOKS + ")");
+                    }
+                    shot.recycle();
                     src.tapCar(p[0], p[1]);
                     pressed = true;
                     for (int k = 0; k < 15 && !navigating(); k++) SystemClock.sleep(200);

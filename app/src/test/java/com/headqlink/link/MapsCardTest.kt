@@ -362,6 +362,31 @@ class MapsCardTest {
         assertNull(MapsCard.mapsIcon(none, 1824, 882))
     }
 
+    /**
+     * «Detalles de la ruta» con AA a media pantalla (16-10): «Iniciar» es un círculo verde azulado sin texto a la
+     * izquierda de «5 h y 27 min / 461 km». Se pulsa su centro; sin él, nada.
+     */
+    @Test
+    fun theRoundStartButtonWithoutText() {
+        val w = 988
+        val h = 769
+        val px = IntArray(w * h) { 0xFF8FC98A.toInt() } // el mapa (verde)
+        for (y in 620 until 750) for (x in 105 until 530) px[y * w + x] = 0xFFFFFFFF.toInt() // la tarjeta
+        val teal = 0xFF006874.toInt()
+        for (y in 0 until h) for (x in 0 until w) {
+            val dx = x - 162
+            val dy = y - 685
+            if (dx * dx + dy * dy <= 38 * 38) px[y * w + x] = teal
+        }
+        val lines = listOf(MapsCard.Line("5 h y 27 min", 220, 645, 408, 682), MapsCard.Line("461 km", 220, 690, 332, 726))
+        val c = MapsCard.startRound(px, w, h, lines)!!
+        assertEquals(162.0, c[0].toDouble(), 4.0)
+        assertEquals(685.0, c[1].toDouble(), 4.0)
+        // Sin el botón (la tarjeta blanca y el mapa verde), nada.
+        for (y in 0 until h) for (x in 0 until w) if (px[y * w + x] == teal) px[y * w + x] = 0xFFFFFFFF.toInt()
+        assertNull(MapsCard.startRound(px, w, h, lines))
+    }
+
     @Test
     fun nothingToReadGivesNull() {
         assertNull(MapsCard.address(listOf(l("P", 330, 330, 360, 365), l("30 min · 36 km", 440, 420, 640, 460))))
