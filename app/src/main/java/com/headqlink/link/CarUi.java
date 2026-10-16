@@ -121,11 +121,22 @@ final class CarUi {
     private TextView alertText;
     private View alertGo;
     private boolean alertPending;
+    /**
+     * El aviso ya se vio (estuvo a la vista y el panel se recogió): no vuelve a salir al cambiar de pantalla; queda el
+     * botón Coche en ámbar hasta abrirla o hasta ALERT_KEEP_MS.
+     */
+    private boolean alertSeen;
     /** El panel se despliega para enseñar el aviso y se vuelve a ocultar pasado esto (si se oculta solo). */
     private static final long ALERT_SHOW_MS = 20_000;
     /** Sin tocarlo, el aviso se quita pasado esto (sigue en la pestaña Ruta). */
     private static final long ALERT_KEEP_MS = 10 * 60_000L;
     private final Runnable alertExpire = this::clearAlert;
+    /** Pasado ALERT_SHOW_MS a la vista, el aviso cuenta como visto aunque el panel no se recoja (sin ocultado automático). */
+    private final Runnable alertSeenTask = () -> {
+        if (!alertPending || alertSeen) return;
+        alertSeen = true;
+        renderAlert();
+    };
     private final RoutePlanner.ChargeAlertListener chargeAlert = (title, text, kind) -> main.post(() -> showAlert(title, text, kind));
     // Destino de Google Maps y sus preguntas: tarjeta flotante encima de AA (el panel no se despliega: AA no se recoloca).
     private LinearLayout guessCard;
@@ -948,6 +959,7 @@ final class CarUi {
             if (current == this) current = null;
             main.removeCallbacks(hideTask);
             main.removeCallbacks(alertExpire);
+            main.removeCallbacks(alertSeenTask);
             main.removeCallbacks(guessExpire);
             main.removeCallbacks(askExpire);
             main.removeCallbacks(railTick);
@@ -1392,22 +1404,27 @@ final class CarUi {
         alertGo.setVisibility(cp != null && cp.next() != null ? View.VISIBLE : View.GONE);
         alertPending = true;
         if (!replaying) {
+            alertSeen = false;
             main.removeCallbacks(alertExpire);
             main.postDelayed(alertExpire, ALERT_KEEP_MS);
+            main.removeCallbacks(alertSeenTask);
+            main.postDelayed(alertSeenTask, ALERT_SHOW_MS);
         }
         if (hidden && !replaying) setHidden(false);
         renderAlert();
         markNav();
         if (!replaying) {
             main.removeCallbacks(hideTask);
-            if (autoHide && aaShown) main.postDelayed(hideTask, ALERT_SHOW_MS);
+            if (autoHide && aaVisible()) main.postDelayed(hideTask, ALERT_SHOW_MS);
         }
     }
 
     private void clearAlert() {
         alertPending = false;
+        alertSeen = false;
         alertShown = null;
         main.removeCallbacks(alertExpire);
+        main.removeCallbacks(alertSeenTask);
         renderAlert();
         markNav();
     }
@@ -1418,8 +1435,13 @@ final class CarUi {
      */
     private void renderAlert() {
         if (alertCard != null) {
-            boolean show = alertPending && !rail();
-            if (show != (alertCard.getVisibility() == View.VISIBLE)) L.i("CarUi: aviso del plan en el panel " + (show ? "a la vista" : "fuera"));
+            boolean show = alertPending && !alertSeen && !rail();
+            if (show) placeAlert();
+            if (show != (alertCard.getVisibility() == View.VISIBLE)) {
+                L.i("CarUi: aviso del plan " + (show ? "a la vista" : "fuera"));
+                // Visto: al recogerse el panel ya no vuelve (antes salía otra vez con cada pantalla abierta).
+                if (!show && alertPending) alertSeen = true;
+            }
             alertCard.setVisibility(show ? View.VISIBLE : View.GONE);
         }
         if (guessCard == null) return;
@@ -1430,6 +1452,30 @@ final class CarUi {
             L.i("CarUi: tarjeta «" + guessKind + "» fuera");
             guessPlaced = "";
             setGuessRect(null);
+        }
+    }
+
+    /**
+     * El aviso, abajo en el panel; con la pantalla partida el panel es la barra de iconos y no cabe: abajo a la izquierda
+     * de nuestra pantalla (antes quedaba encima de AA, en la esquina inferior izquierda).
+     */
+    private void placeAlert() {
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) alertCard.getLayoutParams();
+        boolean sp = splitActive();
+        int w = panelW - 24;
+        int gravity = Gravity.BOTTOM | (panelRight ? Gravity.RIGHT : Gravity.LEFT);
+        int left = 12;
+        if (sp) {
+            int pw = layoutPanelW();
+            gravity = Gravity.BOTTOM | Gravity.LEFT;
+            left = (panelRight ? 0 : pw) + splitAaWidth(width, height, pw, dpi) + 12;
+            w = Math.min(contentWidth() - 24, GUESS_W);
+        }
+        if (lp.width != w || lp.gravity != gravity || lp.leftMargin != left) {
+            lp.width = w;
+            lp.gravity = gravity;
+            lp.leftMargin = left;
+            alertCard.setLayoutParams(lp);
         }
     }
 
@@ -2020,8 +2066,18 @@ final class CarUi {
         // WhitelistAppOn: Android Auto y la sección Coche son interfaces de conducción; el resto, ocio.
         // La radio también (solo audio, como la música de AA).
         SspSession.setDrivingUi("aa".equals(name) || "car".equals(name) || "radio".equals(name));
-        setCompact(false);
-        if (!"aa".equals(name)) setHidden(false);
+        // Panel y pantalla grande se ajustan junto con la pantalla nueva (applyLayout, abajo), de una vez: antes AA recibía
+        // primero los márgenes del panel completo y enseguida los de la pantalla partida, y se recolocaba dos veces.
+        if (compact && panel != null) {
+            compact = false;
+            L.i("CarUi: pantalla grande no");
+        }
+        if (!"aa".equals(name) && hidden && panel != null) {
+            hidden = false;
+            L.i("CarUi: panel desplegado");
+        }
+        // Visto el aviso, abrir la sección Coche lo da por leído (el botón deja el ámbar).
+        if ("car".equals(name) && alertSeen) clearAlert();
         // Al abrir una pantalla se ve el panel con la elegida; a los pocos segundos sin tocar, se recoge.
         scheduleHide();
         if (screen != null) screen.destroy();
