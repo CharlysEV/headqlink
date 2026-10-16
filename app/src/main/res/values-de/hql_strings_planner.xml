@@ -65,28 +65,20 @@
     <string name="hql_pl_here_name">GPS-Standort</string>
     <string name="hql_guess_title">Route nach %1$s</string>
     <string name="hql_guess_text">Aus Google Maps gelesen (noch %1$s). Der Ladeplan folgt.</string>
-    <string name="hql_guess_ok">OK</string>
+    <string name="hql_guess_auto_text">Aus Google Maps gelesen und schon geplant (noch %1$s): Du kommst mit %2$s %% an.</string>
+    <string name="hql_guess_ok">Stimmt</string>
     <string name="hql_guess_not">Stimmt nicht</string>
     <string name="hql_guess_ask_title">Wohin geht\'s?</string>
     <string name="hql_guess_ask_text">Google Maps navigiert (%1$s). Ziel für den Ladeplan wählen:</string>
     <string name="hql_guess_search">Suchen</string>
     <string name="hql_guess_close">Schließen</string>
-    <plurals name="hql_guess_stops_title">
-        <item quantity="one">Ladestopp zu Google Maps hinzufügen?</item>
-        <item quantity="other">Die %1$d Ladestopps zu Google Maps hinzufügen?</item>
+    <plurals name="hql_guess_auto_stops">
+        <item quantity="one">Aus Google Maps gelesen und schon geplant (noch %1$s). Du musst einmal zum Laden halten (bei %3$s). Wenn ich den Stopp hinzufüge, beende ich die Google-Maps-Route und starte die des Plans, die darüber führt.</item>
+        <item quantity="other">Aus Google Maps gelesen und schon geplant (noch %1$s). Du musst %2$d-mal zum Laden halten (zuerst bei %3$s). Wenn ich die Stopps hinzufüge, beende ich die Google-Maps-Route und starte die des Plans, die darüber führt.</item>
     </plurals>
-    <string name="hql_guess_stops_text">Um anzukommen, musst du laden (erster Stopp: %1$s). Wenn du sie hinzufügst, beendet der Planer die aktuelle Google-Maps-Route und startet seine eigene über die Stopps.</string>
     <string name="hql_guess_stops_add">Zu Maps hinzufügen</string>
-    <string name="hql_guess_stops_no">Nein</string>
+    <string name="hql_guess_stops_no">Ohne Stopps</string>
     <string name="hql_guess_stops_fail_title">Google-Maps-Route konnte nicht geändert werden</string>
     <string name="hql_guess_stops_fail_text">Maps folgt noch seiner Route. Beende sie mit dem X und tippe auf «Erneut versuchen».</string>
     <string name="hql_guess_stops_retry">Erneut versuchen</string>
-    <string name="hql_guess_plan_title">Routenplaner einschalten?</string>
-    <string name="hql_guess_plan_text">Google Maps fährt zu einem Ziel in %1$s Entfernung. Ich kann es lesen und die Ladestopps berechnen.</string>
-    <string name="hql_guess_plan_text_existing">Google Maps hatte schon eine Route (%1$s). Ich kann sie lesen und die Ladestopps berechnen.</string>
-    <string name="hql_guess_plan_text_dest">Google Maps fährt nach %1$s (%2$s). Ich kann die Ladestopps berechnen.</string>
-    <string name="hql_guess_plan_yes">Ja, planen</string>
-    <string name="hql_guess_plan_this">Diese Route planen</string>
-    <string name="hql_guess_plan_no">Nein</string>
-    <string name="hql_guess_plan_countdown">Wenn du nichts antippst, geht es in %1$d s ohne Routenplaner weiter</string>
 </resources>

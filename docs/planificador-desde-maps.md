@@ -6,12 +6,17 @@ navega en Android Auto sin destino en el planificador:
 1. La app lee el destino de la tarjeta de Maps: toca el icono de la ruta, lo lee con el OCR del móvil y la cierra con
    un «atrás». Antes de tocar nada pone Maps a pantalla completa: si AA tiene la pantalla partida (Maps y la tarjeta
    de música), pulsa una vez el icono de Maps de su barra, que alterna entre partida y completa, y lo comprueba. Así
-   ningún toque cae en otra app. Antes espera a que el conductor lleve 4 s sin tocar la pantalla del coche, y solo lo hace por debajo de
-   20 km/h.
-2. Pregunta «¿Activo el planificador? Google Maps va a ‹sitio› (411 km)», con 15 s de cuenta atrás. Si no se ha podido
-   leer, pregunta sin el sitio y lee tras el «Sí».
-3. Con «Sí» calcula el plan de carga y, si hacen falta paradas, ofrece añadirlas a Maps.
-4. Con «Añadir a Maps» quita la ruta de Maps, le manda la del plan con las paradas y pulsa su «Iniciar». Todo se maneja con
+   ningún toque cae en otra app. Antes espera a que el conductor lleve 4 s sin tocar la pantalla del coche (a cualquier
+   velocidad desde el 16-10-2026).
+2. Planifica sin preguntar (desde el 16-10-2026; antes preguntaba «¿Activo el planificador?»). Con el plan de carga hecho
+   (o a los 30 s si tarda), una sola tarjeta:
+   - sin paradas: «Ruta a ‹sitio›» · «llegas con el 23 %», con «Correcto» / «No es»; sin respuesta, se va a los 20 s y la
+     ruta se queda;
+   - con paradas: «Ruta a ‹sitio›» · «hay que parar a cargar 2 veces», con «Añadir a Maps» / «Sin paradas» / «No es»; se
+     va a los 2 min (sin añadir nada).
+   «No es» quita la ruta del planificador y no la vuelve a planificar en 12 h (también tras reconectar). Si no se puede
+   leer el destino, o lo leído no cuadra con los km de Maps, «¿A dónde vas?».
+3. Con «Añadir a Maps» quita la ruta de Maps, le manda la del plan con las paradas y pulsa su «Iniciar». Todo se maneja con
 tarjetas flotantes encima de Android Auto: el panel no se despliega ni se recoge (AA no se recoloca).
 
 Las tarjetas van en la columna de la derecha de la zona de AA (donde suele estar la tarjeta de música o el mapa sin
@@ -26,10 +31,10 @@ nuestra capa encima de AA (`GlFrameRelay.setFloatRects`); antes era uno solo.
 
 Código:
 
-- `RoutePlanner.guessFromMaps`: decide cuándo preguntar o leer.
+- `RoutePlanner.guessFromMaps`: decide cuándo leer y planificar.
 - `MapsReader`: lee la tarjeta, quita la navegación y pulsa «Iniciar».
 - `MapsCard`: lectura pura de las líneas del OCR. Tests en `MapsCardTest`.
-- `CarUi.showPlannerAsk` y demás `show*`: las tarjetas.
+- `CarUi.showMapsRoute` y demás `show*`: las tarjetas.
 - `DestGuess`: reglas de distancia.
 
 El log de la app apunta cada paso sin datos personales: «ruta: …», «Maps: …» y «CarUi: tarjeta «…» en x,y AxB». Nunca
@@ -37,7 +42,8 @@ apunta direcciones ni el texto de las tarjetas.
 
 ## Escenarios
 
-Pruebas en el coche virtual (versión 0.2.63 de pruebas, 15-10-2026), salvo donde se indica. Se probaron dos variantes y
+Pruebas en el coche virtual (versión 0.2.63 de pruebas, 15-10-2026), salvo donde se indica. Los escenarios 2-6, 11, 12 y
+17 son de cuando se preguntaba: con la planificación automática (16-10-2026) están pendientes de repetir. Se probaron dos variantes y
 se eligió la A: «A», leer Maps antes de preguntar; «B», preguntar primero y leer tras el «Sí». También se eligió pulsar
 «Iniciar» solo.
 

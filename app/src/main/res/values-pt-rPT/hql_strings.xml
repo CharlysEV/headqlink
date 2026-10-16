@@ -925,7 +925,7 @@
     <string name="hql_float_card">Cartão da próxima paragem sobre o Android Auto</string>
     <string name="hql_float_card_help">Toque para abrir a rota; mantenha premido para o mover.</string>
     <string name="hql_maps_planner">Planeador a partir do Google Maps</string>
-    <string name="hql_maps_planner_help">Ao navegar com o Google Maps, o carro pergunta se ativa o planeador. Se disser que sim, lê o destino do Maps no ecrã do carro e calcula as paragens de carregamento.</string>
+    <string name="hql_maps_planner_help">Ao navegar com o Google Maps, a app lê o destino do Maps no ecrã do carro e calcula sozinha as paragens de carregamento. Um cartão mostra a rota lida: «Não é» retira-a do planeador.</string>
     <string name="hql_gal_all">Todas</string>
     <string name="hql_gal_camera">Câmara</string>
     <string name="hql_gal_downloads">Transferências</string>

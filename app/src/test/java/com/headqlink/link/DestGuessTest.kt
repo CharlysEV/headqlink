@@ -21,19 +21,19 @@ class DestGuessTest {
         assertFalse(MapsNavListener.sameRoute(434_000, 411_000))
         assertTrue(MapsNavListener.sameRoute(5_000, 5_800))
         assertFalse(MapsNavListener.sameRoute(5_000, 7_000))
-        // Contestada hace una hora: no se vuelve a preguntar; hace 13 h, o por otra ruta, sí.
+        // Apuntada hace una hora: cuenta; hace 13 h, o por otra ruta, no.
         val now = 1_760_000_000_000L
-        assertTrue(RoutePlanner.answered("434000," + (now - 3_600_000) + ",n", 435_000, now))
-        assertFalse(RoutePlanner.answered("434000," + (now - 13 * 3_600_000L) + ",s", 434_000, now))
-        assertFalse(RoutePlanner.answered("434000," + (now - 3_600_000) + ",s", 298_000, now))
+        assertTrue(RoutePlanner.answered("434000," + (now - 3_600_000) + ",x", 435_000, now))
+        assertFalse(RoutePlanner.answered("434000," + (now - 13 * 3_600_000L) + ",x", 434_000, now))
+        assertFalse(RoutePlanner.answered("434000," + (now - 3_600_000) + ",x", 298_000, now))
         assertFalse(RoutePlanner.answered("", 434_000, now))
         assertFalse(RoutePlanner.answered("basura", 434_000, now))
-        // Con la respuesta: «Sí» planifica sin preguntar; «No» y las de antes (sin respuesta guardada), silencio.
-        assertTrue(RoutePlanner.answered("434000," + (now - 3_600_000) + ",s", 434_000, now))
-        assertTrue(RoutePlanner.answeredYes("434000," + (now - 3_600_000) + ",s"))
-        assertFalse(RoutePlanner.answeredYes("434000," + (now - 3_600_000) + ",n"))
-        assertFalse(RoutePlanner.answeredYes("434000," + (now - 3_600_000)))
         assertFalse(RoutePlanner.answered("434000," + (now - 3_600_000), 434_000, now))
+        // Solo «No es» (x) deja la ruta sin planificar; las respuestas de la pregunta de antes (s, n) se planifican.
+        assertTrue(RoutePlanner.rejected("434000," + (now - 3_600_000) + ",x"))
+        assertFalse(RoutePlanner.rejected("434000," + (now - 3_600_000) + ",n"))
+        assertFalse(RoutePlanner.rejected("434000," + (now - 3_600_000) + ",s"))
+        assertFalse(RoutePlanner.rejected("434000," + (now - 3_600_000)))
     }
 
     @Test

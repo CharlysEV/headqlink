@@ -925,7 +925,7 @@
     <string name="hql_float_card">Scheda della prossima sosta sopra Android Auto</string>
     <string name="hql_float_card_help">Toccala per aprire il percorso; tienila premuta per spostarla.</string>
     <string name="hql_maps_planner">Pianificatore da Google Maps</string>
-    <string name="hql_maps_planner_help">Quando navighi con Google Maps, l\'auto chiede se attivare il pianificatore. Se dici di sì, legge la destinazione di Maps sullo schermo dell\'auto e calcola le soste di ricarica.</string>
+    <string name="hql_maps_planner_help">Quando navighi con Google Maps, l\'app legge la destinazione di Maps sullo schermo dell\'auto e calcola da sola le soste di ricarica. Una scheda mostra il percorso letto: «Non è questo» lo toglie dal pianificatore.</string>
     <string name="hql_gal_all">Tutte</string>
     <string name="hql_gal_camera">Fotocamera</string>
     <string name="hql_gal_downloads">Download</string>

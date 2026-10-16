@@ -65,29 +65,21 @@
     <string name="hql_pl_here_name">Localização do GPS</string>
     <string name="hql_guess_title">Rota para %1$s</string>
     <string name="hql_guess_text">Lido do Google Maps (faltam %1$s). O plano de recarga acompanha.</string>
-    <string name="hql_guess_ok">OK</string>
+    <string name="hql_guess_auto_text">Lida do Google Maps e já planejada (faltam %1$s): você chega com %2$s %%.</string>
+    <string name="hql_guess_ok">Correto</string>
     <string name="hql_guess_not">Não é</string>
     <string name="hql_guess_ask_title">Para onde você vai?</string>
     <string name="hql_guess_ask_text">O Google Maps está navegando (%1$s). Escolha o destino para o plano de recarga:</string>
     <string name="hql_guess_search">Buscar</string>
     <string name="hql_guess_close">Fechar</string>
-    <plurals name="hql_guess_stops_title">
-        <item quantity="one">Adiciono a parada de recarga ao Google Maps?</item>
-        <item quantity="many">Adiciono as %1$d paradas de recarga ao Google Maps?</item>
-        <item quantity="other">Adiciono as %1$d paradas de recarga ao Google Maps?</item>
+    <plurals name="hql_guess_auto_stops">
+        <item quantity="one">Lida do Google Maps e já planejada (faltam %1$s). É preciso parar para recarregar uma vez (em %3$s). Se eu adicionar a parada, encerro a rota do Google Maps e coloco a do plano, que passa por ela.</item>
+        <item quantity="many">Lida do Google Maps e já planejada (faltam %1$s). É preciso parar para recarregar %2$d vezes (a primeira em %3$s). Se eu adicionar as paradas, encerro a rota do Google Maps e coloco a do plano, que passa por elas.</item>
+        <item quantity="other">Lida do Google Maps e já planejada (faltam %1$s). É preciso parar para recarregar %2$d vezes (a primeira em %3$s). Se eu adicionar as paradas, encerro a rota do Google Maps e coloco a do plano, que passa por elas.</item>
     </plurals>
-    <string name="hql_guess_stops_text">Para chegar é preciso recarregar (primeira parada: %1$s). Se você adicionar, o planejador encerra a rota atual do Google Maps e coloca a dele, passando por elas.</string>
     <string name="hql_guess_stops_add">Adicionar ao Maps</string>
-    <string name="hql_guess_stops_no">Não</string>
+    <string name="hql_guess_stops_no">Sem paradas</string>
     <string name="hql_guess_stops_fail_title">Não consegui mudar a rota do Google Maps</string>
     <string name="hql_guess_stops_fail_text">O Maps continua com a rota dele. Encerre com o X e toque em «Tentar de novo».</string>
     <string name="hql_guess_stops_retry">Tentar de novo</string>
-    <string name="hql_guess_plan_title">Ativo o planejador?</string>
-    <string name="hql_guess_plan_text">O Google Maps vai para um destino a %1$s. Posso lê-lo e calcular as paradas de recarga.</string>
-    <string name="hql_guess_plan_text_existing">O Google Maps já tinha uma rota (%1$s). Posso lê-la e calcular as paradas de recarga.</string>
-    <string name="hql_guess_plan_text_dest">O Google Maps vai para %1$s (%2$s). Posso calcular as paradas de recarga.</string>
-    <string name="hql_guess_plan_yes">Sim, planejar</string>
-    <string name="hql_guess_plan_this">Planejar esta rota</string>
-    <string name="hql_guess_plan_no">Não</string>
-    <string name="hql_guess_plan_countdown">Se você não tocar em nada, segue sem o planejador em %1$d s</string>
 </resources>

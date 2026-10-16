@@ -928,7 +928,7 @@
     <string name="hql_float_card">在 Android Auto 上显示下一站卡片</string>
     <string name="hql_float_card_help">点按打开路线；长按可移动。</string>
     <string name="hql_maps_planner">从 Google Maps 启动规划器</string>
-    <string name="hql_maps_planner_help">使用 Google Maps 导航时，车机会询问是否开启规划器。如果选择是，它会读取车机屏幕上 Maps 的目的地并计算充电停靠点。</string>
+    <string name="hql_maps_planner_help">使用 Google Maps 导航时，应用会读取车机屏幕上 Maps 的目的地，并自动计算充电停靠点。卡片会显示读取到的路线：点“不是这个”即可从规划器中移除。</string>
     <string name="hql_gal_all">全部</string>
     <string name="hql_gal_camera">相机</string>
     <string name="hql_gal_downloads">下载</string>

@@ -65,28 +65,20 @@
     <string name="hql_pl_here_name">GPS-locatie</string>
     <string name="hql_guess_title">Route naar %1$s</string>
     <string name="hql_guess_text">Gelezen uit Google Maps (nog %1$s). Het laadplan volgt.</string>
-    <string name="hql_guess_ok">OK</string>
+    <string name="hql_guess_auto_text">Gelezen uit Google Maps en al gepland (nog %1$s): je komt aan met %2$s %%.</string>
+    <string name="hql_guess_ok">Klopt</string>
     <string name="hql_guess_not">Klopt niet</string>
     <string name="hql_guess_ask_title">Waar ga je heen?</string>
     <string name="hql_guess_ask_text">Google Maps navigeert (%1$s). Kies de bestemming voor het laadplan:</string>
     <string name="hql_guess_search">Zoeken</string>
     <string name="hql_guess_close">Sluiten</string>
-    <plurals name="hql_guess_stops_title">
-        <item quantity="one">Laadstop toevoegen aan Google Maps?</item>
-        <item quantity="other">De %1$d laadstops toevoegen aan Google Maps?</item>
+    <plurals name="hql_guess_auto_stops">
+        <item quantity="one">Gelezen uit Google Maps en al gepland (nog %1$s). Je moet één keer stoppen om te laden (bij %3$s). Als ik de stop toevoeg, stop ik de route van Google Maps en start ik die van het plan, die erlangs gaat.</item>
+        <item quantity="other">Gelezen uit Google Maps en al gepland (nog %1$s). Je moet %2$d keer stoppen om te laden (eerst bij %3$s). Als ik de stops toevoeg, stop ik de route van Google Maps en start ik die van het plan, die erlangs gaat.</item>
     </plurals>
-    <string name="hql_guess_stops_text">Om aan te komen moet je laden (eerste stop: %1$s). Als je ze toevoegt, stopt de planner de huidige route van Google Maps en start zijn eigen route langs de stops.</string>
     <string name="hql_guess_stops_add">Toevoegen aan Maps</string>
-    <string name="hql_guess_stops_no">Nee</string>
+    <string name="hql_guess_stops_no">Zonder stops</string>
     <string name="hql_guess_stops_fail_title">Kon de route van Google Maps niet wijzigen</string>
     <string name="hql_guess_stops_fail_text">Maps volgt nog zijn eigen route. Stop die met de X en tik op «Opnieuw».</string>
     <string name="hql_guess_stops_retry">Opnieuw</string>
-    <string name="hql_guess_plan_title">Routeplanner aanzetten?</string>
-    <string name="hql_guess_plan_text">Google Maps rijdt naar een bestemming op %1$s. Ik kan die lezen en de laadstops berekenen.</string>
-    <string name="hql_guess_plan_text_existing">Google Maps had al een route (%1$s). Ik kan die lezen en de laadstops berekenen.</string>
-    <string name="hql_guess_plan_text_dest">Google Maps rijdt naar %1$s (%2$s). Ik kan de laadstops berekenen.</string>
-    <string name="hql_guess_plan_yes">Ja, plannen</string>
-    <string name="hql_guess_plan_this">Deze route plannen</string>
-    <string name="hql_guess_plan_no">Nee</string>
-    <string name="hql_guess_plan_countdown">Als je niets aantikt, ga je over %1$d s verder zonder routeplanner</string>
 </resources>

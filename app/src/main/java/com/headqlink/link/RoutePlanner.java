@@ -210,29 +210,37 @@ final class RoutePlanner {
      */
     private static volatile long askedNavMs;
     /**
-     * El destino se ha leído de Maps y aún no se ha mirado si hacen falta paradas: con el primer plan de carga que las
-     * tenga, se ofrece en el coche añadirlas a Google Maps (DestGuessListener.onDestStops).
+     * El destino leído de Maps ya está puesto y falta su tarjeta «Ruta a…»: sale con el primer plan de carga (con sus
+     * paradas, si hacen falta) o, si el plan tarda, pasado ROUTE_CARD_WAIT_MS sin ellas (DestGuessListener.onMapsRoute).
      */
-    private static volatile boolean stopsOffer;
-    /** Por encima de esto (km/h) no se pregunta: se espera a que el coche vaya más despacio. */
-    static final double ASK_MAX_KMH = 20;
+    private static volatile RouteOffer routeOffer;
+    static final long ROUTE_CARD_WAIT_MS = 30_000;
+
+    private static final class RouteOffer {
+        final String name;
+        final double km;
+        final long atMs = SystemClock.elapsedRealtime();
+
+        RouteOffer(String name, double km) {
+            this.name = name;
+            this.km = km;
+        }
+    }
+
     /** Sin tocar la pantalla del coche durante esto antes de leer Maps (para no tocarlo mientras lo usa el conductor). */
     static final long IDLE_BEFORE_READ_MS = 4000;
     /**
      * Al entrar se esperan EXISTING_WAIT_MS (que Android Auto enseñe Maps) y se mira si Maps ya navegaba (una ruta de
-     * antes): la pregunta lo dice. existingDecided: ya se ha mirado.
+     * antes), para el log. existingDecided: ya se ha mirado.
      */
     static final long EXISTING_WAIT_MS = 10_000;
     private volatile boolean existingDecided;
     private final long startedMs = SystemClock.elapsedRealtime();
     /**
-     * El conductor ha activado el planificador (reloj de arranque; 0: no): se lee la tarjeta de Maps en cuanto se vea AA
-     * (vale READ_WANT_MS).
+     * Hay que leer la tarjeta de Maps (reloj de arranque; 0: no): se lee en cuanto se vea AA (vale READ_WANT_MS). Para
+     * cuando Maps empieza a navegar con una pantalla nuestra delante.
      */
     private static volatile long readWantedMs;
-    /** Leído antes de preguntar: el destino ya situado, a la espera del «Sí». */
-    private static volatile Place pendingPlace;
-    private static volatile double pendingKm;
     static final long READ_WANT_MS = 10 * 60_000L;
     /** Lo que se descartó en esta navegación (el plan no cuadró, o «No es»): no se vuelve a proponer. */
     private static final java.util.Set<String> guessRejected = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
@@ -561,9 +569,9 @@ final class RoutePlanner {
                     guessed = false;
                     plan = null;
                     status = noRoute();
-                    stopsOffer = false;
+                    routeOffer = null;
                     DestGuessListener gl = destGuesses;
-                    if (gl != null) gl.onDestGuess(null, new ArrayList<>(), mi.remainingM / 1000.0);
+                    if (gl != null) gl.onDestAsk(new ArrayList<>(), mi.remainingM / 1000.0);
                     return;
                 }
             }
@@ -776,22 +784,19 @@ final class RoutePlanner {
 
     /** El panel del coche se apunta para enseñar el destino deducido o preguntar por él. */
     interface DestGuessListener {
-        /** chosen: el deducido (null si se pregunta); options: los que encajan (o los de siempre si no encaja ninguno). */
-        void onDestGuess(DestGuess.Candidate chosen, List<DestGuess.Candidate> options, double mapsKm);
+        /** No se sabe a dónde va Maps: «¿A dónde vas?» (options: los que encajan, o ninguno). */
+        void onDestAsk(List<DestGuess.Candidate> options, double mapsKm);
 
-        /** El plan al destino leído de Maps lleva paradas: ¿se añaden a Google Maps? (first: la primera parada). */
-        default void onDestStops(int stops, String first) {
+        /**
+         * El destino leído de Maps ya está planificado: «Ruta a name», con «No es». stops: paradas del plan (con ellas,
+         * se ofrece añadirlas a Google Maps; first, la primera); arrivalPct: con cuánto se llega sin parar (NaN si no se
+         * sabe: el plan aún no está o no hay cargador al alcance).
+         */
+        default void onMapsRoute(String name, double mapsKm, int stops, String first, double arrivalPct) {
         }
 
         /** No se ha podido quitar la navegación de Maps para mandarle la del plan. */
         default void onDestStopsFailed() {
-        }
-
-        /**
-         * Maps navega sin destino aquí: ¿activa el conductor el planificador? existing: Maps ya navegaba al entrar (se
-         * planifica esa ruta, sin quitarla). Sin respuesta, no.
-         */
-        default void onPlannerAsk(double mapsKm, boolean existing, String dest) {
         }
 
     }
@@ -803,11 +808,12 @@ final class RoutePlanner {
     }
 
     /**
-     * Google Maps navega y aquí no hay destino: se pregunta en el coche si se activa el planificador (una vez por
-     * navegación; al acabar Maps, se vuelve a poder) y, si el conductor dice que sí, se lee el destino de la tarjeta de
-     * Maps en Android Auto (MapsReader).
+     * Google Maps navega y aquí no hay destino: se lee el destino de la tarjeta de Maps en Android Auto (MapsReader) y se
+     * planifica sin preguntar (una vez por navegación; al acabar Maps, se vuelve a poder). Luego, la tarjeta «Ruta a…»
+     * con «No es» (onMapsRoute). Una ruta quitada con «No es» no se vuelve a planificar en ANSWERED_MS.
      */
     private void guessFromMaps(CarSensors.Snapshot s) {
+        routeCardIfLate();
         if (!new Config(ctx).mapsPlanner()) return;
         MapsNavListener.Info mi = MapsNavListener.ongoing();
         // Sin ruta (o con la notificación de 0 km que deja Maps al acabar o quitarla): la siguiente navegación se lee.
@@ -816,16 +822,13 @@ final class RoutePlanner {
                 guessAsked = false;
                 guessRejected.clear();
             }
-            pendingPlace = null;
             return;
         }
         double km = mi.remainingM / 1000.0;
         if (guessAsked && mi.startedMs != askedNavMs) {
             guessAsked = false;
             guessRejected.clear();
-            pendingPlace = null;
         }
-        DestGuessListener l = destGuesses;
         // Tan cerca no hay nada que planificar.
         if (km < DestGuess.MIN_ROAD_KM) return;
         // Al entrar: unos segundos para que Android Auto enseñe Maps.
@@ -835,36 +838,17 @@ final class RoutePlanner {
         if (here == null) return;
         long want = readWantedMs;
         if (want != 0 && SystemClock.elapsedRealtime() - want > READ_WANT_MS) readWantedMs = want = 0;
-        if (want != 0) {
-            // El conductor ya ha dicho que sí: se lee en cuanto AA (con Maps) está en pantalla.
-            AaPassthroughSource src = AaPassthroughSource.current();
-            if (src == null || !src.aaOnScreen()) return;
-            readWantedMs = 0;
-            guessAsked = true;
-            askedNavMs = mi.startedMs;
-            L.i(String.format(Locale.US, "ruta: Google Maps navega %.1f km sin destino aquí: leo su tarjeta", km));
-            double lat = here[0];
-            double lon = here[1];
-            MapsReader.read(ctx, () -> {
-                AaPassthroughSource now = AaPassthroughSource.current();
-                return MapsNavListener.routing() && manual == null && now != null && now.aaOnScreen();
-            }, address -> onMapsAddress(address, lat, lon, km));
-            return;
-        }
-        if (guessAsked) return;
-        // Ya contestada (en esta sesión o en otra de hace poco): la misma ruta no se vuelve a preguntar.
-        Config cfg = new Config(ctx);
-        // Ya contestada: si fue «No» (o sin respuesta), silencio; si fue «Sí», se planifica sin volver a preguntar.
-        boolean autoYes = false;
-        if (answered(cfg, mi.totalM)) {
-            if (!answeredYes(cfg.mapsAnswered())) {
+        if (want == 0 && guessAsked) return;
+        if (want == 0) {
+            // Quitada con «No es» hace poco (también en otra sesión): esa ruta no se vuelve a planificar.
+            Config cfg = new Config(ctx);
+            if (answered(cfg, mi.totalM) && rejected(cfg.mapsAnswered())) {
+                L.i("ruta: esta ruta de Google Maps se quitó con «No es»: no la planifico");
                 guessAsked = true;
                 askedNavMs = mi.startedMs;
                 return;
             }
-            autoYes = true;
         }
-        if (!Double.isNaN(s.speedKmh) && s.speedKmh >= ASK_MAX_KMH) return;
         AaPassthroughSource src = AaPassthroughSource.current();
         boolean canRead = src != null && src.aaOnScreen();
         // Antes de tocar Maps para leerlo, unos segundos sin que el conductor toque la pantalla del coche (podría estar
@@ -875,70 +859,37 @@ final class RoutePlanner {
         askedTotalM = mi.totalM;
         boolean existing = !existingDecided && mi.startedMs <= startedMs + 2000;
         existingDecided = true;
-        if (canRead) {
-            // Se lee la tarjeta de Maps antes de preguntar, para que la pregunta diga a dónde va (si no se puede, se
-            // pregunta sin el sitio y se lee tras el «Sí»).
-            L.i(String.format(Locale.US, "ruta: Google Maps navega %.1f km sin destino aquí%s: leo su tarjeta antes de preguntar", km,
-                    existing ? " (ya navegaba al entrar)" : ""));
-            double lat = here[0];
-            double lon = here[1];
-            boolean yes = autoYes;
-            MapsReader.read(ctx, () -> {
-                AaPassthroughSource now = AaPassthroughSource.current();
-                return MapsNavListener.routing() && manual == null && now != null && now.aaOnScreen();
-            }, read -> {
-                // La búsqueda del sitio, como mucho LOCATE_ASK_MS: si el buscador va lento (o falla), se pregunta sin el
-                // sitio y, si llega antes del «Sí», se usa igual.
-                Place[] got = new Place[1];
-                java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
-                pendingKm = km;
-                new Thread(() -> {
-                    got[0] = locate(read, lat, lon, km);
-                    if (got[0] != null) pendingPlace = got[0];
-                    done.countDown();
-                }, "maps-situar").start();
-                try {
-                    done.await(LOCATE_ASK_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
-                } catch (InterruptedException ignored) {
-                }
-                Place pl = got[0];
-                if (yes) {
-                    L.i("ruta: esta ruta de Google Maps ya tuvo un «Sí»: planifico sin preguntar");
-                    acceptPlanner();
-                    return;
-                }
-                if (pl == null && done.getCount() > 0) L.i("ruta: el buscador tarda: pregunto sin el sitio");
-                L.i("ruta: pregunto si activo el planificador " + (pl != null ? "(con el destino leído)" : "(sin destino: no se ha leído)"));
-                DestGuessListener gl = destGuesses;
-                if (gl != null) gl.onPlannerAsk(km, existing, pl == null ? null : pl.name);
-            });
+        if (!canRead) {
+            // Con una pantalla nuestra delante: se lee en cuanto se vea AA.
+            if (want == 0) {
+                L.i(String.format(Locale.US, "ruta: Google Maps navega %.1f km sin destino aquí%s: leo su tarjeta cuando se vea", km,
+                        existing ? " (ya navegaba al entrar)" : ""));
+                readWantedMs = SystemClock.elapsedRealtime();
+            }
             return;
         }
-        if (autoYes) {
-            L.i("ruta: esta ruta de Google Maps ya tuvo un «Sí»: planifico sin preguntar (leo Maps cuando se vea)");
-            acceptPlanner();
-            return;
-        }
-        L.i(String.format(Locale.US, "ruta: Google Maps navega %.1f km sin destino aquí%s: pregunto si activo el planificador", km,
+        readWantedMs = 0;
+        L.i(String.format(Locale.US, "ruta: Google Maps navega %.1f km sin destino aquí%s: leo su tarjeta y planifico", km,
                 existing ? " (ya navegaba al entrar)" : ""));
-        if (l != null) l.onPlannerAsk(km, existing, null);
+        double lat = here[0];
+        double lon = here[1];
+        MapsReader.read(ctx, () -> {
+            AaPassthroughSource now = AaPassthroughSource.current();
+            return MapsNavListener.routing() && manual == null && now != null && now.aaOnScreen();
+        }, address -> onMapsAddress(address, lat, lon, km));
     }
 
-    /** Longitud de la ruta de Maps por la que se preguntó (para recordarla al contestar). */
+    /** Longitud de la ruta de Maps que se leyó (para recordarla si se quita con «No es»). */
     private static volatile int askedTotalM = -1;
-    /** Lo que se espera al buscador del sitio leído antes de preguntar. */
-    static final long LOCATE_ASK_MS = 8000;
-    /** Una ruta contestada no se vuelve a preguntar durante esto (también tras cerrar y abrir el coche). */
+    /** Una ruta quitada con «No es» no se vuelve a planificar durante esto (también tras cerrar y abrir el coche). */
     static final long ANSWERED_MS = 12 * 3600_000L;
 
     /**
-     * Puro: ¿la ruta de longitud totalM se contestó (stored: «total,ms de pared» o «total,ms,s|n») hace menos de
-     * ANSWERED_MS?
+     * Puro: ¿la ruta de longitud totalM se apuntó (stored: «total,ms de pared,respuesta») hace menos de ANSWERED_MS?
      */
     static boolean answered(String stored, int totalM, long nowMs) {
         if (stored == null || stored.isEmpty() || totalM <= 0) return false;
         String[] f = stored.split(",");
-        // Las guardadas sin la respuesta (versiones de antes) no cuentan: se vuelve a preguntar una vez.
         if (f.length != 3) return false;
         try {
             return MapsNavListener.sameRoute(Integer.parseInt(f[0]), totalM) && nowMs - Long.parseLong(f[1]) < ANSWERED_MS;
@@ -947,46 +898,37 @@ final class RoutePlanner {
         }
     }
 
-    /** Puro: ¿la respuesta guardada fue «Sí»? (las de antes, sin la respuesta, cuentan como «No»). */
-    static boolean answeredYes(String stored) {
+    /**
+     * Puro: ¿la ruta apuntada se quitó con «No es»? (las respuestas de la pregunta de antes, «s» o «n», no cuentan:
+     * esas rutas se planifican).
+     */
+    static boolean rejected(String stored) {
         if (stored == null) return false;
         String[] f = stored.split(",");
-        return f.length == 3 && "s".equals(f[2]);
+        return f.length == 3 && "x".equals(f[2]);
     }
 
     private static boolean answered(Config cfg, int totalM) {
         return answered(cfg.mapsAnswered(), totalM, System.currentTimeMillis());
     }
 
-    /** Apunta la ruta contestada (Sí, No o sin respuesta). */
-    private static void rememberAnswer(boolean yes) {
+    /** Apunta que la ruta leída de Maps se quitó con «No es». */
+    private static void rememberRejected() {
         RoutePlanner r = instance;
         int t = askedTotalM;
         if (r == null || t <= 0) return;
-        new Config(r.ctx).setMapsAnswered(t + "," + System.currentTimeMillis() + "," + (yes ? "s" : "n"));
+        new Config(r.ctx).setMapsAnswered(t + "," + System.currentTimeMillis() + ",x");
     }
 
-    /** El panel del coche: el conductor activa el planificador; se lee la ruta de Maps en el próximo paso. */
-    static void acceptPlanner() {
-        rememberAnswer(true);
-        Place pl = pendingPlace;
-        RoutePlanner r = instance;
-        pendingPlace = null;
-        if (pl != null && r != null) {
-            // Ya leído antes de preguntar: se planifica sin volver a tocar Maps.
-            L.i("ruta: el conductor activa el planificador: planifico el destino ya leído de Google Maps");
-            r.useMapsPlace(pl, pendingKm);
-            return;
-        }
-        L.i("ruta: el conductor activa el planificador: leo la ruta de Google Maps");
-        readWantedMs = SystemClock.elapsedRealtime();
-    }
-
-    /** El panel del coche: «No», o sin respuesta. Nada más en esta navegación de Maps. */
-    static void declinePlanner(boolean timeout) {
-        rememberAnswer(false);
-        pendingPlace = null;
-        L.i("ruta: " + (timeout ? "sin respuesta" : "el conductor no quiere el planificador") + ": sigo sin planificar esta navegación");
+    /** Si el plan de carga tarda (o falla), la tarjeta «Ruta a…» sale igual, sin las paradas. */
+    private void routeCardIfLate() {
+        RouteOffer o = routeOffer;
+        if (o == null || SystemClock.elapsedRealtime() - o.atMs < ROUTE_CARD_WAIT_MS) return;
+        routeOffer = null;
+        if (manual == null || !guessed) return;
+        L.i("ruta: el plan de carga tarda: enseño la ruta leída de Google Maps sin las paradas");
+        DestGuessListener l = destGuesses;
+        if (l != null) l.onMapsRoute(o.name, o.km, 0, null, Double.NaN);
     }
 
     /**
@@ -997,7 +939,7 @@ final class RoutePlanner {
         Place pl = locate(read, lat, lon, km);
         if (pl == null) {
             DestGuessListener l = destGuesses;
-            if (l != null) l.onDestGuess(null, new ArrayList<>(), km);
+            if (l != null) l.onDestAsk(new ArrayList<>(), km);
             return;
         }
         useMapsPlace(pl, km);
@@ -1033,16 +975,17 @@ final class RoutePlanner {
         return pl;
     }
 
-    /** El destino de Maps, ya situado, pasa a ser el del planificador (y se ofrecerán sus paradas a Maps). */
+    /**
+     * El destino de Maps, ya situado, pasa a ser el del planificador; su tarjeta «Ruta a…» sale con el plan de carga
+     * (routeOffer).
+     */
     private void useMapsPlace(Place pl, double km) {
-        L.i(String.format(Locale.US, "ruta: destino leído de la tarjeta de Google Maps (%.1f km por carretera)", km));
+        L.i(String.format(Locale.US, "ruta: destino leído de la tarjeta de Google Maps (%.1f km por carretera): planifico", km));
         Config c = new Config(ctx);
         c.setRecentPlaces(PlaceSearch.remember(c.recentPlaces(), pl));
         nextGuess = true;
-        stopsOffer = true;
+        routeOffer = new RouteOffer(pl.name, km);
         setManualDestination(pl);
-        DestGuessListener l = destGuesses;
-        if (l != null) l.onDestGuess(new DestGuess.Candidate(pl.name, "maps", pl), new ArrayList<>(), km);
     }
 
     /** El panel del coche: el usuario ha elegido uno de la tarjeta (sigue la navegación de Maps). */
@@ -1080,11 +1023,16 @@ final class RoutePlanner {
         }));
     }
 
-    /** El panel del coche: «No es» sobre el deducido. Se quita y no se vuelve a proponer en esta navegación. */
+    /**
+     * El panel del coche: «No es» sobre la ruta leída de Maps. Se quita del planificador y no se vuelve a planificar en
+     * esta navegación ni, esa misma ruta, en ANSWERED_MS.
+     */
     static void rejectGuess() {
         Place m = manual;
         if (m != null) guessRejected.add(guessKey(m));
-        L.i("ruta: el destino deducido de Google Maps no era: lo quito");
+        L.i("ruta: la ruta leída de Google Maps no era: la quito del planificador");
+        routeOffer = null;
+        rememberRejected();
         setManualDestination(null);
         guessAsked = true;
     }
@@ -1257,14 +1205,19 @@ final class RoutePlanner {
                         r.outcome.name().toLowerCase(Locale.ROOT), r.stops.size(), r.chargeMinutes, r.arrivalPct, f, curveNote(s)));
             }
             if (change != ChargePlanner.Change.NONE) alert(change, before, r);
-            if (stopsOffer && !demo) {
-                // Destino leído de Maps: si hacen falta paradas, se pregunta en el coche si se añaden a Google Maps.
-                stopsOffer = false;
+            RouteOffer offer = routeOffer;
+            if (offer != null && !demo) {
+                // Destino leído de Maps, ya planificado: la tarjeta «Ruta a…» con lo que sale (y, con paradas, si se
+                // añaden a Google Maps).
+                routeOffer = null;
                 ChargePlanner.Stop next = r.next();
-                if (next != null) {
-                    L.i("ruta: el plan al destino de Google Maps lleva " + r.stops.size() + " paradas: pregunto si las añado a Maps");
+                boolean stops = r.outcome == ChargePlanner.Outcome.PLANNED && next != null;
+                if (guessed) {
+                    L.i("ruta: ruta de Google Maps planificada (" + (stops ? r.stops.size() + " paradas: pregunto si las añado a Maps"
+                            : r.outcome.name().toLowerCase(Locale.ROOT)) + ")");
                     DestGuessListener gl = destGuesses;
-                    if (gl != null) gl.onDestStops(r.stops.size(), next.charger.name);
+                    if (gl != null) gl.onMapsRoute(offer.name, offer.km, stops ? r.stops.size() : 0, stops ? next.charger.name : null,
+                            r.outcome == ChargePlanner.Outcome.NO_STOPS ? r.arrivalPct : Double.NaN);
                 }
             }
             return r;

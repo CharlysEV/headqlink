@@ -924,7 +924,7 @@
     <string name="hql_float_card">Karte mit dem nächsten Halt über Android Auto</string>
     <string name="hql_float_card_help">Antippen öffnet die Route; gedrückt halten, um sie zu verschieben.</string>
     <string name="hql_maps_planner">Routenplaner aus Google Maps</string>
-    <string name="hql_maps_planner_help">Wenn du mit Google Maps navigierst, fragt das Auto, ob du den Routenplaner einschaltest. Wenn ja, liest es das Maps-Ziel auf dem Autobildschirm und berechnet die Ladestopps.</string>
+    <string name="hql_maps_planner_help">Wenn du mit Google Maps navigierst, liest die App das Ziel aus Maps auf dem Autobildschirm und plant die Ladestopps selbst. Eine Karte zeigt die gelesene Route: «Stimmt nicht» nimmt sie aus dem Planer.</string>
     <string name="hql_gal_all">Alle</string>
     <string name="hql_gal_camera">Kamera</string>
     <string name="hql_gal_downloads">Downloads</string>

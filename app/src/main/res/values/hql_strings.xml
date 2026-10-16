@@ -929,7 +929,7 @@
     <string name="hql_float_card">Next stop card over Android Auto</string>
     <string name="hql_float_card_help">Tap it to open the route; press and hold to move it.</string>
     <string name="hql_maps_planner">Planner from Google Maps</string>
-    <string name="hql_maps_planner_help">When you navigate with Google Maps, the car asks whether to turn on the planner. If you say yes, it reads the Maps destination on the car screen and works out the charging stops.</string>
+    <string name="hql_maps_planner_help">When you navigate with Google Maps, the app reads the destination from Maps on the car screen and works out the charging stops on its own. A card shows the route it read: «That\'s not it» removes it from the planner.</string>
     <string name="hql_gal_all">All</string>
     <string name="hql_gal_camera">Camera</string>
     <string name="hql_gal_downloads">Downloads</string>

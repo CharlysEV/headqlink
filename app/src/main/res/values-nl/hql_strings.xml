@@ -924,7 +924,7 @@
     <string name="hql_float_card">Kaart met de volgende stop boven Android Auto</string>
     <string name="hql_float_card_help">Tik om de route te openen; houd ingedrukt om hem te verplaatsen.</string>
     <string name="hql_maps_planner">Planner vanuit Google Maps</string>
-    <string name="hql_maps_planner_help">Als je met Google Maps navigeert, vraagt de auto of je de planner aanzet. Zo ja, dan leest hij de Maps-bestemming op het autoscherm en berekent hij de laadstops.</string>
+    <string name="hql_maps_planner_help">Als je met Google Maps navigeert, leest de app de bestemming uit Maps op het autoscherm en plant hij zelf de laadstops. Een kaart toont de gelezen route: «Klopt niet» haalt hem uit de planner.</string>
     <string name="hql_gal_all">Alle</string>
     <string name="hql_gal_camera">Camera</string>
     <string name="hql_gal_downloads">Downloads</string>

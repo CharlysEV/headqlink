@@ -154,50 +154,23 @@ final class CarUi {
     private Object[] alertShown;
     private TextView guessTitle;
     private TextView guessText;
-    /** Cuenta atrás de la pregunta del planificador: qué pasa si no se pulsa nada, y en cuántos segundos. */
-    private TextView guessCountdown;
-    private long askDeadline;
-    /** Segundos de la pregunta del planificador antes de quedarse en «No». */
-    private static final int ASK_CARD_S = 15;
     private LinearLayout guessBtns;
     private boolean guessPending;
     private final Runnable guessExpire = this::clearGuess;
-    /**
-     * La pregunta del planificador: cada segundo, la cuenta atrás; al llegar a 0 sin respuesta, la tarjeta se va y es un
-     * «No» (Maps sigue como está; nunca se quita ni se lee nada sin que el conductor lo pida).
-     */
-    private final Runnable askExpire = new Runnable() {
-        @Override
-        public void run() {
-            long left = askDeadline - android.os.SystemClock.elapsedRealtime();
-            if (left > 0) {
-                guessCountdown.setText(Str.get(R.string.hql_guess_plan_countdown, (int) Math.ceil(left / 1000.0)));
-                main.postDelayed(this, Math.min(1000, left));
-                return;
-            }
-            clearGuess();
-            RoutePlanner.declinePlanner(true);
-        }
-    };
     private final RoutePlanner.DestGuessListener destGuess = new RoutePlanner.DestGuessListener() {
         @Override
-        public void onDestGuess(DestGuess.Candidate chosen, java.util.List<DestGuess.Candidate> options, double mapsKm) {
-            main.post(() -> showGuess(chosen, options, mapsKm));
+        public void onDestAsk(java.util.List<DestGuess.Candidate> options, double mapsKm) {
+            main.post(() -> showGuess(options, mapsKm));
         }
 
         @Override
-        public void onDestStops(int stops, String first) {
-            main.post(() -> showGuessStops(stops, first));
+        public void onMapsRoute(String name, double mapsKm, int stops, String first, double arrivalPct) {
+            main.post(() -> showMapsRoute(name, mapsKm, stops, first, arrivalPct));
         }
 
         @Override
         public void onDestStopsFailed() {
             main.post(CarUi.this::showGuessStopsFailed);
-        }
-
-        @Override
-        public void onPlannerAsk(double mapsKm, boolean existing, String dest) {
-            main.post(() -> showPlannerAsk(mapsKm, existing, dest));
         }
 
     };
@@ -961,7 +934,6 @@ final class CarUi {
             main.removeCallbacks(alertExpire);
             main.removeCallbacks(alertSeenTask);
             main.removeCallbacks(guessExpire);
-            main.removeCallbacks(askExpire);
             main.removeCallbacks(railTick);
             main.removeCallbacks(floatTick);
             floatRect = null;
@@ -1522,7 +1494,7 @@ final class CarUi {
         setGuessRect(overAa ? new int[]{x, y, GUESS_W, h} : null);
     }
 
-    /** Tarjeta del destino de Google Maps: «Ruta a Casa · según Google Maps» con «No es», o «¿A dónde vas?» con opciones. */
+    /** Tarjeta del destino de Google Maps: «Ruta a Casa», ya planificada, con «No es», o «¿A dónde vas?» con opciones. */
     private View buildGuess(Context c) {
         LinearLayout card = new LinearLayout(c);
         card.setOrientation(LinearLayout.VERTICAL);
@@ -1537,11 +1509,6 @@ final class CarUi {
         guessText.setMaxLines(7);
         guessText.setPadding(0, 8, 0, 12);
         card.addView(guessText);
-        guessCountdown = CarStyle.text(c, "", 20, CarKit.AMBER);
-        guessCountdown.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        guessCountdown.setPadding(0, 0, 0, 10);
-        guessCountdown.setVisibility(View.GONE);
-        card.addView(guessCountdown);
         guessBtns = new LinearLayout(c);
         guessBtns.setOrientation(LinearLayout.VERTICAL);
         card.addView(guessBtns);
@@ -1562,70 +1529,33 @@ final class CarUi {
     }
 
     /**
-     * Google Maps navega y el planificador ha leído el destino (chosen) o no sabe cuál es (chosen null): tarjeta
+     * Google Maps navega y el planificador no sabe a dónde (no se pudo leer o no cuadra): «¿A dónde vas?», tarjeta
      * flotante encima de AA. Todo con un toque en la pantalla del coche.
      */
-    private void showGuess(DestGuess.Candidate chosen, java.util.List<DestGuess.Candidate> options, double km) {
+    private void showGuess(java.util.List<DestGuess.Candidate> options, double km) {
         if (guessCard == null) return;
-        guessReplay = () -> showGuess(chosen, options, km);
-        guessKind = chosen != null ? "destino leído" : "destino sin leer";
+        guessReplay = () -> showGuess(options, km);
+        guessKind = "destino sin leer";
         guessBtns.removeAllViews();
         String dist = String.format(java.util.Locale.getDefault(), "%.0f km", km);
-        boolean ok = chosen != null;
-        guessCard.setBackground(CarStyle.round(CarTheme.alertBg(ok), 24));
-        guessTitle.setTextColor(ok ? CarKit.GREEN : CarKit.AMBER);
-        if (ok) {
-            guessTitle.setText(Str.get(R.string.hql_guess_title, chosen.label));
-            guessText.setText(Str.get(R.string.hql_guess_text, dist));
-            guessPill(Str.get(R.string.hql_guess_ok), true, this::clearGuess);
-            guessPill(Str.get(R.string.hql_guess_not), false, () -> {
-                RoutePlanner.rejectGuess();
-                showGuess(null, options, km);
-            });
-        } else {
-            guessTitle.setText(Str.get(R.string.hql_guess_ask_title));
-            guessText.setText(Str.get(R.string.hql_guess_ask_text, dist));
-            int n = 0;
-            for (DestGuess.Candidate o : options) {
-                if (n++ >= 3) break;
-                guessPill(o.label, n == 1, () -> {
-                    clearGuess();
-                    RoutePlanner.chooseGuess(o);
-                });
-            }
-            guessPill(Str.get(R.string.hql_guess_search), false, () -> {
-                clearGuess();
-                CarHubScreen.selectTab(0);
-                open("car");
-            });
-            guessPill(Str.get(R.string.hql_guess_close), false, this::clearGuess);
-        }
-        guessPending = true;
-        if (!replaying) {
-            main.removeCallbacks(guessExpire);
-            main.postDelayed(guessExpire, ok ? ALERT_SHOW_MS : 2 * 60_000L);
-        }
-        renderAlert();
-    }
-
-    /** El plan al destino de Maps lleva paradas: el conductor decide si el planificador cambia la ruta de Google Maps. */
-    private void showGuessStops(int stops, String first) {
-        if (guessCard == null) return;
-        guessReplay = () -> showGuessStops(stops, first);
-        guessKind = "paradas a Maps";
-        guessBtns.removeAllViews();
         guessCard.setBackground(CarStyle.round(CarTheme.alertBg(false), 24));
         guessTitle.setTextColor(CarKit.AMBER);
-        guessTitle.setText(Str.plural(R.plurals.hql_guess_stops_title, stops, stops));
-        guessText.setText(Str.get(R.string.hql_guess_stops_text, first == null ? "" : first));
-        guessPill(Str.get(R.string.hql_guess_stops_add), true, () -> {
+        guessTitle.setText(Str.get(R.string.hql_guess_ask_title));
+        guessText.setText(Str.get(R.string.hql_guess_ask_text, dist));
+        int n = 0;
+        for (DestGuess.Candidate o : options) {
+            if (n++ >= 3) break;
+            guessPill(o.label, n == 1, () -> {
+                clearGuess();
+                RoutePlanner.chooseGuess(o);
+            });
+        }
+        guessPill(Str.get(R.string.hql_guess_search), false, () -> {
             clearGuess();
-            RoutePlanner.addStopsToMaps(ctx);
+            CarHubScreen.selectTab(0);
+            open("car");
         });
-        guessPill(Str.get(R.string.hql_guess_stops_no), false, () -> {
-            L.i("ruta: el conductor no quiere las paradas en Google Maps");
-            clearGuess();
-        });
+        guessPill(Str.get(R.string.hql_guess_close), false, this::clearGuess);
         guessPending = true;
         if (!replaying) {
             main.removeCallbacks(guessExpire);
@@ -1635,38 +1565,46 @@ final class CarUi {
     }
 
     /**
-     * Maps navega sin destino aquí: ¿activo el planificador? «Sí» lee la ruta de Maps (si ya navegaba al entrar,
-     * existing, esa misma, sin quitarla). Sin respuesta en ASK_CARD_S, «No».
+     * La ruta de Google Maps ya está planificada: «Ruta a Sevilla», con «Correcto» y «No es» (la quita del planificador).
+     * Sin respuesta, se queda. Con paradas, además si se añaden a Google Maps (cambia su ruta: eso sí se pregunta).
      */
-    private void showPlannerAsk(double km, boolean existing, String dest) {
+    private void showMapsRoute(String name, double km, int stops, String first, double arrivalPct) {
         if (guessCard == null) return;
-        guessReplay = () -> showPlannerAsk(km, existing, dest);
-        guessKind = (existing ? "¿planificador? (ruta de antes)" : "¿planificador?") + (dest != null ? " con destino" : " sin destino");
+        guessReplay = () -> showMapsRoute(name, km, stops, first, arrivalPct);
+        guessKind = stops > 0 ? "ruta de Maps planificada, con paradas" : "ruta de Maps planificada";
         guessBtns.removeAllViews();
-        guessCard.setBackground(CarStyle.round(CarTheme.alertBg(false), 24));
-        guessTitle.setTextColor(CarKit.AMBER);
-        guessTitle.setText(Str.get(R.string.hql_guess_plan_title));
         String dist = String.format(java.util.Locale.getDefault(), "%.0f km", km);
-        // Con el destino ya leído, la pregunta dice a dónde va.
-        guessText.setText(dest != null ? Str.get(R.string.hql_guess_plan_text_dest, dest, dist)
-                : Str.get(existing ? R.string.hql_guess_plan_text_existing : R.string.hql_guess_plan_text, dist));
-        guessPill(Str.get(existing ? R.string.hql_guess_plan_this : R.string.hql_guess_plan_yes), true, () -> {
-            main.removeCallbacks(askExpire);
+        boolean ok = stops <= 0;
+        guessCard.setBackground(CarStyle.round(CarTheme.alertBg(ok), 24));
+        guessTitle.setTextColor(ok ? CarKit.GREEN : CarKit.AMBER);
+        guessTitle.setText(Str.get(R.string.hql_guess_title, name));
+        if (!ok) {
+            guessText.setText(Str.plural(R.plurals.hql_guess_auto_stops, stops, dist, stops, first == null ? "" : first));
+            guessPill(Str.get(R.string.hql_guess_stops_add), true, () -> {
+                clearGuess();
+                RoutePlanner.addStopsToMaps(ctx);
+            });
+            guessPill(Str.get(R.string.hql_guess_stops_no), false, () -> {
+                L.i("ruta: el conductor no quiere las paradas en Google Maps");
+                clearGuess();
+            });
+        } else {
+            guessText.setText(Double.isNaN(arrivalPct) ? Str.get(R.string.hql_guess_text, dist)
+                    : Str.get(R.string.hql_guess_auto_text, dist, String.format(java.util.Locale.getDefault(), "%.0f", arrivalPct)));
+            guessPill(Str.get(R.string.hql_guess_ok), true, () -> {
+                L.i("ruta: el conductor confirma la ruta leída de Google Maps");
+                clearGuess();
+            });
+        }
+        guessPill(Str.get(R.string.hql_guess_not), false, () -> {
             clearGuess();
-            RoutePlanner.acceptPlanner();
-        });
-        guessPill(Str.get(R.string.hql_guess_plan_no), false, () -> {
-            main.removeCallbacks(askExpire);
-            clearGuess();
-            RoutePlanner.declinePlanner(false);
+            RoutePlanner.rejectGuess();
         });
         guessPending = true;
-        main.removeCallbacks(guessExpire);
-        // Sin respuesta en ASK_CARD_S: la tarjeta se va y es un «No».
-        main.removeCallbacks(askExpire);
-        if (!replaying) askDeadline = android.os.SystemClock.elapsedRealtime() + ASK_CARD_S * 1000L;
-        guessCountdown.setVisibility(View.VISIBLE);
-        askExpire.run();
+        if (!replaying) {
+            main.removeCallbacks(guessExpire);
+            main.postDelayed(guessExpire, ok ? ALERT_SHOW_MS : 2 * 60_000L);
+        }
         renderAlert();
     }
 
@@ -1697,8 +1635,6 @@ final class CarUi {
         guessPending = false;
         guessReplay = null;
         main.removeCallbacks(guessExpire);
-        main.removeCallbacks(askExpire);
-        if (guessCountdown != null) guessCountdown.setVisibility(View.GONE);
         renderAlert();
     }
 

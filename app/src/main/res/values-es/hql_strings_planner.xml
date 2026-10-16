@@ -65,29 +65,21 @@
     <string name="hql_pl_here_name">Ubicación del GPS</string>
     <string name="hql_guess_title">Ruta a %1$s</string>
     <string name="hql_guess_text">Leído de Google Maps (faltan %1$s). El plan de carga lo sigue.</string>
-    <string name="hql_guess_ok">Vale</string>
+    <string name="hql_guess_auto_text">Leída de Google Maps y ya planificada (faltan %1$s): llegas con el %2$s %%.</string>
+    <string name="hql_guess_ok">Correcto</string>
     <string name="hql_guess_not">No es</string>
     <string name="hql_guess_ask_title">¿A dónde vas?</string>
     <string name="hql_guess_ask_text">Google Maps está navegando (%1$s). Elige el destino para el plan de carga:</string>
     <string name="hql_guess_search">Buscar</string>
     <string name="hql_guess_close">Cerrar</string>
-    <plurals name="hql_guess_stops_title">
-        <item quantity="one">¿Añado la parada de carga a Google Maps?</item>
-        <item quantity="many">¿Añado las %1$d paradas de carga a Google Maps?</item>
-        <item quantity="other">¿Añado las %1$d paradas de carga a Google Maps?</item>
+    <plurals name="hql_guess_auto_stops">
+        <item quantity="one">Leída de Google Maps y ya planificada (faltan %1$s). Hay que parar a cargar una vez (en %3$s). Si añado la parada, quito la ruta de Google Maps y pongo la del plan, que pasa por ella.</item>
+        <item quantity="many">Leída de Google Maps y ya planificada (faltan %1$s). Hay que parar a cargar %2$d veces (la primera, en %3$s). Si añado las paradas, quito la ruta de Google Maps y pongo la del plan, que pasa por ellas.</item>
+        <item quantity="other">Leída de Google Maps y ya planificada (faltan %1$s). Hay que parar a cargar %2$d veces (la primera, en %3$s). Si añado las paradas, quito la ruta de Google Maps y pongo la del plan, que pasa por ellas.</item>
     </plurals>
-    <string name="hql_guess_stops_text">Para llegar hay que cargar (primera parada: %1$s). Si las añades, el planificador quitará la ruta actual de Google Maps y pondrá la suya, que pasa por ellas.</string>
     <string name="hql_guess_stops_add">Añadir a Maps</string>
-    <string name="hql_guess_stops_no">No</string>
+    <string name="hql_guess_stops_no">Sin paradas</string>
     <string name="hql_guess_stops_fail_title">No he podido cambiar la ruta de Google Maps</string>
     <string name="hql_guess_stops_fail_text">Maps sigue con su ruta. Quítala con la X y pulsa «Reintentar».</string>
     <string name="hql_guess_stops_retry">Reintentar</string>
-    <string name="hql_guess_plan_title">¿Activo el planificador?</string>
-    <string name="hql_guess_plan_text">Google Maps va a un destino a %1$s. Puedo leerlo y calcular las paradas de carga.</string>
-    <string name="hql_guess_plan_text_existing">Google Maps ya tenía una ruta (%1$s). Puedo leerla y calcular las paradas de carga.</string>
-    <string name="hql_guess_plan_text_dest">Google Maps va a %1$s (%2$s). Puedo calcular las paradas de carga.</string>
-    <string name="hql_guess_plan_yes">Sí, planificar</string>
-    <string name="hql_guess_plan_this">Planificar esta ruta</string>
-    <string name="hql_guess_plan_no">No</string>
-    <string name="hql_guess_plan_countdown">Si no pulsas nada, sigues sin planificador en %1$d s</string>
 </resources>

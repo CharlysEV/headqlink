@@ -925,7 +925,7 @@
     <string name="hql_float_card">Carte du prochain arrêt sur Android Auto</string>
     <string name="hql_float_card_help">Touchez-la pour ouvrir l\'itinéraire ; maintenez-la pour la déplacer.</string>
     <string name="hql_maps_planner">Planificateur depuis Google Maps</string>
-    <string name="hql_maps_planner_help">Quand vous naviguez avec Google Maps, la voiture demande si vous activez le planificateur. Si vous dites oui, elle lit la destination de Maps sur l\'écran de la voiture et calcule les arrêts de recharge.</string>
+    <string name="hql_maps_planner_help">Quand vous naviguez avec Google Maps, l\'app lit la destination de Maps sur l\'écran de la voiture et calcule seule les arrêts de recharge. Une carte affiche l\'itinéraire lu : «Ce n\'est pas ça» le retire du planificateur.</string>
     <string name="hql_gal_all">Toutes</string>
     <string name="hql_gal_camera">Appareil photo</string>
     <string name="hql_gal_downloads">Téléchargements</string>

@@ -65,27 +65,19 @@
     <string name="hql_pl_here_name">GPS 位置</string>
     <string name="hql_guess_title">前往 %1$s 的路线</string>
     <string name="hql_guess_text">从 Google Maps 读取（剩余 %1$s）。充电计划将跟随此路线。</string>
-    <string name="hql_guess_ok">确定</string>
+    <string name="hql_guess_auto_text">已从 Google Maps 读取并完成规划（剩余 %1$s）：到达时电量 %2$s %%。</string>
+    <string name="hql_guess_ok">正确</string>
     <string name="hql_guess_not">不是这个</string>
     <string name="hql_guess_ask_title">你要去哪里？</string>
     <string name="hql_guess_ask_text">Google Maps 正在导航（%1$s）。请为充电计划选择目的地：</string>
     <string name="hql_guess_search">搜索</string>
     <string name="hql_guess_close">关闭</string>
-    <plurals name="hql_guess_stops_title">
-        <item quantity="other">将 %1$d 个充电站点添加到 Google Maps？</item>
+    <plurals name="hql_guess_auto_stops">
+        <item quantity="other">已从 Google Maps 读取并完成规划（剩余 %1$s）。需要停车充电 %2$d 次（第一站：%3$s）。添加后，我会结束 Google Maps 当前的路线，改用经过这些站点的规划路线。</item>
     </plurals>
-    <string name="hql_guess_stops_text">你需要充电才能到达（第一站：%1$s）。添加后，规划器会结束 Google Maps 当前的路线，并开始经过这些站点的新路线。</string>
     <string name="hql_guess_stops_add">添加到 Maps</string>
-    <string name="hql_guess_stops_no">不</string>
+    <string name="hql_guess_stops_no">不加停靠点</string>
     <string name="hql_guess_stops_fail_title">无法更改 Google Maps 路线</string>
     <string name="hql_guess_stops_fail_text">Maps 仍在使用自己的路线。请点 X 结束导航，然后点按“重试”。</string>
     <string name="hql_guess_stops_retry">重试</string>
-    <string name="hql_guess_plan_title">开启路线规划器？</string>
-    <string name="hql_guess_plan_text">Google Maps 正在前往 %1$s 外的目的地。我可以读取它并计算充电停靠点。</string>
-    <string name="hql_guess_plan_text_existing">Google Maps 已有一条路线（%1$s）。我可以读取它并计算充电停靠点。</string>
-    <string name="hql_guess_plan_text_dest">Google Maps 正前往 %1$s（%2$s）。我可以计算充电停靠点。</string>
-    <string name="hql_guess_plan_yes">好，开始规划</string>
-    <string name="hql_guess_plan_this">规划这条路线</string>
-    <string name="hql_guess_plan_no">不</string>
-    <string name="hql_guess_plan_countdown">如果不点按任何选项，%1$d 秒后将不使用规划器继续</string>
 </resources>

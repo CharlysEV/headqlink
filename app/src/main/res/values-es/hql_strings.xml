@@ -930,7 +930,7 @@
     <string name="hql_float_card">Tarjeta de la próxima parada sobre Android Auto</string>
     <string name="hql_float_card_help">Tócala para abrir la ruta; mantenla pulsada para moverla.</string>
     <string name="hql_maps_planner">Planificador desde Google Maps</string>
-    <string name="hql_maps_planner_help">Al navegar con Google Maps, el coche pregunta si activas el planificador. Si dices que sí, lee el destino de Maps en la pantalla del coche y calcula las paradas de carga.</string>
+    <string name="hql_maps_planner_help">Al navegar con Google Maps, la app lee el destino de Maps en la pantalla del coche y calcula sola las paradas de carga. Una tarjeta enseña la ruta leída: con «No es» se quita del planificador.</string>
     <string name="hql_gal_all">Todas</string>
     <string name="hql_gal_camera">Cámara</string>
     <string name="hql_gal_downloads">Descargas</string>
