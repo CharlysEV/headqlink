@@ -159,6 +159,13 @@ final class RouteTab implements CarScreen {
         actions.addView(mapPill, spaced());
         actions.addView(goMaps, spaced());
         actions.addView(clear, spaced());
+        // Pantalla partida: botones más pequeños (deja sitio al perfil de la ruta).
+        if (narrow) {
+            for (TextView t : new TextView[]{search, goMaps, clear, originPill, tripPill, mapPill}) {
+                t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 20);
+                t.setPadding(20, 8, 20, 8);
+            }
+        }
         // Con la interfaz reducida (T03) los botones, más grandes, pueden no caber en la tarjeta: la fila se desplaza.
         actionsHost = actions;
         if (CarStyle.scaled() || narrow) {
@@ -2520,12 +2527,23 @@ final class RouteTab implements CarScreen {
             y0 += (actionsHost.getHeight() > 0 ? actionsHost.getHeight() : CarStyle.touch(56)) + 4;
             pillsW = 0;
         }
-        // Destino.
-        CarIcons.pin(cv, x0 + 16, y0 + 30, 40, CarKit.ACCENT, CarKit.SURFACE, p);
-        CarKit.label(cv, Str.get(R.string.hql_destination), x0 + 48, y0 + 14, CarKit.FAINT, p, Paint.Align.LEFT, r.width() - pillsW - 60);
-        p.setTypeface(CarKit.MEDIUM);
-        p.setTextSize(40);
-        CarKit.text(cv, CarKit.ellipsize(dest != null ? dest : "", r.width() - pillsW - 60, p), x0 + 48, y0 + 58, 40, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        // Pantalla partida (la tarjeta es media pestaña): todo más pequeño para que quepa el perfil.
+        boolean small = r.height() < 420;
+        if (small) {
+            CarIcons.pin(cv, x0 + 10, y0 + 18, 26, CarKit.ACCENT, CarKit.SURFACE, p);
+            float wr = weatherRight(cv, pl, r.right, y0 + 26, p);
+            p.setTypeface(CarKit.MEDIUM);
+            p.setTextSize(26);
+            CarKit.text(cv, CarKit.ellipsize(dest != null ? dest : "", wr - x0 - 40, p), x0 + 30, y0 + 28, 26, CarKit.TEXT, CarKit.MEDIUM, p,
+                    Paint.Align.LEFT);
+        } else {
+            // Destino.
+            CarIcons.pin(cv, x0 + 16, y0 + 30, 40, CarKit.ACCENT, CarKit.SURFACE, p);
+            CarKit.label(cv, Str.get(R.string.hql_destination), x0 + 48, y0 + 14, CarKit.FAINT, p, Paint.Align.LEFT, r.width() - pillsW - 60);
+            p.setTypeface(CarKit.MEDIUM);
+            p.setTextSize(40);
+            CarKit.text(cv, CarKit.ellipsize(dest != null ? dest : "", r.width() - pillsW - 60, p), x0 + 48, y0 + 58, 40, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        }
         // Fichas: lo que falta, llegada, energía y consumo previstos.
         int prog = Math.min(pl.progress, pl.n - 1);
         double remKm = nav.remainingMeters >= 0 ? nav.remainingMeters / 1000.0 : pl.totalKm - pl.km[prog];
@@ -2535,17 +2553,33 @@ final class RouteTab implements CarScreen {
                 .format(new java.util.Date(DemoMode.wallClockMs() + remSec * 1000));
         double kwh = remainingKwh();
         double per100 = pl.totalKm - pl.km[prog] > 1 ? kwh / (pl.totalKm - pl.km[prog]) * 100 : Double.NaN;
-        float cw = (r.width() - 3 * 14) / 4f;
-        float cy0 = y0 + 92;
-        tmp.set(x0, cy0, x0 + cw, cy0 + 88);
-        CarKit.chip(cv, tmp, Str.get(R.string.hql_remaining), String.format(Locale.getDefault(), "%.0f", remKm), "km", CarKit.TEXT, p);
-        tmp.offset(cw + 14, 0);
-        CarKit.chip(cv, tmp, Str.get(R.string.hql_drive_arrival), eta, DriveTab.duration(remSec), CarKit.TEXT, p);
-        tmp.offset(cw + 14, 0);
-        CarKit.chip(cv, tmp, Str.get(R.string.hql_energy_needed), "~" + String.format(Locale.getDefault(), "%.1f", kwh), "kWh", CarKit.TEXT, p);
-        tmp.offset(cw + 14, 0);
-        CarKit.chip(cv, tmp, Str.get(R.string.hql_expected_use), Double.isNaN(per100) ? "—" : String.format(Locale.getDefault(), "%.1f", per100),
-                "kWh/100", CarKit.TEXT, p);
+        float gap = small ? 10 : 14;
+        float cw = (r.width() - 3 * gap) / 4f;
+        float cy0 = small ? y0 + 42 : y0 + 92;
+        float chH = small ? 62 : 88;
+        String per = Double.isNaN(per100) ? "—" : String.format(Locale.getDefault(), "%.1f", per100);
+        tmp.set(x0, cy0, x0 + cw, cy0 + chH);
+        chipFor(small, cv, Str.get(R.string.hql_remaining), String.format(Locale.getDefault(), "%.0f", remKm), "km", p);
+        tmp.offset(cw + gap, 0);
+        chipFor(small, cv, Str.get(R.string.hql_drive_arrival), eta, small ? "" : DriveTab.duration(remSec), p);
+        tmp.offset(cw + gap, 0);
+        chipFor(small, cv, Str.get(R.string.hql_energy_needed), "~" + String.format(Locale.getDefault(), "%.1f", kwh), "kWh", p);
+        tmp.offset(cw + gap, 0);
+        chipFor(small, cv, Str.get(R.string.hql_expected_use), per, small ? "" : "kWh/100", p);
+        if (small) {
+            // Perfil (con su eje de km) y la franja del viento debajo; sin tramos ni leyenda.
+            RectF chart = chartRect;
+            chart.set(x0 + 64, cy0 + chH + 40, r.right, r.bottom - 46);
+            profile(cv, chart, pl, prog, p);
+            float wy = r.bottom - 8;
+            for (int i = 1; i < pl.n; i++) {
+                double hw = pl.headwind[i];
+                p.setColor(hw > 15 ? CarKit.RED : hw > 5 ? CarKit.AMBER : hw < -5 ? CarKit.BLUE : CarKit.SURFACE_TOP);
+                cv.drawRect(xFor(pl, i - 1, chart), wy, xFor(pl, i, chart) + 1, wy + 8, p);
+            }
+            CarKit.text(cv, Str.get(R.string.hql_wind), x0, wy + 8, 16, CarKit.FAINT, CarKit.MEDIUM, p, Paint.Align.LEFT);
+            return;
+        }
         if (gpsNote != null) {
             // Sin GPS al día, el avance por la ruta (y lo que falta) se queda donde estaba: se dice.
             p.setTypeface(CarKit.MEDIUM);
@@ -2564,11 +2598,6 @@ final class RouteTab implements CarScreen {
                 CarKit.text(cv, CarKit.ellipsize(why, r.width() - right, p), x0, cy0 + 114, 21, CarKit.DIM, CarKit.MEDIUM, p,
                         Paint.Align.LEFT);
             }
-        }
-        // Pantalla partida (la tarjeta es media pestaña): sin perfil (se ve entero en «Mapa»); abajo, el tiempo al llegar.
-        if (r.height() < 420) {
-            weatherLine(cv, pl, x0, r.right, r.bottom - 6, p);
-            return;
         }
         // Perfil, viento, tramos y leyenda.
         float gx0 = x0 + 74;
@@ -2970,19 +2999,37 @@ final class RouteTab implements CarScreen {
         else statusPara.draw(cv, st, tx, r.top + 86, (int) (r.right - tx), false);
     }
 
-    /** El tiempo al llegar en una línea (pantalla partida, dentro de la tarjeta del destino); y: la base del texto. */
-    private void weatherLine(Canvas cv, RoutePlanner.Plan pl, float x, float right, float y, Paint p) {
-        if (pl == null || Double.isNaN(pl.destTemp)) return;
-        float lw = CarKit.label(cv, Str.get(R.string.hql_route_weather), x, y - 8, p);
-        CarIcons.weather(cv, pl.destCode, x + lw + 34, y - 15, 42, p);
-        float tx = x + lw + 64;
-        float w = CarKit.number(cv, String.format(Locale.getDefault(), "%.0f", pl.destTemp), "°C", tx, y, 32, CarKit.TEXT, CarKit.REGULAR,
-                p, Paint.Align.LEFT);
-        String more = weatherText(pl.destCode) + " · " + Str.get(R.string.hql_wind_rain, pl.destWind, pl.destRain);
+    /**
+     * Pantalla partida: el tiempo al llegar a la derecha de la línea del destino (icono, grados y cómo estará); y: la
+     * base del texto. Devuelve dónde empieza (el destino se corta antes).
+     */
+    private float weatherRight(Canvas cv, RoutePlanner.Plan pl, float right, float y, Paint p) {
+        if (pl == null || Double.isNaN(pl.destTemp)) return right;
         p.setTypeface(CarKit.MEDIUM);
-        p.setTextSize(21);
-        CarKit.text(cv, CarKit.ellipsize(more, right - tx - w - 16, p), tx + w + 16, y - 4, 21, CarKit.DIM, CarKit.MEDIUM, p,
-                Paint.Align.LEFT);
+        p.setTextSize(20);
+        String word = weatherText(pl.destCode);
+        float ww = Math.min(p.measureText(word), 190);
+        CarKit.text(cv, CarKit.ellipsize(word, 190, p), right, y - 2, 20, CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.RIGHT);
+        float tx = right - ww - 12;
+        float tw = CarKit.number(cv, String.format(Locale.getDefault(), "%.0f", pl.destTemp), "°C", tx, y, 26, CarKit.TEXT,
+                CarKit.REGULAR, p, Paint.Align.RIGHT);
+        float ix = tx - tw - 22;
+        CarIcons.weather(cv, pl.destCode, ix, y - 10, 34, p);
+        return ix - 22;
+    }
+
+    /** Ficha en tmp: la de siempre o, en la pantalla partida, una más baja con letra más pequeña. */
+    private void chipFor(boolean small, Canvas cv, String label, String value, String unit, Paint p) {
+        if (!small) {
+            CarKit.chip(cv, tmp, label, value, unit, CarKit.TEXT, p);
+            return;
+        }
+        p.setShader(null);
+        p.setStyle(Paint.Style.FILL);
+        p.setColor(CarKit.SURFACE_HI);
+        cv.drawRoundRect(tmp, 14, 14, p);
+        CarKit.titleLabel(cv, label, tmp.left + 12, tmp.top + 22, CarKit.FAINT, p, Paint.Align.LEFT, tmp.width() - 20);
+        CarKit.number(cv, value, unit, tmp.left + 12, tmp.bottom - 10, 26, CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
     }
 
     private void paintWeather(Canvas cv, RectF r, Paint p) {
