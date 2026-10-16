@@ -542,7 +542,6 @@ final class AaPassthroughSource implements VideoSource {
         hookMarginReply(cm);
         marginRight = right;
         marginBottom = bottom;
-        marginGen = cm.getTransportGeneration();
         marginAcked = false;
         int seq = ++marginSeq;
         L.i("AA: márgenes por lado L0 T0 R" + right + " B" + bottom + " (interfaz arriba)" + (attempt > 0 ? " · intento " + (attempt + 1) : ""));
@@ -573,24 +572,30 @@ final class AaPassthroughSource implements VideoSource {
         });
     }
 
-    /** Con cada frame de AA: si es otra conexión de AA (relanzado) que no tiene los márgenes, se le mandan otra vez. */
+    /**
+     * Con cada frame de AA: con el primero de cada conexión de AA (también un AA relanzado), los márgenes otra vez. Si
+     * se mandaron antes de que AA diera imagen, a veces no los aplica (12:54 del 16/10: centrada con franja negra).
+     */
     private void marginsForNewAa() {
         CommManager cm = comm();
-        if (marginRight < 0 || cm.getTransportGeneration() == marginGen) return;
+        int gen = cm.getTransportGeneration();
+        if (marginRight < 0 || gen == videoGen) return;
+        videoGen = gen;
         int r = marginRight;
         int b = marginBottom;
-        marginGen = cm.getTransportGeneration();
         main.post(() -> {
-            L.i("AA: otra conexión de Android Auto: le vuelvo a mandar los márgenes");
+            L.i("AA: primera imagen de esta conexión de Android Auto: le repito los márgenes");
             sendMargins(r, b, 0);
         });
     }
+
+    /** La conexión de AA de la que ya se vio la primera imagen (marginsForNewAa). */
+    private volatile int videoGen = -1;
 
     private static final long MARGIN_ACK_MS = 2500;
     private static final int MARGIN_TRIES = 4;
     private volatile int marginRight = -1;
     private volatile int marginBottom;
-    private volatile int marginGen = -1;
     private volatile boolean marginAcked;
     private int marginSeq;
     private CommManager marginHooked;
