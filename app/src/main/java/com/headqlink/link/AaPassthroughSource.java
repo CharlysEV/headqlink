@@ -358,6 +358,7 @@ final class AaPassthroughSource implements VideoSource {
                 LinkState.setSource(LinkState.Level.OK, Str.get(R.string.hql_running_size, sz[0], sz[1]));
                 announceTopAlignedMargins();
             }
+            marginsForNewAa();
             noteAaTimestamp();
             int nw = HeadUnitScreenConfig.INSTANCE.getNegotiatedWidth();
             int nh = HeadUnitScreenConfig.INSTANCE.getNegotiatedHeight();
@@ -528,11 +529,71 @@ final class AaPassthroughSource implements VideoSource {
         int right = Math.max(0, sc.getNegotiatedWidth() - aaVideoW());
         int bottom = Math.max(0, sc.getNegotiatedHeight() - videoH);
         if (right == 0 && bottom == 0) return;
-        main.post(() -> {
-            L.i("AA: márgenes por lado L0 T0 R" + right + " B" + bottom + " (interfaz arriba)");
-            comm().sendUpdateUiConfigRequest(0, 0, right, bottom);
+        main.post(() -> sendMargins(right, bottom, 0));
+    }
+
+    /**
+     * Manda los márgenes y comprueba que AA los confirma (UpdateUiConfigReply). Si AA los recibe antes de estar listo,
+     * o se relanza, se queda con los de serie: la interfaz centrada en vertical, con una franja negra arriba y lo de
+     * abajo cortado (16/10/2026, tras reconectar). Sin respuesta en MARGIN_ACK_MS, se repiten (hasta MARGIN_TRIES).
+     */
+    private void sendMargins(int right, int bottom, int attempt) {
+        CommManager cm = comm();
+        hookMarginReply(cm);
+        marginRight = right;
+        marginBottom = bottom;
+        marginGen = cm.getTransportGeneration();
+        marginAcked = false;
+        int seq = ++marginSeq;
+        L.i("AA: márgenes por lado L0 T0 R" + right + " B" + bottom + " (interfaz arriba)" + (attempt > 0 ? " · intento " + (attempt + 1) : ""));
+        cm.sendUpdateUiConfigRequest(0, 0, right, bottom);
+        main.postDelayed(() -> {
+            if (seq != marginSeq || marginAcked || !cm.isConnected()) return;
+            if (attempt + 1 >= MARGIN_TRIES) {
+                L.w("AA: no confirma los márgenes tras " + MARGIN_TRIES + " intentos");
+                return;
+            }
+            L.w("AA: no ha confirmado los márgenes en " + MARGIN_ACK_MS + " ms: los repito");
+            sendMargins(right, bottom, attempt + 1);
+        }, MARGIN_ACK_MS);
+    }
+
+    /** La respuesta de AA a los márgenes (sin quitar la que hubiera puesta). */
+    private void hookMarginReply(CommManager cm) {
+        if (marginHooked == cm) return;
+        marginHooked = cm;
+        kotlin.jvm.functions.Function0<kotlin.Unit> prev = cm.getOnUpdateUiConfigReplyReceived();
+        cm.setOnUpdateUiConfigReplyReceived(() -> {
+            if (!marginAcked) {
+                marginAcked = true;
+                L.i("AA: márgenes confirmados");
+            }
+            if (prev != null) prev.invoke();
+            return kotlin.Unit.INSTANCE;
         });
     }
+
+    /** Con cada frame de AA: si es otra conexión de AA (relanzado) que no tiene los márgenes, se le mandan otra vez. */
+    private void marginsForNewAa() {
+        CommManager cm = comm();
+        if (marginRight < 0 || cm.getTransportGeneration() == marginGen) return;
+        int r = marginRight;
+        int b = marginBottom;
+        marginGen = cm.getTransportGeneration();
+        main.post(() -> {
+            L.i("AA: otra conexión de Android Auto: le vuelvo a mandar los márgenes");
+            sendMargins(r, b, 0);
+        });
+    }
+
+    private static final long MARGIN_ACK_MS = 2500;
+    private static final int MARGIN_TRIES = 4;
+    private volatile int marginRight = -1;
+    private volatile int marginBottom;
+    private volatile int marginGen = -1;
+    private volatile boolean marginAcked;
+    private int marginSeq;
+    private CommManager marginHooked;
 
     @Override
     public void requestKeyFrame() {
@@ -611,6 +672,7 @@ final class AaPassthroughSource implements VideoSource {
         LinkState.setSource(LinkState.Level.BUSY, Str.get(R.string.hql_starting_auto));
         boolean[] first = {true};
         VideoTap.setSink((buf, off, len) -> {
+            marginsForNewAa();
             noteAaTimestamp();
             GlFrameRelay r = relay;
             if (r != null) {

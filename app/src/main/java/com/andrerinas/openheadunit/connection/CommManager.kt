@@ -150,6 +150,10 @@ class CommManager(
     /** @Volatile: written on IO thread, read on Main and IO threads. */
     @Volatile private var _transport: AapTransport? = null
 
+    /** headqlink: sube con cada conexión de AA (un AA relanzado es otra): sus márgenes hay que volver a mandarlos. */
+    @Volatile var transportGeneration: Int = 0
+        private set
+
     /**
      * `ip:port` of the most recent connection attempt, or `null` when it was not a socket
      * (USB). Lets a caller attribute a handshake failure to the peer it happened with, which
@@ -510,6 +514,7 @@ class CommManager(
 
                 if (_transport == null) {
                     val audioManager = context.getSystemService(Application.AUDIO_SERVICE) as AudioManager
+                    transportGeneration++
                     _transport = AapTransport(
                         audioDecoder,
                         videoDecoder,
