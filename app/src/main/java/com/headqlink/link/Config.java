@@ -268,6 +268,17 @@ final class Config {
     /** Tema de la pantalla del C10 (Global/DarkModeOn): -1 sin saber, 0 claro, 1 oscuro. */
     static final String CAR_DARK = "car_dark";
 
+    /**
+     * «Tema» de la pantalla del coche (Android Auto, el panel y las pantallas del modo extendido): 0 automático (el tema
+     * del coche o, si no lo dice, el sensor de luz), 1 siempre claro, 2 siempre oscuro.
+     */
+    static final String CAR_THEME = "car_theme";
+
+    int carTheme() {
+        int t = sp.getInt(CAR_THEME, 0);
+        return t == 1 || t == 2 ? t : 0;
+    }
+
     /** El último tema que dijo el coche (-1 si nunca lo ha dicho). */
     int carDark() {
         return sp.getInt(CAR_DARK, -1);

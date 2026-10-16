@@ -255,11 +255,16 @@ final class AaPassthroughSource implements VideoSource {
     /**
      * Tema de la pantalla del C10 (Global/DarkModeOn) → modo noche de Android Auto y, con él, el panel del modo
      * extendido (CarUi lo sigue): todo como los ajustes del coche. Se recuerda, porque el coche no lo manda en todas las
-     * sesiones; al arrancar se aplica el último (applyRememberedCarTheme).
+     * sesiones; al arrancar se aplica el último (applyCarTheme).
      */
     @Override
     public void onCarDarkMode(boolean dark) {
-        new Config(ctx).setCarDark(dark);
+        Config cfg = new Config(ctx);
+        cfg.setCarDark(dark);
+        if (cfg.carTheme() != 0) {
+            L.i("AA: el coche dice modo " + (dark ? "noche" : "día") + ", pero el tema es fijo (" + (cfg.carTheme() == 2 ? "oscuro" : "claro") + ")");
+            return;
+        }
         Settings settings = App.Companion.provide(ctx).getSettings();
         settings.setNightMode(dark ? Settings.NightMode.NIGHT : Settings.NightMode.DAY);
         L.i("AA: modo " + (dark ? "noche" : "día") + " del coche");
@@ -310,37 +315,44 @@ final class AaPassthroughSource implements VideoSource {
 
     /**
      * Día o noche de la sesión (lo que Open Headunit le manda a AA y lo que sigue nuestro panel, CarTheme), pura:
+     * - con el ajuste «Tema» fijo (theme 1 claro, 2 oscuro), ese;
      * - si el coche dijo alguna vez su tema (Global/DarkModeOn), ese;
      * - si no, el sensor de luz del móvil (como hace el propio Android Auto: viaje del 2026-10-09, en túneles, en el
      *   garaje y en días nublados AA y la pantalla del coche se oscurecían y nuestra barra no, porque le mandábamos
      *   amanecer y atardecer). El coche no avisa cuando cambia su tema automático;
      * - sin sensor de luz, amanecer y atardecer.
      */
-    static Settings.NightMode sessionNightMode(int carDark, boolean hasLightSensor) {
+    static Settings.NightMode sessionNightMode(int theme, int carDark, boolean hasLightSensor) {
+        if (theme == 1) return Settings.NightMode.DAY;
+        if (theme == 2) return Settings.NightMode.NIGHT;
         if (carDark >= 0) return carDark == 1 ? Settings.NightMode.NIGHT : Settings.NightMode.DAY;
         return hasLightSensor ? Settings.NightMode.LIGHT_SENSOR : Settings.NightMode.AUTO;
     }
 
-    /** Al arrancar: el día y la noche de la sesión (sessionNightMode). */
-    private void applyRememberedCarTheme() {
-        int d = new Config(ctx).carDark();
+    /** Al arrancar y al cambiar el ajuste «Tema»: el día y la noche de la sesión (sessionNightMode). */
+    static void applyCarTheme(Context ctx) {
+        Config cfg = new Config(ctx);
+        int t = cfg.carTheme();
+        int d = cfg.carDark();
         android.hardware.SensorManager sm = ctx.getSystemService(android.hardware.SensorManager.class);
         boolean light = sm != null && sm.getDefaultSensor(android.hardware.Sensor.TYPE_LIGHT) != null;
-        Settings.NightMode m = sessionNightMode(d, light);
+        Settings.NightMode m = sessionNightMode(t, d, light);
         App.Companion.provide(ctx).getSettings().setNightMode(m);
-        if (d >= 0) {
+        if (t != 0) {
+            L.i("AA: siempre modo " + (t == 2 ? "noche" : "día") + " (ajuste «Tema»)");
+        } else if (d >= 0) {
             L.i("AA: modo " + (d == 1 ? "noche" : "día") + " como la pantalla del coche (el último que dijo)");
         } else {
             L.i("AA: día y noche " + (light ? "con el sensor de luz del móvil (túneles, garajes)" : "por el amanecer y el atardecer (sin sensor de luz)"));
         }
-        if (comm().isConnected()) {
+        if (App.Companion.provide(ctx).getCommManager().isConnected()) {
             ctx.startForegroundService(new Intent(ctx, AapService.class).setAction(AapService.ACTION_REQUEST_NIGHT_MODE_UPDATE));
         }
     }
 
     @Override
     public void startPassthrough(EncodedSink sink) {
-        applyRememberedCarTheme();
+        applyCarTheme(ctx);
         HeadUnitScreenConfig sc = HeadUnitScreenConfig.INSTANCE;
         L.i("AA: vídeo negociado " + sc.getNegotiatedWidth() + "x" + sc.getNegotiatedHeight() + " márgenes "
                 + sc.getWidthMargin() + "x" + sc.getHeightMargin() + "; abre Android Auto (Self-Mode) si no está conectado");
@@ -663,7 +675,7 @@ final class AaPassthroughSource implements VideoSource {
     @Override
     public void start(Surface surface, int width, int height, int fps, String info) {
         if (!reencode) return;
-        applyRememberedCarTheme();
+        applyCarTheme(ctx);
         uiScale = extended ? UiScale.forCar(carW, carH, new Config(ctx).uiScalePercent()) : 1f;
         uiW = UiScale.canvas(carW, uiScale);
         uiH = UiScale.canvas(carH, uiScale);

@@ -330,9 +330,8 @@
     <string name="hql_tailwind">tailwind</string>
     <string name="hql_tap_to_connect">Tap to connect Qonecta+</string>
     <string name="hql_theme">Theme</string>
-    <string name="hql_theme_dark">Dark</string>
-    <string name="hql_theme_light">Light</string>
-    <string name="hql_theme_system">System default</string>
+    <string name="hql_theme_dark">Always dark</string>
+    <string name="hql_theme_light">Always light</string>
     <string name="hql_this_phone">This phone: %1$s</string>
     <string name="hql_touch_label">Qonecta+ touch</string>
     <string name="hql_touch_service_desc">Forwards the touches on the car\'s screen to the projected app and starts the Android Auto server when needed.</string>
@@ -1077,4 +1076,6 @@
     <string name="hql_tr_speed">Temporary speed limit</string>
     <string name="hql_tr_surface">Poor road surface</string>
     <string name="hql_tr_other">Incident</string>
+    <string name="hql_theme_auto">Automatic</string>
+    <string name="hql_theme_help">Android Auto, the side panel and the extended-mode screens. Automatic: like the car screen or, if the car doesn\'t say, with the phone\'s light sensor.</string>
 </resources>

@@ -330,9 +330,8 @@
     <string name="hql_tailwind">de cola</string>
     <string name="hql_tap_to_connect">Toca para conectar Qonecta+</string>
     <string name="hql_theme">Tema</string>
-    <string name="hql_theme_dark">Oscuro</string>
-    <string name="hql_theme_light">Claro</string>
-    <string name="hql_theme_system">Según el sistema</string>
+    <string name="hql_theme_dark">Siempre oscuro</string>
+    <string name="hql_theme_light">Siempre claro</string>
     <string name="hql_this_phone">Este móvil: %1$s</string>
     <string name="hql_touch_label">Qonecta+ táctil</string>
     <string name="hql_touch_service_desc">Reenvía los toques de la pantalla del coche a la app proyectada y arranca el servidor de Android Auto cuando hace falta.</string>
@@ -1078,4 +1077,6 @@
     <string name="hql_tr_speed">Límite de velocidad temporal</string>
     <string name="hql_tr_surface">Firme en mal estado</string>
     <string name="hql_tr_other">Incidencia</string>
+    <string name="hql_theme_auto">Automático</string>
+    <string name="hql_theme_help">Android Auto, el panel y las pantallas del modo extendido. Automático: como la pantalla del coche o, si el coche no lo dice, con el sensor de luz del móvil.</string>
 </resources>

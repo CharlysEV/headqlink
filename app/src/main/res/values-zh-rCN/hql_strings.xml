@@ -330,9 +330,8 @@
     <string name="hql_tailwind">顺风</string>
     <string name="hql_tap_to_connect">点按连接 Qonecta+</string>
     <string name="hql_theme">主题</string>
-    <string name="hql_theme_dark">深色</string>
-    <string name="hql_theme_light">浅色</string>
-    <string name="hql_theme_system">跟随系统</string>
+    <string name="hql_theme_dark">始终深色</string>
+    <string name="hql_theme_light">始终浅色</string>
     <string name="hql_this_phone">这部手机：%1$s</string>
     <string name="hql_touch_label">Qonecta+ 触控</string>
     <string name="hql_touch_service_desc">将车机屏幕上的触摸转发给投屏的应用，并在需要时启动 Android Auto 服务器。</string>
@@ -1076,4 +1075,6 @@
     <string name="hql_tr_speed">临时限速</string>
     <string name="hql_tr_surface">路面状况差</string>
     <string name="hql_tr_other">交通事件</string>
+    <string name="hql_theme_auto">自动</string>
+    <string name="hql_theme_help">Android Auto、侧边栏和扩展模式的界面。自动：跟随车机屏幕；车机未提供时，使用手机的光线传感器。</string>
 </resources>

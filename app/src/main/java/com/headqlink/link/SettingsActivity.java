@@ -182,6 +182,7 @@ public class SettingsActivity extends Activity implements LinkState.Listener {
 
     private void buildCarScreen() {
         section(R.drawable.hql_ln_car, Str.get(R.string.hql_aj_sec_car_screen));
+        row(Str.get(R.string.hql_theme), () -> themeLabel(cfg.carTheme())).setOnClickListener(v -> pickTheme());
         row(Str.get(R.string.hql_aa_size), () -> aaSizeLabel(cfg.aaSizePercent())).setOnClickListener(v -> pickAaSize());
         View scale = row(Str.get(R.string.hql_aj_ui_scale), () -> uiScaleLabel(cfg.uiScalePercent()));
         scale.setOnClickListener(v -> pickUiScale());
@@ -365,6 +366,21 @@ public class SettingsActivity extends Activity implements LinkState.Listener {
                     + (LinkState.running ? "se aplica al reconectar" : "se aplica en la próxima sesión") + ")");
             needsReconnect();
         });
+    }
+
+    /** «Tema» de la pantalla del coche: Automático, Siempre claro o Siempre oscuro; se aplica en el acto. */
+    private void pickTheme() {
+        CharSequence[] items = {themeLabel(0), themeLabel(1), themeLabel(2)};
+        choose(Str.get(R.string.hql_theme), items, cfg.carTheme(), Str.get(R.string.hql_theme_help), i -> {
+            cfg.putInt(Config.CAR_THEME, i);
+            L.i("tema de la pantalla del coche: " + (i == 0 ? "automático" : i == 1 ? "siempre claro" : "siempre oscuro"));
+            AaPassthroughSource.applyCarTheme(this);
+            refreshAll();
+        });
+    }
+
+    static String themeLabel(int theme) {
+        return Str.get(theme == 1 ? R.string.hql_theme_light : theme == 2 ? R.string.hql_theme_dark : R.string.hql_theme_auto);
     }
 
     private void pickThermal() {

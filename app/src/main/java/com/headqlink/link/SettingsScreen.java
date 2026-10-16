@@ -50,6 +50,8 @@ final class SettingsScreen implements CarScreen {
     /** «Tamaño de la interfaz» pendiente de aplicar (Config.uiScalePercent: 0 automático, UI_SCALE_CHOICES). */
     private int pendingUiScale;
     private final java.util.List<TextView> uiScalePills = new java.util.ArrayList<>();
+    /** «Tema» (0 automático, 1 claro, 2 oscuro): se aplica al tocar, sin reconectar. */
+    private final java.util.List<TextView> themePills = new java.util.ArrayList<>();
     /** Lo que se puede elegir en «Tamaño de la interfaz»: automático y del 60 al 100 %. */
     static final int[] UI_SCALE_CHOICES = {0, 60, 70, 80, 90, 100};
     private LinearLayout nav;
@@ -182,6 +184,7 @@ final class SettingsScreen implements CarScreen {
         fluidPills.clear();
         sizePills.clear();
         uiScalePills.clear();
+        themePills.clear();
         apply = null;
         detail = null;
         LinearLayout col = new LinearLayout(c);
@@ -380,6 +383,7 @@ final class SettingsScreen implements CarScreen {
     // ------------------------------------------------------------------ Panel lateral
 
     private void buildPanel(Context c, LinearLayout col) {
+        col.addView(themeCard(c), cardLp());
         LinearLayout ui = card(c, Str.get(R.string.hql_settings_behaviour));
         ui.addView(toggle(c, Str.get(R.string.hql_autohide_panel), null, cfg.panelAutoHide(), on -> {
             cfg.putBool(Config.PANEL_AUTOHIDE, on);
@@ -398,6 +402,41 @@ final class SettingsScreen implements CarScreen {
         LinearLayout buttons = card(c, Str.get(R.string.hql_panel_buttons));
         buttons.addView(panelButtonsRows(c));
         col.addView(buttons, cardLp());
+    }
+
+    /**
+     * «Tema»: Automático (como la pantalla del coche o el sensor de luz), Siempre claro o Siempre oscuro, para Android Auto,
+     * el panel y estas pantallas. Al cambiar el día o la noche, la interfaz se rehace sola (CarUi.applyNight).
+     */
+    private View themeCard(Context c) {
+        LinearLayout card = card(c, Str.get(R.string.hql_theme));
+        LinearLayout row = new LinearLayout(c);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, 14, 0, 4);
+        for (int t = 0; t < 3; t++) {
+            int theme = t;
+            TextView p = CarStyle.pill(c, SettingsActivity.themeLabel(t));
+            p.setTag(t);
+            p.setPadding(16, 22, 16, 22);
+            twoLinesIfScaled(p);
+            p.setGravity(Gravity.CENTER);
+            p.setOnClickListener(v -> {
+                if (cfg.carTheme() == theme) return;
+                cfg.putInt(Config.CAR_THEME, theme);
+                L.i("tema de la pantalla del coche: " + (theme == 0 ? "automático" : theme == 1 ? "siempre claro" : "siempre oscuro") + " (desde el coche)");
+                AaPassthroughSource.applyCarTheme(c);
+                refresh();
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            if (t < 2) lp.rightMargin = 14;
+            themePills.add(p);
+            row.addView(p, lp);
+        }
+        card.addView(row);
+        TextView note = CarStyle.text(c, Str.get(R.string.hql_theme_help), 20, CarStyle.TEXT_DIM);
+        note.setPadding(4, 4, 0, 0);
+        card.addView(note);
+        return card;
     }
 
     // ------------------------------------------------------------------ Viaje
@@ -812,6 +851,11 @@ final class SettingsScreen implements CarScreen {
         }
         for (TextView p : sizePills) {
             boolean sel = pendingAaSize == (int) p.getTag();
+            p.setBackground(sel ? CarKit.outlined(CarStyle.ACCENT_BG, CarStyle.ACCENT, 28) : CarStyle.round(CarStyle.PILL_BG, 28));
+            p.setTextColor(sel ? CarStyle.ACCENT : CarStyle.TEXT);
+        }
+        for (TextView p : themePills) {
+            boolean sel = cfg.carTheme() == (int) p.getTag();
             p.setBackground(sel ? CarKit.outlined(CarStyle.ACCENT_BG, CarStyle.ACCENT, 28) : CarStyle.round(CarStyle.PILL_BG, 28));
             p.setTextColor(sel ? CarStyle.ACCENT : CarStyle.TEXT);
         }

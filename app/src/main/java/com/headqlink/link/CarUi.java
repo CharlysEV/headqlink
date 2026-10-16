@@ -281,8 +281,9 @@ final class CarUi {
         screen = null;
         if (splash != null) splash.stop();
         splash = null;
-        // El aviso abierto se va con la interfaz vieja.
+        // El aviso abierto se va con la interfaz vieja, y el deslizamiento del panel con el panel viejo.
         splitWarning = null;
+        stopPanelSlide();
         // El cartel de la imagen también: el siguiente se crea en la interfaz nueva. Si no, se escribía en el viejo (ya
         // fuera de pantalla) y el relay pintaba encima de AA ese hueco de nuestra capa: un recuadro del color del fondo.
         main.removeCallbacks(hideVideoInfo);
@@ -504,7 +505,7 @@ final class CarUi {
 
     int contentWidth() {
         int pw = layoutPanelW();
-        return width - pw - (splitActive() ? splitAaWidth(width, height, pw, dpi) : 0);
+        return width - sideW() - (splitActive() ? splitAaWidth(width, height, pw, dpi) : 0);
     }
 
     /** Pantallas que se pueden poner junto a AA: la sección Coche (instrumentos: vale en marcha) y las de ocio. */
@@ -559,6 +560,20 @@ final class CarUi {
         return rail() ? COMPACT_W : panelW;
     }
 
+    /**
+     * Con AA a pantalla completa (sin partir ni pantalla nuestra), el panel desplegado va encima de AA: AA se queda con el
+     * tamaño de la barra de iconos y no se rehace al abrir o cerrar el panel (16-10: «pasa de 0 a 1»). El panel se desliza
+     * (slidePanel) y el relay pinta su trozo de nuestra capa encima de AA (panelRect).
+     */
+    private boolean panelOverAa() {
+        return aaShown && !splitActive() && !compact;
+    }
+
+    /** Lo que ocupa el panel al lado de AA o de nuestra pantalla: con el panel encima de AA, solo la barra. */
+    private int sideW() {
+        return panelOverAa() ? COMPACT_W : layoutPanelW();
+    }
+
     /** Recoloca panel y contenido y pone el panel como barra de iconos o completo. */
     private void applyLayout() {
         boolean sp = splitActive();
@@ -581,11 +596,13 @@ final class CarUi {
         panel.setPadding(rail ? railPad : 20, 20, rail ? railPad : 20, 20);
         renderRadioMini();
         int aaW = sp ? splitAaWidth(width, height, pw, dpi) : 0;
+        // Con el panel encima de AA, AA y el contenido empiezan tras la barra aunque el panel esté desplegado.
+        int side = sideW();
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) content.getLayoutParams();
         // Con el panel a la derecha, AA va pegado al borde izquierdo y nuestra pantalla entre AA y el panel.
-        int aaX = panelRight ? 0 : pw;
+        int aaX = panelRight ? 0 : side;
         lp.leftMargin = aaX + aaW;
-        lp.width = width - pw - aaW;
+        lp.width = width - side - aaW;
         content.setLayoutParams(lp);
         renderSplitButton(rail);
         fitPanelButtons(rail, pw);
@@ -593,10 +610,11 @@ final class CarUi {
         if (sp) {
             listener.onAaRegion(aaX, aaW);
         } else if (!compact) {
-            listener.onAaRegion(aaX, width - pw);
+            listener.onAaRegion(aaX, width - side);
         }
         aaRegX = aaX;
-        aaRegW = sp ? aaW : width - pw;
+        aaRegW = sp ? aaW : width - side;
+        updatePanelRect();
         refreshFloat();
     }
 
@@ -749,9 +767,99 @@ final class CarUi {
             main.postDelayed(() -> setHidden(on), 500);
             return;
         }
+        if (panelOverAa()) {
+            slidePanel(on);
+            return;
+        }
         hidden = on;
         applyLayout();
         L.i("CarUi: panel " + (hidden ? "minimizado" : "desplegado"));
+    }
+
+    /** Lo que dura el deslizamiento entero del panel encima de AA. */
+    static final long PANEL_SLIDE_MS = 220;
+    /** El panel desplegado encima de AA (lo pinta el relay y sus toques vienen aquí); null si no. */
+    private int[] panelRect;
+    /** Ancho del panel que se ve mientras se desliza (-1: sin deslizar). */
+    private int slideW = -1;
+    /** Deslizamiento en curso: de slideFrom a slideTo px, desde slideStart (reloj de arranque), en slideMs. */
+    private boolean sliding;
+    private boolean slideHide;
+    private int slideFrom;
+    private int slideTo;
+    private long slideStart;
+    private long slideMs;
+    /**
+     * Cada paso del deslizamiento, con el reloj y no con un ValueAnimator: con la pantalla del móvil apagada Android no da
+     * el ritmo de las animaciones (no compone la pantalla virtual y dibujamos nosotros), y se quedaría a medias.
+     */
+    private final Runnable slideTick = new Runnable() {
+        @Override
+        public void run() {
+            if (!sliding) return;
+            float t = Math.min(1f, (SystemClock.uptimeMillis() - slideStart) / (float) Math.max(1, slideMs));
+            float e = 1f - (1f - t) * (1f - t);
+            clipPanel(Math.round(slideFrom + (slideTo - slideFrom) * e));
+            if (t < 1f) {
+                main.postDelayed(this, 16);
+                return;
+            }
+            sliding = false;
+            slideW = -1;
+            panel.setClipBounds(null);
+            if (slideHide) hidden = true;
+            applyLayout();
+            L.i("CarUi: panel " + (slideHide ? "minimizado" : "desplegado") + " (encima de AA)");
+        }
+    };
+
+    /**
+     * Despliega o recoge el panel encima de AA deslizándolo: se ve recortado, del ancho de la barra al entero o al revés.
+     * AA no cambia de tamaño (solo el trozo de nuestra capa que el relay pinta encima).
+     */
+    private void slidePanel(boolean hide) {
+        int from = slideW >= 0 ? slideW : hidden ? COMPACT_W : panelW;
+        stopPanelSlide();
+        slideW = from;
+        if (!hide) {
+            // Ya desplegado (con sus textos); se ve solo lo que lleva el deslizamiento.
+            hidden = false;
+            applyLayout();
+        }
+        clipPanel(from);
+        slideHide = hide;
+        slideFrom = from;
+        slideTo = hide ? COMPACT_W : panelW;
+        slideMs = Math.max(60, PANEL_SLIDE_MS * Math.abs(slideTo - from) / Math.max(1, panelW - COMPACT_W));
+        slideStart = SystemClock.uptimeMillis();
+        sliding = true;
+        main.post(slideTick);
+    }
+
+    /** El trozo del panel que se ve (w de ancho desde su borde), y el que el relay pinta encima de AA. */
+    private void clipPanel(int w) {
+        slideW = w;
+        panel.setClipBounds(new android.graphics.Rect(panelRight ? panelW - w : 0, 0, panelRight ? panelW : w, height));
+        updatePanelRect();
+    }
+
+    /** Corta un deslizamiento a medias (pantalla nueva, interfaz rehecha): el panel queda como diga hidden. */
+    private void stopPanelSlide() {
+        sliding = false;
+        main.removeCallbacks(slideTick);
+        if (slideW >= 0 && panel != null) panel.setClipBounds(null);
+        slideW = -1;
+    }
+
+    /** El trozo del panel encima de AA (desplegado o deslizándose), al relay y a los toques (floatHit). */
+    private void updatePanelRect() {
+        int[] r = null;
+        if (panelOverAa() && !hidden) {
+            int w = slideW >= 0 ? slideW : panelW;
+            r = new int[]{panelRight ? width - w : 0, 0, w, height};
+        }
+        panelRect = r;
+        pushRects();
     }
 
     /**
@@ -939,6 +1047,7 @@ final class CarUi {
             main.removeCallbacks(alertExpire);
             main.removeCallbacks(alertSeenTask);
             main.removeCallbacks(guessExpire);
+            stopPanelSlide();
             main.removeCallbacks(railTick);
             main.removeCallbacks(floatTick);
             floatRect = null;
@@ -1151,14 +1260,15 @@ final class CarUi {
     private View buildRoot(Context c) {
         root = new FrameLayout(c);
         root.setBackgroundColor(CarStyle.BG);
-        panel = buildPanel(c);
-        int side = panelRight ? Gravity.RIGHT : Gravity.LEFT;
-        root.addView(panel, new FrameLayout.LayoutParams(panelW, height, side));
+        // El contenido debajo del panel: con AA a la vista, el panel desplegado se pone encima (panelOverAa).
         content = new FrameLayout(c);
         content.setBackgroundColor(panelColor);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(contentWidth(), height);
         lp.leftMargin = panelRight ? 0 : panelW;
         root.addView(content, lp);
+        panel = buildPanel(c);
+        int side = panelRight ? Gravity.RIGHT : Gravity.LEFT;
+        root.addView(panel, new FrameLayout.LayoutParams(panelW, height, side));
         FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(panelW - 24, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM | side);
         alp.leftMargin = 12;
@@ -1208,7 +1318,7 @@ final class CarUi {
 
     /** ¿Cae (x, y) en la tarjeta flotante? Hilo del coche: sus toques van a nuestra interfaz, no a AA. */
     boolean floatHit(float x, float y) {
-        return inside(floatRect, x, y) || inside(guessRect, x, y) || inside(infoRect, x, y);
+        return inside(panelRect, x, y) || inside(floatRect, x, y) || inside(guessRect, x, y) || inside(infoRect, x, y);
     }
 
     private static boolean inside(int[] r, float x, float y) {
@@ -1238,11 +1348,11 @@ final class CarUi {
     /** Manda al relay los trozos que hay ahora (si han cambiado). */
     private void pushRects() {
         java.util.List<int[]> l = new java.util.ArrayList<>();
-        for (int[] r : new int[][]{floatRect, guessRect, infoRect}) if (r != null) l.add(r);
+        for (int[] r : new int[][]{panelRect, floatRect, guessRect, infoRect}) if (r != null) l.add(r);
         int[][] now = l.isEmpty() ? null : l.toArray(new int[0][]);
         if (java.util.Arrays.deepEquals(now, sentRects)) return;
         sentRects = now;
-        if (!dragging) logFloatRects(now);
+        if (!dragging && !sliding) logFloatRects(now);
         listener.onFloatRects(now);
     }
 
@@ -2007,6 +2117,7 @@ final class CarUi {
         // WhitelistAppOn: Android Auto y la sección Coche son interfaces de conducción; el resto, ocio.
         // La radio también (solo audio, como la música de AA).
         SspSession.setDrivingUi("aa".equals(name) || "car".equals(name) || "radio".equals(name));
+        stopPanelSlide();
         // Panel y pantalla grande se ajustan junto con la pantalla nueva (applyLayout, abajo), de una vez: antes AA recibía
         // primero los márgenes del panel completo y enseguida los de la pantalla partida, y se recolocaba dos veces.
         if (compact && panel != null) {

@@ -330,9 +330,8 @@
     <string name="hql_tailwind">meewind</string>
     <string name="hql_tap_to_connect">Tik om Qonecta+ te verbinden</string>
     <string name="hql_theme">Thema</string>
-    <string name="hql_theme_dark">Donker</string>
-    <string name="hql_theme_light">Licht</string>
-    <string name="hql_theme_system">Systeemstandaard</string>
+    <string name="hql_theme_dark">Altijd donker</string>
+    <string name="hql_theme_light">Altijd licht</string>
     <string name="hql_this_phone">Deze telefoon: %1$s</string>
     <string name="hql_touch_label">Qonecta+-aanraking</string>
     <string name="hql_touch_service_desc">Stuurt aanrakingen op het autoscherm door naar de geprojecteerde app en start de Android Auto-server als dat nodig is.</string>
@@ -1072,4 +1071,6 @@
     <string name="hql_tr_speed">Tijdelijke snelheidslimiet</string>
     <string name="hql_tr_surface">Slecht wegdek</string>
     <string name="hql_tr_other">Melding</string>
+    <string name="hql_theme_auto">Automatisch</string>
+    <string name="hql_theme_help">Android Auto, het zijpaneel en de schermen van de uitgebreide modus. Automatisch: zoals het autoscherm of, als de auto het niet doorgeeft, met de lichtsensor van de telefoon.</string>
 </resources>
