@@ -254,6 +254,21 @@ final class CarIcons {
     }
 
     /** Radar fijo: cámara en un poste. */
+    /** Triángulo de peligro con la exclamación (incidencias de tráfico). */
+    static void warning(Canvas cv, float cx, float cy, float s, int color, Paint p) {
+        fill(p, color);
+        PATH.rewind();
+        PATH.moveTo(cx, cy - s * 0.46f);
+        PATH.lineTo(cx + s * 0.5f, cy + s * 0.42f);
+        PATH.lineTo(cx - s * 0.5f, cy + s * 0.42f);
+        PATH.close();
+        cv.drawPath(PATH, p);
+        p.setColor(0xFF15181C);
+        R.set(cx - s * 0.05f, cy - s * 0.16f, cx + s * 0.05f, cy + s * 0.16f);
+        cv.drawRoundRect(R, s * 0.04f, s * 0.04f, p);
+        cv.drawCircle(cx, cy + s * 0.28f, s * 0.055f, p);
+    }
+
     static void camera(Canvas cv, float cx, float cy, float s, int color, Paint p) {
         fill(p, color);
         R.set(cx - s * 0.42f, cy - s * 0.3f, cx + s * 0.3f, cy + s * 0.12f);

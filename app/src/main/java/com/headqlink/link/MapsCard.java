@@ -129,9 +129,9 @@ final class MapsCard {
         List<int[]> out = new ArrayList<>();
         if (argb == null || eta == null || km == null || argb.length < w * h) return out;
         int lh = Math.max(8, Math.max(eta.h(), km.h()));
-        int y0 = Math.min(h - 1, km.bottom + lh / 3);
-        // Hasta el pie de los botones, sin pasar del recuadro (debajo ya es mapa).
-        int y1 = Math.min(h - 1, km.bottom + lh * 27 / 10);
+        // La franja de los botones, sin llegar al borde de abajo del recuadro (debajo ya es mapa, con sus calles).
+        int y0 = Math.min(h - 1, km.bottom + lh * 4 / 10);
+        int y1 = Math.min(h - 1, km.bottom + lh * 19 / 10);
         int x0 = Math.max(0, eta.left - lh);
         int x1 = Math.min(w - 1, eta.left + lh * 18);
         if (y1 - y0 < lh || x1 - x0 < lh * 4) return out;
@@ -192,8 +192,31 @@ final class MapsCard {
                 start = -1;
             }
         }
+        return rowRhythm(out, lh);
+    }
+
+    /**
+     * Puro: los botones del recuadro van en fila, a la misma altura y con la misma separación (X, alternativas, añadir
+     * parada y ruta): se quedan los que siguen ese ritmo, como mucho ROW_MAX. Así no cuenta lo del mapa de al lado cuando
+     * su color se parece al del recuadro (de día, el mapa casi blanco y un globo con el nombre de una calle: 16/10).
+     */
+    static List<int[]> rowRhythm(List<int[]> icons, int lh) {
+        List<int[]> out = new ArrayList<>();
+        for (int[] c : icons) {
+            if (out.size() >= ROW_MAX) break;
+            if (!out.isEmpty() && Math.abs(c[1] - out.get(0)[1]) > lh) break;
+            if (out.size() >= 2) {
+                int gap = out.get(1)[0] - out.get(0)[0];
+                int gi = c[0] - out.get(out.size() - 1)[0];
+                if (Math.abs(gi - gap) > gap * 0.35) break;
+            }
+            out.add(c);
+        }
         return out;
     }
+
+    /** Botones de la fila del recuadro de navegación de Maps. */
+    static final int ROW_MAX = 4;
 
     /** El centro de un icono: en horizontal, el de sus columnas; en vertical, la media de sus filas con píxeles de icono. */
     private static int[] iconCenter(int[] argb, int w, int y0, int y1, int start, int end, int bg, int bgL) {

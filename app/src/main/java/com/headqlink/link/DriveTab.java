@@ -86,6 +86,9 @@ final class DriveTab implements CarScreen {
         return CarKit.page(c, top);
     }
 
+    /** La próxima incidencia de la DGT sale en Conducción desde esta distancia. */
+    static final double TRAFFIC_SHOW_KM = 10;
+
     /** Pantalla partida: alto de la fila de Velocidad y Rumbo y de la de Altitud, Pendiente y Sol. */
     static final int NARROW_ROW2_H = 150;
     static final int NARROW_ROW3_H = 140;
@@ -217,9 +220,15 @@ final class DriveTab implements CarScreen {
         float b = r.bottom;
         String alert = null;
         boolean camera = false;
+        int trafficColor = 0;
         if (rs.cameraM >= 0) {
             camera = true;
             alert = Str.get(R.string.hql_camera_at, Math.round(rs.cameraM / 10.0) * 10.0) + (rs.cameraLimit > 0 ? " · " + rs.cameraLimit + " km/h" : "");
+        } else if (!DgtTraffic.ahead().isEmpty() && DgtTraffic.ahead().get(0).km <= TRAFFIC_SHOW_KM) {
+            // La próxima incidencia de la DGT en la ruta: «Obras · carril cortado a 3,2 km».
+            DgtTraffic.Ahead a = DgtTraffic.ahead().get(0);
+            alert = DgtTraffic.title(a.inc) + " " + Str.get(R.string.hql_tr_at, DgtTraffic.kmText(a.km));
+            trafficColor = DgtTraffic.color(a.inc);
         } else if (rs.sunGlare) {
             alert = Str.get(R.string.hql_sun_glare);
         }
@@ -233,6 +242,7 @@ final class DriveTab implements CarScreen {
             cv.drawRoundRect(tmp, 18 * k, 18 * k, p);
             p.setStyle(Paint.Style.FILL);
             if (camera) CarIcons.camera(cv, x0 + 44 * k, tmp.centerY(), 38 * k, CarKit.AMBER, p);
+            else if (trafficColor != 0) CarIcons.warning(cv, x0 + 44 * k, tmp.centerY(), 40 * k, trafficColor, p);
             else CarIcons.sun(cv, x0 + 44 * k, tmp.centerY(), 40 * k, CarKit.AMBER, p);
             p.setTypeface(CarKit.MEDIUM);
             p.setTextSize(28 * Math.max(k, 0.75f));

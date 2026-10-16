@@ -615,6 +615,13 @@ final class Config {
         sp.edit().putString("nav_app", NAV_WAZE.equals(app) ? NAV_WAZE : NAV_MAPS).apply();
     }
 
+    /** Incidencias de tráfico de la DGT en la ruta (DgtTraffic): de serie, sí. */
+    static final String DGT_TRAFFIC = "dgt_traffic";
+
+    boolean dgtTraffic() {
+        return sp.getBoolean(DGT_TRAFFIC, true);
+    }
+
     /** Avisar por voz si el plan de carga cambia durante el viaje. */
     boolean planVoice() {
         return sp.getBoolean("plan_voice", true);

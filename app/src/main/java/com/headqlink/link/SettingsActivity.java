@@ -220,6 +220,10 @@ public class SettingsActivity extends Activity implements LinkState.Listener {
 
     private void buildTrip() {
         section(R.drawable.hql_ic_efficiency, Str.get(R.string.hql_settings_sec_trip));
+        switchRow(Str.get(R.string.hql_tr_setting), () -> Str.get(R.string.hql_tr_setting_sum), cfg::dgtTraffic, on -> {
+            cfg.putBool(Config.DGT_TRAFFIC, on);
+            L.i("tráfico DGT: " + (on ? "activado" : "desactivado"));
+        });
         switchRow(Str.get(R.string.hql_radar_voice), null, cfg::radarVoice, on -> {
             cfg.putBool(Config.RADAR_VOICE, on);
             L.i("avisos de radar por voz: " + (on ? "sí" : "no"));

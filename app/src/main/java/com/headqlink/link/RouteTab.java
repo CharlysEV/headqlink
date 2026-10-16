@@ -68,6 +68,8 @@ final class RouteTab implements CarScreen {
     private TextView goMaps;
     /** Mapa con el trazado del plan (para compararlo con el de Google Maps). */
     private TextView mapPill;
+    /** «Tráfico · 3»: las incidencias de la DGT que quedan en la ruta (abre su lista). */
+    private TextView trafficPill;
     private TextView clear;
     private TextView cta;
     /** El viaje: paradas intermedias, ida y vuelta y guardarlo («Viaje · 2 ⇄»). */
@@ -154,8 +156,12 @@ final class RouteTab implements CarScreen {
         tripPill = CarKit.pill(ctx, Str.get(R.string.hql_pl_trip), false);
         tripPill.setOnClickListener(v -> openTrip());
         actions.addView(tripPill, spaced());
+        trafficPill = CarKit.pill(ctx, "", false);
+        trafficPill.setOnClickListener(v -> openTrafficList());
+        trafficPill.setVisibility(View.GONE);
         mapPill = CarKit.pill(ctx, Str.get(R.string.hql_route_map), false);
         mapPill.setOnClickListener(v -> openMap());
+        actions.addView(trafficPill, spaced());
         actions.addView(mapPill, spaced());
         actions.addView(goMaps, spaced());
         actions.addView(clear, spaced());
@@ -796,6 +802,10 @@ final class RouteTab implements CarScreen {
             shownChargersFor = -1;
         }
         mapPill.setVisibility(have ? View.VISIBLE : View.GONE);
+        int nTraffic = have ? DgtTraffic.ahead().size() : 0;
+        trafficPill.setVisibility(nTraffic > 0 ? View.VISIBLE : View.GONE);
+        String tp = Str.get(R.string.hql_tr_pill, nTraffic);
+        if (!tp.contentEquals(trafficPill.getText())) trafficPill.setText(tp);
         cta.setVisibility(have || manual ? View.GONE : View.VISIBLE);
         search.setVisibility(have || manual ? View.VISIBLE : View.GONE);
         routeCard.invalidate();
@@ -1642,6 +1652,71 @@ final class RouteTab implements CarScreen {
         bp.topMargin = CarKit.GAP;
         list.addView(bottom, bp);
         return list;
+    }
+
+    /** Ventana con las incidencias de la DGT que quedan en la ruta: tipo, carretera y km, y a cuántos km están. */
+    private void openTrafficList() {
+        LinearLayout panel = new LinearLayout(ctx);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setBackgroundColor(CarKit.BG);
+        panel.setClickable(true);
+        panel.setPadding(CarKit.PAD, 18, CarKit.PAD, CarKit.PAD);
+        LinearLayout bar = CarKit.row(ctx);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = CarStyle.text(ctx, Str.get(R.string.hql_tr_list_title), 34, CarKit.TEXT);
+        title.setTypeface(CarKit.MEDIUM);
+        title.setSingleLine(true);
+        bar.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView done = CarKit.pill(ctx, Str.get(R.string.hql_close), true);
+        bar.addView(done);
+        panel.addView(bar);
+        LinearLayout body = CarKit.col(ctx);
+        ScrollView sv = new ScrollView(ctx);
+        sv.addView(body);
+        LinearLayout.LayoutParams svp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        svp.topMargin = 10;
+        panel.addView(sv, svp);
+        done.setOnClickListener(v -> root.removeView(panel));
+        java.util.List<DgtTraffic.Ahead> list = DgtTraffic.ahead();
+        if (list.isEmpty()) body.addView(hint(Str.get(R.string.hql_tr_none)));
+        for (DgtTraffic.Ahead a : list) body.addView(trafficRow(a), itemParams());
+        body.addView(hint(Str.get(R.string.hql_tr_source)));
+        L.i("tráfico DGT: lista abierta (" + list.size() + ")");
+        root.addView(panel, CarStyle.match());
+    }
+
+    private View trafficRow(DgtTraffic.Ahead a) {
+        LinearLayout item = CarKit.row(ctx);
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setPadding(18, 12, 18, 12);
+        int color = DgtTraffic.color(a.inc);
+        item.setBackground(CarKit.outlined(CarKit.SURFACE, a.inc.serious() ? color : CarKit.OUTLINE, 18));
+        View icon = new View(ctx) {
+            private final Paint ip = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+            @Override
+            protected void onDraw(Canvas cv) {
+                CarIcons.warning(cv, getWidth() / 2f, getHeight() / 2f, Math.min(getWidth(), getHeight()) * 0.8f, color, ip);
+            }
+        };
+        item.addView(icon, new LinearLayout.LayoutParams(56, 56));
+        LinearLayout txt = CarKit.col(ctx);
+        txt.setPadding(20, 0, 12, 0);
+        TextView name = CarStyle.text(ctx, DgtTraffic.title(a.inc), 26, CarKit.TEXT);
+        name.setTypeface(CarKit.MEDIUM);
+        name.setSingleLine(true);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView detail = CarStyle.text(ctx, DgtTraffic.where(a.inc), 21, CarKit.DIM);
+        detail.setSingleLine(true);
+        detail.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        txt.addView(name);
+        if (!DgtTraffic.where(a.inc).isEmpty()) txt.addView(detail);
+        item.addView(txt, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView dist = CarStyle.text(ctx, Str.get(R.string.hql_tr_at, DgtTraffic.kmText(a.km)), 24, color == CarKit.DIM ? CarKit.DIM : color);
+        dist.setTypeface(CarKit.MEDIUM);
+        dist.setSingleLine(true);
+        item.addView(dist);
+        return item;
     }
 
     /**

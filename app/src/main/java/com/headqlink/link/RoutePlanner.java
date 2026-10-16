@@ -452,6 +452,8 @@ final class RoutePlanner {
         Plan p = plan;
         if (p != null && origin == null && !Double.isNaN(s.lat)) p.progress = nearest(p, s.lat, s.lon, p.progress);
         if (p != null) compareOnArrival(p, s);
+        // Tráfico de la DGT sobre la ruta (obras, accidentes, retenciones, vehículos detenidos…).
+        DgtTraffic.update(ctx, p, p == null ? 0 : p.km[Math.min(p.progress, p.n - 1)], this::trafficAlert);
         if (p != null && !demo && !p.routeTiles.isEmpty() && p.dgtVersion != DgtChargers.version) {
             // Han llegado (o se han renovado) los puntos de la DGT: la lista de la ruta, con ellos.
             rebuildChargers(p);
@@ -1094,6 +1096,13 @@ final class RoutePlanner {
     }
 
     static volatile ChargeAlertListener chargeAlerts;
+
+    /** Lo importante del tráfico de la DGT a poca distancia: la tarjeta de aviso y, con la voz del plan, dicho. */
+    private void trafficAlert(String title, String text, String voice) {
+        ChargeAlertListener l = chargeAlerts;
+        if (l != null) l.onChargeAlert(title, text, ALERT_WARN);
+        if (!demo && new Config(ctx).planVoice()) VoiceAlert.say(ctx, voice);
+    }
     /** Entre dos avisos por voz (los cambios seguidos solo actualizan el aviso escrito), salvo si ya no se llega. */
     static final long VOICE_GAP_MS = 90_000;
 

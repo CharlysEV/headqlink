@@ -135,6 +135,7 @@ final class MapsReader {
                 int[] px = new int[w * h];
                 shot.getPixels(px, 0, w, 0, 0, w, h);
                 icon = MapsCard.routeIcon(px, w, h, eta, MapsCard.kmLine(lines, eta));
+                lastShot(ctx, shot);
                 if (icon == null) {
                     etaNoIcon++;
                 }
@@ -358,6 +359,21 @@ final class MapsReader {
     }
 
     /** Copia de la zona de AA del próximo frame (o null si no llega a tiempo). */
+    /**
+     * Diagnóstico: la última imagen en la que se buscó el icono de la ruta, en la caché del móvil (no va en los logs que se
+     * exportan; se sobrescribe cada vez). Sirve para ver por qué no se abre la tarjeta.
+     */
+    private static void lastShot(Context ctx, Bitmap b) {
+        try {
+            java.io.File dir = ctx.getExternalCacheDir();
+            if (dir == null) return;
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(new java.io.File(dir, "maps-lector.png"))) {
+                b.compress(Bitmap.CompressFormat.PNG, 100, out);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
     private static Bitmap capture(AaPassthroughSource src) throws InterruptedException {
         Bitmap[] got = new Bitmap[1];
         CountDownLatch done = new CountDownLatch(1);
