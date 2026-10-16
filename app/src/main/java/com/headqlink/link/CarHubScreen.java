@@ -23,6 +23,10 @@ final class CarHubScreen implements CarScreen {
         lastTab = Math.max(0, Math.min(TABS.length - 1, tab));
     }
 
+    static int lastTab() {
+        return lastTab;
+    }
+
     private Host host;
     private FrameLayout body;
     private CarScreen current;

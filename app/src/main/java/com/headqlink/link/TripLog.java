@@ -85,8 +85,10 @@ final class TripLog {
     private final CarSensors sensors;
     private volatile boolean running;
     private final List<double[]> track = new ArrayList<>();
-    private final long startMs = System.currentTimeMillis();
-    private final long startElapsed = SystemClock.elapsedRealtime();
+    private long startMs = System.currentTimeMillis();
+    private long startElapsed = SystemClock.elapsedRealtime();
+    /** El viaje que se retoma (TripCarry): sus km, energía y desnivel ya hechos, para las bases del primer paso. */
+    private JSONObject resumed;
     private double startKwh = Double.NaN;
     private double startKm;
     private double startClimb;
@@ -105,6 +107,44 @@ final class TripLog {
         this.ctx = ctx.getApplicationContext();
         sensors = CarSensors.start(ctx);
         demo = DemoMode.active();
+        if (!demo && CarSensors.continuedTrip()) resume();
+    }
+
+    /**
+     * La conexión anterior se cortó hace poco y los sensores siguen su viaje: este también, en el mismo fichero (su
+     * inicio, recorrido, máximos y los datos del coche del principio).
+     */
+    private void resume() {
+        File[] files = new File(ctx.getExternalFilesDir(null), "trips").listFiles((d, n) -> n.endsWith(".json"));
+        if (files == null || files.length == 0) return;
+        Arrays.sort(files, (a, b) -> b.getName().compareTo(a.getName()));
+        try {
+            JSONObject o = new JSONObject(new String(Files.readAllBytes(files[0].toPath()), StandardCharsets.UTF_8));
+            long end = o.optLong("start") + o.optLong("minutes") * 60_000L;
+            if (System.currentTimeMillis() - end > TripCarry.CONTINUE_MS + 60_000L) return;
+            startMs = o.optLong("start");
+            startElapsed = SystemClock.elapsedRealtime() - o.optLong("minutes") * 60_000L;
+            maxKmh = o.optDouble("maxKmh", 0);
+            JSONArray t = o.optJSONArray("track");
+            if (t != null) {
+                synchronized (track) {
+                    for (int i = 0; i < t.length(); i++) {
+                        JSONArray p = t.optJSONArray(i);
+                        if (p != null && p.length() >= 3) track.add(new double[]{p.optDouble(0), p.optDouble(1), p.optDouble(2)});
+                    }
+                }
+            }
+            JSONObject c = o.optJSONObject("cloud");
+            if (c != null) {
+                cloudStart = new CloudMark(c.optDouble("socStart", Double.NaN), c.optDouble("odoStart", Double.NaN), startMs,
+                        c.optDouble("fuelStart", Double.NaN));
+                cloudCharged = c.optBoolean("charged");
+            }
+            resumed = o;
+            L.i("viaje: sigo el guardado de la conexión anterior (mismo fichero)");
+        } catch (Exception e) {
+            L.w("viaje: no se pudo seguir el anterior: " + e.getClass().getSimpleName());
+        }
     }
 
     static synchronized void start(Context ctx) {
@@ -127,10 +167,12 @@ final class TripLog {
         while (running) {
             CarSensors.Snapshot s = sensors.snapshot();
             if (Double.isNaN(startKwh)) {
-                startKwh = s.kwhTotal;
-                startKm = s.kmTotal;
-                startClimb = s.climbM;
-                startDescent = s.descentM;
+                // Si se retoma el viaje anterior, lo ya hecho cuenta: la base queda tanto más atrás.
+                JSONObject r = resumed;
+                startKwh = s.kwhTotal - (r == null ? 0 : r.optDouble("kwh", 0));
+                startKm = s.kmTotal - (r == null ? 0 : r.optDouble("km", 0));
+                startClimb = s.climbM - (r == null ? 0 : r.optDouble("climb", 0));
+                startDescent = s.descentM - (r == null ? 0 : r.optDouble("descent", 0));
             }
             if (s.gpsLive()) maxKmh = Math.max(maxKmh, s.speedKmh);
             noteCloud(CarCloud.snapshot());

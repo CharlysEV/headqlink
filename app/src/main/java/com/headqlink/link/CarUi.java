@@ -821,10 +821,45 @@ final class CarUi {
             RoutePlanner.chargeAlerts = chargeAlert;
             RoutePlanner.destGuesses = destGuess;
             RoadInfo.start(ctx);
-            open("aa");
-            if (autoHide) setHidden(true);
+            if (!resumeScreen()) {
+                open("aa");
+                if (autoHide) setHidden(true);
+            }
             main.postDelayed(floatTick, FLOAT_TICK_MS);
         });
+    }
+
+    /** Guarda qué se veía (sección, pestaña de Coche y pantalla partida) por si la conexión vuelve enseguida (TripCarry). */
+    private void saveScreen() {
+        if (RoutePlanner.testMode()) return;
+        try {
+            org.json.JSONObject o = new org.json.JSONObject();
+            o.put("screen", screenName == null ? "aa" : screenName);
+            o.put("tab", CarHubScreen.lastTab());
+            o.put("split", split);
+            o.put("splitAccepted", splitAccepted);
+            TripCarry.put(ctx, "screen", o);
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Si la conexión anterior se cortó hace menos de TripCarry.CONTINUE_MS, vuelve lo que se veía: la sección, la
+     * pestaña de Coche y la pantalla partida. false: no había nada que recuperar (se abre AA, como siempre).
+     */
+    private boolean resumeScreen() {
+        if (RoutePlanner.testMode()) return false;
+        org.json.JSONObject o = TripCarry.take(ctx, "screen");
+        TripCarry.clear(ctx, "screen");
+        if (o == null) return false;
+        String name = o.optString("screen", "aa");
+        if ("aa".equals(name) || name.isEmpty()) return false;
+        CarHubScreen.selectTab(o.optInt("tab", 0));
+        splitAccepted = o.optBoolean("splitAccepted");
+        split = o.optBoolean("split") && splitCapable(name);
+        L.i("CarUi: la conexión se cortó hace poco: vuelvo a " + name + (split ? " (pantalla partida)" : ""));
+        open(name);
+        return true;
     }
 
     /** Escucha el día y la noche de AA y pide el estado de ahora (si AA ya está conectado, llega enseguida). */
@@ -865,6 +900,7 @@ final class CarUi {
                 }
                 nightRegistered = false;
             }
+            saveScreen();
             if (screen != null) screen.destroy();
             screen = null;
             RadioPlayer.removeListener(radioChanged);
@@ -1955,6 +1991,7 @@ final class CarUi {
         listener.onAaVisible(aaVisible());
         scheduleHide();
         L.i("CarUi: pantalla " + name + (splitActive() ? " (partida, con AA)" : ""));
+        saveScreen();
     }
 
     private static Supplier<CarScreen> factory(String name) {

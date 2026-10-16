@@ -205,6 +205,70 @@ final class CarSensors implements SensorEventListener, LocationListener {
         instance = null;
     }
 
+    /** El viaje de estos sensores sigue el de una conexión cortada hace poco (TripCarry). */
+    private volatile boolean continued;
+
+    static synchronized boolean continuedTrip() {
+        return instance != null && instance.continued;
+    }
+
+    /** Guarda el viaje en curso para retomarlo si la conexión vuelve enseguida (TripCarry). */
+    private void saveCarry() {
+        try {
+            org.json.JSONObject o = new org.json.JSONObject();
+            synchronized (this) {
+                o.put("tripKm", s.tripKm);
+                o.put("tripSec", tripStarted ? (nowMs() - tripStartMs) / 1000 : 0);
+                o.put("kwhTotal", s.kwhTotal);
+                o.put("kmTotal", s.kmTotal);
+                o.put("kwhStart", tripKwhStart);
+                o.put("kmStart", tripKmStart);
+                o.put("climb", s.climbM);
+                o.put("descent", s.descentM);
+                o.put("maxKmh", s.maxSpeedKmh);
+                o.put("maxAccel", s.maxAccelG);
+                o.put("maxBrake", s.maxBrakeG);
+                o.put("maxLeft", s.maxLeftG);
+                o.put("maxRight", s.maxRightG);
+                o.put("energy", TripCarry.arr(tripEnergy.toArray()));
+            }
+            TripCarry.put(ctx, "sensors", o);
+        } catch (Exception e) {
+            L.w("viaje: no se pudo guardar para retomarlo: " + e.getClass().getSimpleName());
+        }
+    }
+
+    /** Si la conexión anterior se cortó hace menos de TripCarry.CONTINUE_MS, su viaje sigue aquí. */
+    private void loadCarry() {
+        org.json.JSONObject o = TripCarry.take(ctx, "sensors");
+        if (o == null) return;
+        synchronized (this) {
+            s.tripKm = o.optDouble("tripKm", 0);
+            tripStartMs = nowMs() - o.optLong("tripSec") * 1000;
+            s.kwhTotal = o.optDouble("kwhTotal", 0);
+            s.kmTotal = o.optDouble("kmTotal", 0);
+            tripKwhStart = o.optDouble("kwhStart", 0);
+            tripKmStart = o.optDouble("kmStart", 0);
+            s.climbM = o.optDouble("climb", 0);
+            s.descentM = o.optDouble("descent", 0);
+            s.maxSpeedKmh = o.optDouble("maxKmh", 0);
+            s.maxAccelG = o.optDouble("maxAccel", 0);
+            s.maxBrakeG = o.optDouble("maxBrake", 0);
+            s.maxLeftG = o.optDouble("maxLeft", 0);
+            s.maxRightG = o.optDouble("maxRight", 0);
+            org.json.JSONArray e = o.optJSONArray("energy");
+            if (e != null) {
+                double[] a = new double[e.length()];
+                for (int i = 0; i < a.length; i++) a[i] = e.optDouble(i, 0);
+                tripEnergy.fromArray(a);
+            }
+            continued = true;
+        }
+        long ago = (System.currentTimeMillis() - o.optLong("at")) / 1000;
+        L.i(String.format(Locale.US, "viaje: sigue el de la conexión anterior (cortada hace %d s): %.1f km, %.2f kWh", ago,
+                s.tripKm, s.kwhTotal - tripKwhStart));
+    }
+
     /** ¿Hay sensores en marcha (de una sesión o de la vista previa)? */
     static synchronized boolean isRunning() {
         return instance != null;
@@ -343,6 +407,7 @@ final class CarSensors implements SensorEventListener, LocationListener {
         }
         tripStartMs = SystemClock.elapsedRealtime();
         tripStarted = true;
+        loadCarry();
         sm = ctx.getSystemService(SensorManager.class);
         // Ritmo de interfaz (~16 muestras/s): de sobra para el medidor G y la inclinación; a ritmo de juego (50/s) eran
         // 100 despertares por segundo durante todo el viaje.
@@ -379,6 +444,7 @@ final class CarSensors implements SensorEventListener, LocationListener {
             return;
         }
         h.removeCallbacks(watchTick);
+        saveCarry();
         sm.unregisterListener(this);
         try {
             ctx.getSystemService(LocationManager.class).removeUpdates(this);
@@ -398,8 +464,15 @@ final class CarSensors implements SensorEventListener, LocationListener {
     // ------------------------------------------------------------------ GPS parado
 
     /** Cada segundo (hilo de sensores): bloqueo, permisos, cambios de estado del GPS y la sonda del bloqueo. */
+    private long lastCarryMs;
+
     private void watchTick() {
         long now = SystemClock.elapsedRealtime();
+        // Cada 30 s, el viaje para retomarlo aunque Android cierre la app de golpe (sin pasar por end()).
+        if (now - lastCarryMs >= 30_000) {
+            lastCarryMs = now;
+            saveCarry();
+        }
         boolean lk = false;
         try {
             KeyguardManager km = ctx.getSystemService(KeyguardManager.class);

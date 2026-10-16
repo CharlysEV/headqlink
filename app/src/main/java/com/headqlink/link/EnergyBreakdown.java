@@ -71,6 +71,19 @@ final class EnergyBreakdown {
         return c > 0 ? kwh[i] / c : 0;
     }
 
+    /** Las partes y lo recuperado, para guardarlo (TripCarry). */
+    double[] toArray() {
+        double[] a = java.util.Arrays.copyOf(kwh, PARTS + 1);
+        a[PARTS] = recovered;
+        return a;
+    }
+
+    void fromArray(double[] a) {
+        if (a == null || a.length != PARTS + 1) return;
+        System.arraycopy(a, 0, kwh, 0, PARTS);
+        recovered = a[PARTS];
+    }
+
     void copyFrom(EnergyBreakdown o) {
         System.arraycopy(o.kwh, 0, kwh, 0, PARTS);
         recovered = o.recovered;
