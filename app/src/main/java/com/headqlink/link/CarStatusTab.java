@@ -59,16 +59,35 @@ final class CarStatusTab implements CarScreen {
     public View create(Host h) {
         ctx = h.context();
         FrameLayout frame = new FrameLayout(ctx);
-        dataView = CarKit.row(ctx);
-        LinearLayout c1 = CarKit.add(dataView, CarKit.col(ctx), 1.02f, 0);
-        LinearLayout c2 = CarKit.add(dataView, CarKit.col(ctx), 1.1f, 0);
-        LinearLayout c3 = CarKit.add(dataView, CarKit.col(ctx), 0.88f, 0);
-        cards.add(CarKit.add(c1, new CarKit.Card(ctx, Str.get(R.string.hql_cloud_battery), this::paintBattery), 1f, 0));
-        CarKit.Card tyres = CarKit.add(c2, new CarKit.Card(ctx, Str.get(R.string.hql_cloud_tyres_doors), this::paintTyres), 1f, 0);
+        CarKit.Card battery = new CarKit.Card(ctx, Str.get(R.string.hql_cloud_battery), this::paintBattery);
+        CarKit.Card tyres = new CarKit.Card(ctx, Str.get(R.string.hql_cloud_tyres_doors), this::paintTyres);
+        CarKit.Card car = new CarKit.Card(ctx, Str.get(R.string.hql_car), this::paintCar);
+        CarKit.Card data = new CarKit.Card(ctx, Str.get(R.string.hql_cloud_data), this::paintData);
+        if (CarKit.narrow) {
+            // Pantalla partida: las cuatro en una pantalla, sin deslizar. Arriba Batería y Neumáticos (más altas);
+            // abajo Coche y Datos. Cada dibujo, a escala desde su tamaño en la pestaña ancha.
+            dataView = CarKit.keep(CarKit.col(ctx));
+            LinearLayout r1 = CarKit.add(dataView, CarKit.row(ctx), 1.75f, 0);
+            LinearLayout r2 = CarKit.add(dataView, CarKit.row(ctx), 1f, 0);
+            CarKit.add(r1, battery.design(484, 650), 1f, 0);
+            CarKit.add(r1, tyres.design(525, 560), 1f, 0);
+            CarKit.add(r2, car.design(411, 290), 1f, 0);
+            CarKit.add(r2, data.design(411, 250), 1f, 0);
+        } else {
+            dataView = CarKit.row(ctx);
+            LinearLayout c1 = CarKit.add(dataView, CarKit.col(ctx), 1.02f, 0);
+            LinearLayout c2 = CarKit.add(dataView, CarKit.col(ctx), 1.1f, 0);
+            LinearLayout c3 = CarKit.add(dataView, CarKit.col(ctx), 0.88f, 0);
+            CarKit.add(c1, battery, 1f, 0);
+            CarKit.add(c2, tyres, 1f, 0);
+            CarKit.add(c3, car, 1.12f, 0);
+            CarKit.add(c3, data, 1f, 0);
+        }
+        cards.add(battery);
         cards.add(tyres);
         setup3d(tyres);
-        cards.add(CarKit.add(c3, new CarKit.Card(ctx, Str.get(R.string.hql_car), this::paintCar), 1.12f, 0));
-        cards.add(CarKit.add(c3, new CarKit.Card(ctx, Str.get(R.string.hql_cloud_data), this::paintData), 1f, 0));
+        cards.add(car);
+        cards.add(data);
         frame.addView(dataView, CarStyle.match());
         emptyCard = new CarKit.Card(ctx, null, this::paintEmpty);
         frame.addView(emptyCard, CarStyle.match());
