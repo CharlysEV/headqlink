@@ -143,6 +143,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
         com.headqlink.link.LogcatCapture.start(this)
         com.headqlink.link.QdTrace.init(this)
         com.headqlink.link.ExitReasons.start(this)
+        com.headqlink.link.LiveLog.resume(this)
 
         // Root support
         component.suExecutor.register()

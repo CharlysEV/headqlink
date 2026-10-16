@@ -169,6 +169,7 @@ final class L {
         });
         Listener l = listener;
         if (l != null) l.onLine(line);
+        LiveLog.add(line);
     }
 
     /** Vuelca a disco lo escrito (hilo escritor de LowLatency). */

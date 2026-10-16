@@ -308,6 +308,13 @@
         <!-- AndroidX MediaButtonReceiver: Routes MEDIA_BUTTON intents to AapService
              on Android 8+ where implicit broadcasts to manifest-registered receivers
              are restricted. This is the standard Android mechanism used by HUR. -->
+        <!-- headqlink: log en directo para el desarrollador (LiveLog), solo desde adb: el permiso DUMP solo lo tiene la
+             shell de adb, ninguna app ni nadie desde fuera. -->
+        <receiver
+            android:name="com.headqlink.link.LiveLogReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
+
         <receiver
             android:name="androidx.media.session.MediaButtonReceiver"
             android:exported="true">
