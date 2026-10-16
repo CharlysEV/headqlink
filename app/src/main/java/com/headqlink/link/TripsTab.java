@@ -33,6 +33,8 @@ final class TripsTab implements CarScreen {
 
     /** Vista previa: abrir en grande el viaje más largo al crear la pestaña. */
     static volatile boolean previewDetail;
+    /** La pestaña está en la pantalla partida (CarKit.narrow al crearla): el viaje abierto, a su medida. */
+    private boolean narrowUi;
 
     private Context ctx;
     private Config cfg;
@@ -70,6 +72,7 @@ final class TripsTab implements CarScreen {
         dayFmt = new java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(loc, "EEEdMMM"), loc);
         timeFmt = android.text.format.DateFormat.getTimeFormat(ctx);
 
+        narrowUi = CarKit.narrow;
         LinearLayout row = CarKit.row(ctx);
         LinearLayout list = CarKit.col(ctx);
         ScrollView sv = new ScrollView(ctx);
@@ -120,6 +123,7 @@ final class TripsTab implements CarScreen {
             detail = null;
         });
         detail = d;
+        d.narrow = narrowUi;
         root.addView(d.create(), CarStyle.match());
     }
 

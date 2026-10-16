@@ -54,9 +54,12 @@ final class TripDetail {
     }
 
     /** La vista completa (mapa y cifras). */
+    /** Pantalla partida: el mapa y las cifras a partes casi iguales (la columna de cifras no cabía). */
+    boolean narrow;
+
     View create() {
-        LinearLayout row = CarKit.row(ctx);
-        FrameLayout mapCard = CarKit.add(row, new CarKit.Card(ctx, null, null), 1.6f, 0);
+        LinearLayout row = CarKit.keep(CarKit.row(ctx));
+        FrameLayout mapCard = CarKit.add(row, new CarKit.Card(ctx, null, null), narrow ? 1f : 1.6f, 0);
         mapCard.setPadding(4, 4, 4, 4);
         if (t.track.length >= 2) {
             web = map();
@@ -64,7 +67,7 @@ final class TripDetail {
         } else {
             mapCard.addView(CarStyle.message(ctx, Str.get(R.string.hql_trip_no_track)), CarStyle.match());
         }
-        LinearLayout right = CarKit.add(row, CarKit.col(ctx), 1f, 0);
+        LinearLayout right = CarKit.add(row, CarKit.col(ctx), narrow ? 1.15f : 1f, 0);
         CarKit.Card info = CarKit.add(right, new CarKit.Card(ctx, null, this::paintInfo), 1f, 0);
         TextView back = CarKit.pill(ctx, "‹ " + Str.get(R.string.hql_tab_trips), false);
         back.setOnClickListener(v -> close());
@@ -162,7 +165,7 @@ final class TripDetail {
         y += 122;
         float w = CarKit.number(cv, String.format(Locale.getDefault(), "%.1f", t.km), "km", x, y, 64, CarKit.TEXT, CarKit.REGULAR, p,
                 Paint.Align.LEFT);
-        CarKit.text(cv, DriveTab.duration(t.minutes * 60), x + w + 28, y - 4, 32, CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.LEFT);
+        CarKit.text(cv, DriveTab.duration(t.minutes * 60), x + w + 28, y - 4, r.width() < 480 ? 26 : 32, CarKit.DIM, CarKit.MEDIUM, p, Paint.Align.LEFT);
         // Consumo: el del coche, el real o el estimado, con su fuente.
         y += 70;
         TripStats.Source src = TripStats.source(t, history);
@@ -184,15 +187,19 @@ final class TripDetail {
                     : Str.get(R.string.hql_trip_fuel, fuel, TripStats.litersPer100(t, history));
             CarKit.text(cv, ft, x + 40, y, 27, fuel < 0.05 ? CarKit.DIM : CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
         }
-        // Fila de cifras: velocidad media, máxima, desnivel y coste.
+        // Cifras: velocidad media, máxima, desnivel y coste (en una fila; en una columna estrecha, en dos de dos).
         y += 70;
         double avg = TripStats.avgKmh(t);
-        float col = r.width() / 4f;
+        boolean two = r.width() < 480;
+        float col = r.width() / (two ? 2f : 4f);
+        float row2 = two ? 78 : 0;
         stat(cv, x, y, Str.get(R.string.hql_trip_avg), Double.isNaN(avg) ? "—" : String.format(Locale.getDefault(), "%.0f", avg), "km/h", p);
         stat(cv, x + col, y, Str.get(R.string.hql_trip_max), String.format(Locale.getDefault(), "%.0f", t.maxKmh), "km/h", p);
-        stat(cv, x + 2 * col, y, Str.get(R.string.hql_trip_climb), "↑" + String.format(Locale.getDefault(), "%.0f", t.climb), "m", p);
+        float x2 = two ? x : x + 2 * col;
+        stat(cv, x2, y + row2, Str.get(R.string.hql_trip_climb), "↑" + String.format(Locale.getDefault(), "%.0f", t.climb), "m", p);
         double cost = TripStats.cost(t, history, cfg.electricityPrice(), cfg.fuelPrice());
-        stat(cv, x + 3 * col, y, Str.get(R.string.hql_trip_cost_label), Money.parts(cost)[0], Money.parts(cost)[1], p);
+        stat(cv, x2 + col, y + row2, Str.get(R.string.hql_trip_cost_label), Money.parts(cost)[0], Money.parts(cost)[1], p);
+        y += row2;
         // Paradas.
         y += 70;
         p.setColor(CarKit.OUTLINE);
@@ -213,7 +220,7 @@ final class TripDetail {
             CarKit.text(cv, "P" + (stops.size() > 1 ? String.valueOf(i + 1) : ""), x + 18, y - 2, 20, CarKit.AMBER, CarKit.MEDIUM, p,
                     Paint.Align.CENTER);
             String at = timeFmt.format(new java.util.Date(t.startMs + Math.round(s.atSec * 1000)));
-            CarKit.text(cv, Str.get(R.string.hql_trip_stop_line, DriveTab.duration((long) s.durationSec), at, s.km), x + 48, y, 25,
+            CarKit.text(cv, Str.get(R.string.hql_trip_stop_line, DriveTab.duration((long) s.durationSec), at, s.km), x + 48, y, r.width() < 480 ? 22 : 25,
                     CarKit.TEXT, CarKit.MEDIUM, p, Paint.Align.LEFT);
         }
     }
