@@ -307,13 +307,39 @@ final class CarKit {
             invalidate();
         }
 
+        /** Tamaño (interior) para el que está pensado su dibujo: si la tarjeta es más pequeña, se dibuja a escala. */
+        private float designW;
+        private float designH;
+        private final RectF scaled = new RectF();
+
+        /**
+         * Pantalla partida: el dibujo se hace en el tamaño de la pestaña ancha (w × h) y se encoge entero, en vez de
+         * montarse lo que no cabe. El título de la tarjeta sigue a su tamaño.
+         */
+        Card design(float w, float h) {
+            designW = w;
+            designH = h;
+            return this;
+        }
+
         @Override
         protected void onDraw(Canvas cv) {
             r.set(BORDER / 2, BORDER / 2, getWidth() - BORDER / 2, getHeight() - BORDER / 2);
             card(cv, r, p);
             if (title != null) titleLabel(cv, title, PAD, PAD + 20, FAINT, p, Paint.Align.LEFT, getWidth() - 2 * PAD);
             inner.set(getPaddingLeft(), getPaddingTop(), getWidth() - getPaddingRight(), getHeight() - getPaddingBottom());
-            if (painter != null) painter.paint(cv, inner, p);
+            if (painter == null) return;
+            float k = designW > 0 ? Math.min(1f, Math.min(inner.width() / designW, inner.height() / designH)) : 1f;
+            if (k >= 0.99f) {
+                painter.paint(cv, inner, p);
+                return;
+            }
+            cv.save();
+            cv.translate(inner.left, inner.top);
+            cv.scale(k, k);
+            scaled.set(0, 0, inner.width() / k, inner.height() / k);
+            painter.paint(cv, scaled, p);
+            cv.restore();
         }
     }
 

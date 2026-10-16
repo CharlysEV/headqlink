@@ -66,17 +66,41 @@ final class EfficiencyScreen implements CarScreen {
         sensors = CarSensors.start(c);
         cfg = new Config(c);
         avgAllTrips = TripStats.avgKwhPer100(TripLog.recent(c, 60));
-        LinearLayout row = CarKit.row(c);
-        LinearLayout c1 = CarKit.add(row, CarKit.col(c), 1f, 0);
-        LinearLayout c2 = CarKit.add(row, CarKit.col(c), 1f, 0);
-        LinearLayout c3 = CarKit.add(row, CarKit.col(c), 1f, 0);
-        powerCard = CarKit.add(c1, new CarKit.Card(c, Str.get(R.string.hql_power_now), this::paintPower), 1.15f, 0);
-        condCard = CarKit.add(c1, new CarKit.Card(c, Str.get(R.string.hql_conditions), this::paintConditions), 1f, 0);
-        useCard = CarKit.add(c2, new CarKit.Card(c, Str.get(R.string.hql_consumption), this::paintUse), 0.62f, 0);
-        splitCard = CarKit.add(c2, new CarKit.Card(c, Str.get(R.string.hql_where_energy_goes), this::paintSplit), 1.38f, 0);
-        costCard = CarKit.add(c3, new CarKit.Card(c, Str.get(R.string.hql_trip_cost_title), this::paintCost), 0.8f, 0);
-        co2Card = CarKit.add(c3, new CarKit.Card(c, Str.get(R.string.hql_co2_avoided), this::paintCo2), 0.75f, 0);
-        tipCard = CarKit.add(c3, new CarKit.Card(c, Str.get(R.string.hql_tip), this::paintTip), 0.85f, 0);
+        powerCard = new CarKit.Card(c, Str.get(R.string.hql_power_now), this::paintPower);
+        condCard = new CarKit.Card(c, Str.get(R.string.hql_conditions), this::paintConditions);
+        useCard = new CarKit.Card(c, Str.get(R.string.hql_consumption), this::paintUse);
+        splitCard = new CarKit.Card(c, Str.get(R.string.hql_where_energy_goes), this::paintSplit);
+        costCard = new CarKit.Card(c, Str.get(R.string.hql_trip_cost_title), this::paintCost);
+        co2Card = new CarKit.Card(c, Str.get(R.string.hql_co2_avoided), this::paintCo2);
+        tipCard = new CarKit.Card(c, Str.get(R.string.hql_tip), this::paintTip);
+        LinearLayout row;
+        if (CarKit.narrow) {
+            // Pantalla partida: las siete en dos columnas que caben enteras, sin deslizar. A la izquierda lo de ahora
+            // (potencia, consumo, coste, CO2); a la derecha en qué se va, las condiciones y el consejo.
+            row = CarKit.keep(CarKit.row(c));
+            LinearLayout c1 = CarKit.add(row, CarKit.col(c), 1f, 0);
+            LinearLayout c2 = CarKit.add(row, CarKit.col(c), 1f, 0);
+            // Cada dibujo, a escala desde su tamaño en la pestaña ancha (no se monta nada).
+            CarKit.add(c1, powerCard.design(457, 200), 1.1f, 0);
+            CarKit.add(c1, useCard.design(457, 110), 0.85f, 0);
+            CarKit.add(c1, costCard.design(457, 135), 0.8f, 0);
+            CarKit.add(c1, co2Card.design(457, 118), 0.75f, 0);
+            CarKit.add(c2, splitCard.design(457, 300), 1.4f, 0);
+            CarKit.add(c2, condCard.design(457, 240), 1.05f, 0);
+            CarKit.add(c2, tipCard.design(457, 110), 0.8f, 0);
+        } else {
+            row = CarKit.row(c);
+            LinearLayout c1 = CarKit.add(row, CarKit.col(c), 1f, 0);
+            LinearLayout c2 = CarKit.add(row, CarKit.col(c), 1f, 0);
+            LinearLayout c3 = CarKit.add(row, CarKit.col(c), 1f, 0);
+            CarKit.add(c1, powerCard, 1.15f, 0);
+            CarKit.add(c1, condCard, 1f, 0);
+            CarKit.add(c2, useCard, 0.62f, 0);
+            CarKit.add(c2, splitCard, 1.38f, 0);
+            CarKit.add(c3, costCard, 0.8f, 0);
+            CarKit.add(c3, co2Card, 0.75f, 0);
+            CarKit.add(c3, tipCard, 0.85f, 0);
+        }
         running = true;
         tick();
         return CarKit.page(c, row);
