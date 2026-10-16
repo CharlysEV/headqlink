@@ -844,10 +844,15 @@ final class RoutePlanner {
         if (guessAsked) return;
         // Ya contestada (en esta sesión o en otra de hace poco): la misma ruta no se vuelve a preguntar.
         Config cfg = new Config(ctx);
+        // Ya contestada: si fue «No» (o sin respuesta), silencio; si fue «Sí», se planifica sin volver a preguntar.
+        boolean autoYes = false;
         if (answered(cfg, mi.totalM)) {
-            guessAsked = true;
-            askedNavMs = mi.startedMs;
-            return;
+            if (!answeredYes(cfg.mapsAnswered())) {
+                guessAsked = true;
+                askedNavMs = mi.startedMs;
+                return;
+            }
+            autoYes = true;
         }
         if (!Double.isNaN(s.speedKmh) && s.speedKmh >= ASK_MAX_KMH) return;
         AaPassthroughSource src = AaPassthroughSource.current();
@@ -867,6 +872,7 @@ final class RoutePlanner {
                     existing ? " (ya navegaba al entrar)" : ""));
             double lat = s.lat;
             double lon = s.lon;
+            boolean yes = autoYes;
             MapsReader.read(ctx, () -> {
                 AaPassthroughSource now = AaPassthroughSource.current();
                 return MapsNavListener.routing() && manual == null && now != null && now.aaOnScreen();
@@ -886,11 +892,21 @@ final class RoutePlanner {
                 } catch (InterruptedException ignored) {
                 }
                 Place pl = got[0];
+                if (yes) {
+                    L.i("ruta: esta ruta de Google Maps ya tuvo un «Sí»: planifico sin preguntar");
+                    acceptPlanner();
+                    return;
+                }
                 if (pl == null && done.getCount() > 0) L.i("ruta: el buscador tarda: pregunto sin el sitio");
                 L.i("ruta: pregunto si activo el planificador " + (pl != null ? "(con el destino leído)" : "(sin destino: no se ha leído)"));
                 DestGuessListener gl = destGuesses;
                 if (gl != null) gl.onPlannerAsk(km, existing, pl == null ? null : pl.name);
             });
+            return;
+        }
+        if (autoYes) {
+            L.i("ruta: esta ruta de Google Maps ya tuvo un «Sí»: planifico sin preguntar (leo Maps cuando se vea)");
+            acceptPlanner();
             return;
         }
         L.i(String.format(Locale.US, "ruta: Google Maps navega %.1f km sin destino aquí%s: pregunto si activo el planificador", km,
@@ -905,11 +921,15 @@ final class RoutePlanner {
     /** Una ruta contestada no se vuelve a preguntar durante esto (también tras cerrar y abrir el coche). */
     static final long ANSWERED_MS = 12 * 3600_000L;
 
-    /** Puro: ¿la ruta de longitud totalM se contestó (stored: «total,ms de pared») hace menos de ANSWERED_MS? */
+    /**
+     * Puro: ¿la ruta de longitud totalM se contestó (stored: «total,ms de pared» o «total,ms,s|n») hace menos de
+     * ANSWERED_MS?
+     */
     static boolean answered(String stored, int totalM, long nowMs) {
         if (stored == null || stored.isEmpty() || totalM <= 0) return false;
         String[] f = stored.split(",");
-        if (f.length != 2) return false;
+        // Las guardadas sin la respuesta (versiones de antes) no cuentan: se vuelve a preguntar una vez.
+        if (f.length != 3) return false;
         try {
             return MapsNavListener.sameRoute(Integer.parseInt(f[0]), totalM) && nowMs - Long.parseLong(f[1]) < ANSWERED_MS;
         } catch (NumberFormatException e) {
@@ -917,21 +937,28 @@ final class RoutePlanner {
         }
     }
 
+    /** Puro: ¿la respuesta guardada fue «Sí»? (las de antes, sin la respuesta, cuentan como «No»). */
+    static boolean answeredYes(String stored) {
+        if (stored == null) return false;
+        String[] f = stored.split(",");
+        return f.length == 3 && "s".equals(f[2]);
+    }
+
     private static boolean answered(Config cfg, int totalM) {
         return answered(cfg.mapsAnswered(), totalM, System.currentTimeMillis());
     }
 
     /** Apunta la ruta contestada (Sí, No o sin respuesta). */
-    private static void rememberAnswer() {
+    private static void rememberAnswer(boolean yes) {
         RoutePlanner r = instance;
         int t = askedTotalM;
         if (r == null || t <= 0) return;
-        new Config(r.ctx).setMapsAnswered(t + "," + System.currentTimeMillis());
+        new Config(r.ctx).setMapsAnswered(t + "," + System.currentTimeMillis() + "," + (yes ? "s" : "n"));
     }
 
     /** El panel del coche: el conductor activa el planificador; se lee la ruta de Maps en el próximo paso. */
     static void acceptPlanner() {
-        rememberAnswer();
+        rememberAnswer(true);
         Place pl = pendingPlace;
         RoutePlanner r = instance;
         pendingPlace = null;
@@ -947,7 +974,7 @@ final class RoutePlanner {
 
     /** El panel del coche: «No», o sin respuesta. Nada más en esta navegación de Maps. */
     static void declinePlanner(boolean timeout) {
-        rememberAnswer();
+        rememberAnswer(false);
         pendingPlace = null;
         L.i("ruta: " + (timeout ? "sin respuesta" : "el conductor no quiere el planificador") + ": sigo sin planificar esta navegación");
     }

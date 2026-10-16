@@ -23,11 +23,17 @@ class DestGuessTest {
         assertFalse(MapsNavListener.sameRoute(5_000, 7_000))
         // Contestada hace una hora: no se vuelve a preguntar; hace 13 h, o por otra ruta, sí.
         val now = 1_760_000_000_000L
-        assertTrue(RoutePlanner.answered("434000," + (now - 3_600_000), 435_000, now))
-        assertFalse(RoutePlanner.answered("434000," + (now - 13 * 3_600_000L), 434_000, now))
-        assertFalse(RoutePlanner.answered("434000," + (now - 3_600_000), 298_000, now))
+        assertTrue(RoutePlanner.answered("434000," + (now - 3_600_000) + ",n", 435_000, now))
+        assertFalse(RoutePlanner.answered("434000," + (now - 13 * 3_600_000L) + ",s", 434_000, now))
+        assertFalse(RoutePlanner.answered("434000," + (now - 3_600_000) + ",s", 298_000, now))
         assertFalse(RoutePlanner.answered("", 434_000, now))
         assertFalse(RoutePlanner.answered("basura", 434_000, now))
+        // Con la respuesta: «Sí» planifica sin preguntar; «No» y las de antes (sin respuesta guardada), silencio.
+        assertTrue(RoutePlanner.answered("434000," + (now - 3_600_000) + ",s", 434_000, now))
+        assertTrue(RoutePlanner.answeredYes("434000," + (now - 3_600_000) + ",s"))
+        assertFalse(RoutePlanner.answeredYes("434000," + (now - 3_600_000) + ",n"))
+        assertFalse(RoutePlanner.answeredYes("434000," + (now - 3_600_000)))
+        assertFalse(RoutePlanner.answered("434000," + (now - 3_600_000), 434_000, now))
     }
 
     @Test
