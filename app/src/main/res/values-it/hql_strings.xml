@@ -1044,4 +1044,6 @@
     <string name="hql_acc_guide_other">Il gestore della batteria del produttore: lascia che Qonecta+ funzioni in background.</string>
     <string name="hql_acc_guide_restricted">Se Android non ti lascia attivarla: Info app › ⋮ › «Consenti impostazioni con restrizioni».</string>
     <string name="hql_acc_guide_battery">Batteria</string>
+    <string name="hql_psx_enhanced">Immagine PlayStation migliorata</string>
+    <string name="hql_psx_enhanced_sum">Risoluzione interna doppia e senza retinatura: meno scalettature e colori più uniformi. Consuma un po\' più batteria e scalda di più; vale dal prossimo gioco.</string>
 </resources>

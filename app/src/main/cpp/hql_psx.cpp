@@ -249,6 +249,19 @@ void unloadGame() {
  * Opciones del núcleo cambiadas a mano para probar un juego que falla: files/psx/opciones.txt, una por línea
  * («pcsx_rearmed_drc=disabled»). Sin el archivo, todas con su valor por defecto.
  */
+/** Imagen mejorada (PsxEngine.nSetEnhanced): resolución interna al doble (GPU NEON) y sin el tramado de colores. */
+bool enhanced = false;
+
+void applyImage() {
+    auto set = [](const char *k, const char *v) {
+        if (vars.find(k) != vars.end()) vars[k] = v;
+    };
+    set("pcsx_rearmed_neon_enhancement_enable", enhanced ? "enabled" : "disabled");
+    set("pcsx_rearmed_neon_enhancement_tex_adj_v2", enhanced ? "enabled" : "disabled");
+    set("pcsx_rearmed_dithering", enhanced ? "disabled" : "enabled");
+    varsChanged = true;
+}
+
 void applyOverrides(const std::string &path) {
     FILE *f = fopen(path.c_str(), "r");
     if (!f) return;
@@ -313,6 +326,11 @@ extern "C" {
  * Abre el disco (ruta real: .cue, .chd, .pbp, .iso o .m3u; el núcleo lo lee él) con la carpeta de guardado (tarjeta de
  * memoria) y la del sistema (BIOS, si se ha puesto). null si arranca; si no, el error.
  */
+JNIEXPORT void JNICALL
+Java_com_headqlink_link_PsxEngine_nSetEnhanced(JNIEnv *, jclass, jboolean on) {
+    enhanced = on;
+}
+
 JNIEXPORT jstring JNICALL
 Java_com_headqlink_link_PsxEngine_nLoad(JNIEnv *env, jclass, jstring jpath, jstring jsaveDir, jstring jsystemDir, jstring jsrm) {
     std::string romPath = jstr(env, jpath);
@@ -331,6 +349,7 @@ Java_com_headqlink_link_PsxEngine_nLoad(JNIEnv *env, jclass, jstring jpath, jstr
         retro_init();
         initDone = true;
     }
+    applyImage();
     applyOverrides(systemDir + "/../opciones.txt");
     retro_game_info game{};
     game.path = romPath.c_str();

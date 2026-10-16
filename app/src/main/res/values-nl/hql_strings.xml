@@ -1043,4 +1043,6 @@
     <string name="hql_acc_guide_other">De batterijbeheerder van de fabrikant: laat Qonecta+ op de achtergrond werken.</string>
     <string name="hql_acc_guide_restricted">Als Android het aanzetten niet toestaat: App-info › ⋮ › «Beperkte instellingen toestaan».</string>
     <string name="hql_acc_guide_battery">Batterij</string>
+    <string name="hql_psx_enhanced">Verbeterd PlayStation-beeld</string>
+    <string name="hql_psx_enhanced_sum">Dubbele interne resolutie en geen dithering: minder kartelranden en vloeiendere kleuren. Kost iets meer batterij en wordt warmer; geldt vanaf het volgende spel.</string>
 </resources>

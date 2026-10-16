@@ -1043,4 +1043,6 @@
     <string name="hql_acc_guide_other">Der Akku-Manager des Herstellers: Qonecta+ im Hintergrund laufen lassen.</string>
     <string name="hql_acc_guide_restricted">Wenn Android das Einschalten nicht erlaubt: App-Info › ⋮ › «Eingeschränkte Einstellungen zulassen».</string>
     <string name="hql_acc_guide_battery">Akku</string>
+    <string name="hql_psx_enhanced">Verbessertes PlayStation-Bild</string>
+    <string name="hql_psx_enhanced_sum">Doppelte interne Auflösung und kein Dithering: weniger Treppenstufen und glattere Farben. Braucht etwas mehr Akku und wird wärmer; gilt ab dem nächsten Spiel.</string>
 </resources>

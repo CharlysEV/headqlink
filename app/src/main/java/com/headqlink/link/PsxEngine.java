@@ -28,6 +28,9 @@ final class PsxEngine extends NativeCore {
 
     private static native String nLoad(String path, String saveDir, String systemDir, String srmPath);
 
+    /** Imagen mejorada (resolución interna al doble y sin el tramado), para el próximo nLoad. */
+    private static native void nSetEnhanced(boolean on);
+
     private static native int nFrame(int[] argb, short[] audio, int buttons);
 
     private static native int nSize();
@@ -45,8 +48,11 @@ final class PsxEngine extends NativeCore {
     private final File base;
     private int fps = 60;
 
+    private final Context appCtx;
+
     PsxEngine(Context ctx) {
         super("PlayStation", 2, 1f);
+        appCtx = ctx.getApplicationContext();
         base = new File(ctx.getExternalFilesDir(null), GameConsole.PSX.dir);
     }
 
@@ -71,6 +77,9 @@ final class PsxEngine extends NativeCore {
         saves.mkdirs();
         bios.mkdirs();
         String title = GameConsole.title(new File(path).getName());
+        boolean enhanced = new Config(appCtx).psxEnhanced();
+        nSetEnhanced(enhanced);
+        L.i("PlayStation: imagen " + (enhanced ? "mejorada (resolución al doble y sin tramado)" : "original"));
         String err = nLoad(path, saves.getAbsolutePath(), bios.getAbsolutePath(), new File(saves, title + ".srm").getAbsolutePath());
         if (err == null) fps = Math.max(1, Math.round(nFps100() / 100f));
         return err;

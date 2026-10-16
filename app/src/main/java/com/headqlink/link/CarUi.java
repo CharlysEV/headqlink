@@ -439,12 +439,38 @@ final class CarUi {
     static void gameDrawing(boolean on) {
         // Con un emulador, el vídeo al coche sube a 60 fps; sin él, 30 (VideoPipeline.contentCap).
         VideoPipeline.setGameMode(on);
+        gaming = on;
+        CarUi g = current;
+        if (g != null) g.main.post(g::aaForGame);
         // Con mando Bluetooth, la pantalla del móvil negra y quieta (cada botón la encendería: TouchService.gameCover).
         TouchService.gameCover(on);
         CarUi ui = current;
         if (ui != null) ui.main.post(() -> {
             if (ui.phoneOff != null) ui.phoneOff.setForced(on);
         });
+    }
+
+    /** Hay un juego en marcha (gameDrawing). */
+    private static volatile boolean gaming;
+    /** El vídeo de AA está en pausa por un juego a pantalla completa (foco de vídeo en nativo). */
+    private boolean aaPausedForGame;
+
+    /**
+     * Hilo principal: con un juego a pantalla completa, AA no se ve pero seguía mandando y decodificándose su vídeo (GPU,
+     * calor y tirones en el juego): se le quita el foco de vídeo. Al acabar el juego, o con la pantalla partida (AA a la
+     * vista), se le devuelve y manda una imagen nueva.
+     */
+    private void aaForGame() {
+        boolean want = gaming && !splitActive();
+        if (want == aaPausedForGame) return;
+        com.andrerinas.openheadunit.connection.CommManager cm = com.andrerinas.openheadunit.App.Companion.provide(ctx).getCommManager();
+        if (!cm.isConnected()) {
+            aaPausedForGame = false;
+            return;
+        }
+        aaPausedForGame = want;
+        cm.send(new com.andrerinas.openheadunit.aap.protocol.messages.VideoFocusEvent(!want, true));
+        L.i("CarUi: vídeo de Android Auto " + (want ? "en pausa mientras se juega a pantalla completa" : "de vuelta (fin del juego o pantalla partida)"));
     }
 
     /** Hilo principal: el juego tiene fotograma nuevo; se dibuja ya, sin esperar al ritmo de la pantalla del móvil. */
@@ -629,6 +655,7 @@ final class CarUi {
             return;
         }
         split = !split;
+        main.post(this::aaForGame);
         L.i("CarUi: pantalla partida " + (split ? "sí" : "no") + " (" + screenName + ")");
         if ("car".equals(screenName)) {
             // La sección Coche cambia de escala con el ancho: se vuelve a abrir (las de ocio conservan su página).

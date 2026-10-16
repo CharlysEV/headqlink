@@ -825,6 +825,13 @@ final class Config {
         return sp.getBoolean(PANEL_RIGHT, false);
     }
 
+    /** PlayStation con la imagen mejorada (resolución interna al doble y sin el tramado): de serie, sí. */
+    static final String PSX_ENHANCED = "psx_enhanced";
+
+    boolean psxEnhanced() {
+        return sp.getBoolean(PSX_ENHANCED, true);
+    }
+
     /**
      * Tamaño de la interfaz del modo extendido en la pantalla del coche (UiScale): 0 = automático (como en el C10; en
      * pantallas más pequeñas, como la del T03, se reduce para que quepa), o el porcentaje elegido (50-100).

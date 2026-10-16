@@ -1047,4 +1047,6 @@
     <string name="hql_acc_guide_other">厂商的电池管理：允许 Qonecta+ 在后台运行。</string>
     <string name="hql_acc_guide_restricted">如果 Android 不让开启：应用信息 › ⋮ › 「允许受限制的设置」。</string>
     <string name="hql_acc_guide_battery">电池</string>
+    <string name="hql_psx_enhanced">增强 PlayStation 画面</string>
+    <string name="hql_psx_enhanced_sum">内部分辨率翻倍并关闭抖动：锯齿更少、颜色更平滑。稍微更耗电、更发热；从下一次打开游戏时生效。</string>
 </resources>
