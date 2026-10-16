@@ -312,6 +312,20 @@ class MapsCardTest {
      * Coche virtual (16-10): la imagen de AA es más estrecha que su zona y queda una banda negra hasta el borde derecho.
      * No es la pantalla partida: antes se pulsaba el icono de Maps y así se partía.
      */
+    /**
+     * Coche virtual (16-10, «franja al 42 %»): un panel oscuro de Maps a la izquierda que llega hasta pasado el 40 % del
+     * ancho. Su borde no es el hueco de la pantalla partida.
+     */
+    @Test
+    fun aMapsPanelOnTheLeftIsNotASplitScreen() {
+        val night = 0xFF000000.toInt()
+        for (end in intArrayOf(760, 790, 820)) {
+            val px = aa(false, night, 0xFF35466A.toInt())
+            for (y in 0 until 882) for (x in 300 until end) px[y * 1824 + x] = 0xFF202124.toInt()
+            assertFalse("panel hasta x=$end", MapsCard.splitScreen(px, 1824, 882))
+        }
+    }
+
     @Test
     fun aBandUpToTheEdgeIsNotASplitScreen() {
         val night = 0xFF000000.toInt()

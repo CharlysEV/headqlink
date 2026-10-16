@@ -408,7 +408,8 @@ final class MapsCard {
      * Puro: el centro x de la franja de la pantalla partida (splitScreen), o -1. La franja tiene que acabar antes del 95 %
      * del ancho, con la otra app a su derecha: una banda del fondo que llega al final (la imagen de AA más estrecha que su
      * zona, como en el coche virtual) no es la pantalla partida (16-10: se pulsaba el icono de Maps con Maps ya a
-     * pantalla completa, y así se partía).
+     * pantalla completa, y así se partía). Y tiene que empezar después del 40 %, con contenido a su izquierda: la que ya
+     * viene de antes es un panel de Maps (16-10: «franja al 42 %» con Maps a pantalla completa).
      */
     static int splitGapX(int[] argb, int w, int h) {
         int y0 = Math.round(h * 0.04f);
@@ -418,7 +419,8 @@ final class MapsCard {
         int minRun = Math.max(4, w / 400);
         int maxRun = Math.max(minRun, w / 20);
         int run = 0;
-        for (int x = Math.round(w * 0.40f); x < Math.round(w * 0.95f); x++) {
+        int x0 = Math.round(w * 0.40f);
+        for (int x = x0; x < Math.round(w * 0.95f); x++) {
             int first = luma(argb[y0 * w + x]);
             int ok = 0;
             for (int y = y0; y < y1; y += 3) {
@@ -428,7 +430,7 @@ final class MapsCard {
             if (ok >= rows * 0.95) {
                 run++;
             } else {
-                if (run >= minRun && run <= maxRun) return x - (run + 1) / 2;
+                if (run >= minRun && run <= maxRun && x - run > x0) return x - (run + 1) / 2;
                 run = 0;
             }
         }

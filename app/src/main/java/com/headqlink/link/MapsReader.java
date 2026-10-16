@@ -101,7 +101,7 @@ final class MapsReader {
         AaPassthroughSource first = AaPassthroughSource.current();
         if (first == null || !first.aaOnScreen()) return new MapsCard.Read(new ArrayList<>(), null);
         hold = true;
-        if (!ensureMapsFull(first)) {
+        if (!ensureMapsFull(ctx, first)) {
             hold = false;
             return new MapsCard.Read(new ArrayList<>(), null);
         }
@@ -135,7 +135,7 @@ final class MapsReader {
                 int[] px = new int[w * h];
                 shot.getPixels(px, 0, w, 0, 0, w, h);
                 icon = MapsCard.routeIcon(px, w, h, eta, MapsCard.kmLine(lines, eta));
-                lastShot(ctx, shot);
+                lastShot(ctx, shot, "maps-lector.png");
                 if (icon == null) {
                     etaNoIcon++;
                 }
@@ -211,7 +211,7 @@ final class MapsReader {
             try {
                 rec = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
                 AaPassthroughSource src = AaPassthroughSource.current();
-                if (src != null && src.aaOnScreen() && !ensureMapsFull(src)) {
+                if (src != null && src.aaOnScreen() && !ensureMapsFull(ctx, src)) {
                     killed[0] = !navigating();
                 } else if (src != null && src.aaOnScreen()) {
                     hold = true;
@@ -329,7 +329,7 @@ final class MapsReader {
      * al lado) se pulsa el icono de Maps de la barra de AA, que alterna entre partida y completa, y se comprueba. Así un
      * toque nunca cae en otra app que se ponga delante. false: no se ha podido (y no se toca nada más).
      */
-    private static boolean ensureMapsFull(AaPassthroughSource src) throws InterruptedException {
+    private static boolean ensureMapsFull(Context ctx, AaPassthroughSource src) throws InterruptedException {
         // El icono alterna entre partida y completa. Si tras un toque sigue «partida», otro: si no lo estaba (se vio mal y el
         // primer toque la partió), la deja como estaba; si lo estaba y el toque no entró, la pone completa.
         for (int i = 0; i < 3; i++) {
@@ -339,8 +339,10 @@ final class MapsReader {
             int h = shot.getHeight();
             int[] px = new int[w * h];
             shot.getPixels(px, 0, w, 0, 0, w, h);
-            shot.recycle();
             int gap = MapsCard.splitGapX(px, w, h);
+            // Diagnóstico (solo en el móvil, se sobrescribe): la imagen en la que se vio la pantalla partida.
+            if (gap >= 0 && i == 0) lastShot(ctx, shot, "maps-partida.png");
+            shot.recycle();
             if (gap < 0) {
                 if (i > 0) L.i("Maps: ya a pantalla completa");
                 return true;
@@ -366,11 +368,11 @@ final class MapsReader {
      * Diagnóstico: la última imagen en la que se buscó el icono de la ruta, en la caché del móvil (no va en los logs que se
      * exportan; se sobrescribe cada vez). Sirve para ver por qué no se abre la tarjeta.
      */
-    private static void lastShot(Context ctx, Bitmap b) {
+    private static void lastShot(Context ctx, Bitmap b, String name) {
         try {
             java.io.File dir = ctx.getExternalCacheDir();
             if (dir == null) return;
-            try (java.io.FileOutputStream out = new java.io.FileOutputStream(new java.io.File(dir, "maps-lector.png"))) {
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(new java.io.File(dir, name))) {
                 b.compress(Bitmap.CompressFormat.PNG, 100, out);
             }
         } catch (Exception ignored) {
