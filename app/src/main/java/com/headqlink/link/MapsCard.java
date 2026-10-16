@@ -137,10 +137,12 @@ final class MapsCard {
         int x0 = Math.max(0, eta.left - lh);
         int x1 = Math.min(w - 1, eta.left + lh * 18);
         if (y1 - y0 < lh || x1 - x0 < lh * 4) return out;
-        // Fondo: el color (cuantizado) más repetido en la franja, del principio del recuadro.
+        // Fondo: el color (cuantizado) más repetido en la franja, en buena parte del recuadro. Solo al principio no: de
+        // noche la X lleva su propio fondo gris, que se tomaba por el del recuadro; el recuadro «acababa» tras la X y solo
+        // se veía ese botón (16-10: se pulsaba la X, o con los cuatro botones exigidos no se pulsaba nada).
         java.util.Map<Integer, Integer> hist = new java.util.HashMap<>();
         for (int y = y0; y <= y1; y += 2) {
-            for (int x = Math.max(0, eta.left); x <= Math.min(x1, eta.left + lh * 4); x += 2) {
+            for (int x = Math.max(0, eta.left); x <= Math.min(x1, eta.left + lh * 10); x += 2) {
                 int q = argb[y * w + x] & 0xF0F0F0;
                 hist.merge(q, 1, Integer::sum);
             }

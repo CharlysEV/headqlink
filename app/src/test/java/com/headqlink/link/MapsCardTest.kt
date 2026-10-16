@@ -128,6 +128,19 @@ class MapsCardTest {
         assertEquals(833.0, p[1].toDouble(), 6.0)
     }
 
+    /**
+     * De noche (16-10, en el coche): la X lleva un fondo gris propio sobre el recuadro casi negro. Ese gris no es el fondo
+     * del recuadro: se ven los cuatro botones y se pulsa el de la ruta.
+     */
+    @Test
+    fun theGreyPillOfTheXIsNotTheBackgroundAtNight() {
+        val px = panel(1824, 882, 0xFF131313.toInt(), 0xFFE3E3E3.toInt(), 0xFF35466A.toInt())
+        for (y in 800 until 866) for (x in 345 until 450) px[y * 1824 + x] = 0xFF242B2C.toInt() // la píldora de la X
+        for (y in 815 until 851) for (x in 379 until 415) px[y * 1824 + x] = 0xFFE3E3E3.toInt() // la X, encima
+        assertEquals(4, MapsCard.rowIcons(px, 1824, 882, navEta, navKm).size)
+        assertEquals(737.0, MapsCard.routeIcon(px, 1824, 882, navEta, navKm)!![0].toDouble(), 6.0)
+    }
+
     @Test
     fun theCancelIconIsTheFirstOfTheRow() {
         val px = panel(1824, 882, 0xFF202124.toInt(), 0xFFE8EAED.toInt(), 0xFF35466A.toInt())
