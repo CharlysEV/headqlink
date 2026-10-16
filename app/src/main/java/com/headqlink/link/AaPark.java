@@ -49,6 +49,13 @@ final class AaPark {
     private AaPark() {
     }
 
+    /** Un ping a AA (sin vídeo se cierra solo si no oye nada: así sigue conectado). */
+    static void ping(CommManager cm) {
+        if (!cm.isConnected()) return;
+        cm.send(new AapMessage(Channel.ID_CTR, Control.ControlMsgType.MESSAGE_PING_REQUEST_VALUE,
+                Control.PingRequest.newBuilder().setTimestamp(System.nanoTime()).build()));
+    }
+
     /** Aparca AA (si está conectado): foco nativo, sin vista en el móvil y ping. Idempotente. */
     static void park(Context ctx, String why) {
         app = ctx.getApplicationContext();

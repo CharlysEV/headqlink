@@ -469,9 +469,35 @@ final class CarUi {
             return;
         }
         aaPausedForGame = want;
+        aaGameGen = cm.getTransportGeneration();
         cm.send(new com.andrerinas.openheadunit.aap.protocol.messages.VideoFocusEvent(!want, true));
         L.i("CarUi: vídeo de Android Auto " + (want ? "en pausa mientras se juega a pantalla completa" : "de vuelta (fin del juego o pantalla partida)"));
+        main.removeCallbacks(aaGamePing);
+        if (want) main.postDelayed(aaGamePing, AA_GAME_PING_MS);
     }
+
+    /**
+     * Con el vídeo de AA en pausa por el juego: un ping cada 5 s (sin vídeo ni nada que oír, AA se cerraba a los ~17 s:
+     * 16/10, 14:06), y si AA se ha relanzado igualmente (otra conexión), se le vuelve a quitar el vídeo.
+     */
+    private static final long AA_GAME_PING_MS = 5_000;
+    private int aaGameGen;
+    private final Runnable aaGamePing = new Runnable() {
+        @Override
+        public void run() {
+            if (!aaPausedForGame) return;
+            com.andrerinas.openheadunit.connection.CommManager cm = com.andrerinas.openheadunit.App.Companion.provide(ctx).getCommManager();
+            if (cm.isConnected()) {
+                if (cm.getTransportGeneration() != aaGameGen) {
+                    aaGameGen = cm.getTransportGeneration();
+                    cm.send(new com.andrerinas.openheadunit.aap.protocol.messages.VideoFocusEvent(false, true));
+                    L.i("CarUi: Android Auto se ha relanzado durante el juego: su vídeo, otra vez en pausa");
+                }
+                AaPark.ping(cm);
+            }
+            main.postDelayed(this, AA_GAME_PING_MS);
+        }
+    };
 
     /** Hilo principal: el juego tiene fotograma nuevo; se dibuja ya, sin esperar al ritmo de la pantalla del móvil. */
     static void gameFrame() {
