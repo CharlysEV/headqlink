@@ -130,7 +130,8 @@ final class MapsCard {
         if (argb == null || eta == null || km == null || argb.length < w * h) return out;
         int lh = Math.max(8, Math.max(eta.h(), km.h()));
         int y0 = Math.min(h - 1, km.bottom + lh / 3);
-        int y1 = Math.min(h - 1, km.bottom + lh * 4);
+        // Hasta el pie de los botones, sin pasar del recuadro (debajo ya es mapa).
+        int y1 = Math.min(h - 1, km.bottom + lh * 27 / 10);
         int x0 = Math.max(0, eta.left - lh);
         int x1 = Math.min(w - 1, eta.left + lh * 18);
         if (y1 - y0 < lh || x1 - x0 < lh * 4) return out;
@@ -161,7 +162,9 @@ final class MapsCard {
             int bgc = 0;
             for (int y = y0; y <= y1; y++) {
                 int c = argb[y * w + x];
-                if (near(c, bg, 28)) bgc++;
+                // El fondo, con poca tolerancia: de día el recuadro es blanco y el mapa beis claro (con 28 se confundían y
+                // se tomaban por iconos la ruta y el coche del mapa: 16/10, tema claro).
+                if (near(c, bg, 12)) bgc++;
                 else if (Math.abs(luma(c) - bgL) > 90) ic++;
             }
             icon[x] = ic >= 2;

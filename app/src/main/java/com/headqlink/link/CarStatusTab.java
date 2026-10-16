@@ -296,6 +296,8 @@ final class CarStatusTab implements CarScreen {
             return;
         }
         if ("robolectric".equals(android.os.Build.FINGERPRINT)) return;
+        // Pantalla partida: la tarjeta es pequeña y el 3D no se encoge (sus presiones se montaban): el dibujo de arriba.
+        if (CarKit.narrow) return;
         try {
             android.webkit.WebView w = new android.webkit.WebView(ctx);
             w.setBackgroundColor(0);

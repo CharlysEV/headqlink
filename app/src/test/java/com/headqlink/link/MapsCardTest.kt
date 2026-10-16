@@ -11,6 +11,32 @@ import org.junit.Test
  * AA (1824 × 882): la navegación con el recuadro abajo a la izquierda, y la tarjeta del viaje abierta.
  */
 class MapsCardTest {
+    /**
+     * Tema claro (16/10): recuadro blanco sobre un mapa beis claro, con la ruta morada y el coche en el mapa. Con mucha
+     * tolerancia al fondo, el recuadro «no acababa» y se tomaba el coche del mapa por el icono de la ruta.
+     */
+    @Test
+    fun routeIconInTheLightTheme() {
+        val w = 990
+        val h = 770
+        val beige = 0xFFF2EFE9.toInt()
+        val white = 0xFFFFFFFF.toInt()
+        val dark = 0xFF202124.toInt()
+        val argb = IntArray(w * h) { beige }
+        fun rect(x0: Int, y0: Int, x1: Int, y1: Int, c: Int) {
+            for (y in y0 until y1) for (x in x0 until x1) argb[y * w + x] = c
+        }
+        rect(105, 563, 530, 748, white) // el recuadro de la navegación
+        for (cx in intArrayOf(162, 263, 369, 485)) rect(cx - 14, 686, cx + 14, 714, dark) // X, alternativas, +, ruta
+        rect(580, 560, 600, 770, 0xFF4A1FE0.toInt()) // la ruta en el mapa
+        rect(700, 640, 740, 740, 0xFF2A9D9F.toInt()) // el coche en el mapa
+        val eta = MapsCard.Line("5 h y 29 min", 135, 578, 372, 612)
+        val km = MapsCard.Line("541 km", 135, 624, 326, 652)
+        assertEquals(4, MapsCard.rowIcons(argb, w, h, eta, km).size)
+        val route = MapsCard.routeIcon(argb, w, h, eta, km)!!
+        assertTrue("el icono de la ruta, no el mapa: " + route[0], route[0] in 470..500)
+    }
+
     private fun l(text: String, left: Int, top: Int, right: Int, bottom: Int) = MapsCard.Line(text, left, top, right, bottom)
 
     /** Navegando: la indicación arriba, una burbuja «8 min más lento» en el mapa y el recuadro abajo. */
