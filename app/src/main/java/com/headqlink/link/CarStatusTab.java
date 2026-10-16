@@ -134,6 +134,7 @@ final class CarStatusTab implements CarScreen {
 
     private void paintBattery(Canvas cv, RectF r, Paint p) {
         LeapStatus s = snap.status;
+        if (s == null) return;
         double soc = s.socBest();
         int col = Double.isNaN(soc) ? CarKit.MUTED : levelColor(soc);
         float rad = Math.min(r.width() * 0.34f, 146);
@@ -393,6 +394,7 @@ final class CarStatusTab implements CarScreen {
 
     private void paintTyres(Canvas cv, RectF r, Paint p) {
         LeapStatus s = snap.status;
+        if (s == null) return;
         boolean narrow = r.width() < TYRES_NARROW_W;
         if (car3d != null) {
             int vis = narrow ? android.view.View.GONE : android.view.View.VISIBLE;
@@ -549,6 +551,7 @@ final class CarStatusTab implements CarScreen {
 
     private void paintCar(Canvas cv, RectF r, Paint p) {
         LeapStatus s = snap.status;
+        if (s == null) return;
         CarKit.label(cv, Str.get(R.string.hql_cloud_odometer), r.left, r.top + 18, p);
         CarKit.number(cv, odometer(s.odometerKm), "km", r.left, r.top + 82, 58, CarKit.TEXT, CarKit.REGULAR, p, Paint.Align.LEFT);
         String state;

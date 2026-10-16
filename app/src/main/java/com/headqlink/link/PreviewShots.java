@@ -45,6 +45,7 @@ final class PreviewShots {
             new Shot("partida_instrumentos", "car-3-partida", 408.6, 1800),
             new Shot("partida_eficiencia", "car-4-partida", 396, 1800),
             new Shot("partida_estado", "car-5-partida", 300, 1800),
+            new Shot("partida_estado_sin_cuenta", "car-5-partida", 30, 1500, "sin_nube"),
             new Shot("coche_estado_cargando", "car-5", 30, 1500, "cargando"),
             new Shot("coche_ruta_cargando", "car-0", 300, 3000, "cargando"),
             new Shot("coche_estado_sin_cuenta", "car-5", 30, 1500, "sin_nube"),

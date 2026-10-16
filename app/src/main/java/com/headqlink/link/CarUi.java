@@ -847,11 +847,23 @@ final class CarUi {
      * Si la conexión anterior se cortó hace menos de TripCarry.CONTINUE_MS, vuelve lo que se veía: la sección, la
      * pestaña de Coche y la pantalla partida. false: no había nada que recuperar (se abre AA, como siempre).
      */
+    static final long RESUME_GUARD_MS = 90_000;
+
     private boolean resumeScreen() {
         if (RoutePlanner.testMode()) return false;
         org.json.JSONObject o = TripCarry.take(ctx, "screen");
         TripCarry.clear(ctx, "screen");
         if (o == null) return false;
+        // Como mucho una vez cada RESUME_GUARD_MS: si recuperar la pantalla hiciera caer la app, la conexión siguiente
+        // abre Android Auto en vez de repetirlo en bucle (pasó con Estado en la pantalla partida, 16-10).
+        android.content.SharedPreferences g = ctx.getSharedPreferences("hql_trip_carry", Context.MODE_PRIVATE);
+        long now = System.currentTimeMillis();
+        long last = g.getLong("screenResumedAt", 0);
+        if (now - last >= 0 && now - last < RESUME_GUARD_MS) {
+            L.w("CarUi: la pantalla ya se recuperó hace " + (now - last) / 1000 + " s: esta vez, Android Auto");
+            return false;
+        }
+        g.edit().putLong("screenResumedAt", now).commit();
         String name = o.optString("screen", "aa");
         if ("aa".equals(name) || name.isEmpty()) return false;
         CarHubScreen.selectTab(o.optInt("tab", 0));

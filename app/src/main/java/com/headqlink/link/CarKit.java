@@ -387,10 +387,7 @@ final class CarKit {
             FrameLayout f = (FrameLayout) content;
             for (int i = 0; i < f.getChildCount(); i++) {
                 View ch = f.getChildAt(i);
-                if (!GRID.contains(ch)) continue;
-                ViewGroup.LayoutParams lp = ch.getLayoutParams();
-                f.removeViewAt(i);
-                f.addView(narrowColumn(c, ch), i, lp);
+                if (GRID.contains(ch)) narrowColumn(c, ch);
             }
         }
         return content;
@@ -414,7 +411,12 @@ final class CarKit {
         android.widget.ScrollView sv = new android.widget.ScrollView(c);
         sv.setVerticalScrollBarEnabled(false);
         sv.addView(list);
-        return sv;
+        // Dentro de la propia rejilla (ya vacía): la pestaña sigue pudiendo ocultarla o enseñarla por su referencia.
+        LinearLayout grid = (LinearLayout) content;
+        grid.removeAllViews();
+        grid.setOrientation(LinearLayout.VERTICAL);
+        grid.addView(sv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        return grid;
     }
 
     /** Añade v a l con peso (0: tamaño fijo size) y el hueco antes si no es el primero. */
