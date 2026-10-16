@@ -242,8 +242,8 @@ final class CarUi {
 
     /** Puro: escala de la sección Coche para un ancho de contenido dado (1 si cabe). */
     static float narrowScale(String name, int contentW) {
-        if (!"car".equals(name) || contentW >= NARROW_MIN_W) return 1f;
-        return contentW / (float) NARROW_MIN_W;
+        // Ya no se encoge: las pestañas de Coche se ponen en una columna a tamaño real (CarKit.narrow).
+        return 1f;
     }
     /** Panel a la derecha (Ajustes): AA y nuestras pantallas a su izquierda. */
     private boolean panelRight;
@@ -1076,6 +1076,9 @@ final class CarUi {
                 CarHubScreen.selectTab(Integer.parseInt(parts[1]));
                 if (parts.length > 2 && parts[2].equals("detalle")) TripsTab.previewDetail = true;
                 if (parts.length > 2 && parts[2].equals("buscar")) RouteTab.previewQuery = "electrolinera";
+                // "car-N-partida": con la pantalla partida (AA a la izquierda).
+                split = parts.length > 2 && parts[2].equals("partida");
+                splitAccepted = true;
                 open("car");
             } else {
                 open(name);

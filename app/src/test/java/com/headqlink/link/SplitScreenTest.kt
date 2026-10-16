@@ -32,7 +32,10 @@ class SplitScreenTest {
     @Test
     fun theCarSectionIsScaledDownWhenTheHalfIsNarrow() {
         // En el C10 la mitad deja 810 px: la sección se dibuja a 1100 y se escala a 0,74. Las de ocio, nunca.
-        assertEquals(810f / 1100f, CarUi.narrowScale("car", 810), 0.001f)
+        // La sección Coche ya no se encoge en la pantalla partida: va en una columna (CarKit.narrow).
+        assertEquals(1f, CarUi.narrowScale("car", 810), 0f)
+        assertEquals(listOf(300, 482), NarrowGrid.split(floatArrayOf(0f, 1f), intArrayOf(300, 0), 800, 18).toList())
+        assertEquals(listOf(391, 391), NarrowGrid.split(floatArrayOf(1f, 1f), intArrayOf(0, 0), 800, 18).toList())
         assertEquals(1f, CarUi.narrowScale("car", 1600), 0f)
         assertEquals(1f, CarUi.narrowScale("web", 810), 0f)
     }

@@ -43,7 +43,13 @@ final class CarHubScreen implements CarScreen {
         // Con la pantalla partida (la mitad de ancho) las seis pestañas no caben: la fila se desplaza.
         android.widget.HorizontalScrollView tabScroll = new android.widget.HorizontalScrollView(c);
         tabScroll.setHorizontalScrollBarEnabled(false);
-        tabScroll.addView(CarStyle.tabs(c, names, lastTab, this::open));
+        LinearLayout tabRow = CarStyle.tabs(c, names, lastTab, this::open);
+        tabScroll.addView(tabRow);
+        // Con la fila más ancha que la pantalla (partida), la pestaña elegida a la vista.
+        tabScroll.post(() -> {
+            View sel = tabRow.getChildAt(lastTab);
+            if (sel != null) tabScroll.scrollTo(Math.max(0, sel.getLeft() - (tabScroll.getWidth() - sel.getWidth()) / 2), 0);
+        });
         col.addView(tabScroll);
         body = new FrameLayout(c);
         col.addView(body, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
@@ -75,7 +81,14 @@ final class CarHubScreen implements CarScreen {
             default:
                 current = new EfficiencyScreen();
         }
-        body.addView(current.create(sub), CarStyle.match());
+        // En la pantalla partida (estrecha) la pestaña va en una columna a tamaño real (CarKit.narrow).
+        CarKit.narrow = sub.width() < CarUi.NARROW_MIN_W;
+        CarKit.pageH = sub.height();
+        try {
+            body.addView(current.create(sub), CarStyle.match());
+        } finally {
+            CarKit.narrow = false;
+        }
     }
 
     @Override

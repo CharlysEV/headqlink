@@ -321,13 +321,100 @@ final class CarKit {
     static LinearLayout row(Context c) {
         LinearLayout l = new LinearLayout(c);
         l.setOrientation(LinearLayout.HORIZONTAL);
+        GRID.add(l);
         return l;
     }
 
     static LinearLayout col(Context c) {
         LinearLayout l = new LinearLayout(c);
         l.setOrientation(LinearLayout.VERTICAL);
+        GRID.add(l);
         return l;
+    }
+
+    /** Las filas y columnas de la rejilla (row y col): en la pantalla estrecha se deshacen (page). */
+    private static final java.util.Set<View> GRID = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    /**
+     * Pantalla estrecha (la sección Coche en la pantalla partida, CarHubScreen): las pestañas se ponen en una columna
+     * con desplazamiento, cada tarjeta a todo el ancho y a tamaño real, en vez de encoger la rejilla ancha.
+     */
+    static volatile boolean narrow;
+    /** Alto de la pestaña (para el alto de cada tarjeta en la columna: el que tendría en la rejilla ancha). */
+    static volatile int pageH = 760;
+    /** Alto mínimo de una tarjeta en la columna estrecha. */
+    static final int NARROW_MIN_H = 220;
+
+    /** Las tarjetas de la rejilla en orden de lectura (columna a columna) con el alto que tendrían en la ancha. */
+    private static void flatten(View v, int h, java.util.List<View> views, java.util.List<Integer> heights) {
+        if (!GRID.contains(v)) {
+            views.add(v);
+            heights.add(h);
+            return;
+        }
+        LinearLayout l = (LinearLayout) v;
+        int n = l.getChildCount();
+        if (l.getOrientation() == LinearLayout.HORIZONTAL) {
+            // Una fila de cosas de ancho fijo (botones) se queda como está: solo se deshacen las de pesos.
+            for (int i = 0; i < n; i++) {
+                LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) l.getChildAt(i).getLayoutParams();
+                if (lp.weight <= 0) {
+                    views.add(v);
+                    heights.add(h);
+                    return;
+                }
+            }
+            for (int i = 0; i < n; i++) flatten(l.getChildAt(i), h, views, heights);
+            return;
+        }
+        float[] w = new float[n];
+        int[] sz = new int[n];
+        for (int i = 0; i < n; i++) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) l.getChildAt(i).getLayoutParams();
+            w[i] = lp.weight;
+            sz[i] = lp.weight > 0 ? 0 : Math.max(0, lp.height);
+        }
+        int[] hs = NarrowGrid.split(w, sz, h, GAP);
+        for (int i = 0; i < n; i++) flatten(l.getChildAt(i), hs[i], views, heights);
+    }
+
+    /**
+     * La pestaña para la pantalla estrecha: su rejilla en columna; si la rejilla va dentro de un marco (con un aviso
+     * encima, como Estado sin cuenta), se cambia dentro del marco.
+     */
+    private static View narrowed(Context c, View content) {
+        if (GRID.contains(content)) return narrowColumn(c, content);
+        if (content instanceof FrameLayout) {
+            FrameLayout f = (FrameLayout) content;
+            for (int i = 0; i < f.getChildCount(); i++) {
+                View ch = f.getChildAt(i);
+                if (!GRID.contains(ch)) continue;
+                ViewGroup.LayoutParams lp = ch.getLayoutParams();
+                f.removeViewAt(i);
+                f.addView(narrowColumn(c, ch), i, lp);
+            }
+        }
+        return content;
+    }
+
+    /** La rejilla en una columna con desplazamiento: cada tarjeta a todo el ancho, con su alto de la ancha (o el mínimo). */
+    private static View narrowColumn(Context c, View content) {
+        java.util.List<View> views = new java.util.ArrayList<>();
+        java.util.List<Integer> heights = new java.util.ArrayList<>();
+        flatten(content, Math.max(400, pageH - PAD - 6), views, heights);
+        LinearLayout list = new LinearLayout(c);
+        list.setOrientation(LinearLayout.VERTICAL);
+        for (int i = 0; i < views.size(); i++) {
+            View v = views.get(i);
+            if (v.getParent() instanceof ViewGroup) ((ViewGroup) v.getParent()).removeView(v);
+            int h = Math.max(NARROW_MIN_H, heights.get(i));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h);
+            if (i > 0) lp.topMargin = GAP;
+            list.addView(v, lp);
+        }
+        android.widget.ScrollView sv = new android.widget.ScrollView(c);
+        sv.setVerticalScrollBarEnabled(false);
+        sv.addView(list);
+        return sv;
     }
 
     /** Añade v a l con peso (0: tamaño fijo size) y el hueco antes si no es el primero. */
@@ -349,6 +436,7 @@ final class CarKit {
         FrameLayout f = new FrameLayout(c);
         f.setBackgroundColor(BG);
         f.setPadding(PAD, 6, PAD, PAD);
+        if (narrow) content = narrowed(c, content);
         f.addView(content, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         return f;
     }
