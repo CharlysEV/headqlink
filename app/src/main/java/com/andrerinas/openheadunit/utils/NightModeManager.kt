@@ -39,6 +39,11 @@ class NightModeManager(
     
     private val handler = Handler(Looper.getMainLooper())
 
+    private companion object {
+        /** headqlink: con el sensor de luz, el cambio de día a noche (o al revés) tiene que durar 8 s. */
+        const val SENSOR_DEBOUNCE_MS = 8000L
+    }
+
     // Debouncing
     private var pendingValue: Boolean? = null
     private val debounceRunnable = Runnable {
@@ -197,11 +202,14 @@ class NightModeManager(
             Settings.NightMode.LIGHT_SENSOR -> {
                 if (currentLux >= 0) {
                     // Hysteresis Logic
-                    val hyst = 10.0f // 5 Lux buffer
+                    // headqlink: en el coche la luz que ve el móvil sube y baja mucho (sombras, la mano, el soporte):
+                    // con 10 lux de margen AA cambiaba de día a noche cada pocos segundos (log del 2026-10-16). Para
+                    // volver al día hace falta bastante más luz (×2,5 del umbral) y un rato estable (SENSOR_DEBOUNCE_MS).
+                    val dayLux = maxOf(threshold * 2.5f, threshold + 50f)
                     val currentIsNight = lastEmittedValue ?: false
                     
                     isNight = if (currentIsNight) {
-                        currentLux < (threshold + hyst)
+                        currentLux < dayLux
                     } else {
                         currentLux < threshold
                     }
@@ -250,7 +258,8 @@ class NightModeManager(
             if (pendingValue != isNight) {
                 pendingValue = isNight
                 handler.removeCallbacks(debounceRunnable)
-                handler.postDelayed(debounceRunnable, 2000)
+                handler.postDelayed(debounceRunnable,
+                    if (settings.nightMode == Settings.NightMode.LIGHT_SENSOR) SENSOR_DEBOUNCE_MS else 2000L)
             }
         } else {
             // Immediate update
