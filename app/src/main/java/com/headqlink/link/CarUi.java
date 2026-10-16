@@ -379,6 +379,11 @@ final class CarUi {
     static void switchToAa() {
         CarUi ui = current;
         if (ui != null) ui.main.post(() -> {
+            // Pantalla partida: el navegador ya se ve en AA, al lado; se queda partida (no a pantalla completa).
+            if (ui.splitActive()) {
+                L.i("CarUi: navegador abierto con la pantalla partida: sigue partida (AA ya se ve)");
+                return;
+            }
             ui.open("aa");
             ui.setHidden(true);
         });
